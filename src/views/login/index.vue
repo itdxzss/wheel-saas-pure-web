@@ -37,8 +37,8 @@ dataThemeChange(overallStyle.value);
 const { title } = useNav();
 
 const ruleForm = reactive({
-  username: "admin",
-  password: "admin123"
+  username: "demo", // 租户码
+  password: ""
 });
 
 const onLogin = async (formEl: FormInstance | undefined) => {
@@ -64,7 +64,7 @@ const onLogin = async (formEl: FormInstance | undefined) => {
                 .finally(() => (disabled.value = false));
             });
           } else {
-            message("登录失败", { type: "error" });
+            message(res.message ?? "登录失败", { type: "error" });
           }
         })
         .finally(() => (loading.value = false));
@@ -123,7 +123,7 @@ useEventListener(document, "keydown", ({ code }) => {
                 :rules="[
                   {
                     required: true,
-                    message: '请输入账号',
+                    message: '请输入租户码',
                     trigger: 'blur'
                   }
                 ]"
@@ -132,7 +132,7 @@ useEventListener(document, "keydown", ({ code }) => {
                 <el-input
                   v-model="ruleForm.username"
                   clearable
-                  placeholder="账号"
+                  placeholder="租户码"
                   :prefix-icon="useRenderIcon(User)"
                 />
               </el-form-item>

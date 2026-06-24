@@ -14,7 +14,15 @@ import {
   refreshTokenApi
 } from "@/api/user";
 import { useMultiTagsStoreHook } from "./multiTags";
-import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
+import {
+  type DataInfo,
+  setToken,
+  removeToken,
+  userKey,
+  setTenantCode,
+  removeTenantCode
+} from "@/utils/auth";
+import { loginTenant } from "@/api/auth";
 
 export const useUserStore = defineStore("pure-user", {
   state: (): userType => ({
@@ -63,16 +71,26 @@ export const useUserStore = defineStore("pure-user", {
     SET_LOGINDAY(value: number) {
       this.loginDay = Number(value);
     },
-    /** 登入 */
+    /** 登入(先测:username 即租户码,密码为统一测试密码) */
     async loginByUsername(data) {
-      return new Promise<UserResult>((resolve, reject) => {
-        getLogin(data)
-          .then(data => {
-            if (data?.success) setToken(data.data);
-            resolve(data);
+      return new Promise<any>(resolve => {
+        loginTenant({ tenantCode: data.username, password: data.password })
+          .then(res => {
+            // res = { tenantCode, tenantName, token };先测无 JWT,构造占位会话满足 pure-admin 机制。
+            setTenantCode(res.tenantCode);
+            setToken({
+              accessToken: res.token,
+              refreshToken: res.token,
+              // 占位过期时间:7 天后(pure-admin 用 Date 解析)
+              expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              username: res.tenantName,
+              roles: ["admin"],
+              permissions: ["*:*:*"]
+            } as any);
+            resolve({ success: true, data: res });
           })
-          .catch(error => {
-            reject(error);
+          .catch(err => {
+            resolve({ success: false, message: err?.message ?? "登录失败" });
           });
       });
     },
@@ -82,6 +100,7 @@ export const useUserStore = defineStore("pure-user", {
       this.roles = [];
       this.permissions = [];
       removeToken();
+      removeTenantCode();
       useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
       resetRouter();
       router.push("/login");
