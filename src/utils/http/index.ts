@@ -11,6 +11,7 @@ import type {
 } from "./types.d";
 import { stringify } from "qs";
 import { getToken, formatToken } from "@/utils/auth";
+import { getTenantCode } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
@@ -60,6 +61,11 @@ class PureHttp {
   private httpInterceptorsRequest(): void {
     PureHttp.axiosInstance.interceptors.request.use(
       async (config: PureHttpRequestConfig): Promise<any> => {
+        // 注入租户头(存在才带;登录前无租户码,自然不带)
+        const tenantCode = getTenantCode();
+        if (tenantCode) {
+          config.headers["X-Tenant-Code"] = tenantCode;
+        }
         // 优先判断post/get等方法是否传入回调，否则执行初始化设置等回调
         if (typeof config.beforeRequestCallback === "function") {
           config.beforeRequestCallback(config);

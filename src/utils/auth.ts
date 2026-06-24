@@ -31,6 +31,24 @@ export const TokenKey = "authorized-token";
  * */
 export const multipleTabsKey = "multiple-tabs";
 
+/** 当前登录租户码(先测阶段作 X-Tenant-Code 头;接 JWT 后由 token 携带,可移除)。 */
+export const tenantCodeKey = "tenant-code";
+
+/** 取当前租户码;无则空串。 */
+export function getTenantCode(): string {
+  return storageLocal().getItem<string>(tenantCodeKey) ?? "";
+}
+
+/** 存当前租户码。 */
+export function setTenantCode(code: string) {
+  storageLocal().setItem(tenantCodeKey, code);
+}
+
+/** 清除租户码。 */
+export function removeTenantCode() {
+  storageLocal().removeItem(tenantCodeKey);
+}
+
 /** 获取`token` */
 export function getToken(): DataInfo<number> {
   // 此处与`TokenKey`相同，此写法解决初始化时`Cookies`中不存在`TokenKey`报错
