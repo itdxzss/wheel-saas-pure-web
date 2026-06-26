@@ -65,6 +65,18 @@ const accountRouter = {
   },
   children: [
     {
+      path: "/account/index",
+      component: "account/index/index",
+      name: "AccountIndex",
+      meta: {
+        title: "账号列表",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "account",
+        perm_key: "tenant:account:view"
+      }
+    },
+    {
       path: "/account/group/index",
       component: "account/group/index",
       name: "AccountGroup",
@@ -79,12 +91,72 @@ const accountRouter = {
   ]
 };
 
+const taskRouter = {
+  path: "/task",
+  meta: {
+    title: "任务中心",
+    icon: "ep:list",
+    rank: 3,
+    module_key: "pull_task"
+  },
+  children: [
+    {
+      path: "/account/import",
+      component: "account/import/index",
+      name: "AccountImport",
+      meta: {
+        title: "账号导入",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "account",
+        perm_key: "tenant:account:edit"
+      }
+    },
+    {
+      path: "/task/group-link/imports",
+      component: "group/imports/index",
+      name: "TaskGroupLinkImports",
+      meta: {
+        title: "导入链接",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "group_link",
+        perm_key: "tenant:group_link:view"
+      }
+    }
+  ]
+};
+
+const materialRouter = {
+  path: "/material",
+  meta: {
+    title: "素材管理",
+    icon: "ep:collection",
+    rank: 4,
+    module_key: "material_management"
+  },
+  children: [
+    {
+      path: "/task/marketing",
+      component: "material/marketing-template/index",
+      name: "TaskMarketingTemplate",
+      meta: {
+        title: "营销模版",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "marketing_template",
+        perm_key: "tenant:marketing_template:view"
+      }
+    }
+  ]
+};
+
 const operationRouter = {
   path: "/operation",
   meta: {
     title: "运营管理",
     icon: "ep:operation",
-    rank: 3,
+    rank: 5,
     module_key: "ops_management"
   },
   children: [
@@ -110,7 +182,13 @@ export default defineFakeRoute([
     response: () => {
       return {
         success: true,
-        data: [accountRouter, operationRouter, permissionRouter]
+        data: [
+          accountRouter,
+          taskRouter,
+          materialRouter,
+          operationRouter,
+          permissionRouter
+        ]
       };
     }
   }

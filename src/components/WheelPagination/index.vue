@@ -14,7 +14,18 @@ withDefaults(
 const emit = defineEmits<{
   (event: "update:currentPage", value: number): void;
   (event: "update:pageSize", value: number): void;
+  (event: "change"): void;
 }>();
+
+function onCurrentPageChange(value: number): void {
+  emit("update:currentPage", value);
+  emit("change");
+}
+
+function onPageSizeChange(value: number): void {
+  emit("update:pageSize", value);
+  emit("change");
+}
 </script>
 
 <template>
@@ -26,8 +37,8 @@ const emit = defineEmits<{
       layout="total, sizes, prev, pager, next, jumper"
       :page-sizes="pageSizes"
       :total="total"
-      @update:current-page="emit('update:currentPage', $event)"
-      @update:page-size="emit('update:pageSize', $event)"
+      @update:current-page="onCurrentPageChange"
+      @update:page-size="onPageSizeChange"
     />
   </div>
 </template>

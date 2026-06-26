@@ -1,0 +1,21 @@
+export const accountListColumns: TableColumnList = [
+  { label: "头像", prop: "avatar_url", width: 82 },
+  { label: "账号", prop: "ws_phone", minWidth: 160 },
+  { label: "国家", prop: "ip_region", width: 120 },
+  { label: "IP来源", prop: "ip_source", minWidth: 140 },
+  { label: "账号类型", prop: "account_type", width: 130 },
+  { label: "协议", prop: "protocol_address", minWidth: 160 },
+  { label: "IP地址", prop: "truth_ip", minWidth: 160 },
+  { label: "渠道/来源", prop: "channel_name", minWidth: 150 },
+  { label: "分组", prop: "group_name", minWidth: 140 },
+  { label: "状态", prop: "account_state", width: 110 },
+  { label: "登录", prop: "login_state", width: 100 },
+  { label: "风控", prop: "risk_status", width: 120 },
+  { label: "好友 / 群", prop: "friends_num", width: 120 },
+  { label: "拉人数量", prop: "pull_into_group_count", width: 110 },
+  { label: "超链寿命", prop: "hyperlink_sent_count", width: 110 },
+  { label: "封号错误码/封号原因", prop: "block_reason", minWidth: 180 },
+  { label: "入库时间", prop: "first_login_time", width: 180 },
+  { label: "失效时间", prop: "invalidated_at", width: 180 },
+  { label: "操作", prop: "operation", fixed: "right", width: 210 }
+];

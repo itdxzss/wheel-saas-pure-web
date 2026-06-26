@@ -22,13 +22,36 @@ export interface AccountGroupBatchDeleteResponse {
   deleted_count: number;
 }
 
-interface ApiResponse<T> {
+export interface AccountGroupListQuery {
+  page?: number;
+  page_size?: number;
+  keyword?: string;
+}
+
+export interface PageResponse<T> {
+  list?: T[];
+  total?: number;
+}
+
+export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
 }
 
-export function createAccountGroup(data: AccountGroupWriteRequest) {
+export function listAccountGroups(
+  params: AccountGroupListQuery = {}
+): Promise<ApiResponse<PageResponse<AccountGroupApiRow>>> {
+  return http.request<ApiResponse<PageResponse<AccountGroupApiRow>>>(
+    "get",
+    "/api/tenant/account-groups",
+    { params }
+  );
+}
+
+export function createAccountGroup(
+  data: AccountGroupWriteRequest
+): Promise<ApiResponse<AccountGroupApiRow>> {
   return http.request<ApiResponse<AccountGroupApiRow>>(
     "post",
     "/api/tenant/account-groups",
@@ -36,7 +59,9 @@ export function createAccountGroup(data: AccountGroupWriteRequest) {
   );
 }
 
-export function batchDeleteAccountGroups(ids: number[]) {
+export function batchDeleteAccountGroups(
+  ids: number[]
+): Promise<ApiResponse<AccountGroupBatchDeleteResponse>> {
   return http.request<ApiResponse<AccountGroupBatchDeleteResponse>>(
     "post",
     "/api/tenant/account-groups/batch-delete",
