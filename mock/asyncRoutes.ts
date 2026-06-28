@@ -123,6 +123,18 @@ const taskRouter = {
         module_key: "group_link",
         perm_key: "tenant:group_link:view"
       }
+    },
+    {
+      path: "/group/list",
+      component: "group/list/index",
+      name: "GroupList",
+      meta: {
+        title: "群组列表",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "ws_group",
+        perm_key: "tenant:group_link:view"
+      }
     }
   ]
 };

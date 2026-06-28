@@ -1,15 +1,18 @@
 import {
   computed,
   onMounted,
+  onUnmounted,
   reactive,
   ref,
   type ComputedRef,
   type Ref
 } from "vue";
+import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
   getTenantAccountSummary,
   listTenantAccounts,
+  onlineTenantAccount,
   type AccountState,
   type RiskStatus,
   type TenantAccount,
@@ -54,6 +57,18 @@ const ZERO_SUMMARY: TenantAccountSummary = {
   unassigned: 0
 };
 
+// 前端缓解同账号连续点上线的竞态；后端仍需要账号级互斥做最终兜底。
+const ONLINE_COOLDOWN_MS = 30_000;
+const ONLINE_COOLDOWN_TICK_MS = 1_000;
+const ONLINE_COOLDOWN_KEY_PREFIX = "armada:account-online-cooldown:";
+
+function routeNumber(value: unknown): "" | number {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string" || !raw.trim()) return "";
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : "";
+}
+
 export interface AccountListPageState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   accountStatusOptions: string[];
@@ -67,7 +82,9 @@ export interface AccountListPageState {
   refreshAccountList: () => Promise<void>;
   resetSearchForm: () => void;
   riskStatusOptions: Array<{ label: string; value: string }>;
-  rowActionWarning: (action: string) => void;
+  handleRowAction: (row: TenantAccount, action: string) => void;
+  isOnlineActionDisabled: (row: TenantAccount) => boolean;
+  onlineActionLabel: (row: TenantAccount) => string;
   rows: Ref<TenantAccount[]>;
   searchAccounts: () => void;
   searchForm: AccountSearchForm;
@@ -80,6 +97,10 @@ export interface AccountListPageState {
 }
 
 export function useAccountListPage(): AccountListPageState {
+  const route = useRoute();
+  const initialGroupId = routeNumber(
+    route.query.accountGroupId ?? route.query.groupId
+  );
   const riskStatusOptions = [
     { label: "未风控", value: "1" },
     { label: "风控中", value: "2" },
@@ -99,7 +120,7 @@ export function useAccountListPage(): AccountListPageState {
     riskStatus: "",
     accountStatus: "",
     ipGroupName: "",
-    groupId: "",
+    groupId: initialGroupId,
     country: "",
     assignedService: ""
   });
@@ -113,11 +134,16 @@ export function useAccountListPage(): AccountListPageState {
   const selectedRows = ref<TenantAccount[]>([]);
   const loading = ref(false);
   const groupLoading = ref(false);
-  const showAdvancedSearch = ref(false);
+  const showAdvancedSearch = ref(initialGroupId !== "");
   const showBatchMoveDrawer = ref(false);
   const page = ref(1);
   const pageSize = ref(10);
   const total = ref(0);
+  const now = ref(Date.now());
+  // Set 记录正在提交的账号，Map 负责当前页面内的倒计时响应。
+  const onlineSubmittingIds = ref<Set<number>>(new Set());
+  const onlineCooldownUntilById = ref<Map<number, number>>(new Map());
+  let onlineCooldownTimer: number | null = null;
 
   const statCards = computed(() => [
     { key: "total", label: "总账号数", value: summary.value.total },
@@ -140,15 +166,92 @@ export function useAccountListPage(): AccountListPageState {
       : fallback;
   }
 
+  function accountId(row: TenantAccount): number | null {
+    return typeof row.id === "number" && Number.isSafeInteger(row.id)
+      ? row.id
+      : null;
+  }
+
+  function onlineCooldownKey(id: number): string {
+    return `${ONLINE_COOLDOWN_KEY_PREFIX}${id}`;
+  }
+
+  // localStorage 让刷新页面或重新打开账号列表后，未过期的 30 秒冷却仍然生效。
+  function readOnlineCooldownUntil(id: number): number {
+    const inMemoryUntil = onlineCooldownUntilById.value.get(id) ?? 0;
+    let storedUntil = 0;
+    try {
+      const raw = window.localStorage.getItem(onlineCooldownKey(id));
+      const value = raw ? Number(raw) : 0;
+      storedUntil = Number.isFinite(value) && value > 0 ? value : 0;
+      if (storedUntil > 0 && storedUntil <= now.value) {
+        window.localStorage.removeItem(onlineCooldownKey(id));
+      }
+    } catch {
+      storedUntil = 0;
+    }
+    const until = Math.max(inMemoryUntil, storedUntil);
+    if (until <= now.value) {
+      onlineCooldownUntilById.value.delete(id);
+      return 0;
+    }
+    return until;
+  }
+
+  function writeOnlineCooldown(id: number): void {
+    const until = Date.now() + ONLINE_COOLDOWN_MS;
+    onlineCooldownUntilById.value.set(id, until);
+    try {
+      window.localStorage.setItem(onlineCooldownKey(id), String(until));
+    } catch {
+      // localStorage 不可用时仍保留当前页面内的 30 秒禁用。
+    }
+    now.value = Date.now();
+  }
+
+  function setOnlineSubmitting(id: number, submitting: boolean): void {
+    const next = new Set(onlineSubmittingIds.value);
+    if (submitting) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+    onlineSubmittingIds.value = next;
+  }
+
+  function onlineCooldownRemaining(row: TenantAccount): number {
+    const id = accountId(row);
+    if (!id) return 0;
+    const until = readOnlineCooldownUntil(id);
+    return Math.max(
+      0,
+      Math.ceil((until - now.value) / ONLINE_COOLDOWN_TICK_MS)
+    );
+  }
+
+  function isOnlineActionDisabled(row: TenantAccount): boolean {
+    const id = accountId(row);
+    if (!id || row.login_state === 1) return false;
+    return (
+      onlineSubmittingIds.value.has(id) || onlineCooldownRemaining(row) > 0
+    );
+  }
+
+  function onlineActionLabel(row: TenantAccount): string {
+    if (row.login_state === 1) return "下线";
+    const remaining = onlineCooldownRemaining(row);
+    return remaining > 0 ? `上线(${remaining}s)` : "上线";
+  }
+
   function buildQuery(): TenantAccountListQuery {
     const query: TenantAccountListQuery = {
       page: page.value,
-      page_size: pageSize.value
+      pageSize: pageSize.value
     };
     if (searchForm.keyword.trim()) query.keyword = searchForm.keyword.trim();
     if (searchForm.phone.trim()) query.phone = searchForm.phone.trim();
     if (searchForm.riskStatus) {
-      query.risk_status = Number(searchForm.riskStatus) as RiskStatus;
+      query.riskStatus = Number(searchForm.riskStatus) as RiskStatus;
     }
     if (searchForm.accountStatus) {
       const accountStateMap: Record<string, AccountState | undefined> = {
@@ -158,12 +261,12 @@ export function useAccountListPage(): AccountListPageState {
         解绑: 5
       };
       const accountState = accountStateMap[searchForm.accountStatus];
-      if (accountState) query.account_state = accountState;
+      if (accountState) query.accountState = accountState;
       if (searchForm.accountStatus === "禁言6小时") query.mute_status = "6h";
       if (searchForm.accountStatus === "禁言24小时") query.mute_status = "24h";
     }
     if (searchForm.ipGroupName) query.ip_group_name = searchForm.ipGroupName;
-    if (searchForm.groupId) query.group_id = Number(searchForm.groupId);
+    if (searchForm.groupId) query.accountGroupId = Number(searchForm.groupId);
     if (searchForm.country.trim()) query.country = searchForm.country.trim();
     if (searchForm.assignedService)
       query.assigned_service = searchForm.assignedService;
@@ -172,8 +275,7 @@ export function useAccountListPage(): AccountListPageState {
 
   async function loadSummary() {
     try {
-      const response = await getTenantAccountSummary();
-      summary.value = response.data ?? { ...ZERO_SUMMARY };
+      summary.value = await getTenantAccountSummary();
     } catch {
       summary.value = { ...ZERO_SUMMARY };
     }
@@ -182,8 +284,8 @@ export function useAccountListPage(): AccountListPageState {
   async function loadAccountGroups() {
     groupLoading.value = true;
     try {
-      const response = await listAccountGroups({ page: 1, page_size: 200 });
-      accountGroups.value = response.data?.list ?? [];
+      const response = await listAccountGroups({ page: 1, pageSize: 200 });
+      accountGroups.value = response.list ?? [];
     } catch (error) {
       accountGroups.value = [];
       ElMessage.warning(apiErrorMessage(error, "账号分组加载失败"));
@@ -197,8 +299,8 @@ export function useAccountListPage(): AccountListPageState {
     void loadSummary();
     try {
       const response = await listTenantAccounts(buildQuery());
-      rows.value = response.data?.list ?? [];
-      total.value = response.data?.total ?? 0;
+      rows.value = response.list ?? [];
+      total.value = response.total ?? 0;
       selectedRows.value = selectedRows.value.filter(row =>
         rows.value.some(item => item.id === row.id)
       );
@@ -251,6 +353,32 @@ export function useAccountListPage(): AccountListPageState {
     ElMessage.warning("迁移到分组写接口待接入，当前只完成账号列表页面迁移");
   }
 
+  async function submitOnline(row: TenantAccount): Promise<void> {
+    const id = accountId(row);
+    if (!id) {
+      ElMessage.warning("账号 ID 为空，无法上线");
+      return;
+    }
+    if (isOnlineActionDisabled(row)) return;
+
+    // 点击后立即开始冷却，不等接口返回，避免慢请求窗口里被重复点击。
+    writeOnlineCooldown(id);
+    setOnlineSubmitting(id, true);
+    try {
+      const result = await onlineTenantAccount(id);
+      if (result.accepted) {
+        ElMessage.success("上线请求已提交");
+      } else {
+        ElMessage.warning("协议层未受理上线请求");
+      }
+      void refreshAccountList();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "上线请求失败"));
+    } finally {
+      setOnlineSubmitting(id, false);
+    }
+  }
+
   function handleBatchAction(command: string) {
     if (command === "move-group") {
       openBatchMoveDrawer();
@@ -270,13 +398,26 @@ export function useAccountListPage(): AccountListPageState {
     );
   }
 
-  function rowActionWarning(action: string) {
+  function handleRowAction(row: TenantAccount, action: string) {
+    if (action === "上线") {
+      void submitOnline(row);
+      return;
+    }
     ElMessage.warning(`${action}接口待接入，未伪造成功结果`);
   }
 
   onMounted(() => {
+    onlineCooldownTimer = window.setInterval(() => {
+      now.value = Date.now();
+    }, ONLINE_COOLDOWN_TICK_MS);
     void loadAccountGroups();
     void refreshAccountList();
+  });
+
+  onUnmounted(() => {
+    if (onlineCooldownTimer !== null) {
+      window.clearInterval(onlineCooldownTimer);
+    }
   });
 
   return {
@@ -292,7 +433,9 @@ export function useAccountListPage(): AccountListPageState {
     refreshAccountList,
     resetSearchForm,
     riskStatusOptions,
-    rowActionWarning,
+    handleRowAction,
+    isOnlineActionDisabled,
+    onlineActionLabel,
     rows,
     searchAccounts,
     searchForm,

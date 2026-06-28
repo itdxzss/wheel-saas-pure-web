@@ -124,7 +124,7 @@ export function useAccountImportPage(): AccountImportPageState {
   function buildQuery(): ListAccountImportTasksParams {
     const query: ListAccountImportTasksParams = {
       page: page.value,
-      page_size: pageSize.value
+      pageSize: pageSize.value
     };
     if (searchForm.keyword.trim()) query.keyword = searchForm.keyword.trim();
     if (searchForm.importType) query.import_type = searchForm.importType;
@@ -156,8 +156,8 @@ export function useAccountImportPage(): AccountImportPageState {
     loading.value = true;
     try {
       const response = await listAccountImportTasks(buildQuery());
-      rows.value = response.data?.list ?? [];
-      total.value = response.data?.total ?? 0;
+      rows.value = response.list ?? [];
+      total.value = response.total ?? 0;
       schedulePollIfNeeded();
     } catch (error) {
       rows.value = [];
@@ -172,8 +172,8 @@ export function useAccountImportPage(): AccountImportPageState {
   async function loadAccountGroups(): Promise<void> {
     groupLoading.value = true;
     try {
-      const response = await listAccountGroups({ page: 1, page_size: 500 });
-      accountGroups.value = response.data?.list ?? [];
+      const response = await listAccountGroups({ page: 1, pageSize: 500 });
+      accountGroups.value = response.list ?? [];
     } catch (error) {
       accountGroups.value = [];
       ElMessage.warning(apiErrorMessage(error, "账号分组加载失败"));
@@ -184,8 +184,7 @@ export function useAccountImportPage(): AccountImportPageState {
 
   async function loadIpRegionOptions(): Promise<void> {
     try {
-      const response = await listTenantIpRegions();
-      ipRegions.value = response.data ?? [];
+      ipRegions.value = await listTenantIpRegions();
     } catch (error) {
       ipRegions.value = [];
       ElMessage.warning(apiErrorMessage(error, "IP 区域加载失败"));
@@ -212,6 +211,19 @@ export function useAccountImportPage(): AccountImportPageState {
     return accountGroups.value.find(group => group.id === groupId)?.name ?? "";
   }
 
+  function summarizeFailReasons(
+    details: AccountImportDetailRow[]
+  ): AccountImportFailReason[] {
+    const counts = new Map<string, number>();
+    details
+      .filter(row => row.status !== "成功")
+      .forEach(row => {
+        const reason = row.reason || "导入失败";
+        counts.set(reason, (counts.get(reason) ?? 0) + 1);
+      });
+    return Array.from(counts, ([reason, count]) => ({ reason, count }));
+  }
+
   function appendAccountGroup(group: AccountGroupApiRow): void {
     if (accountGroups.value.some(item => item.id === group.id)) return;
     accountGroups.value = [...accountGroups.value, group];
@@ -222,9 +234,9 @@ export function useAccountImportPage(): AccountImportPageState {
   ): Promise<AccountGroupApiRow | null> {
     try {
       const response = await createAccountGroup(data);
-      appendAccountGroup(response.data);
+      appendAccountGroup(response);
       ElMessage.success("分组已新增");
-      return response.data;
+      return response;
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "新增分组失败"));
       return null;
@@ -246,15 +258,16 @@ export function useAccountImportPage(): AccountImportPageState {
           ElMessage.warning("请上传 JSON号 ZIP 包");
           return false;
         }
-        const form = new FormData();
-        form.append("file", payload.file);
-        form.append("group", groupName);
-        form.append("group_id", String(payload.groupId));
-        form.append("device", payload.device);
-        form.append("account_type", payload.accountType);
-        form.append("ip_mode", payload.ipMode);
-        if (payload.remark) form.append("remark", payload.remark);
-        await uploadAccountImportZip(form);
+        await uploadAccountImportZip({
+          import_type: importKindLabelMap[payload.importKind],
+          group: groupName,
+          group_id: payload.groupId,
+          device: payload.device,
+          account_type: payload.accountType,
+          ip_mode: payload.ipMode,
+          remark: payload.remark || null,
+          file: payload.file
+        });
       } else {
         await createAccountImportTask({
           import_type: importKindLabelMap[payload.importKind],
@@ -303,14 +316,9 @@ export function useAccountImportPage(): AccountImportPageState {
         ...(detailFilter.value ? { status: detailFilter.value } : {})
       };
       const response = await getAccountImportTask(detailTask.value.id, params);
-      const detail = response.data;
-      detailTask.value = detail.task;
-      detailRows.value = detail.detail_rows ?? [];
-      detailTotal.value = detail.detail_total ?? 0;
-      detailFailReasons.value = detail.fail_reasons ?? [];
-      rows.value = rows.value.map(row =>
-        row.id === detail.task.id ? detail.task : row
-      );
+      detailRows.value = response.list ?? [];
+      detailTotal.value = response.total ?? 0;
+      detailFailReasons.value = summarizeFailReasons(detailRows.value);
     } catch (error) {
       detailRows.value = [];
       detailTotal.value = 0;
@@ -347,14 +355,13 @@ export function useAccountImportPage(): AccountImportPageState {
     exportingTaskId.value = row.id;
     try {
       const response = await exportAccountImportTask(row.id, kind);
-      const payload = response.data;
-      if (!payload?.content) {
+      if (!response.content) {
         ElMessage.warning("当前任务暂无可导出的内容");
         return;
       }
       downloadCsv(
-        payload.filename || `account-import-${row.id}-${kind}.csv`,
-        payload.content
+        response.filename || `account-import-${row.id}-${kind}.csv`,
+        response.content
       );
       ElMessage.success("导出文件已生成");
     } catch (error) {

@@ -13,6 +13,8 @@ defineOptions({
 const props = defineProps<{
   columns: TableColumnList;
   loading: boolean;
+  onlineActionDisabled: (row: TenantAccount) => boolean;
+  onlineActionLabel: (row: TenantAccount) => string;
   page: number;
   pageSize: number;
   rows: TenantAccount[];
@@ -23,7 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: "batch-command", command: string): void;
   (event: "refresh"): void;
-  (event: "row-action", action: string): void;
+  (event: "row-action", row: TenantAccount, action: string): void;
   (event: "selection-change", rows: TenantAccount[]): void;
   (event: "update:page", value: number): void;
   (event: "update:pageSize", value: number): void;
@@ -266,20 +268,32 @@ function avatarText(row: TenantAccount) {
             <el-button
               link
               type="primary"
+              :disabled="
+                row.login_state !== 1 &&
+                onlineActionDisabled(row as TenantAccount)
+              "
               @click="
-                emit('row-action', row.login_state === 1 ? '下线' : '上线')
+                emit(
+                  'row-action',
+                  row as TenantAccount,
+                  row.login_state === 1 ? '下线' : '上线'
+                )
               "
             >
-              {{ row.login_state === 1 ? "下线" : "上线" }}
+              {{ onlineActionLabel(row as TenantAccount) }}
             </el-button>
             <el-button
               link
               type="warning"
-              @click="emit('row-action', '解除风控')"
+              @click="emit('row-action', row as TenantAccount, '解除风控')"
             >
               解除风控
             </el-button>
-            <el-button link type="danger" @click="emit('row-action', '删除')">
+            <el-button
+              link
+              type="danger"
+              @click="emit('row-action', row as TenantAccount, '删除')"
+            >
               删除
             </el-button>
           </template>

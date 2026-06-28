@@ -1,4 +1,4 @@
-import { http } from "@/utils/http";
+import { armadaRequest } from "@/api/armada";
 
 export type AccountState = 1 | 2 | 3 | 4 | 5;
 export type LoginState = 1 | 2;
@@ -40,12 +40,16 @@ export interface TenantAccount {
 export interface TenantAccountListQuery {
   page?: number;
   page_size?: number;
+  pageSize?: number;
   keyword?: string;
   phone?: string;
   account_state?: AccountState | "";
+  accountState?: AccountState | "";
   login_state?: LoginState | "";
   risk_status?: RiskStatus | "";
+  riskStatus?: RiskStatus | "";
   group_id?: number | "";
+  accountGroupId?: number | "";
   assigned_service?: string;
   country?: string;
   mute_status?: string;
@@ -62,33 +66,150 @@ export interface TenantAccountSummary {
   unassigned: number;
 }
 
+export interface TenantAccountOnlineResult {
+  accountId: number;
+  protocolAccountId: string;
+  accepted: boolean;
+  stateSource: string;
+  syncedAt: number | null;
+  ownerWorkerId: string | null;
+  ownerEndpoint: string | null;
+  currentWorkerId: string | null;
+  local: boolean;
+}
+
 export interface PageResponse<T> {
   list?: T[];
   total?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-  msg?: string;
+interface ArmadaTenantAccount {
+  id?: number;
+  wsPhone?: string | null;
+  accountType?: number | null;
+  deviceOs?: number | null;
+  numberSource?: number | null;
+  channelName?: string | null;
+  protocolId?: string | null;
+  accountGroupId?: number | null;
+  groupName?: string | null;
+  ownership?: number | null;
+  leaseUntil?: number | null;
+  dispatchedAt?: number | null;
+  createdAt?: number | null;
+  accountState?: AccountState | null;
+  loginState?: LoginState | null;
+  riskStatus?: RiskStatus | null;
+  riskEndTime?: number | null;
+  muteStatus?: number | null;
+  blockErrorCode?: string | null;
+  blockReason?: string | null;
+  truthIp?: string | null;
+  pullIntoGroupCount?: number | null;
+  invalidatedAt?: number | null;
+  avatarUrl?: string | null;
+  friendsNum?: number | null;
+  groupsNum?: number | null;
+  hyperlinkSentCount?: number | null;
+  country?: string | null;
+  ipSource?: string | null;
+}
+
+function formatEpoch(value?: number | null): string | null {
+  if (!value) return null;
+  return new Date(value).toISOString().replace("T", " ").slice(0, 19);
+}
+
+function accountTypeLabel(value?: number | null): string | null {
+  if (value === 1) return "个人号";
+  if (value === 2) return "商业号";
+  return null;
+}
+
+function numberSourceLabel(value?: number | null): string | null {
+  if (value === 1) return "买量";
+  if (value === 2) return "裂变";
+  if (value === 3) return "自购";
+  return null;
+}
+
+function muteStatusLabel(value?: number | null): string | null {
+  if (value === 1) return "6h";
+  if (value === 2) return "24h";
+  return null;
+}
+
+function toQuery(params: TenantAccountListQuery) {
+  return {
+    page: params.page,
+    pageSize: params.pageSize ?? params.page_size,
+    phone: params.phone || params.keyword,
+    accountState: params.accountState ?? params.account_state,
+    riskStatus: params.riskStatus ?? params.risk_status,
+    accountGroupId: params.accountGroupId ?? params.group_id
+  };
+}
+
+function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
+  return {
+    id: row.id,
+    ws_phone: row.wsPhone ?? null,
+    protocol_address: row.protocolId ?? null,
+    truth_ip: row.truthIp ?? null,
+    account_type: accountTypeLabel(row.accountType),
+    number_source: numberSourceLabel(row.numberSource),
+    channel_name: row.channelName ?? null,
+    account_state: row.accountState ?? null,
+    login_state: row.loginState ?? null,
+    risk_status: row.riskStatus ?? null,
+    group_id: row.accountGroupId ?? null,
+    group_name: row.groupName ?? null,
+    assigned_service: null,
+    service_name: null,
+    friends_num: row.friendsNum ?? 0,
+    groups_num: row.groupsNum ?? 0,
+    avatar_url: row.avatarUrl ?? null,
+    nickname: null,
+    remark: null,
+    country: row.country ?? null,
+    mute_status: muteStatusLabel(row.muteStatus),
+    ip_region: row.country ?? null,
+    ip_source: row.ipSource ?? null,
+    ip_group_name: null,
+    first_login_time: formatEpoch(row.createdAt),
+    risk_end_time: formatEpoch(row.riskEndTime),
+    pull_into_group_count: row.pullIntoGroupCount ?? 0,
+    hyperlink_sent_count: row.hyperlinkSentCount ?? 0,
+    block_reason: row.blockReason ?? row.blockErrorCode ?? null,
+    invalidated_at: formatEpoch(row.invalidatedAt)
+  };
 }
 
 export function listTenantAccounts(
   params: TenantAccountListQuery = {}
-): Promise<ApiResponse<PageResponse<TenantAccount>>> {
-  return http.request<ApiResponse<PageResponse<TenantAccount>>>(
+): Promise<PageResponse<TenantAccount>> {
+  return armadaRequest<PageResponse<ArmadaTenantAccount>>(
     "get",
-    "/api/tenant/accounts/list",
-    { params }
-  );
+    "/api/accounts",
+    { params: toQuery(params) }
+  ).then(result => ({
+    ...result,
+    list: result.list?.map(toTenantAccount) ?? []
+  }));
 }
 
-export function getTenantAccountSummary(): Promise<
-  ApiResponse<TenantAccountSummary>
-> {
-  return http.request<ApiResponse<TenantAccountSummary>>(
-    "get",
-    "/api/tenant/accounts/summary"
+export function getTenantAccountSummary(): Promise<TenantAccountSummary> {
+  return armadaRequest<TenantAccountSummary>("get", "/api/accounts/stats");
+}
+
+export function onlineTenantAccount(
+  id: number
+): Promise<TenantAccountOnlineResult> {
+  return armadaRequest<TenantAccountOnlineResult>(
+    "post",
+    `/api/accounts/${id}/online`
   );
 }

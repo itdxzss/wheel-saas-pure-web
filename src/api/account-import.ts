@@ -1,5 +1,6 @@
 import { http } from "@/utils/http";
-import type { ApiResponse, PageResponse } from "@/api/account";
+import { armadaRequest } from "@/api/armada";
+import type { PageResponse } from "@/api/account";
 
 export type AccountImportType = "六段号" | "JSON号" | "全参账号" | string;
 export type AccountImportStatus = "导入中" | "已完成" | string;
@@ -84,41 +85,234 @@ export interface AccountImportExport {
 export interface ListAccountImportTasksParams {
   page?: number;
   page_size?: number;
+  pageSize?: number;
   keyword?: string;
   import_type?: string;
+  importFormat?: number;
   group?: string;
+  accountGroupId?: number;
   device?: string;
+  deviceOs?: number;
   account_type?: string;
+  accountType?: number;
   login?: string;
   status?: string;
 }
 
+interface ArmadaAccountImportBatch {
+  id: number;
+  sourceFileName?: string | null;
+  importFormat?: number | null;
+  deviceOs?: number | null;
+  accountType?: number | null;
+  ipRegion?: string | null;
+  totalRows?: number | null;
+  importedRows?: number | null;
+  duplicateRows?: number | null;
+  formatErrorRows?: number | null;
+  loginSuccess?: number | null;
+  loginFailed?: number | null;
+  loginAbnormal?: number | null;
+  status?: number | null;
+  groupName?: string | null;
+  createdAt?: number | null;
+}
+
+interface ArmadaAccountImportDetail {
+  id: number;
+  lineNo?: number | null;
+  wsPhone?: string | null;
+  accountId?: number | null;
+  parseResult?: number | null;
+  parseResultLabel?: string | null;
+  failReason?: string | null;
+  loginResult?: number | null;
+  createdAt?: number | null;
+}
+
+function formatEpoch(value?: number | null): string {
+  if (!value) return "-";
+  return new Date(value).toISOString().replace("T", " ").slice(0, 19);
+}
+
+function importFormatCode(value?: string | number | null): number | undefined {
+  if (typeof value === "number") return value;
+  if (value === "六段号") return 1;
+  if (value === "JSON号") return 2;
+  if (value === "全参账号") return 3;
+  return undefined;
+}
+
+function importFormatLabel(value?: number | null): string {
+  if (value === 1) return "六段号";
+  if (value === 2) return "JSON号";
+  if (value === 3) return "全参账号";
+  return "-";
+}
+
+function deviceOsCode(value?: string | number | null): number | undefined {
+  if (typeof value === "number") return value;
+  if (value === "安卓") return 1;
+  if (value === "苹果") return 2;
+  return undefined;
+}
+
+function deviceOsLabel(value?: number | null): string {
+  if (value === 1) return "安卓";
+  if (value === 2) return "苹果";
+  return "-";
+}
+
+function accountTypeCode(value?: string | number | null): number | undefined {
+  if (typeof value === "number") return value;
+  if (value === "个人") return 1;
+  if (value === "商业") return 2;
+  return undefined;
+}
+
+function accountTypeLabel(value?: number | null): string {
+  if (value === 1) return "个人";
+  if (value === 2) return "商业";
+  return "-";
+}
+
+function statusCode(value?: string | number | null): number | undefined {
+  if (typeof value === "number") return value;
+  if (value === "导入中" || value === "进行中") return 1;
+  if (value === "已完成") return 2;
+  return undefined;
+}
+
+function statusLabel(value?: number | null): AccountImportStatus {
+  if (value === 1) return "导入中";
+  if (value === 2) return "已完成";
+  return "-";
+}
+
+function detailFilter(value?: string): string {
+  if (value === "SUCCESS") return "success";
+  if (value === "FAIL" || value === "ABNORMAL") return "fail";
+  return "all";
+}
+
+function exportScope(value: string): string {
+  if (value === "SUCCESS") return "success";
+  if (value === "FAIL" || value === "ABNORMAL") return "fail";
+  return "all";
+}
+
+function toListQuery(params: ListAccountImportTasksParams) {
+  return {
+    page: params.page,
+    pageSize: params.pageSize ?? params.page_size,
+    sourceFileName: params.keyword,
+    importFormat: params.importFormat ?? importFormatCode(params.import_type),
+    accountGroupId: params.accountGroupId,
+    deviceOs: params.deviceOs ?? deviceOsCode(params.device),
+    accountType: params.accountType ?? accountTypeCode(params.account_type),
+    status: statusCode(params.status)
+  };
+}
+
+function toTask(row: ArmadaAccountImportBatch): AccountImportTask {
+  const total = row.totalRows ?? 0;
+  const imported = row.importedRows ?? 0;
+  const failed = (row.duplicateRows ?? 0) + (row.formatErrorRows ?? 0);
+  const loginFailed = row.loginFailed ?? 0;
+  const loginAbnormal = row.loginAbnormal ?? 0;
+  return {
+    id: row.id,
+    filename: row.sourceFileName || "导入",
+    import_type: importFormatLabel(row.importFormat),
+    group: row.groupName || "-",
+    tag: null,
+    device: deviceOsLabel(row.deviceOs),
+    account_type: accountTypeLabel(row.accountType),
+    service: null,
+    ip_mode: row.ipRegion ?? null,
+    total,
+    imported,
+    success: imported,
+    fail: failed,
+    login_success: row.loginSuccess ?? 0,
+    login_failed: loginFailed,
+    login_fail: loginFailed,
+    abnormal: loginAbnormal,
+    abnormal_key: 0,
+    abnormal_ban: 0,
+    created_at: formatEpoch(row.createdAt),
+    progress: `${imported} / ${total}`,
+    status: statusLabel(row.status),
+    remark: null
+  };
+}
+
+function toDetailRow(row: ArmadaAccountImportDetail): AccountImportDetailRow {
+  const success = row.parseResult === 1;
+  return {
+    line: row.lineNo ?? "-",
+    account: row.wsPhone ?? "-",
+    status: success ? "成功" : "失败",
+    reason: success ? "" : row.failReason || row.parseResultLabel || "导入失败",
+    group: null,
+    tag: null,
+    created_at: formatEpoch(row.createdAt)
+  };
+}
+
+function toFormData(data: CreateAccountImportTaskRequest): FormData {
+  const form = new FormData();
+  if (data.group_id) form.append("accountGroupId", String(data.group_id));
+  const importFormat = importFormatCode(data.import_type);
+  if (importFormat) form.append("importFormat", String(importFormat));
+  const deviceOs = deviceOsCode(data.device);
+  if (deviceOs) form.append("deviceOs", String(deviceOs));
+  const accountType = accountTypeCode(data.account_type);
+  if (accountType) form.append("accountType", String(accountType));
+  if (data.ip_mode && !data.ip_mode.startsWith("系统自动")) {
+    form.append("ipRegion", data.ip_mode);
+  }
+  if (data.remark) form.append("remark", data.remark);
+  if (data.text) form.append("text", data.text);
+  return form;
+}
+
 export function listAccountImportTasks(
   params: ListAccountImportTasksParams = {}
-): Promise<ApiResponse<PageResponse<AccountImportTask>>> {
-  return http.request<ApiResponse<PageResponse<AccountImportTask>>>(
+): Promise<PageResponse<AccountImportTask>> {
+  return armadaRequest<PageResponse<ArmadaAccountImportBatch>>(
     "get",
-    "/api/tenant/account-imports",
-    { params }
-  );
+    "/api/account-imports",
+    { params: toListQuery(params) }
+  ).then(result => ({
+    ...result,
+    list: result.list?.map(toTask) ?? []
+  }));
 }
 
 export function createAccountImportTask(
   data: CreateAccountImportTaskRequest
-): Promise<ApiResponse<AccountImportTask>> {
-  return http.request<ApiResponse<AccountImportTask>>(
+): Promise<AccountImportTask> {
+  return armadaRequest<ArmadaAccountImportBatch>(
     "post",
-    "/api/tenant/account-imports",
-    { data }
-  );
+    "/api/account-imports",
+    { data: toFormData(data) },
+    {
+      beforeRequestCallback: config => {
+        delete config.headers["Content-Type"];
+      }
+    }
+  ).then(toTask);
 }
 
-export function uploadAccountImportZip(
-  form: FormData
-): Promise<ApiResponse<AccountImportTask>> {
-  return http.request<ApiResponse<AccountImportTask>>(
+export function uploadAccountImportZip(data: CreateAccountImportTaskRequest & {
+  file: File;
+}): Promise<AccountImportTask> {
+  const form = toFormData(data);
+  form.append("file", data.file);
+  return armadaRequest<ArmadaAccountImportBatch>(
     "post",
-    "/api/tenant/account-imports/zip",
+    "/api/account-imports",
     { data: form },
     {
       beforeRequestCallback: config => {
@@ -126,27 +320,40 @@ export function uploadAccountImportZip(
         delete config.headers["Content-Type"];
       }
     }
-  );
+  ).then(toTask);
 }
 
 export function getAccountImportTask(
   id: number,
   params?: AccountImportDetailParams
-): Promise<ApiResponse<AccountImportTaskDetail>> {
-  return http.request<ApiResponse<AccountImportTaskDetail>>(
+): Promise<PageResponse<AccountImportDetailRow>> {
+  return armadaRequest<PageResponse<ArmadaAccountImportDetail>>(
     "get",
-    `/api/tenant/account-imports/${id}`,
-    params ? { params } : undefined
-  );
+    `/api/account-imports/${id}/details`,
+    {
+      params: {
+        page: params?.page,
+        pageSize: params?.page_size,
+        filter: detailFilter(params?.status)
+      }
+    }
+  ).then(result => ({
+    ...result,
+    list: result.list?.map(toDetailRow) ?? []
+  }));
 }
 
 export function exportAccountImportTask(
   id: number,
   kind: string
-): Promise<ApiResponse<AccountImportExport>> {
-  return http.request<ApiResponse<AccountImportExport>>(
-    "get",
-    `/api/tenant/account-imports/${id}/export`,
-    { params: { kind } }
-  );
+): Promise<AccountImportExport> {
+  return http
+    .request<string>("get", `/api/account-imports/${id}/export`, {
+      params: { scope: exportScope(kind) },
+      responseType: "text"
+    })
+    .then(content => ({
+      filename: `account-import-${id}-${exportScope(kind)}.csv`,
+      content
+    }));
 }

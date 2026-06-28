@@ -1,9 +1,21 @@
-import { http } from "@/utils/http";
-import type { ApiResponse } from "@/api/account";
+import { armadaRequest } from "@/api/armada";
+import type { PageResponse } from "@/api/account";
 
-export function listTenantIpRegions(): Promise<ApiResponse<string[]>> {
-  return http.request<ApiResponse<string[]>>(
+interface IpProxyRow {
+  region?: string | null;
+}
+
+export async function listTenantIpRegions(): Promise<string[]> {
+  const result = await armadaRequest<PageResponse<IpProxyRow>>(
     "get",
-    "/api/tenant/resource/ip-proxies/regions"
+    "/api/ip-proxies",
+    { params: { page: 1, pageSize: 500 } }
+  );
+  return Array.from(
+    new Set(
+      (result.list ?? [])
+        .map(row => row.region?.trim())
+        .filter((region): region is string => Boolean(region))
+    )
   );
 }

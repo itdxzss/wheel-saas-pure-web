@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import {
   batchDeleteAccountGroups,
-  createAccountGroup
+  createAccountGroup,
+  listAccountGroups,
+  updateAccountGroup
 } from "@/api/account-group";
 import Search from "~icons/ri/search-line";
 import Delete from "~icons/ep/delete";
@@ -25,6 +28,7 @@ interface AccountGroupRow {
   bannedAccounts: number;
   accountCountSummary?: string;
   updatedAt: string;
+  remark?: string | null;
   systemBuiltin: boolean;
 }
 
@@ -33,25 +37,33 @@ interface AccountGroupSearchForm {
   groupName: string;
 }
 
-interface AccountGroupCreateForm {
+interface AccountGroupForm {
   name: string;
   remark: string;
 }
 
+const router = useRouter();
 const searchForm = ref<AccountGroupSearchForm>({
   groupId: "",
   groupName: ""
 });
-const createForm = ref<AccountGroupCreateForm>({
+const createForm = ref<AccountGroupForm>({
+  name: "",
+  remark: ""
+});
+const editForm = ref<AccountGroupForm>({
   name: "",
   remark: ""
 });
 const loading = ref(false);
 const createLoading = ref(false);
+const editLoading = ref(false);
 const deleteLoading = ref(false);
 const showCreateDrawer = ref(false);
+const showEditDrawer = ref(false);
 const rows = ref<AccountGroupRow[]>([]);
 const selectedRows = ref<AccountGroupRow[]>([]);
+const editingGroup = ref<AccountGroupRow | null>(null);
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
@@ -81,11 +93,26 @@ function formatAccountCount(row: AccountGroupRow) {
   );
 }
 
-function refreshAccountGroups() {
-  const keyword = buildAccountGroupKeyword();
-  void keyword;
+async function refreshAccountGroups() {
   selectedRows.value = [];
-  loading.value = false;
+  loading.value = true;
+  try {
+    const groupId = searchForm.value.groupId.trim();
+    const response = await listAccountGroups({
+      page: page.value,
+      pageSize: pageSize.value,
+      id: groupId ? Number(groupId) : undefined,
+      keyword: groupId ? undefined : buildAccountGroupKeyword()
+    });
+    rows.value = response.list ?? [];
+    total.value = response.total ?? 0;
+  } catch (error) {
+    rows.value = [];
+    total.value = 0;
+    ElMessage.error(apiErrorMessage(error, "账号分组加载失败，请稍后重试"));
+  } finally {
+    loading.value = false;
+  }
 }
 
 function onSelectionChange(rows: AccountGroupRow[]) {
@@ -112,6 +139,26 @@ function openCreateDrawer() {
   showCreateDrawer.value = true;
 }
 
+function openEditDrawer(row: AccountGroupRow) {
+  if (row.systemBuiltin) {
+    ElMessage.warning("系统默认分组不允许修改");
+    return;
+  }
+  editingGroup.value = row;
+  editForm.value = {
+    name: row.name,
+    remark: row.remark ?? ""
+  };
+  showEditDrawer.value = true;
+}
+
+function openGroupAccounts(row: AccountGroupRow) {
+  void router.push({
+    name: "AccountIndex",
+    query: { accountGroupId: String(row.id) }
+  });
+}
+
 async function submitCreateAccountGroup() {
   const name = createForm.value.name.trim();
   const remark = createForm.value.remark.trim();
@@ -127,11 +174,37 @@ async function submitCreateAccountGroup() {
     });
     ElMessage.success("新增分组成功");
     showCreateDrawer.value = false;
-    refreshAccountGroups();
+    void refreshAccountGroups();
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "新增分组失败，请稍后重试"));
   } finally {
     createLoading.value = false;
+  }
+}
+
+async function submitEditAccountGroup() {
+  const current = editingGroup.value;
+  if (!current) return;
+  const name = editForm.value.name.trim();
+  const remark = editForm.value.remark.trim();
+  if (!name) {
+    ElMessage.warning("请填写分组名称");
+    return;
+  }
+  editLoading.value = true;
+  try {
+    await updateAccountGroup(current.id, {
+      name,
+      remark
+    });
+    ElMessage.success("修改分组成功");
+    showEditDrawer.value = false;
+    editingGroup.value = null;
+    void refreshAccountGroups();
+  } catch (error) {
+    ElMessage.error(apiErrorMessage(error, "修改分组失败，请稍后重试"));
+  } finally {
+    editLoading.value = false;
   }
 }
 
@@ -154,7 +227,7 @@ async function deleteSelectedAccountGroups() {
   try {
     await batchDeleteAccountGroups(selectedRows.value.map(row => row.id));
     ElMessage.success("删除选中分组成功");
-    refreshAccountGroups();
+    void refreshAccountGroups();
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "批量删除失败，请稍后重试"));
   } finally {
@@ -164,7 +237,7 @@ async function deleteSelectedAccountGroups() {
 
 function searchAccountGroups() {
   page.value = 1;
-  refreshAccountGroups();
+  void refreshAccountGroups();
 }
 
 function resetSearchForm() {
@@ -172,6 +245,10 @@ function resetSearchForm() {
   searchForm.value.groupName = "";
   searchAccountGroups();
 }
+
+onMounted(() => {
+  void refreshAccountGroups();
+});
 </script>
 
 <template>
@@ -282,6 +359,33 @@ function resetSearchForm() {
             label="更新时间"
             width="180"
           />
+          <el-table-column label="操作" width="160" fixed="right">
+            <template #default="{ row }">
+              <el-tooltip
+                content="系统默认分组不允许修改"
+                placement="top"
+                :disabled="!(row as AccountGroupRow).systemBuiltin"
+              >
+                <span>
+                  <el-button
+                    link
+                    type="primary"
+                    :disabled="(row as AccountGroupRow).systemBuiltin"
+                    @click="openEditDrawer(row as AccountGroupRow)"
+                  >
+                    修改
+                  </el-button>
+                </span>
+              </el-tooltip>
+              <el-button
+                link
+                type="primary"
+                @click="openGroupAccounts(row as AccountGroupRow)"
+              >
+                账号
+              </el-button>
+            </template>
+          </el-table-column>
           <template #empty>
             <el-empty description="暂无账号分组" />
           </template>
@@ -291,6 +395,7 @@ function resetSearchForm() {
           v-model:current-page="page"
           v-model:page-size="pageSize"
           :total="total"
+          @change="refreshAccountGroups"
         />
       </template>
     </PureTableBar>
@@ -341,6 +446,55 @@ function resetSearchForm() {
         </el-button>
       </template>
     </el-drawer>
+
+    <el-drawer
+      v-model="showEditDrawer"
+      title="修改分组"
+      size="480px"
+      destroy-on-close
+    >
+      <template v-if="editingGroup">
+        <el-descriptions :column="1" border class="account-group-edit-meta">
+          <el-descriptions-item label="分组ID">
+            {{ editingGroup.id }}
+          </el-descriptions-item>
+          <el-descriptions-item label="当前名称">
+            {{ editingGroup.name }}
+          </el-descriptions-item>
+        </el-descriptions>
+        <el-form :model="editForm" label-position="top">
+          <el-form-item label="分组名称" required>
+            <el-input
+              v-model="editForm.name"
+              :maxlength="128"
+              show-word-limit
+              placeholder="请输入分组名称"
+            />
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input
+              v-model="editForm.remark"
+              type="textarea"
+              :rows="4"
+              :maxlength="512"
+              show-word-limit
+              placeholder="填写分组用途、规则或说明"
+            />
+          </el-form-item>
+        </el-form>
+      </template>
+
+      <template #footer>
+        <el-button @click="showEditDrawer = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="editLoading"
+          @click="submitEditAccountGroup"
+        >
+          保存修改
+        </el-button>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
@@ -359,5 +513,9 @@ function resetSearchForm() {
 
 .account-group-create-alert {
   margin-top: 16px;
+}
+
+.account-group-edit-meta {
+  margin-bottom: 16px;
 }
 </style>

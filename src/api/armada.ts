@@ -1,6 +1,9 @@
 import { http } from "@/utils/http";
 import type { AxiosRequestConfig } from "axios";
-import type { RequestMethods } from "@/utils/http/types.d";
+import type {
+  PureHttpRequestConfig,
+  RequestMethods
+} from "@/utils/http/types.d";
 
 /** armada 统一响应信封。code=0 成功,非 0 业务错误(HTTP 仍 200)。 */
 export interface ArmadaResp<T> {
@@ -16,9 +19,10 @@ export interface ArmadaResp<T> {
 export async function armadaRequest<T>(
   method: RequestMethods,
   url: string,
-  opts?: AxiosRequestConfig
+  opts?: AxiosRequestConfig,
+  config?: PureHttpRequestConfig
 ): Promise<T> {
-  const resp = await http.request<ArmadaResp<T>>(method, url, opts);
+  const resp = await http.request<ArmadaResp<T>>(method, url, opts, config);
   if (!resp || resp.code !== 0) {
     throw new Error(resp?.message ?? "请求失败");
   }

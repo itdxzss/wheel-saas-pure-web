@@ -16,14 +16,16 @@ const {
   batchMoveForm,
   groupLoading,
   handleBatchAction,
+  handleRowAction,
+  isOnlineActionDisabled,
   loading,
+  onlineActionLabel,
   onSelectionChange,
   page,
   pageSize,
   refreshAccountList,
   resetSearchForm,
   riskStatusOptions,
-  rowActionWarning,
   rows,
   searchAccounts,
   searchForm,
@@ -170,12 +172,14 @@ const {
       v-model:page-size="pageSize"
       :columns="accountListColumns"
       :loading="loading"
+      :online-action-disabled="isOnlineActionDisabled"
+      :online-action-label="onlineActionLabel"
       :rows="rows"
       :selected-count="selectedCount"
       :total="total"
       @batch-command="handleBatchAction"
       @refresh="refreshAccountList"
-      @row-action="rowActionWarning"
+      @row-action="handleRowAction"
       @selection-change="onSelectionChange"
     />
 
