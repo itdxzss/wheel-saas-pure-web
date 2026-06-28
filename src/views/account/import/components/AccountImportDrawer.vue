@@ -399,7 +399,7 @@ function submitDrawer(): void {
           v-model="groupForm.remark"
           type="textarea"
           :rows="5"
-          maxlength="512"
+          maxlength="255"
           show-word-limit
           placeholder="填写分组用途、规则或说明"
         />

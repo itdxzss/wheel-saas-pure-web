@@ -420,7 +420,7 @@ onMounted(() => {
             v-model="createForm.remark"
             type="textarea"
             :rows="4"
-            :maxlength="512"
+            :maxlength="255"
             show-word-limit
             placeholder="填写分组用途、规则或说明，例如：用于进群账号，国家=巴基斯坦，账号状态=正常"
           />
@@ -476,7 +476,7 @@ onMounted(() => {
               v-model="editForm.remark"
               type="textarea"
               :rows="4"
-              :maxlength="512"
+              :maxlength="255"
               show-word-limit
               placeholder="填写分组用途、规则或说明"
             />

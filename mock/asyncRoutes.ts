@@ -135,6 +135,30 @@ const taskRouter = {
         module_key: "ws_group",
         perm_key: "tenant:group_link:view"
       }
+    },
+    {
+      path: "/task/pull",
+      component: "task/pull-task/index",
+      name: "TaskPull",
+      meta: {
+        title: "拉群任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "pull_task",
+        perm_key: "tenant:pull_task:view"
+      }
+    },
+    {
+      path: "/task/group-marketing",
+      component: "task/group-marketing/index",
+      name: "TaskGroupMarketing",
+      meta: {
+        title: "群组营销任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "marketing_task",
+        perm_key: "tenant:marketing_task:view"
+      }
     }
   ]
 };
