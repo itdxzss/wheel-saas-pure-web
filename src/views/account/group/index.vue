@@ -413,7 +413,7 @@ onMounted(() => {
         <el-form-item label="分组名称" required>
           <el-input
             v-model="createForm.name"
-            :maxlength="128"
+            :maxlength="100"
             show-word-limit
             placeholder="例如：巴铁推手-A / 印度进群-A"
           />
@@ -469,7 +469,7 @@ onMounted(() => {
           <el-form-item label="分组名称" required>
             <el-input
               v-model="editForm.name"
-              :maxlength="128"
+              :maxlength="100"
               show-word-limit
               placeholder="请输入分组名称"
             />
