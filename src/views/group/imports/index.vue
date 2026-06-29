@@ -34,7 +34,7 @@ defineOptions({
 interface GroupImportSearchForm {
   keyword: string;
   id: string;
-  importedRange: Array<string | number>;
+  importedRange: string[];
   status: string;
 }
 
