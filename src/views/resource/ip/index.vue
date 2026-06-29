@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import { useResourceIpPage } from "./composables/useResourceIpPage";
 import Search from "~icons/ri/search-line";
 import RefreshRight from "~icons/ep/refresh-right";
 import Upload from "~icons/ep/upload";
@@ -12,95 +12,33 @@ defineOptions({
   name: "ResourceIp"
 });
 
-interface IpManageRow {
-  id: number;
-  country: string;
-  proxyType: string;
-  proxyAddress: string;
-  username: string;
-  password: string;
-  validAccountCount: number;
-  source: string;
-  createdAt: string;
-}
-
-interface IpSearchForm {
-  country: string;
-  proxyType: string;
-  source: string;
-}
-
-interface IpImportForm {
-  country: string;
-  proxyType: string;
-  source: string;
-}
-
-const countryOptions = [
-  "混合（不限国家）",
-  "巴基斯坦",
-  "印度",
-  "马来西亚",
-  "印度尼西亚"
-];
-const proxyTypeOptions = ["HTTP", "SOCKS5"];
-const searchForm = ref<IpSearchForm>({
-  country: "",
-  proxyType: "",
-  source: ""
-});
-const loading = ref(false);
-const guideCollapsed = ref(false);
-const rows = ref<IpManageRow[]>([]);
-const selectedRows = ref<IpManageRow[]>([]);
-const showImportDrawer = ref(false);
-const importForm = ref<IpImportForm>({
-  country: "",
-  proxyType: "HTTP",
-  source: ""
-});
-const page = ref(1);
-const pageSize = ref(10);
-const total = ref(0);
-
-const columns: TableColumnList = [
-  { label: "国家", prop: "country", width: 130 },
-  { label: "类型", prop: "proxyType", width: 110 },
-  { label: "代理地址", prop: "proxyAddress", minWidth: 220 },
-  { label: "用户名", prop: "username", minWidth: 140 },
-  { label: "密码", prop: "password", minWidth: 140 },
-  { label: "有效账号", prop: "validAccountCount", width: 110 },
-  { label: "来源", prop: "source", minWidth: 140 },
-  { label: "创建时间", prop: "createdAt", width: 180 }
-];
-
-function refreshIpList() {
-  loading.value = false;
-}
-
-function openImportDrawer() {
-  showImportDrawer.value = true;
-}
-
-function deleteSelectedIps() {
-  if (selectedRows.value.length === 0) return;
-}
-
-function onSelectionChange(selection: IpManageRow[]) {
-  selectedRows.value = selection;
-}
-
-function searchIpList() {
-  page.value = 1;
-  refreshIpList();
-}
-
-function resetSearchForm() {
-  searchForm.value.country = "";
-  searchForm.value.proxyType = "";
-  searchForm.value.source = "";
-  searchIpList();
-}
+const {
+  columns,
+  countryOptions,
+  deleting,
+  errorMessage,
+  guideCollapsed,
+  importErrors,
+  importForm,
+  importing,
+  loading,
+  page,
+  pageSize,
+  proxyTypeOptions,
+  rows,
+  searchForm,
+  selectedRows,
+  showImportDrawer,
+  total,
+  uploadFiles,
+  deleteSelectedIps,
+  onSelectionChange,
+  openImportDrawer,
+  refreshIpList,
+  resetSearchForm,
+  searchIpList,
+  submitImport
+} = useResourceIpPage();
 </script>
 
 <template>
@@ -228,6 +166,15 @@ function resetSearchForm() {
       </el-form>
     </div>
 
+    <el-alert
+      v-if="errorMessage"
+      class="ip-manage-error"
+      type="error"
+      show-icon
+      :closable="false"
+      :title="errorMessage"
+    />
+
     <PureTableBar title="IP 管理" :columns="columns" @refresh="refreshIpList">
       <template #buttons>
         <el-button
@@ -240,6 +187,7 @@ function resetSearchForm() {
         <el-button
           type="danger"
           plain
+          :loading="deleting"
           :disabled="selectedRows.length === 0"
           :icon="useRenderIcon(Delete)"
           @click="deleteSelectedIps"
@@ -324,6 +272,7 @@ function resetSearchForm() {
           v-model:current-page="page"
           v-model:page-size="pageSize"
           :total="total"
+          @change="refreshIpList"
         />
       </template>
     </PureTableBar>
@@ -376,7 +325,13 @@ function resetSearchForm() {
           />
         </el-form-item>
         <el-form-item label="TXT 文件" required>
-          <el-upload drag accept=".txt,text/plain" :auto-upload="false">
+          <el-upload
+            v-model:file-list="uploadFiles"
+            drag
+            accept=".txt,text/plain"
+            :auto-upload="false"
+            :limit="1"
+          >
             <div class="ip-upload-text">点击或拖拽 TXT 文件到此处</div>
             <template #tip>
               <div class="el-upload__tip">仅支持 .txt 格式，编码建议 UTF-8</div>
@@ -385,9 +340,24 @@ function resetSearchForm() {
         </el-form-item>
       </el-form>
 
+      <el-alert
+        v-if="importErrors.length > 0"
+        class="ip-import-errors"
+        type="warning"
+        show-icon
+        :closable="false"
+        title="以下行未导入"
+      >
+        <ul class="ip-import-error-list">
+          <li v-for="item in importErrors" :key="item">{{ item }}</li>
+        </ul>
+      </el-alert>
+
       <template #footer>
         <el-button @click="showImportDrawer = false">取消</el-button>
-        <el-button type="primary" disabled>开始导入</el-button>
+        <el-button type="primary" :loading="importing" @click="submitImport">
+          开始导入
+        </el-button>
       </template>
     </el-drawer>
   </div>
@@ -480,6 +450,16 @@ function resetSearchForm() {
 
 .ip-import-alert {
   margin-bottom: 16px;
+}
+
+.ip-import-errors,
+.ip-manage-error {
+  margin-bottom: 12px;
+}
+
+.ip-import-error-list {
+  padding-left: 18px;
+  margin: 8px 0 0;
 }
 
 .ip-import-form :deep(.el-select),
