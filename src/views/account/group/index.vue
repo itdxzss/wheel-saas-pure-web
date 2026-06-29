@@ -80,10 +80,19 @@ const columns: TableColumnList = [
 ];
 
 function buildAccountGroupKeyword() {
-  const groupId = searchForm.value.groupId.trim();
-  if (groupId) return groupId;
   const groupName = searchForm.value.groupName.trim();
   return groupName || undefined;
+}
+
+function parseAccountGroupId() {
+  const groupId = searchForm.value.groupId.trim();
+  if (!groupId) return undefined;
+  const value = Number(groupId);
+  if (!/^[1-9]\d*$/.test(groupId) || !Number.isSafeInteger(value)) {
+    ElMessage.warning("分组ID必须是正整数");
+    return null;
+  }
+  return value;
 }
 
 function formatAccountCount(row: AccountGroupRow) {
@@ -94,14 +103,15 @@ function formatAccountCount(row: AccountGroupRow) {
 }
 
 async function refreshAccountGroups() {
+  const groupId = parseAccountGroupId();
+  if (groupId === null) return;
   selectedRows.value = [];
   loading.value = true;
   try {
-    const groupId = searchForm.value.groupId.trim();
     const response = await listAccountGroups({
       page: page.value,
       pageSize: pageSize.value,
-      id: groupId ? Number(groupId) : undefined,
+      id: groupId,
       keyword: groupId ? undefined : buildAccountGroupKeyword()
     });
     rows.value = response.list ?? [];

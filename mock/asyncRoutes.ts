@@ -149,6 +149,18 @@ const taskRouter = {
       }
     },
     {
+      path: "/task/join",
+      component: "task/join-task/index",
+      name: "TaskJoin",
+      meta: {
+        title: "进群任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "join_task",
+        perm_key: "tenant:join_task:view"
+      }
+    },
+    {
       path: "/task/group-marketing",
       component: "task/group-marketing/index",
       name: "TaskGroupMarketing",

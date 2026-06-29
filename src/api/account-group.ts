@@ -45,6 +45,8 @@ interface ArmadaAccountGroupRow {
   systemBuiltin?: number | boolean | null;
   accountCount?: number | null;
   onlineCount?: number | null;
+  riskCount?: number | null;
+  bannedCount?: number | null;
   createdAt?: number | null;
   updatedAt?: number | null;
 }
@@ -66,15 +68,17 @@ function toQuery(params: AccountGroupListQuery) {
 function toAccountGroupRow(row: ArmadaAccountGroupRow): AccountGroupApiRow {
   const totalAccounts = row.accountCount ?? 0;
   const onlineAccounts = row.onlineCount ?? 0;
+  const abnormalAccounts = row.riskCount ?? 0;
+  const bannedAccounts = row.bannedCount ?? 0;
   return {
     id: row.id,
     name: row.name,
     remark: row.remark ?? null,
     totalAccounts,
     onlineAccounts,
-    abnormalAccounts: 0,
-    bannedAccounts: 0,
-    accountCountSummary: `${totalAccounts} - ${onlineAccounts} / 0 / 0`,
+    abnormalAccounts,
+    bannedAccounts,
+    accountCountSummary: `${totalAccounts} - ${onlineAccounts} / ${abnormalAccounts} / ${bannedAccounts}`,
     updatedAt: formatEpoch(row.updatedAt ?? row.createdAt),
     systemBuiltin: row.systemBuiltin === true || row.systemBuiltin === 1
   };
