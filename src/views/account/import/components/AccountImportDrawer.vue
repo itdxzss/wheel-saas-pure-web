@@ -13,6 +13,7 @@ import {
   importKindOptions
 } from "../constants";
 import type { AccountImportKind, AccountImportSubmitPayload } from "../types";
+import { apiErrorMessage } from "@/utils/api-error";
 import UploadFilled from "~icons/ep/upload-filled";
 
 defineOptions({
@@ -92,16 +93,6 @@ function switchImportKind(kind: AccountImportKind): void {
 
 function onKindChange(value: string | number | boolean): void {
   switchImportKind(value as AccountImportKind);
-}
-
-function apiErrorMessage(error: unknown, fallback: string): string {
-  const data = (
-    error as { response?: { data?: { msg?: unknown; message?: unknown } } }
-  )?.response?.data;
-  const message = data?.msg ?? data?.message;
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : fallback;
 }
 
 function readTextFile(file: File): Promise<string> {

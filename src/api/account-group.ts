@@ -1,4 +1,5 @@
 import { armadaRequest } from "@/api/armada";
+import { formatEpochMillis } from "@/utils/time";
 
 export interface AccountGroupApiRow {
   id: number;
@@ -51,11 +52,6 @@ interface ArmadaAccountGroupRow {
   updatedAt?: number | null;
 }
 
-function formatEpoch(value?: number | null): string {
-  if (!value) return "-";
-  return new Date(value).toISOString().replace("T", " ").slice(0, 19);
-}
-
 function toQuery(params: AccountGroupListQuery) {
   return {
     page: params.page,
@@ -79,7 +75,7 @@ function toAccountGroupRow(row: ArmadaAccountGroupRow): AccountGroupApiRow {
     abnormalAccounts,
     bannedAccounts,
     accountCountSummary: `${totalAccounts} - ${onlineAccounts} / ${abnormalAccounts} / ${bannedAccounts}`,
-    updatedAt: formatEpoch(row.updatedAt ?? row.createdAt),
+    updatedAt: formatEpochMillis(row.updatedAt ?? row.createdAt),
     systemBuiltin: row.systemBuiltin === true || row.systemBuiltin === 1
   };
 }

@@ -39,6 +39,7 @@ import {
   listAccountGroups,
   type AccountGroupApiRow
 } from "@/api/account-group";
+import { apiErrorMessage } from "@/utils/api-error";
 
 export interface PullTaskSearchForm {
   id: string;
@@ -168,16 +169,6 @@ export interface PullTaskPageState {
   supplementPullers: () => Promise<void>;
   toggleAdvanced: () => void;
   total: Ref<number>;
-}
-
-function apiErrorMessage(error: unknown, fallback: string): string {
-  const data = (
-    error as { response?: { data?: { message?: unknown; msg?: unknown } } }
-  )?.response?.data;
-  const message = data?.message ?? data?.msg ?? (error as Error)?.message;
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : fallback;
 }
 
 function emptyCreateForm(): PullTaskCreateForm {

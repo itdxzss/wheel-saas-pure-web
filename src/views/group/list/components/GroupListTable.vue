@@ -4,6 +4,7 @@ import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { GroupListRow } from "@/api/group";
+import { formatEpochMillis as formatEpoch } from "@/utils/time";
 import Delete from "~icons/ep/delete";
 
 defineOptions({
@@ -53,19 +54,6 @@ function statusType(row: GroupListRow) {
 
 function statusLabel(row: GroupListRow): string {
   return row.statusLabel || row.status || "未检测";
-}
-
-function formatEpoch(value?: number | null): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("zh-CN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
 }
 
 function avatarText(row: GroupListRow): string {

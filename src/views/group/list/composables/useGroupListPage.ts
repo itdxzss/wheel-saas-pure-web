@@ -14,6 +14,7 @@ import {
   type GroupListQuery,
   type GroupListRow
 } from "@/api/group";
+import { apiErrorMessage } from "@/utils/api-error";
 
 export interface GroupSearchForm {
   keyword: string;
@@ -43,16 +44,6 @@ export interface GroupListPageState {
   searchGroups: () => void;
   selectedCount: ComputedRef<number>;
   total: Ref<number>;
-}
-
-function apiErrorMessage(error: unknown, fallback: string): string {
-  const data = (
-    error as { response?: { data?: { message?: unknown; msg?: unknown } } }
-  )?.response?.data;
-  const message = data?.message ?? data?.msg ?? (error as Error)?.message;
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : fallback;
 }
 
 function groupName(row: GroupListRow): string {

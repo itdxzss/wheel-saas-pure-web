@@ -1,4 +1,5 @@
 import type { PullTaskGroupStatus, PullTaskStatus } from "@/api/pull-task";
+import { formatEpochMillis } from "@/utils/time";
 
 export const pullTaskStatusOptions: Array<{
   label: string;
@@ -93,14 +94,5 @@ export function pullTaskModeLabel(mode?: string | null): string {
 }
 
 export function formatEpoch(value?: number | null): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("zh-CN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
+  return formatEpochMillis(value);
 }

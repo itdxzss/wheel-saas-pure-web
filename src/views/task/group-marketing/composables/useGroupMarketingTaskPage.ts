@@ -35,6 +35,7 @@ import {
   listAccountGroups,
   type AccountGroupApiRow
 } from "@/api/account-group";
+import { apiErrorMessage } from "@/utils/api-error";
 
 export interface GroupMarketingSearchForm {
   id: string;
@@ -102,16 +103,6 @@ export interface GroupMarketingTaskPageState {
   total: Ref<number>;
   treeAccounts: Ref<MarketingTreeAccount[]>;
   treeLoading: Ref<boolean>;
-}
-
-function apiErrorMessage(error: unknown, fallback: string): string {
-  const data = (
-    error as { response?: { data?: { message?: unknown; msg?: unknown } } }
-  )?.response?.data;
-  const message = data?.message ?? data?.msg ?? (error as Error)?.message;
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : fallback;
 }
 
 function emptyCreateForm(): GroupMarketingCreateForm {

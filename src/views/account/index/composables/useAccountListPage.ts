@@ -23,6 +23,7 @@ import {
   listAccountGroups,
   type AccountGroupApiRow
 } from "@/api/account-group";
+import { apiErrorMessage } from "@/utils/api-error";
 
 export interface AccountSearchForm {
   keyword: string;
@@ -155,16 +156,6 @@ export function useAccountListPage(): AccountListPageState {
     { key: "unassigned", label: "未分配账户", value: summary.value.unassigned }
   ]);
   const selectedCount = computed(() => selectedRows.value.length);
-
-  function apiErrorMessage(error: unknown, fallback: string) {
-    const data = (
-      error as { response?: { data?: { msg?: unknown; message?: unknown } } }
-    )?.response?.data;
-    const message = data?.msg ?? data?.message;
-    return typeof message === "string" && message.trim()
-      ? message.trim()
-      : fallback;
-  }
 
   function accountId(row: TenantAccount): number | null {
     return typeof row.id === "number" && Number.isSafeInteger(row.id)

@@ -26,6 +26,7 @@ import {
   type AccountGroupWriteRequest
 } from "@/api/account-group";
 import { listTenantIpRegions } from "@/api/resource-ip";
+import { apiErrorMessage } from "@/utils/api-error";
 import { AUTO_IP_MODE, importKindLabelMap } from "../constants";
 import type {
   AccountImportDetailStatus,
@@ -110,16 +111,6 @@ export function useAccountImportPage(): AccountImportPageState {
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
   const ipRegionOptions = computed(() => [AUTO_IP_MODE, ...ipRegions.value]);
-
-  function apiErrorMessage(error: unknown, fallback: string): string {
-    const data = (
-      error as { response?: { data?: { msg?: unknown; message?: unknown } } }
-    )?.response?.data;
-    const message = data?.msg ?? data?.message;
-    return typeof message === "string" && message.trim()
-      ? message.trim()
-      : fallback;
-  }
 
   function buildQuery(): ListAccountImportTasksParams {
     const query: ListAccountImportTasksParams = {

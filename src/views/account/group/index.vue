@@ -11,6 +11,7 @@ import {
   listAccountGroups,
   updateAccountGroup
 } from "@/api/account-group";
+import { apiErrorMessage } from "@/utils/api-error";
 import Search from "~icons/ri/search-line";
 import Delete from "~icons/ep/delete";
 import RefreshRight from "~icons/ep/refresh-right";
@@ -131,14 +132,6 @@ function onSelectionChange(rows: AccountGroupRow[]) {
 
 function isSelectable(row: AccountGroupRow) {
   return row.systemBuiltin !== true;
-}
-
-function apiErrorMessage(error: unknown, fallback: string) {
-  const message = (error as { response?: { data?: { message?: unknown } } })
-    ?.response?.data?.message;
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : fallback;
 }
 
 function openCreateDrawer() {

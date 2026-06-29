@@ -29,6 +29,7 @@ import {
   type AccountGroupApiRow
 } from "@/api/account-group";
 import { listTenantAccounts, type TenantAccount } from "@/api/account";
+import { apiErrorMessage } from "@/utils/api-error";
 import type { JoinFailurePolicy } from "../constants";
 
 export interface JoinTaskSearchForm {
@@ -108,16 +109,6 @@ export interface JoinTaskPageState {
   submitEditor: () => Promise<void>;
   total: Ref<number>;
   toggleAdvanced: () => void;
-}
-
-function apiErrorMessage(error: unknown, fallback: string): string {
-  const data = (
-    error as { response?: { data?: { message?: unknown; msg?: unknown } } }
-  )?.response?.data;
-  const message = data?.message ?? data?.msg ?? (error as Error)?.message;
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : fallback;
 }
 
 function emptyEditorForm(): JoinTaskEditorForm {

@@ -13,6 +13,7 @@ import {
   type GroupListRow,
   type GroupMember
 } from "@/api/group";
+import { apiErrorMessage } from "@/utils/api-error";
 import { timedMessageOptions } from "../constants";
 
 defineOptions({
@@ -69,16 +70,6 @@ const filteredMembers = computed<GroupMember[]>(() => {
   );
 });
 const batchDisabled = computed(() => selectedJids.value.length === 0);
-
-function apiErrorMessage(error: unknown, fallback: string): string {
-  const data = (
-    error as { response?: { data?: { message?: unknown; msg?: unknown } } }
-  )?.response?.data;
-  const message = data?.message ?? data?.msg ?? (error as Error)?.message;
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : fallback;
-}
 
 function displayGroupName(group: GroupListRow | null): string {
   if (!group) return "";

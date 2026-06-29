@@ -1,6 +1,7 @@
 import { http } from "@/utils/http";
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
+import { formatEpochMillis } from "@/utils/time";
 
 export type AccountImportType = "六段号" | "JSON号" | "全参账号" | string;
 export type AccountImportStatus = "导入中" | "已完成" | string;
@@ -130,11 +131,6 @@ interface ArmadaAccountImportDetail {
   createdAt?: number | null;
 }
 
-function formatEpoch(value?: number | null): string {
-  if (!value) return "-";
-  return new Date(value).toISOString().replace("T", " ").slice(0, 19);
-}
-
 function importFormatCode(value?: string | number | null): number | undefined {
   if (typeof value === "number") return value;
   if (value === "六段号") return 1;
@@ -240,7 +236,7 @@ function toTask(row: ArmadaAccountImportBatch): AccountImportTask {
     abnormal: loginAbnormal,
     abnormal_key: 0,
     abnormal_ban: 0,
-    created_at: formatEpoch(row.createdAt),
+    created_at: formatEpochMillis(row.createdAt),
     progress: `${imported} / ${total}`,
     status: statusLabel(row.status),
     remark: null
@@ -256,7 +252,7 @@ function toDetailRow(row: ArmadaAccountImportDetail): AccountImportDetailRow {
     reason: success ? "" : row.failReason || row.parseResultLabel || "导入失败",
     group: null,
     tag: null,
-    created_at: formatEpoch(row.createdAt)
+    created_at: formatEpochMillis(row.createdAt)
   };
 }
 
@@ -305,9 +301,11 @@ export function createAccountImportTask(
   ).then(toTask);
 }
 
-export function uploadAccountImportZip(data: CreateAccountImportTaskRequest & {
-  file: File;
-}): Promise<AccountImportTask> {
+export function uploadAccountImportZip(
+  data: CreateAccountImportTaskRequest & {
+    file: File;
+  }
+): Promise<AccountImportTask> {
   const form = toFormData(data);
   form.append("file", data.file);
   return armadaRequest<ArmadaAccountImportBatch>(

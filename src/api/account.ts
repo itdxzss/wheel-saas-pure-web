@@ -1,4 +1,5 @@
 import { armadaRequest } from "@/api/armada";
+import { formatEpochMillis } from "@/utils/time";
 
 export type AccountState = 1 | 2 | 3 | 4 | 5;
 export type LoginState = 1 | 2;
@@ -118,11 +119,6 @@ interface ArmadaTenantAccount {
   ipSource?: string | null;
 }
 
-function formatEpoch(value?: number | null): string | null {
-  if (!value) return null;
-  return new Date(value).toISOString().replace("T", " ").slice(0, 19);
-}
-
 function accountTypeLabel(value?: number | null): string | null {
   if (value === 1) return "个人号";
   if (value === 2) return "商业号";
@@ -179,12 +175,12 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     ip_region: row.country ?? null,
     ip_source: row.ipSource ?? null,
     ip_group_name: null,
-    first_login_time: formatEpoch(row.createdAt),
-    risk_end_time: formatEpoch(row.riskEndTime),
+    first_login_time: formatEpochMillis(row.createdAt, null),
+    risk_end_time: formatEpochMillis(row.riskEndTime, null),
     pull_into_group_count: row.pullIntoGroupCount ?? 0,
     hyperlink_sent_count: row.hyperlinkSentCount ?? 0,
     block_reason: row.blockReason ?? row.blockErrorCode ?? null,
-    invalidated_at: formatEpoch(row.invalidatedAt)
+    invalidated_at: formatEpochMillis(row.invalidatedAt, null)
   };
 }
 
