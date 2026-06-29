@@ -51,9 +51,22 @@ expectIncludes(
     "proxy.example.com:443:oper:mysecretpass2",
     "英文冒号",
     "不符合规范的行将作为格式错误不予导入",
-    "所选国家 / 来源 / 类型将作用于文件中全部记录"
+    "所选国家 / 来源 / 类型将作用于文件中全部记录",
+    ':on-exceed="handleUploadExceed"'
   ],
   "resource IP import dialog"
+);
+
+expectIncludes(
+  dialog,
+  [
+    "function handleUploadExceed(files: File[]): void",
+    "function replaceUploadFile(file: File): void",
+    "uploadFiles.value = [",
+    "raw: rawFile",
+    "uid: rawFile.uid"
+  ],
+  "resource IP upload replacement"
 );
 
 if (dialog.includes("<el-drawer") || dialog.includes("<dialog")) {

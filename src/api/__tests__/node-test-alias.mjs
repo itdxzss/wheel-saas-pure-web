@@ -8,6 +8,10 @@ const armadaDouble = resolve(
   import.meta.dirname,
   "armada-test-double.ts"
 );
+const httpDouble = resolve(
+  import.meta.dirname,
+  "http-test-double.ts"
+);
 
 require("node:module")._resolveFilename = function resolveTestAlias(
   request,
@@ -19,6 +23,15 @@ require("node:module")._resolveFilename = function resolveTestAlias(
     return originalResolveFilename.call(
       this,
       armadaDouble,
+      parent,
+      isMain,
+      options
+    );
+  }
+  if (request === "@/utils/http") {
+    return originalResolveFilename.call(
+      this,
+      httpDouble,
       parent,
       isMain,
       options

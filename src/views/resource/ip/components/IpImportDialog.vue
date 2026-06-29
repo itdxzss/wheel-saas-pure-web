@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import type { UploadUserFile } from "element-plus";
+import {
+  genFileId,
+  type UploadRawFile,
+  type UploadUserFile
+} from "element-plus";
 import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
 import type { IpImportForm } from "../composables/useResourceIpPage";
 
@@ -23,6 +27,26 @@ const form = defineModel<IpImportForm>("form", { required: true });
 const uploadFiles = defineModel<UploadUserFile[]>("uploadFiles", {
   required: true
 });
+
+function replaceUploadFile(file: File): void {
+  const rawFile = file as UploadRawFile;
+  rawFile.uid = genFileId();
+  uploadFiles.value = [
+    {
+      name: rawFile.name,
+      status: "ready",
+      size: rawFile.size,
+      raw: rawFile,
+      uid: rawFile.uid
+    }
+  ];
+}
+
+function handleUploadExceed(files: File[]): void {
+  const [file] = files;
+  if (!file) return;
+  replaceUploadFile(file);
+}
 
 function submit(): void {
   emit("submit");
@@ -93,6 +117,7 @@ function submit(): void {
           accept=".txt,text/plain"
           :auto-upload="false"
           :limit="1"
+          :on-exceed="handleUploadExceed"
         >
           <div class="ip-upload-icon">↥</div>
           <div class="ip-upload-text">点击选择 TXT 文件</div>
