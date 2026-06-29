@@ -13,12 +13,16 @@ defineOptions({
 const {
   accountGroups,
   accountStatusOptions,
+  accountTypeOptions,
   batchMoveForm,
+  batchMoveModeOptions,
   groupLoading,
   handleBatchAction,
   handleRowAction,
   isOnlineActionDisabled,
+  loginStateOptions,
   loading,
+  numberSourceOptions,
   onlineActionLabel,
   onSelectionChange,
   page,
@@ -62,7 +66,7 @@ const {
             v-model="searchForm.keyword"
             clearable
             class="account-search-main"
-            placeholder="账号 / 国家 / 协议 / 备注 / 分组 / 状态搜索"
+            placeholder="账号前缀 / 备注搜索"
             @keyup.enter="searchAccounts"
           />
         </el-form-item>
@@ -96,7 +100,77 @@ const {
           <el-input
             v-model="searchForm.phone"
             clearable
-            placeholder="请输入账号"
+            placeholder="请输入账号前缀"
+          />
+        </el-form-item>
+        <el-form-item label="账号类型">
+          <el-select
+            v-model="searchForm.accountType"
+            clearable
+            placeholder="请选择账号类型"
+          >
+            <el-option
+              v-for="item in accountTypeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="协议">
+          <el-input
+            v-model="searchForm.protocolId"
+            clearable
+            placeholder="请输入协议标识"
+          />
+        </el-form-item>
+        <el-form-item label="IP地址">
+          <el-input
+            v-model="searchForm.truthIp"
+            clearable
+            placeholder="请输入IP地址"
+          />
+        </el-form-item>
+        <el-form-item label="渠道">
+          <el-input
+            v-model="searchForm.channelName"
+            clearable
+            placeholder="请输入渠道"
+          />
+        </el-form-item>
+        <el-form-item label="来源">
+          <el-select
+            v-model="searchForm.numberSource"
+            clearable
+            placeholder="请选择来源"
+          >
+            <el-option
+              v-for="item in numberSourceOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="登录状态">
+          <el-select
+            v-model="searchForm.loginState"
+            clearable
+            placeholder="请选择登录状态"
+          >
+            <el-option
+              v-for="item in loginStateOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="国家">
+          <el-input
+            v-model="searchForm.country"
+            clearable
+            placeholder="请输入国家"
           />
         </el-form-item>
         <el-form-item label="风控状态">
@@ -127,13 +201,6 @@ const {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="IP分组">
-          <el-input
-            v-model="searchForm.ipGroupName"
-            clearable
-            placeholder="请输入IP分组"
-          />
-        </el-form-item>
         <el-form-item label="绑定分组">
           <el-select
             v-model="searchForm.groupId"
@@ -150,18 +217,20 @@ const {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="国家">
+        <el-form-item label="IP分组">
           <el-input
-            v-model="searchForm.country"
+            v-model="searchForm.ipGroupName"
             clearable
-            placeholder="请输入国家"
+            disabled
+            placeholder="暂未接入"
           />
         </el-form-item>
         <el-form-item label="绑定客服">
           <el-input
             v-model="searchForm.assignedService"
             clearable
-            placeholder="请输入绑定客服"
+            disabled
+            placeholder="暂未接入"
           />
         </el-form-item>
       </el-form>
@@ -194,10 +263,20 @@ const {
         type="info"
         show-icon
         :closable="false"
-        :title="`已选择 ${selectedCount} 个账号。任务中的账号后端会跳过。`"
+        :title="`已选择 ${selectedCount} 个账号。确认后将批量迁移到目标分组。`"
       />
       <el-form :model="batchMoveForm" label-position="top">
-        <el-form-item label="目标分组" required>
+        <el-form-item label="迁移方式">
+          <el-segmented
+            v-model="batchMoveForm.mode"
+            :options="batchMoveModeOptions"
+          />
+        </el-form-item>
+        <el-form-item
+          v-if="batchMoveForm.mode === 'existing'"
+          label="目标分组"
+          required
+        >
           <el-select
             v-model="batchMoveForm.groupId"
             filterable
@@ -212,12 +291,26 @@ const {
             />
           </el-select>
         </el-form-item>
+        <el-form-item v-else label="新分组名称" required>
+          <el-input
+            v-model="batchMoveForm.newGroupName"
+            clearable
+            maxlength="64"
+            show-word-limit
+            placeholder="请输入新分组名称"
+          />
+        </el-form-item>
         <el-form-item label="备注">
           <el-input
             v-model="batchMoveForm.remark"
             type="textarea"
             :rows="4"
-            placeholder="可记录本次迁移原因"
+            :placeholder="
+              batchMoveForm.mode === 'new'
+                ? '可填写新分组备注'
+                : '已有分组迁移不记录备注'
+            "
+            :disabled="batchMoveForm.mode === 'existing'"
           />
         </el-form-item>
       </el-form>
@@ -236,7 +329,7 @@ const {
 
 .account-list-stats {
   display: grid;
-  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  grid-template-columns: repeat(8, minmax(112px, 1fr));
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -275,6 +368,12 @@ const {
 @media (max-width: 1280px) {
   .account-list-stats {
     grid-template-columns: repeat(4, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .account-list-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

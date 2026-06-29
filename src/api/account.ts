@@ -15,6 +15,7 @@ export interface TenantAccount {
   protocol_address?: string | null;
   truth_ip?: string | null;
   account_type?: string | null;
+  device_os?: string | null;
   number_source?: string | null;
   channel_name?: string | null;
   account_state?: AccountState | null;
@@ -35,6 +36,7 @@ export interface TenantAccount {
   ip_source?: string | null;
   ip_group_name?: string | null;
   first_login_time?: string | null;
+  dispatched_at?: string | null;
   risk_end_time?: string | null;
   pull_into_group_count?: number | null;
   hyperlink_sent_count?: number | null;
@@ -95,6 +97,26 @@ export interface TenantAccountOnlineResult {
   local: boolean;
 }
 
+export interface TenantAccountBatchCommandResult {
+  requested: number;
+  submitted: number;
+  accepted: number;
+  timeout: number;
+  proxyRequired: number;
+  error: number;
+  remote: number;
+  elapsedMs: number;
+  results: unknown[];
+  remoteRoutes: unknown[];
+}
+
+export interface BatchMigrateTenantAccountsInput {
+  ids: number[];
+  accountGroupId?: number | null;
+  newGroupName?: string;
+  newGroupRemark?: string;
+}
+
 export interface PageResponse<T> {
   list?: T[];
   total?: number;
@@ -148,6 +170,12 @@ function numberSourceLabel(value?: number | null): string | null {
   return null;
 }
 
+function deviceOsLabel(value?: number | null): string | null {
+  if (value === 1) return "安卓";
+  if (value === 2) return "苹果";
+  return null;
+}
+
 function muteStatusLabel(value?: number | null): string | null {
   if (value === 1) return "6h";
   if (value === 2) return "24h";
@@ -161,6 +189,7 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     protocol_address: row.protocolId ?? null,
     truth_ip: row.truthIp ?? null,
     account_type: accountTypeLabel(row.accountType),
+    device_os: deviceOsLabel(row.deviceOs),
     number_source: numberSourceLabel(row.numberSource),
     channel_name: row.channelName ?? null,
     account_state: row.accountState ?? null,
@@ -181,6 +210,7 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     ip_source: row.ipSource ?? null,
     ip_group_name: null,
     first_login_time: formatEpochMillis(row.createdAt, null),
+    dispatched_at: formatEpochMillis(row.dispatchedAt, null),
     risk_end_time: formatEpochMillis(row.riskEndTime, null),
     pull_into_group_count: row.pullIntoGroupCount ?? 0,
     hyperlink_sent_count: row.hyperlinkSentCount ?? 0,
@@ -213,4 +243,44 @@ export function onlineTenantAccount(
     "post",
     `/api/accounts/${id}/online`
   );
+}
+
+export function batchOnlineTenantAccounts(
+  ids: number[]
+): Promise<TenantAccountBatchCommandResult> {
+  return armadaRequest<TenantAccountBatchCommandResult>(
+    "post",
+    "/api/accounts/batch-online",
+    { data: { ids } }
+  );
+}
+
+export function batchOfflineTenantAccounts(
+  ids: number[]
+): Promise<TenantAccountBatchCommandResult> {
+  return armadaRequest<TenantAccountBatchCommandResult>(
+    "post",
+    "/api/accounts/batch-offline",
+    { data: { ids } }
+  );
+}
+
+export function batchMigrateTenantAccountsToGroup(
+  input: BatchMigrateTenantAccountsInput
+): Promise<void> {
+  const data: BatchMigrateTenantAccountsInput = {
+    ids: input.ids,
+    accountGroupId: input.accountGroupId ?? null
+  };
+  if (input.newGroupName) data.newGroupName = input.newGroupName;
+  if (input.newGroupRemark) data.newGroupRemark = input.newGroupRemark;
+  return armadaRequest<void>("post", "/api/accounts/batch-migrate-group", {
+    data
+  });
+}
+
+export function batchDeleteTenantAccounts(ids: number[]): Promise<void> {
+  return armadaRequest<void>("post", "/api/accounts/batch-delete", {
+    data: { ids }
+  });
 }

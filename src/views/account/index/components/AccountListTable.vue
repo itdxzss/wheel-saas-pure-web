@@ -5,6 +5,14 @@ import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { TenantAccount } from "@/api/account";
 import MoreFilled from "~icons/ep/more-filled";
+import {
+  accountStatusLabel,
+  accountTypeDeviceLabel,
+  canDeleteAccount,
+  loginStateLabel,
+  riskStatusLabel,
+  sourceLabel
+} from "../account-display";
 
 defineOptions({
   name: "AccountListTable"
@@ -39,44 +47,6 @@ const currentPageSize = computed({
   get: () => props.pageSize,
   set: value => emit("update:pageSize", value)
 });
-
-function accountStatusLabel(row: TenantAccount) {
-  if (row.mute_status === "6h") return "禁言6小时";
-  if (row.mute_status === "24h") return "禁言24小时";
-  const map: Record<number, string> = {
-    1: "新增",
-    2: "正常",
-    3: "封禁",
-    4: "导出",
-    5: "解绑"
-  };
-  return row.account_state ? (map[row.account_state] ?? "-") : "-";
-}
-
-function loginStateLabel(value?: number | null) {
-  return value === 1 ? "在线" : value === 2 ? "离线" : "-";
-}
-
-function riskStatusLabel(value?: number | null) {
-  const map: Record<number, string> = {
-    1: "未风控",
-    2: "风控中",
-    3: "待解除"
-  };
-  return value ? (map[value] ?? "-") : "-";
-}
-
-function accountTypeLabel(value?: string | null) {
-  const map: Record<string, string> = {
-    PERSONAL_ANDROID: "个人号",
-    BUSINESS: "商业号"
-  };
-  return value ? (map[value] ?? value) : "-";
-}
-
-function sourceLabel(row: TenantAccount) {
-  return row.channel_name || row.number_source || "-";
-}
 
 function formatDate(value?: string | null) {
   if (!value) return "-";
@@ -150,11 +120,11 @@ function avatarText(row: TenantAccount) {
         />
         <el-table-column
           v-if="!dynamicColumns[4].hide"
-          label="账号类型"
-          width="130"
+          label="账号类型/设备"
+          width="140"
         >
           <template #default="{ row }">
-            {{ accountTypeLabel(row.account_type) }}
+            {{ accountTypeDeviceLabel(row as TenantAccount) }}
           </template>
         </el-table-column>
         <el-table-column
@@ -285,6 +255,7 @@ function avatarText(row: TenantAccount) {
             <el-button
               link
               type="warning"
+              disabled
               @click="emit('row-action', row as TenantAccount, '解除风控')"
             >
               解除风控
@@ -292,6 +263,7 @@ function avatarText(row: TenantAccount) {
             <el-button
               link
               type="danger"
+              :disabled="!canDeleteAccount(row as TenantAccount)"
               @click="emit('row-action', row as TenantAccount, '删除')"
             >
               删除

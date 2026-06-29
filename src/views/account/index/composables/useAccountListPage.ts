@@ -10,10 +10,17 @@ import {
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
+  batchDeleteTenantAccounts,
+  batchMigrateTenantAccountsToGroup,
+  batchOfflineTenantAccounts,
+  batchOnlineTenantAccounts,
   getTenantAccountSummary,
   listTenantAccounts,
   onlineTenantAccount,
   type AccountState,
+  type AccountType,
+  type LoginState,
+  type NumberSource,
   type RiskStatus,
   type TenantAccount,
   type TenantAccountListQuery,
@@ -24,10 +31,26 @@ import {
   type AccountGroupApiRow
 } from "@/api/account-group";
 import { apiErrorMessage } from "@/utils/api-error";
+import {
+  buildAccountStatCards,
+  canDeleteAccount,
+  type AccountStatCard
+} from "../account-display";
+import {
+  buildBatchMoveInput,
+  type BatchMoveForm,
+  type BatchMoveMode
+} from "../account-move";
 
 export interface AccountSearchForm {
   keyword: string;
   phone: string;
+  accountType: "" | AccountType;
+  protocolId: string;
+  numberSource: "" | NumberSource;
+  channelName: string;
+  truthIp: string;
+  loginState: "" | "1" | "2";
   riskStatus: "" | "1" | "2" | "3";
   accountStatus:
     | ""
@@ -41,11 +64,6 @@ export interface AccountSearchForm {
   groupId: "" | number;
   country: string;
   assignedService: string;
-}
-
-export interface BatchMoveForm {
-  groupId: "" | number;
-  remark: string;
 }
 
 const ZERO_SUMMARY: TenantAccountSummary = {
@@ -73,10 +91,14 @@ function routeNumber(value: unknown): "" | number {
 export interface AccountListPageState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   accountStatusOptions: string[];
+  accountTypeOptions: Array<{ label: string; value: AccountType }>;
   batchMoveForm: BatchMoveForm;
+  batchMoveModeOptions: Array<{ label: string; value: BatchMoveMode }>;
   groupLoading: Ref<boolean>;
   handleBatchAction: (command: string) => void;
+  loginStateOptions: Array<{ label: string; value: string }>;
   loading: Ref<boolean>;
+  numberSourceOptions: Array<{ label: string; value: NumberSource }>;
   onSelectionChange: (selection: TenantAccount[]) => void;
   page: Ref<number>;
   pageSize: Ref<number>;
@@ -92,7 +114,7 @@ export interface AccountListPageState {
   selectedCount: ComputedRef<number>;
   showAdvancedSearch: Ref<boolean>;
   showBatchMoveDrawer: Ref<boolean>;
-  statCards: ComputedRef<Array<{ key: string; label: string; value: number }>>;
+  statCards: ComputedRef<AccountStatCard[]>;
   submitBatchMove: () => void;
   total: Ref<number>;
 }
@@ -107,6 +129,19 @@ export function useAccountListPage(): AccountListPageState {
     { label: "风控中", value: "2" },
     { label: "待解除", value: "3" }
   ];
+  const loginStateOptions = [
+    { label: "在线", value: "1" },
+    { label: "离线", value: "2" }
+  ];
+  const accountTypeOptions: Array<{ label: string; value: AccountType }> = [
+    { label: "个人号", value: 1 },
+    { label: "商业号", value: 2 }
+  ];
+  const numberSourceOptions: Array<{ label: string; value: NumberSource }> = [
+    { label: "买量", value: 1 },
+    { label: "裂变", value: 2 },
+    { label: "自购", value: 3 }
+  ];
   const accountStatusOptions = [
     "正常",
     "封禁",
@@ -115,9 +150,19 @@ export function useAccountListPage(): AccountListPageState {
     "禁言24小时",
     "解绑"
   ];
+  const batchMoveModeOptions: Array<{ label: string; value: BatchMoveMode }> = [
+    { label: "已有分组", value: "existing" },
+    { label: "新建分组", value: "new" }
+  ];
   const searchForm = reactive<AccountSearchForm>({
     keyword: "",
     phone: "",
+    accountType: "",
+    protocolId: "",
+    numberSource: "",
+    channelName: "",
+    truthIp: "",
+    loginState: "",
     riskStatus: "",
     accountStatus: "",
     ipGroupName: "",
@@ -126,7 +171,9 @@ export function useAccountListPage(): AccountListPageState {
     assignedService: ""
   });
   const batchMoveForm = reactive<BatchMoveForm>({
+    mode: "existing",
     groupId: "",
+    newGroupName: "",
     remark: ""
   });
   const summary = ref<TenantAccountSummary>({ ...ZERO_SUMMARY });
@@ -146,21 +193,19 @@ export function useAccountListPage(): AccountListPageState {
   const onlineCooldownUntilById = ref<Map<number, number>>(new Map());
   let onlineCooldownTimer: number | null = null;
 
-  const statCards = computed(() => [
-    { key: "total", label: "总账号数", value: summary.value.total },
-    { key: "banned", label: "封禁账号", value: summary.value.banned },
-    { key: "online", label: "在线账号", value: summary.value.online },
-    { key: "offline", label: "离线账号", value: summary.value.offline },
-    { key: "risk", label: "风控账号", value: summary.value.risk },
-    { key: "assigned", label: "已分配账号", value: summary.value.assigned },
-    { key: "unassigned", label: "未分配账户", value: summary.value.unassigned }
-  ]);
+  const statCards = computed(() => buildAccountStatCards(summary.value));
   const selectedCount = computed(() => selectedRows.value.length);
 
   function accountId(row: TenantAccount): number | null {
     return typeof row.id === "number" && Number.isSafeInteger(row.id)
       ? row.id
       : null;
+  }
+
+  function selectedAccountIds(): number[] {
+    return selectedRows.value
+      .map(row => accountId(row))
+      .filter((id): id is number => id !== null);
   }
 
   function onlineCooldownKey(id: number): string {
@@ -241,6 +286,16 @@ export function useAccountListPage(): AccountListPageState {
     };
     if (searchForm.keyword.trim()) query.keyword = searchForm.keyword.trim();
     if (searchForm.phone.trim()) query.phone = searchForm.phone.trim();
+    if (searchForm.accountType) query.accountType = searchForm.accountType;
+    if (searchForm.protocolId.trim())
+      query.protocolId = searchForm.protocolId.trim();
+    if (searchForm.numberSource) query.numberSource = searchForm.numberSource;
+    if (searchForm.channelName.trim())
+      query.channelName = searchForm.channelName.trim();
+    if (searchForm.truthIp.trim()) query.truthIp = searchForm.truthIp.trim();
+    if (searchForm.loginState) {
+      query.loginState = Number(searchForm.loginState) as LoginState;
+    }
     if (searchForm.riskStatus) {
       query.riskStatus = Number(searchForm.riskStatus) as RiskStatus;
     }
@@ -253,14 +308,11 @@ export function useAccountListPage(): AccountListPageState {
       };
       const accountState = accountStateMap[searchForm.accountStatus];
       if (accountState) query.accountState = accountState;
-      if (searchForm.accountStatus === "禁言6小时") query.mute_status = "6h";
-      if (searchForm.accountStatus === "禁言24小时") query.mute_status = "24h";
+      if (searchForm.accountStatus === "禁言6小时") query.muteStatus = 1;
+      if (searchForm.accountStatus === "禁言24小时") query.muteStatus = 2;
     }
-    if (searchForm.ipGroupName) query.ip_group_name = searchForm.ipGroupName;
     if (searchForm.groupId) query.accountGroupId = Number(searchForm.groupId);
     if (searchForm.country.trim()) query.country = searchForm.country.trim();
-    if (searchForm.assignedService)
-      query.assigned_service = searchForm.assignedService;
     return query;
   }
 
@@ -313,6 +365,12 @@ export function useAccountListPage(): AccountListPageState {
   function resetSearchForm() {
     searchForm.keyword = "";
     searchForm.phone = "";
+    searchForm.accountType = "";
+    searchForm.protocolId = "";
+    searchForm.numberSource = "";
+    searchForm.channelName = "";
+    searchForm.truthIp = "";
+    searchForm.loginState = "";
     searchForm.riskStatus = "";
     searchForm.accountStatus = "";
     searchForm.ipGroupName = "";
@@ -327,21 +385,40 @@ export function useAccountListPage(): AccountListPageState {
   }
 
   function openBatchMoveDrawer() {
-    if (selectedRows.value.length === 0) {
+    if (selectedAccountIds().length === 0) {
       ElMessage.warning("请先选择账号");
       return;
     }
+    batchMoveForm.mode = "existing";
     batchMoveForm.groupId = "";
+    batchMoveForm.newGroupName = "";
     batchMoveForm.remark = "";
     showBatchMoveDrawer.value = true;
   }
 
-  function submitBatchMove() {
-    if (!batchMoveForm.groupId) {
-      ElMessage.warning("请选择目标分组");
+  async function submitBatchMove(): Promise<void> {
+    const ids = selectedAccountIds();
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择账号");
       return;
     }
-    ElMessage.warning("迁移到分组写接口待接入，当前只完成账号列表页面迁移");
+    const result = buildBatchMoveInput(ids, batchMoveForm);
+    if (result.ok === false) {
+      ElMessage.warning(result.message);
+      return;
+    }
+    try {
+      await batchMigrateTenantAccountsToGroup(result.payload);
+      ElMessage.success("迁移分组成功");
+      showBatchMoveDrawer.value = false;
+      selectedRows.value = [];
+      if (result.payload.newGroupName) {
+        await loadAccountGroups();
+      }
+      await refreshAccountList();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "迁移分组失败"));
+    }
   }
 
   async function submitOnline(row: TenantAccount): Promise<void> {
@@ -370,28 +447,119 @@ export function useAccountListPage(): AccountListPageState {
     }
   }
 
+  function batchResultMessage(
+    prefix: string,
+    result: { requested: number; accepted: number }
+  ): string {
+    return `${prefix}，已受理 ${result.accepted}/${result.requested}`;
+  }
+
+  async function submitBatchOnline(ids: number[]): Promise<void> {
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择账号");
+      return;
+    }
+    ids.forEach(id => {
+      writeOnlineCooldown(id);
+      setOnlineSubmitting(id, true);
+    });
+    try {
+      const result = await batchOnlineTenantAccounts(ids);
+      ElMessage.success(batchResultMessage("登录请求已提交", result));
+      await refreshAccountList();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "登录请求失败"));
+    } finally {
+      ids.forEach(id => setOnlineSubmitting(id, false));
+    }
+  }
+
+  async function submitBatchOffline(
+    ids: number[],
+    successPrefix = "离线请求已提交"
+  ): Promise<void> {
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择账号");
+      return;
+    }
+    try {
+      const result = await batchOfflineTenantAccounts(ids);
+      ElMessage.success(batchResultMessage(successPrefix, result));
+      await refreshAccountList();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "离线请求失败"));
+    }
+  }
+
+  async function submitBatchDelete(ids: number[]): Promise<void> {
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择账号");
+      return;
+    }
+    const deleteText =
+      ids.length === 1 ? "该账号" : `选中的 ${ids.length} 个账号`;
+    if (
+      !window.confirm(
+        `确认删除${deleteText}？仅封禁、导出、解绑且不在任务中的账号可删除。`
+      )
+    ) {
+      return;
+    }
+    try {
+      await batchDeleteTenantAccounts(ids);
+      ElMessage.success("删除成功");
+      selectedRows.value = [];
+      await refreshAccountList();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "删除失败"));
+    }
+  }
+
   function handleBatchAction(command: string) {
     if (command === "move-group") {
       openBatchMoveDrawer();
       return;
     }
-    if (selectedRows.value.length === 0) {
+    const ids = selectedAccountIds();
+    if (ids.length === 0) {
       ElMessage.warning("请先选择账号");
       return;
     }
-    const labelMap: Record<string, string> = {
-      online: "登录",
-      offline: "离线",
-      delete: "批量删除"
-    };
-    ElMessage.warning(
-      `${labelMap[command] ?? "批量操作"}接口待接入，未伪造成功结果`
-    );
+    if (command === "online") {
+      void submitBatchOnline(ids);
+      return;
+    }
+    if (command === "offline") {
+      void submitBatchOffline(ids);
+      return;
+    }
+    if (command === "delete") {
+      void submitBatchDelete(ids);
+      return;
+    }
+    ElMessage.warning("未知批量操作");
   }
 
   function handleRowAction(row: TenantAccount, action: string) {
     if (action === "上线") {
       void submitOnline(row);
+      return;
+    }
+    const id = accountId(row);
+    if (!id) {
+      ElMessage.warning("账号 ID 为空，无法操作");
+      return;
+    }
+    if (action === "下线") {
+      void submitBatchOffline([id], "下线请求已提交");
+      return;
+    }
+    if (action === "删除") {
+      if (!canDeleteAccount(row)) {
+        ElMessage.warning("仅封禁、导出、解绑且不在任务中的账号可删除");
+        return;
+      }
+      void submitBatchDelete([id]);
       return;
     }
     ElMessage.warning(`${action}接口待接入，未伪造成功结果`);
@@ -414,10 +582,14 @@ export function useAccountListPage(): AccountListPageState {
   return {
     accountGroups,
     accountStatusOptions,
+    accountTypeOptions,
     batchMoveForm,
+    batchMoveModeOptions,
     groupLoading,
     handleBatchAction,
+    loginStateOptions,
     loading,
+    numberSourceOptions,
     onSelectionChange,
     page,
     pageSize,

@@ -3,7 +3,7 @@ export const accountListColumns: TableColumnList = [
   { label: "账号", prop: "ws_phone", minWidth: 160 },
   { label: "国家", prop: "ip_region", width: 120 },
   { label: "IP来源", prop: "ip_source", minWidth: 140 },
-  { label: "账号类型", prop: "account_type", width: 130 },
+  { label: "账号类型/设备", prop: "account_type", width: 140 },
   { label: "协议", prop: "protocol_address", minWidth: 160 },
   { label: "IP地址", prop: "truth_ip", minWidth: 160 },
   { label: "渠道/来源", prop: "channel_name", minWidth: 150 },
