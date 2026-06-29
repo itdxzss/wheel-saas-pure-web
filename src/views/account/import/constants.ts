@@ -23,12 +23,14 @@ export const importKindOptions: Array<{
   value: AccountImportKind;
   desc: string;
   accept: string;
+  disabled?: boolean;
 }> = [
   {
     label: "六段号",
     value: "six",
     desc: "支持粘贴或上传 TXT，一行一个六段号。",
-    accept: ".txt"
+    accept: ".txt",
+    disabled: true
   },
   {
     label: "JSON号",

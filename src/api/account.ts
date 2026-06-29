@@ -1,9 +1,13 @@
 import { armadaRequest } from "@/api/armada";
 import { formatEpochMillis } from "@/utils/time";
+import { toTenantAccountListParams } from "./account-mapping";
 
 export type AccountState = 1 | 2 | 3 | 4 | 5;
 export type LoginState = 1 | 2;
 export type RiskStatus = 1 | 2 | 3;
+export type AccountType = 1 | 2;
+export type NumberSource = 1 | 2 | 3;
+export type MuteStatus = 1 | 2;
 
 export interface TenantAccount {
   id?: number;
@@ -44,17 +48,29 @@ export interface TenantAccountListQuery {
   pageSize?: number;
   keyword?: string;
   phone?: string;
+  account_type?: AccountType | "";
+  accountType?: AccountType | "";
+  protocol_id?: string;
+  protocolId?: string;
+  number_source?: NumberSource | "";
+  numberSource?: NumberSource | "";
+  channel_name?: string;
+  channelName?: string;
   account_state?: AccountState | "";
   accountState?: AccountState | "";
   login_state?: LoginState | "";
+  loginState?: LoginState | "";
   risk_status?: RiskStatus | "";
   riskStatus?: RiskStatus | "";
+  mute_status?: MuteStatus | "6h" | "24h" | "";
+  muteStatus?: MuteStatus | "6h" | "24h" | "";
   group_id?: number | "";
   accountGroupId?: number | "";
   assigned_service?: string;
   country?: string;
-  mute_status?: string;
   ip_group_name?: string;
+  truth_ip?: string;
+  truthIp?: string;
 }
 
 export interface TenantAccountSummary {
@@ -138,17 +154,6 @@ function muteStatusLabel(value?: number | null): string | null {
   return null;
 }
 
-function toQuery(params: TenantAccountListQuery) {
-  return {
-    page: params.page,
-    pageSize: params.pageSize ?? params.page_size,
-    phone: params.phone || params.keyword,
-    accountState: params.accountState ?? params.account_state,
-    riskStatus: params.riskStatus ?? params.risk_status,
-    accountGroupId: params.accountGroupId ?? params.group_id
-  };
-}
-
 function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
   return {
     id: row.id,
@@ -190,7 +195,7 @@ export function listTenantAccounts(
   return armadaRequest<PageResponse<ArmadaTenantAccount>>(
     "get",
     "/api/accounts",
-    { params: toQuery(params) }
+    { params: toTenantAccountListParams(params) }
   ).then(result => ({
     ...result,
     list: result.list?.map(toTenantAccount) ?? []

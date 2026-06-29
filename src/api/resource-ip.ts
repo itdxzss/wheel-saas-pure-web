@@ -58,12 +58,5 @@ export function batchDeleteIpProxies(ids: number[]): Promise<void> {
 }
 
 export async function listTenantIpRegions(): Promise<string[]> {
-  const result = await listIpProxies({ page: 1, pageSize: 500 });
-  return Array.from(
-    new Set(
-      (result.list ?? [])
-        .map(row => row.country.trim())
-        .filter((region): region is string => Boolean(region))
-    )
-  );
+  return armadaRequest<string[]>("get", "/api/ip-proxies/regions");
 }

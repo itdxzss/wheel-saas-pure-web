@@ -3,6 +3,7 @@ import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useResourceIpPage } from "./composables/useResourceIpPage";
+import IpImportDialog from "./components/IpImportDialog.vue";
 import Search from "~icons/ri/search-line";
 import RefreshRight from "~icons/ep/refresh-right";
 import Upload from "~icons/ep/upload";
@@ -28,12 +29,12 @@ const {
   rows,
   searchForm,
   selectedRows,
-  showImportDrawer,
+  showImportDialog,
   total,
   uploadFiles,
   deleteSelectedIps,
   onSelectionChange,
-  openImportDrawer,
+  openImportDialog,
   refreshIpList,
   resetSearchForm,
   searchIpList,
@@ -180,7 +181,7 @@ const {
         <el-button
           type="primary"
           :icon="useRenderIcon(Upload)"
-          @click="openImportDrawer"
+          @click="openImportDialog"
         >
           TXT 批量导入
         </el-button>
@@ -277,89 +278,16 @@ const {
       </template>
     </PureTableBar>
 
-    <el-drawer
-      v-model="showImportDrawer"
-      title="TXT 批量导入"
-      size="520px"
-      destroy-on-close
-    >
-      <el-alert
-        class="ip-import-alert"
-        type="info"
-        show-icon
-        :closable="false"
-        title="每行一条代理记录，格式为：代理地址:端口:用户名:密码。"
-      />
-
-      <el-form class="ip-import-form" :model="importForm" label-position="top">
-        <el-form-item label="国家" required>
-          <el-select
-            v-model="importForm.country"
-            clearable
-            filterable
-            placeholder="请选择国家"
-          >
-            <el-option
-              v-for="country in countryOptions"
-              :key="country"
-              :label="country"
-              :value="country"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="代理类型" required>
-          <el-radio-group v-model="importForm.proxyType">
-            <el-radio-button
-              v-for="type in proxyTypeOptions"
-              :key="type"
-              :label="type"
-              :value="type"
-            />
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="来源" required>
-          <el-input
-            v-model="importForm.source"
-            clearable
-            placeholder="请输入来源，如：xx 运营商 / 代理商名称"
-          />
-        </el-form-item>
-        <el-form-item label="TXT 文件" required>
-          <el-upload
-            v-model:file-list="uploadFiles"
-            drag
-            accept=".txt,text/plain"
-            :auto-upload="false"
-            :limit="1"
-          >
-            <div class="ip-upload-text">点击或拖拽 TXT 文件到此处</div>
-            <template #tip>
-              <div class="el-upload__tip">仅支持 .txt 格式，编码建议 UTF-8</div>
-            </template>
-          </el-upload>
-        </el-form-item>
-      </el-form>
-
-      <el-alert
-        v-if="importErrors.length > 0"
-        class="ip-import-errors"
-        type="warning"
-        show-icon
-        :closable="false"
-        title="以下行未导入"
-      >
-        <ul class="ip-import-error-list">
-          <li v-for="item in importErrors" :key="item">{{ item }}</li>
-        </ul>
-      </el-alert>
-
-      <template #footer>
-        <el-button @click="showImportDrawer = false">取消</el-button>
-        <el-button type="primary" :loading="importing" @click="submitImport">
-          开始导入
-        </el-button>
-      </template>
-    </el-drawer>
+    <IpImportDialog
+      v-model="showImportDialog"
+      v-model:form="importForm"
+      v-model:upload-files="uploadFiles"
+      :country-options="countryOptions"
+      :import-errors="importErrors"
+      :importing="importing"
+      :proxy-type-options="proxyTypeOptions"
+      @submit="submitImport"
+    />
   </div>
 </template>
 
@@ -448,28 +376,8 @@ const {
   font-weight: 700;
 }
 
-.ip-import-alert {
-  margin-bottom: 16px;
-}
-
-.ip-import-errors,
 .ip-manage-error {
   margin-bottom: 12px;
-}
-
-.ip-import-error-list {
-  padding-left: 18px;
-  margin: 8px 0 0;
-}
-
-.ip-import-form :deep(.el-select),
-.ip-import-form :deep(.el-upload),
-.ip-import-form :deep(.el-upload-dragger) {
-  width: 100%;
-}
-
-.ip-upload-text {
-  color: var(--el-text-color-regular);
 }
 
 .ip-manage-search {

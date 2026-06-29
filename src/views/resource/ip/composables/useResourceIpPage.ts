@@ -16,7 +16,7 @@ interface IpSearchForm {
   source: string;
 }
 
-interface IpImportForm {
+export interface IpImportForm {
   country: string;
   proxyType: ProxyTypeLabel;
   source: string;
@@ -45,7 +45,7 @@ export function useResourceIpPage() {
   const guideCollapsed = ref(false);
   const rows = ref<IpManageRow[]>([]);
   const selectedRows = ref<IpManageRow[]>([]);
-  const showImportDrawer = ref(false);
+  const showImportDialog = ref(false);
   const importForm = ref<IpImportForm>({
     country: "",
     proxyType: "HTTP",
@@ -110,7 +110,7 @@ export function useResourceIpPage() {
     }
   }
 
-  function openImportDrawer(): void {
+  function openImportDialog(): void {
     importForm.value = {
       country: "",
       proxyType: "HTTP",
@@ -118,7 +118,7 @@ export function useResourceIpPage() {
     };
     uploadFiles.value = [];
     importErrors.value = [];
-    showImportDrawer.value = true;
+    showImportDialog.value = true;
   }
 
   async function deleteSelectedIps(): Promise<void> {
@@ -212,7 +212,7 @@ export function useResourceIpPage() {
       const summary = `导入完成：新增 ${result.insertedRows}，跳过 ${result.skippedRows}，失败 ${result.failedRows}`;
       message(summary, { type: result.failedRows > 0 ? "warning" : "success" });
       if (result.failedRows === 0) {
-        showImportDrawer.value = false;
+        showImportDialog.value = false;
       }
       await refreshIpList();
       void loadCountryOptions();
@@ -244,12 +244,12 @@ export function useResourceIpPage() {
     rows,
     searchForm,
     selectedRows,
-    showImportDrawer,
+    showImportDialog,
     total,
     uploadFiles,
     deleteSelectedIps,
     onSelectionChange,
-    openImportDrawer,
+    openImportDialog,
     refreshIpList,
     resetSearchForm,
     searchIpList,

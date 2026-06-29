@@ -311,6 +311,7 @@ function submitDrawer(): void {
             <el-radio-button
               v-for="item in importKindOptions"
               :key="item.value"
+              :disabled="item.disabled"
               :label="item.value"
             >
               {{ item.label }}
