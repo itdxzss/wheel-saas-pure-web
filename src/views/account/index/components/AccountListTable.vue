@@ -7,9 +7,11 @@ import type { TenantAccount } from "@/api/account";
 import MoreFilled from "~icons/ep/more-filled";
 import {
   accountStatusLabel,
+  accountStatusTagType,
   accountTypeDeviceLabel,
   canDeleteAccount,
   loginStateLabel,
+  loginStateTagType,
   riskStatusLabel,
   sourceLabel
 } from "../account-display";
@@ -161,7 +163,9 @@ function avatarText(row: TenantAccount) {
           width="110"
         >
           <template #default="{ row }">
-            <el-tag size="small">{{ accountStatusLabel(row) }}</el-tag>
+            <el-tag size="small" :type="accountStatusTagType(row)">
+              {{ accountStatusLabel(row) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column
@@ -170,7 +174,9 @@ function avatarText(row: TenantAccount) {
           width="100"
         >
           <template #default="{ row }">
-            {{ loginStateLabel(row.login_state) }}
+            <el-tag size="small" :type="loginStateTagType(row.login_state)">
+              {{ loginStateLabel(row.login_state) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column

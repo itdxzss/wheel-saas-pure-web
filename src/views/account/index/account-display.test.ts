@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   accountStatusLabel,
+  accountStatusTagType,
   accountTypeDeviceLabel,
   buildAccountStatCards,
   canDeleteAccount,
   loginStateLabel,
+  loginStateTagType,
   riskStatusLabel,
   sourceLabel
 } from "./account-display";
@@ -26,6 +28,29 @@ describe("account list display helpers", () => {
       accountStatusLabel({ account_state: 2, mute_status: "24h" }),
       "禁言24小时"
     );
+  });
+
+  it("maps account status labels to tag types", () => {
+    assert.equal(accountStatusTagType({ account_state: 2 }), "success");
+    assert.equal(accountStatusTagType({ account_state: 4 }), "success");
+    assert.equal(accountStatusTagType({ account_state: 3 }), "danger");
+    assert.equal(accountStatusTagType({ account_state: 5 }), "danger");
+    assert.equal(
+      accountStatusTagType({ account_state: 2, mute_status: "6h" }),
+      "danger"
+    );
+    assert.equal(
+      accountStatusTagType({ account_state: 2, mute_status: "24h" }),
+      "danger"
+    );
+    assert.equal(accountStatusTagType({ account_state: 1 }), "info");
+    assert.equal(accountStatusTagType({ account_state: null }), "info");
+  });
+
+  it("maps login states to tag types", () => {
+    assert.equal(loginStateTagType(1), "success");
+    assert.equal(loginStateTagType(2), "danger");
+    assert.equal(loginStateTagType(null), "info");
   });
 
   it("combines account type with device and channel with source", () => {

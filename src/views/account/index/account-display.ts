@@ -1,5 +1,7 @@
 import type { TenantAccount, TenantAccountSummary } from "../../../api/account";
 
+export type AccountTagType = "success" | "danger" | "info";
+
 export interface AccountStatCard {
   key: string;
   label: string;
@@ -26,8 +28,25 @@ export function accountStatusLabel(
   return row.account_state ? (map[row.account_state] ?? "-") : "待上线";
 }
 
+export function accountStatusTagType(
+  row: Pick<TenantAccount, "account_state" | "mute_status">
+): AccountTagType {
+  if (row.mute_status === "6h" || row.mute_status === "24h") {
+    return "danger";
+  }
+  if (row.account_state === 2 || row.account_state === 4) return "success";
+  if (row.account_state === 3 || row.account_state === 5) return "danger";
+  return "info";
+}
+
 export function loginStateLabel(value?: number | null): string {
   return value === 1 ? "在线" : value === 2 ? "离线" : "—";
+}
+
+export function loginStateTagType(value?: number | null): AccountTagType {
+  if (value === 1) return "success";
+  if (value === 2) return "danger";
+  return "info";
 }
 
 export function riskStatusLabel(value?: number | null): string {
