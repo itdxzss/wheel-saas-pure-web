@@ -6,6 +6,10 @@ import type {
   AccountImportFailReason,
   AccountImportTask
 } from "@/api/account-import";
+import {
+  accountImportAbnormalCount,
+  accountImportLoginFailCount
+} from "../account-import-display";
 import { detailStatusOptions } from "../constants";
 import type {
   AccountImportDetailStatus,
@@ -59,14 +63,6 @@ function formatDate(value?: string | null): string {
   return value.replace("T", " ").slice(0, 19);
 }
 
-function loginFailCount(task: AccountImportTask): number {
-  return task.login_fail ?? task.login_failed ?? task.fail ?? 0;
-}
-
-function abnormalCount(task: AccountImportTask): number {
-  return task.abnormal ?? (task.abnormal_key ?? 0) + (task.abnormal_ban ?? 0);
-}
-
 function statusTagType(
   status?: string
 ): "success" | "danger" | "warning" | "info" {
@@ -89,10 +85,16 @@ function filterDetail(value: string | number | boolean): void {
           <el-statistic title="登录成功" :value="task.login_success ?? 0" />
         </el-card>
         <el-card shadow="never">
-          <el-statistic title="登录失败" :value="loginFailCount(task)" />
+          <el-statistic
+            title="登录失败"
+            :value="accountImportLoginFailCount(task)"
+          />
         </el-card>
         <el-card shadow="never">
-          <el-statistic title="登录异常" :value="abnormalCount(task)" />
+          <el-statistic
+            title="登录异常"
+            :value="accountImportAbnormalCount(task)"
+          />
         </el-card>
       </div>
 

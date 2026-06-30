@@ -5,6 +5,10 @@ import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { AccountImportTask } from "@/api/account-import";
 import type { AccountImportExportKind } from "../types";
+import {
+  accountImportAbnormalLabel,
+  accountImportLoginFailCount
+} from "../account-import-display";
 import { exportOptions } from "../constants";
 import RefreshRight from "~icons/ep/refresh-right";
 import Upload from "~icons/ep/upload";
@@ -57,16 +61,6 @@ function toTask(row: unknown): AccountImportTask {
 function progressLabel(row: AccountImportTask): string {
   if (row.progress) return row.progress;
   return `${row.imported ?? 0} / ${row.total ?? 0}`;
-}
-
-function loginFailCount(row: AccountImportTask): number {
-  return row.login_fail ?? row.login_failed ?? row.fail ?? 0;
-}
-
-function abnormalLabel(row: AccountImportTask): string {
-  const key = row.abnormal_key ?? 0;
-  const ban = row.abnormal_ban ?? 0;
-  return `密钥 ${key} / 封号 ${ban}`;
 }
 
 function statusTagType(status?: string): "success" | "warning" | "info" {
@@ -156,7 +150,7 @@ function exportRow(row: AccountImportTask, command: string): void {
         >
           <template #default="{ row }">
             {{ toTask(row).login_success ?? 0 }} /
-            {{ loginFailCount(toTask(row)) }}
+            {{ accountImportLoginFailCount(toTask(row)) }}
           </template>
         </el-table-column>
         <el-table-column
@@ -165,7 +159,7 @@ function exportRow(row: AccountImportTask, command: string): void {
           width="160"
         >
           <template #default="{ row }">{{
-            abnormalLabel(toTask(row))
+            accountImportAbnormalLabel(toTask(row))
           }}</template>
         </el-table-column>
         <el-table-column
