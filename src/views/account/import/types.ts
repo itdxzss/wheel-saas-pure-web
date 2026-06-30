@@ -1,6 +1,6 @@
 export type AccountImportKind = "six" | "json" | "fullparam";
 export type AccountImportDetailStatus = "" | "SUCCESS" | "FAIL" | "ABNORMAL";
-export type AccountImportExportKind = "ALL" | "SUCCESS" | "FAIL" | "ABNORMAL";
+export type AccountImportExportKind = "ALL" | "SUCCESS" | "FAIL";
 
 export interface AccountImportSearchForm {
   keyword: string;

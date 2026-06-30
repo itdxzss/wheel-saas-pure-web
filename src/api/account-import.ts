@@ -194,7 +194,7 @@ function detailFilter(value?: string): string {
 
 function exportScope(value: string): string {
   if (value === "SUCCESS") return "success";
-  if (value === "FAIL" || value === "ABNORMAL") return "fail";
+  if (value === "FAIL") return "fail";
   return "all";
 }
 

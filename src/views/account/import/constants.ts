@@ -72,8 +72,7 @@ export const exportOptions: Array<{
 }> = [
   { label: "导出全部", value: "ALL" },
   { label: "导出成功", value: "SUCCESS" },
-  { label: "导出失败", value: "FAIL" },
-  { label: "导出异常", value: "ABNORMAL" }
+  { label: "导出失败", value: "FAIL" }
 ];
 
 export const accountImportColumns: TableColumnList = [
