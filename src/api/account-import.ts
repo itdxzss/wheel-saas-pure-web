@@ -2,6 +2,7 @@ import { http } from "@/utils/http";
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
 import { formatEpochMillis } from "@/utils/time";
+import type { PureHttpResponse } from "@/utils/http/types.d";
 
 export type AccountImportType = "六段号" | "JSON号" | "全参账号" | string;
 export type AccountImportStatus = "导入中" | "已完成" | string;
@@ -80,7 +81,7 @@ export interface CreateAccountImportTaskRequest {
 
 export interface AccountImportExport {
   filename: string;
-  content: string;
+  blob: Blob;
 }
 
 export interface ListAccountImportTasksParams {
@@ -195,6 +196,44 @@ function exportScope(value: string): string {
   if (value === "SUCCESS") return "success";
   if (value === "FAIL" || value === "ABNORMAL") return "fail";
   return "all";
+}
+
+function headerValue(
+  headers: PureHttpResponse["headers"],
+  name: string
+): string | undefined {
+  const getter = headers as { get?: (key: string) => unknown };
+  const viaGetter = getter.get?.(name);
+  if (typeof viaGetter === "string") return viaGetter;
+
+  const record = headers as Record<string, unknown>;
+  const direct = record[name] ?? record[name.toLowerCase()];
+  return typeof direct === "string" ? direct : undefined;
+}
+
+function decodeFilename(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function filenameFromContentDisposition(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  const encoded = /filename\*=(?:UTF-8'')?("?)([^";]+)\1/i.exec(value);
+  if (encoded?.[2]) {
+    return decodeFilename(encoded[2]);
+  }
+
+  const plain = /filename=("?)([^";]+)\1/i.exec(value);
+  return plain?.[2];
+}
+
+function fallbackExportFilename(id: number, scope: string, blob: Blob): string {
+  const extension = blob.type.includes("zip") ? "zip" : "txt";
+  return `account-import-${id}-${scope}.${extension}`;
 }
 
 function toListQuery(params: ListAccountImportTasksParams) {
@@ -345,13 +384,26 @@ export function exportAccountImportTask(
   id: number,
   kind: string
 ): Promise<AccountImportExport> {
+  const scope = exportScope(kind);
+  let filename: string | undefined;
   return http
-    .request<string>("get", `/api/account-imports/${id}/export`, {
-      params: { scope: exportScope(kind) },
-      responseType: "text"
-    })
-    .then(content => ({
-      filename: `account-import-${id}-${exportScope(kind)}.csv`,
-      content
+    .request<Blob>(
+      "get",
+      `/api/account-imports/${id}/export`,
+      {
+        params: { scope },
+        responseType: "blob"
+      },
+      {
+        beforeResponseCallback: response => {
+          filename = filenameFromContentDisposition(
+            headerValue(response.headers, "Content-Disposition")
+          );
+        }
+      }
+    )
+    .then(blob => ({
+      filename: filename || fallbackExportFilename(id, scope, blob),
+      blob
     }));
 }

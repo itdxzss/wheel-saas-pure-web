@@ -75,7 +75,6 @@ export interface AccountImportPageState {
 }
 
 const POLL_MS = 4000;
-const BOM = String.fromCharCode(0xfeff);
 
 export function useAccountImportPage(): AccountImportPageState {
   const searchForm = reactive<AccountImportSearchForm>({
@@ -326,9 +325,8 @@ export function useAccountImportPage(): AccountImportPageState {
     void loadDetail();
   }
 
-  function downloadCsv(filename: string, content: string): void {
+  function downloadFile(filename: string, blob: Blob): void {
     // 浏览器侧文件下载只在这里触碰 DOM，并在点击后立即清理节点和 URL。
-    const blob = new Blob([BOM + content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -346,14 +344,7 @@ export function useAccountImportPage(): AccountImportPageState {
     exportingTaskId.value = row.id;
     try {
       const response = await exportAccountImportTask(row.id, kind);
-      if (!response.content) {
-        ElMessage.warning("当前任务暂无可导出的内容");
-        return;
-      }
-      downloadCsv(
-        response.filename || `account-import-${row.id}-${kind}.csv`,
-        response.content
-      );
+      downloadFile(response.filename, response.blob);
       ElMessage.success("导出文件已生成");
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "导出失败"));
