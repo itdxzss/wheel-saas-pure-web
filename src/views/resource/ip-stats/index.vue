@@ -2,8 +2,12 @@
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import type { IpCountryStatsRow } from "@/api/resource-ip-stats";
+import type {
+  IpCountryStatsRow,
+  IpStatsDetailRow
+} from "@/api/resource-ip-stats";
 import { useResourceIpStatsPage } from "./composables/useResourceIpStatsPage";
+import IpCheckResultDialog from "../ip/components/IpCheckResultDialog.vue";
 import IpStatsDetailDrawer from "./components/IpStatsDetailDrawer.vue";
 import IpStatsRankList from "./components/IpStatsRankList.vue";
 import IpStatsSummaryCards from "./components/IpStatsSummaryCards.vue";
@@ -15,12 +19,18 @@ defineOptions({
 });
 
 const {
+  activeCheckRow,
   allocationModeOptions,
+  checkDialogErrorMessage,
+  checkDialogLoading,
+  checkDetailIp: runCheckDetailIp,
+  checkResults,
   countryColumns,
   countryLoading,
   countryRows,
   confirmSampleCheckCountry,
   detailColumns,
+  detailCheckingRowIds,
   detailLoading,
   detailPage,
   detailPageSize,
@@ -48,6 +58,7 @@ const {
   resetSearchForm,
   riskOptions,
   riskTagType,
+  rerunActiveDetailCheck,
   sampleChecking,
   sampleCheckCountry: runSampleCheckCountry,
   sampleCount,
@@ -60,6 +71,7 @@ const {
   searchDetailRows,
   searchForm,
   selectedCountry,
+  showCheckResultDialog,
   summaryCards,
   summaryLoading,
   total
@@ -71,6 +83,10 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
 
 function sampleCheckCountry(row: unknown): void {
   void runSampleCheckCountry(row as IpCountryStatsRow);
+}
+
+function checkDetailIp(row: unknown): void {
+  void runCheckDetailIp(row as IpStatsDetailRow);
 }
 </script>
 
@@ -330,6 +346,7 @@ function sampleCheckCountry(row: unknown): void {
       v-model:page-size="detailPageSize"
       v-model:search-form="detailSearchForm"
       :columns="detailColumns"
+      :checking-row-ids="detailCheckingRowIds"
       :country="selectedCountry"
       :detail-status-options="detailStatusOptions"
       :format-time="formatTime"
@@ -341,6 +358,16 @@ function sampleCheckCountry(row: unknown): void {
       @refresh="loadDetailRows"
       @reset="resetDetailSearchForm"
       @search="searchDetailRows"
+      @check="checkDetailIp"
+    />
+
+    <IpCheckResultDialog
+      v-model="showCheckResultDialog"
+      :active-row="activeCheckRow"
+      :error-message="checkDialogErrorMessage"
+      :loading="checkDialogLoading"
+      :results="checkResults"
+      @rerun="rerunActiveDetailCheck"
     />
 
     <el-dialog
@@ -352,7 +379,8 @@ function sampleCheckCountry(row: unknown): void {
     >
       <div v-loading="sampleDialogLoading" class="ip-stats-sample-dialog">
         <div class="ip-stats-sample-sub">
-          当前国家共有 {{ sampleDialogStats.totalIpCount }} 个 IP，可输入抽样检测数量后随机抽取执行检测。
+          当前国家共有 {{ sampleDialogStats.totalIpCount }} 个
+          IP，可输入抽样检测数量后随机抽取执行检测。
         </div>
         <div class="ip-stats-sample-stats">
           <div class="ip-stats-sample-stat">
@@ -466,9 +494,9 @@ function sampleCheckCountry(row: unknown): void {
 
 .ip-stats-sample-stat {
   padding: 10px;
+  background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-light);
   border-radius: 6px;
-  background: var(--el-fill-color-lighter);
 }
 
 .ip-stats-sample-stat span {
@@ -505,7 +533,7 @@ function sampleCheckCountry(row: unknown): void {
   color: var(--el-text-color-secondary);
 }
 
-@media (max-width: 640px) {
+@media (width <= 640px) {
   .ip-stats-sample-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

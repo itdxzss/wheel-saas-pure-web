@@ -13,8 +13,10 @@ import {
   type IpStatsSortOrder,
   type IpStatsSummary
 } from "@/api/resource-ip-stats";
+import { checkIpProxy, type IpProxyCheckResult } from "@/api/resource-ip";
 import type {
   IpAllocationMode,
+  IpManageRow,
   ProxyTypeLabel
 } from "@/api/resource-ip-mapping";
 import { apiErrorMessage } from "@/utils/api-error";
@@ -83,6 +85,9 @@ export function useResourceIpStatsPage() {
   const countryLoading = ref(false);
   const rankLoading = ref(false);
   const detailLoading = ref(false);
+  const detailCheckingRowIds = ref<Set<number>>(new Set());
+  const checkDialogLoading = ref(false);
+  const checkDialogErrorMessage = ref("");
   const errorMessage = ref("");
 
   const searchForm = ref<IpStatsSearchForm>({
@@ -103,7 +108,11 @@ export function useResourceIpStatsPage() {
   const rankRows = ref<IpCountryStatsRow[]>([]);
   const detailRows = ref<IpStatsDetailRow[]>([]);
   const selectedCountry = ref<IpCountryStatsRow | null>(null);
+  const activeCheckRow = ref<IpManageRow | null>(null);
+  const activeDetailCheckRow = ref<IpStatsDetailRow | null>(null);
   const detailVisible = ref(false);
+  const showCheckResultDialog = ref(false);
+  const checkResults = ref<IpProxyCheckResult[]>([]);
   const sampleDialogVisible = ref(false);
   const sampleDialogLoading = ref(false);
   const sampleChecking = ref(false);
@@ -182,7 +191,9 @@ export function useResourceIpStatsPage() {
 
   const sampleDialogTitle = computed(() => {
     const country = sampleDialogCountry.value;
-    return country ? `国家 IP 抽样检测 - ${country.region}` : "国家 IP 抽样检测";
+    return country
+      ? `国家 IP 抽样检测 - ${country.region}`
+      : "国家 IP 抽样检测";
   });
 
   function formatRate(value: number | null | undefined): string {
@@ -198,6 +209,30 @@ export function useResourceIpStatsPage() {
     const max = rankRows.value[0]?.totalIpCount || 1;
     const width = Math.max(6, Math.round((row.totalIpCount / max) * 100));
     return `${Math.min(width, 100)}%`;
+  }
+
+  function setDetailRowChecking(id: number, checking: boolean): void {
+    const nextIds = new Set(detailCheckingRowIds.value);
+    if (checking) {
+      nextIds.add(id);
+    } else {
+      nextIds.delete(id);
+    }
+    detailCheckingRowIds.value = nextIds;
+  }
+
+  function toCheckDialogRow(row: IpStatsDetailRow): IpManageRow {
+    return {
+      id: row.id,
+      country: row.region,
+      proxyType: row.protocolLabel,
+      proxyAddress: row.proxyAddress,
+      username: "-",
+      password: "-",
+      validAccountCount: row.boundAccountId == null ? 0 : 1,
+      source: row.source,
+      createdAt: ""
+    };
   }
 
   async function loadSummary(): Promise<void> {
@@ -334,25 +369,33 @@ export function useResourceIpStatsPage() {
 
     sampleDialogError.value = "";
     const normalizedSampleCount = Number(sampleCount.value);
-    if (!Number.isInteger(normalizedSampleCount) || normalizedSampleCount <= 0) {
+    if (
+      !Number.isInteger(normalizedSampleCount) ||
+      normalizedSampleCount <= 0
+    ) {
       sampleDialogError.value = "请输入大于 0 的整数抽样检测数量。";
       return;
     }
     if (normalizedSampleCount > sampleDialogStats.value.totalIpCount) {
-      sampleDialogError.value =
-        `抽样检测数量不能超过当前国家 IP 总数量 ${sampleDialogStats.value.totalIpCount}。`;
+      sampleDialogError.value = `抽样检测数量不能超过当前国家 IP 总数量 ${sampleDialogStats.value.totalIpCount}。`;
       return;
     }
 
     sampleChecking.value = true;
     try {
       await sampleCheckIpStatsCountry(country.region, normalizedSampleCount);
-      message(`已完成 ${country.region} ${normalizedSampleCount} 个 IP 抽样检测`, {
-        type: "success"
-      });
+      message(
+        `已完成 ${country.region} ${normalizedSampleCount} 个 IP 抽样检测`,
+        {
+          type: "success"
+        }
+      );
       sampleDialogVisible.value = false;
       await refreshAll();
-      if (detailVisible.value && selectedCountry.value?.region === country.region) {
+      if (
+        detailVisible.value &&
+        selectedCountry.value?.region === country.region
+      ) {
         await loadDetailRows();
       }
     } catch (error) {
@@ -403,16 +446,55 @@ export function useResourceIpStatsPage() {
     await loadDetailRows();
   }
 
+  async function checkDetailIp(row: IpStatsDetailRow): Promise<void> {
+    if (detailCheckingRowIds.value.size > 0) return;
+
+    setDetailRowChecking(row.id, true);
+    activeDetailCheckRow.value = row;
+    activeCheckRow.value = toCheckDialogRow(row);
+    checkResults.value = [];
+    checkDialogErrorMessage.value = "";
+    checkDialogLoading.value = true;
+    showCheckResultDialog.value = true;
+
+    try {
+      const result = await checkIpProxy(row.id);
+      checkResults.value = [result];
+      await Promise.all([loadSummary(), loadRankRows(), loadCountryRows()]);
+      if (detailVisible.value) {
+        await loadDetailRows();
+      }
+    } catch (error) {
+      const errorText = apiErrorMessage(error, "IP 检测失败");
+      checkDialogErrorMessage.value = errorText;
+      message(errorText, { type: "error" });
+    } finally {
+      checkDialogLoading.value = false;
+      setDetailRowChecking(row.id, false);
+    }
+  }
+
+  function rerunActiveDetailCheck(): void {
+    if (!activeDetailCheckRow.value) return;
+    void checkDetailIp(activeDetailCheckRow.value);
+  }
+
   onMounted(() => {
     void refreshAll();
   });
 
   return {
+    activeCheckRow,
     allocationModeOptions,
+    checkDialogErrorMessage,
+    checkDialogLoading,
+    checkDetailIp,
+    checkResults,
     countryColumns: ipStatsCountryColumns,
     countryLoading,
     countryRows,
     detailColumns: ipStatsDetailColumns,
+    detailCheckingRowIds,
     detailLoading,
     detailPage,
     detailPageSize,
@@ -438,6 +520,7 @@ export function useResourceIpStatsPage() {
     resetSearchForm,
     riskOptions,
     riskTagType,
+    rerunActiveDetailCheck,
     sampleChecking,
     sampleCheckCountry,
     sampleCount,
@@ -451,6 +534,7 @@ export function useResourceIpStatsPage() {
     searchDetailRows,
     searchForm,
     selectedCountry,
+    showCheckResultDialog,
     summaryCards,
     summaryLoading,
     total,

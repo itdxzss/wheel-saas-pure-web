@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
-import type { IpCountryStatsRow, IpStatsDetailRow } from "@/api/resource-ip-stats";
+import type {
+  IpCountryStatsRow,
+  IpStatsDetailRow
+} from "@/api/resource-ip-stats";
 import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
 import type { IpStatsDetailSearchForm } from "../composables/useResourceIpStatsPage";
 
@@ -14,6 +17,7 @@ const props = defineProps<{
   country: IpCountryStatsRow | null;
   detailStatusOptions: Array<{ label: string; value: number | "" }>;
   formatTime: (value: number | null | undefined) => string;
+  checkingRowIds: Set<number>;
   loading: boolean;
   proxyTypeOptions: ProxyTypeLabel[];
   rows: IpStatsDetailRow[];
@@ -22,6 +26,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (event: "check", row: IpStatsDetailRow): void;
   (event: "refresh"): void;
   (event: "reset"): void;
   (event: "search"): void;
@@ -39,15 +44,29 @@ const pageSize = defineModel<number>("pageSize", { required: true });
 const drawerTitle = computed(() =>
   props.country ? `国家 IP 明细 - ${props.country.region}` : "国家 IP 明细"
 );
+
+function detailRowId(row: unknown): number | null {
+  if (typeof row !== "object" || row === null || !("id" in row)) return null;
+  const id = (row as { id?: unknown }).id;
+  return typeof id === "number" ? id : null;
+}
+
+function isRowChecking(row: unknown): boolean {
+  const id = detailRowId(row);
+  return id !== null && props.checkingRowIds.has(id);
+}
+
+function isCheckDisabled(row: unknown): boolean {
+  return props.checkingRowIds.size > 0 && !isRowChecking(row);
+}
+
+function emitCheck(row: unknown): void {
+  emit("check", row as IpStatsDetailRow);
+}
 </script>
 
 <template>
-  <el-drawer
-    v-model="visible"
-    :title="drawerTitle"
-    size="78%"
-    destroy-on-close
-  >
+  <el-drawer v-model="visible" :title="drawerTitle" size="78%" destroy-on-close>
     <div class="ip-detail-drawer">
       <div class="ip-detail-summary">
         <div
@@ -188,6 +207,24 @@ const drawerTitle = computed(() =>
         >
           <template #default="{ row }">
             {{ row.failCount ?? 0 }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!columns[9].hide"
+          label="操作"
+          fixed="right"
+          width="90"
+        >
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              :loading="isRowChecking(row)"
+              :disabled="isCheckDisabled(row)"
+              @click="emitCheck(row)"
+            >
+              检测
+            </el-button>
           </template>
         </el-table-column>
         <template #empty>

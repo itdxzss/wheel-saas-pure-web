@@ -59,10 +59,13 @@ export const ipStatsDetailColumns: TableColumnList = [
   { label: "状态", prop: "statusLabel", width: 110 },
   { label: "当前使用账号", prop: "boundAccountId", minWidth: 130 },
   { label: "最近抽检时间", prop: "lastSampleCheckAt", width: 180 },
-  { label: "失败次数", prop: "failCount", width: 100 }
+  { label: "失败次数", prop: "failCount", width: 100 },
+  { label: "操作", prop: "operation", fixed: "right", width: 90 }
 ];
 
-export function riskTagType(risk: IpStatsRisk): "success" | "warning" | "danger" | "info" {
+export function riskTagType(
+  risk: IpStatsRisk
+): "success" | "warning" | "danger" | "info" {
   if (risk === "normal") return "success";
   if (risk === "no_ip" || risk === "high_unavailable") return "danger";
   return risk === "no_idle" || risk === "low_available" ? "warning" : "info";

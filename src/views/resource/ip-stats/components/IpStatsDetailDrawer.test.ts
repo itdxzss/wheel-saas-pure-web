@@ -41,4 +41,15 @@ describe("IP stats detail drawer columns", () => {
     assert.doesNotMatch(drawerSource, /label="创建时间"/);
     assert.doesNotMatch(drawerSource, /label="绑定时间"/);
   });
+
+  it("renders a single-check action at the end of each detail row", () => {
+    assert.match(
+      drawerSource,
+      /\(event: "check", row: IpStatsDetailRow\): void/
+    );
+    assert.match(drawerSource, /label="操作"/);
+    assert.match(drawerSource, /fixed="right"/);
+    assert.match(drawerSource, /@click="emitCheck\(row\)"/);
+    assert.match(drawerSource, />\s*检测\s*</);
+  });
 });
