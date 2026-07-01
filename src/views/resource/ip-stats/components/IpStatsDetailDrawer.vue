@@ -2,10 +2,7 @@
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import type { IpCountryStatsRow, IpStatsDetailRow } from "@/api/resource-ip-stats";
-import type {
-  IpAllocationMode,
-  ProxyTypeLabel
-} from "@/api/resource-ip-mapping";
+import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
 import type { IpStatsDetailSearchForm } from "../composables/useResourceIpStatsPage";
 
 defineOptions({
@@ -14,7 +11,6 @@ defineOptions({
 
 const props = defineProps<{
   columns: TableColumnList;
-  allocationModeOptions: Array<{ label: string; value: IpAllocationMode | "" }>;
   country: IpCountryStatsRow | null;
   detailStatusOptions: Array<{ label: string; value: number | "" }>;
   formatTime: (value: number | null | undefined) => string;
@@ -65,11 +61,20 @@ const drawerTitle = computed(() =>
       </div>
 
       <el-form class="ip-detail-filter" :model="searchForm" inline>
-        <el-form-item label="IP 地址 / 来源">
+        <el-form-item label="IP 地址">
           <el-input
-            v-model="searchForm.keyword"
+            v-model="searchForm.ipKeyword"
             clearable
-            placeholder="输入 IP 地址或来源"
+            placeholder="输入 IP 地址"
+            class="ip-detail-filter-control"
+            @keyup.enter="emit('search')"
+          />
+        </el-form-item>
+        <el-form-item label="账号">
+          <el-input
+            v-model="searchForm.accountKeyword"
+            clearable
+            placeholder="输入账号"
             class="ip-detail-filter-control"
             @keyup.enter="emit('search')"
           />
@@ -101,28 +106,6 @@ const drawerTitle = computed(() =>
               :value="type"
             />
           </el-select>
-        </el-form-item>
-        <el-form-item label="分配方式">
-          <el-select
-            v-model="searchForm.allocationMode"
-            class="ip-detail-filter-control ip-detail-filter-control--sm"
-          >
-            <el-option
-              v-for="mode in allocationModeOptions"
-              :key="mode.value"
-              :label="mode.label"
-              :value="mode.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="来源">
-          <el-input
-            v-model="searchForm.source"
-            clearable
-            placeholder="请输入来源"
-            class="ip-detail-filter-control"
-            @keyup.enter="emit('search')"
-          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="emit('search')">查询</el-button>

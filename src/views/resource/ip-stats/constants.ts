@@ -4,7 +4,7 @@ import type {
   ProxyTypeLabel
 } from "@/api/resource-ip-mapping";
 
-export const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKETS"];
+export const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKS5"];
 
 export const allocationModeOptions: Array<{
   label: string;

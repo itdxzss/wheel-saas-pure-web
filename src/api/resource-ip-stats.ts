@@ -84,9 +84,8 @@ export interface IpStatsCountryQuery {
 export interface IpStatsRegionProxyQuery {
   status?: number | "";
   proxyType?: ProxyTypeLabel | "";
-  allocationMode?: IpAllocationMode | "";
-  source?: string;
-  keyword?: string;
+  ipKeyword?: string;
+  accountKeyword?: string;
   page?: number;
   pageSize?: number;
 }
@@ -121,9 +120,8 @@ interface IpStatsCountryParams {
 interface IpStatsRegionProxyParams {
   status?: number;
   protocol?: number;
-  allocationMode?: IpAllocationMode;
-  source?: string;
-  keyword?: string;
+  ipKeyword?: string;
+  accountKeyword?: string;
   page?: number;
   pageSize?: number;
 }
@@ -155,9 +153,8 @@ function toRegionProxyParams(
   return {
     status: typeof query.status === "number" ? query.status : undefined,
     protocol: proxyTypeToProtocol(query.proxyType),
-    allocationMode: normalizeIpAllocationMode(query.allocationMode),
-    source: trimToUndefined(query.source),
-    keyword: trimToUndefined(query.keyword),
+    ipKeyword: trimToUndefined(query.ipKeyword),
+    accountKeyword: trimToUndefined(query.accountKeyword),
     page: query.page,
     pageSize: query.pageSize
   };

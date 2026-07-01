@@ -1,6 +1,6 @@
 import { formatEpochMillis } from "@/utils/time";
 
-export type ProxyTypeLabel = "HTTP" | "SOCKETS";
+export type ProxyTypeLabel = "HTTP" | "SOCKS5";
 export type IpAllocationMode = "smart" | "mixed";
 
 /** 后端 IpProxyVO 的前端镜像;字段保持后端 camelCase,只在 mapping 层做页面规整。 */
@@ -69,7 +69,7 @@ export interface BackendIpProxyListParams {
 
 const proxyProtocolCodes: Record<ProxyTypeLabel, number> = {
   HTTP: 1,
-  SOCKETS: 2
+  SOCKS5: 2
 };
 
 const ipAllocationModes: Record<IpAllocationMode, string> = {
@@ -90,29 +90,29 @@ function toCountryValue(value?: string | null): string | undefined {
   return trimmed === "混合（不限国家）" ? "MIXED" : trimmed;
 }
 
-/** UI 固定展示 SOCKETS,后端协议码仍是历史的 2。 */
+/** UI 固定展示 SOCKS5,后端协议码仍是历史的 2。 */
 export function proxyTypeToProtocol(value?: string): number | undefined {
-  if (value === "HTTP" || value === "SOCKETS") {
+  if (value === "HTTP" || value === "SOCKS5") {
     return proxyProtocolCodes[value];
   }
-  if (value === "SOCKS5") {
-    return proxyProtocolCodes.SOCKETS;
+  if (value === "SOCKETS") {
+    return proxyProtocolCodes.SOCKS5;
   }
   return undefined;
 }
 
 function protocolLabelOf(code?: number | null): string {
   if (code === proxyProtocolCodes.HTTP) return "HTTP";
-  if (code === proxyProtocolCodes.SOCKETS) return "SOCKETS";
+  if (code === proxyProtocolCodes.SOCKS5) return "SOCKS5";
   return code == null ? "" : String(code);
 }
 
-/** 兼容后端或历史数据中可能出现的 SOCKS5 文案,页面统一显示 SOCKETS。 */
+/** 兼容后端或历史数据中可能出现的 SOCKETS 文案,页面统一显示 SOCKS5。 */
 export function normalizeProtocolLabel(
   label?: string | null
 ): string | undefined {
   if (!label) return undefined;
-  return label === "SOCKS5" ? "SOCKETS" : label;
+  return label === "SOCKETS" ? "SOCKS5" : label;
 }
 
 /** 兼容原型/历史接口中的 mixed_country,页面统一使用 mixed。 */

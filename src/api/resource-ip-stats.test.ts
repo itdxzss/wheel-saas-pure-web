@@ -147,10 +147,9 @@ describe("resource IP stats API", () => {
 
     const result = await listIpStatsRegionProxies("混合（不限国家）", {
       status: 2,
-      proxyType: "SOCKETS",
-      allocationMode: "mixed",
-      source: "供应商A",
-      keyword: "1.2.3.4",
+      proxyType: "SOCKS5",
+      ipKeyword: "1.2.3.4",
+      accountKeyword: "9001",
       page: 1,
       pageSize: 10
     });
@@ -163,16 +162,15 @@ describe("resource IP stats API", () => {
           params: {
             status: 2,
             protocol: 2,
-            allocationMode: "mixed",
-            source: "供应商A",
-            keyword: "1.2.3.4",
+            ipKeyword: "1.2.3.4",
+            accountKeyword: "9001",
             page: 1,
             pageSize: 10
           }
         }
       }
     ]);
-    assert.equal(result.list[0].protocolLabel, "SOCKETS");
+    assert.equal(result.list[0].protocolLabel, "SOCKS5");
     assert.equal(result.list[0].proxyHost, "1.2.3.4");
     assert.equal(result.list[0].proxyPort, 1080);
     assert.equal(result.list[0].allocationModeLabel, "混合分组");

@@ -39,10 +39,9 @@ export interface IpStatsSearchForm {
 }
 
 export interface IpStatsDetailSearchForm {
-  keyword: string;
+  ipKeyword: string;
+  accountKeyword: string;
   proxyType: ProxyTypeLabel | "";
-  allocationMode: IpAllocationMode | "";
-  source: string;
   status: number | "";
 }
 
@@ -94,10 +93,9 @@ export function useResourceIpStatsPage() {
     risk: ""
   });
   const detailSearchForm = ref<IpStatsDetailSearchForm>({
-    keyword: "",
+    ipKeyword: "",
+    accountKeyword: "",
     proxyType: "",
-    allocationMode: "",
-    source: "",
     status: ""
   });
 
@@ -295,10 +293,9 @@ export function useResourceIpStatsPage() {
   ): Promise<void> {
     selectedCountry.value = row;
     detailSearchForm.value = {
-      keyword: "",
+      ipKeyword: "",
+      accountKeyword: "",
       proxyType: searchForm.value.proxyType,
-      allocationMode: searchForm.value.allocationMode,
-      source: searchForm.value.source,
       status
     };
     detailPage.value = 1;
@@ -397,10 +394,9 @@ export function useResourceIpStatsPage() {
 
   async function resetDetailSearchForm(): Promise<void> {
     detailSearchForm.value = {
-      keyword: "",
+      ipKeyword: "",
+      accountKeyword: "",
       proxyType: searchForm.value.proxyType,
-      allocationMode: searchForm.value.allocationMode,
-      source: searchForm.value.source,
       status: ""
     };
     detailPage.value = 1;

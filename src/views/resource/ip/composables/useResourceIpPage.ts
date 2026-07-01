@@ -59,7 +59,7 @@ export function useResourceIpPage() {
     { label: "智能分配(smart)", value: "smart" },
     { label: "混合国家(mixed)", value: "mixed" }
   ];
-  const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKETS"];
+  const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKS5"];
   const searchForm = ref<IpSearchForm>({
     country: "",
     proxyType: "",

@@ -54,7 +54,7 @@ describe("resource IP API", () => {
 
     await importIpProxies({
       allocationMode: "smart",
-      proxyType: "SOCKETS",
+      proxyType: "SOCKS5",
       source: "iproyal",
       text: "1.1.1.1:8080:u:p"
     });

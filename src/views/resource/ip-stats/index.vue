@@ -329,7 +329,6 @@ function sampleCheckCountry(row: unknown): void {
       v-model:page="detailPage"
       v-model:page-size="detailPageSize"
       v-model:search-form="detailSearchForm"
-      :allocation-mode-options="allocationModeOptions"
       :columns="detailColumns"
       :country="selectedCountry"
       :detail-status-options="detailStatusOptions"

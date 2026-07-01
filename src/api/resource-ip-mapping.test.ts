@@ -39,7 +39,7 @@ describe("resource IP mapping", () => {
     assert.deepEqual(normalizeIpProxyRow(row), {
       id: 7,
       country: "印度",
-      proxyType: "SOCKETS",
+      proxyType: "SOCKS5",
       proxyAddress: "proxy.example.com:1080",
       username: "operator",
       password: "plain-secret",
@@ -54,7 +54,7 @@ describe("resource IP mapping", () => {
       toIpProxyListParams({
         country: "混合（不限国家）",
         region: "Mumbai",
-        proxyType: "SOCKETS",
+        proxyType: "SOCKS5",
         source: "ipidea",
         keyword: "proxy",
         page: 2,
