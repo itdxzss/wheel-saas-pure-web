@@ -98,7 +98,8 @@ describe("resource IP API", () => {
       {
         method: "post",
         url: "/api/ip-proxies/9/check",
-        opts: undefined
+        opts: undefined,
+        config: { timeout: 30000 }
       }
     ]);
   });
@@ -112,7 +113,8 @@ describe("resource IP API", () => {
       {
         method: "post",
         url: "/api/ip-proxies/check",
-        opts: { data: { ids: [1, 2, 3] } }
+        opts: { data: { ids: [1, 2, 3] } },
+        config: { timeout: 120000 }
       }
     ]);
   });

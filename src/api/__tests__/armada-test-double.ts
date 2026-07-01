@@ -2,6 +2,7 @@ interface ArmadaCall {
   method: string;
   url: string;
   opts?: unknown;
+  config?: unknown;
 }
 
 let response: unknown;
@@ -19,8 +20,13 @@ export function armadaCalls(): ArmadaCall[] {
 export async function armadaRequest<T>(
   method: string,
   url: string,
-  opts?: unknown
+  opts?: unknown,
+  config?: unknown
 ): Promise<T> {
-  calls.push({ method, url, opts });
+  const call: ArmadaCall = { method, url, opts };
+  if (config !== undefined) {
+    call.config = config;
+  }
+  calls.push(call);
   return response as T;
 }

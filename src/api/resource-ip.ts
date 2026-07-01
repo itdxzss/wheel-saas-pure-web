@@ -92,7 +92,9 @@ export function importIpProxies(
 export function checkIpProxy(id: number): Promise<IpProxyCheckResult> {
   return armadaRequest<IpProxyCheckResult>(
     "post",
-    `/api/ip-proxies/${id}/check`
+    `/api/ip-proxies/${id}/check`,
+    undefined,
+    { timeout: 30000 }
   );
 }
 
@@ -100,9 +102,14 @@ export function checkIpProxy(id: number): Promise<IpProxyCheckResult> {
 export function batchCheckIpProxies(
   ids: number[]
 ): Promise<IpProxyCheckResult[]> {
-  return armadaRequest<IpProxyCheckResult[]>("post", "/api/ip-proxies/check", {
-    data: { ids }
-  });
+  return armadaRequest<IpProxyCheckResult[]>(
+    "post",
+    "/api/ip-proxies/check",
+    {
+      data: { ids }
+    },
+    { timeout: 120000 }
+  );
 }
 
 export function batchDeleteIpProxies(ids: number[]): Promise<void> {
