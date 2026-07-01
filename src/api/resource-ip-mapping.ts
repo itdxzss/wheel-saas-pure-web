@@ -37,28 +37,12 @@ export interface BackendIpProxyRow {
 export interface IpManageRow {
   id: number;
   country: string;
-  status: number | null;
-  statusLabel: string;
-  ownership: number | null;
-  ownershipLabel: string;
-  allocationMode: string;
-  allocationModeLabel: string;
   proxyType: string;
   proxyAddress: string;
   username: string;
   password: string;
   validAccountCount: number;
   source: string;
-  remark: string;
-  lastSampleCheckAt: string;
-  detectedCountryCode: string;
-  outboundIp: string;
-  detectedLocation: string;
-  detectedIsp: string;
-  detectedLatitude: number | null;
-  detectedLongitude: number | null;
-  checkFailCount: number;
-  lastCheckError: string;
   createdAt: string;
 }
 
@@ -124,7 +108,9 @@ function protocolLabelOf(code?: number | null): string {
 }
 
 /** 兼容后端或历史数据中可能出现的 SOCKS5 文案,页面统一显示 SOCKETS。 */
-export function normalizeProtocolLabel(label?: string | null): string | undefined {
+export function normalizeProtocolLabel(
+  label?: string | null
+): string | undefined {
   if (!label) return undefined;
   return label === "SOCKS5" ? "SOCKETS" : label;
 }
@@ -148,31 +134,14 @@ export function normalizeIpProxyRow(row: BackendIpProxyRow): IpManageRow {
   return {
     id: row.id,
     country: row.region ?? "",
-    status: row.status ?? null,
-    statusLabel: row.statusLabel ?? (row.status == null ? "" : String(row.status)),
-    ownership: row.ownership ?? null,
-    ownershipLabel:
-      row.ownershipLabel ?? (row.ownership == null ? "" : String(row.ownership)),
-    allocationMode: normalizeIpAllocationMode(row.allocationMode) ?? "",
-    allocationModeLabel:
-      row.allocationModeLabel || ipAllocationModeLabelOf(row.allocationMode),
     proxyType:
-      normalizeProtocolLabel(row.protocolLabel) || protocolLabelOf(row.protocol),
+      normalizeProtocolLabel(row.protocolLabel) ||
+      protocolLabelOf(row.protocol),
     proxyAddress: row.proxyAddress ?? "",
     username: row.username ?? "",
     password: row.password ?? "",
     validAccountCount: row.validAccountCount ?? 0,
     source: row.source ?? "",
-    remark: row.remark ?? "",
-    lastSampleCheckAt: formatEpochMillis(row.lastSampleCheckAt),
-    detectedCountryCode: row.detectedCountryCode ?? "",
-    outboundIp: row.outboundIp ?? "",
-    detectedLocation: row.detectedLocation ?? "",
-    detectedIsp: row.detectedIsp ?? "",
-    detectedLatitude: row.detectedLatitude ?? null,
-    detectedLongitude: row.detectedLongitude ?? null,
-    checkFailCount: row.checkFailCount ?? 0,
-    lastCheckError: row.lastCheckError ?? "",
     createdAt: formatEpochMillis(row.createdAt)
   };
 }

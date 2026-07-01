@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { IpCountryStatsRow } from "@/api/resource-ip-stats";
+import ArrowDown from "~icons/ep/arrow-down";
+import ArrowUp from "~icons/ep/arrow-up";
+import { useIpStatsRankCollapse } from "../composables/useIpStatsRankCollapse";
 
 defineOptions({
   name: "IpStatsRankList"
@@ -10,14 +13,34 @@ defineProps<{
   rankBarWidth: (row: IpCountryStatsRow) => string;
   rows: IpCountryStatsRow[];
 }>();
+
+const {
+  rankAriaExpanded,
+  rankCollapsed,
+  rankCollapseText,
+  toggleRankCollapse
+} = useIpStatsRankCollapse();
 </script>
 
 <template>
   <el-card class="ip-stats-rank-card" shadow="never">
     <template #header>
-      <strong>国家 IP 数量排行 Top 10</strong>
+      <div class="ip-stats-rank-head">
+        <div>
+          <strong>国家 IP 数量排行 Top 10</strong>
+          <span>按 IP 总数倒序展示，包含使用中、空闲和不可用</span>
+        </div>
+        <el-button
+          size="small"
+          :icon="rankCollapsed ? ArrowDown : ArrowUp"
+          :aria-expanded="rankAriaExpanded"
+          @click="toggleRankCollapse"
+        >
+          {{ rankCollapseText }}
+        </el-button>
+      </div>
     </template>
-    <div v-loading="loading" class="ip-stats-rank-list">
+    <div v-show="!rankCollapsed" v-loading="loading" class="ip-stats-rank-list">
       <div v-if="rows.length === 0" class="ip-stats-inline-empty">
         暂无 IP 数据
       </div>
@@ -41,6 +64,21 @@ defineProps<{
 <style scoped>
 .ip-stats-rank-card {
   margin-bottom: 12px;
+}
+
+.ip-stats-rank-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.ip-stats-rank-head span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--el-text-color-secondary);
 }
 
 .ip-stats-rank-list {
@@ -89,6 +127,10 @@ defineProps<{
 }
 
 @media (max-width: 768px) {
+  .ip-stats-rank-head {
+    align-items: stretch;
+  }
+
   .ip-stats-rank-row {
     grid-template-columns: 1fr;
   }

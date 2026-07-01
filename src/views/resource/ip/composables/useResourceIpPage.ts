@@ -30,6 +30,20 @@ export interface IpImportForm {
   source: string;
 }
 
+/** IP 管理主列表按 PRD/原型展示,状态类字段只在检测弹窗和统计模块出现。 */
+export function createIpManageTableColumns(): TableColumnList {
+  return [
+    { label: "国家", prop: "country", width: 130 },
+    { label: "类型", prop: "proxyType", width: 110 },
+    { label: "代理地址", prop: "proxyAddress", minWidth: 220 },
+    { label: "用户名", prop: "username", minWidth: 140 },
+    { label: "密码", prop: "password", minWidth: 140 },
+    { label: "IP来源（二期）", prop: "source", minWidth: 140 },
+    { label: "有效账号", prop: "validAccountCount", width: 110 },
+    { label: "创建时间", prop: "createdAt", width: 180 }
+  ];
+}
+
 /**
  * IP 管理页的状态与动作集中在这里。
  *
@@ -75,21 +89,7 @@ export function useResourceIpPage() {
   const total = ref(0);
 
   // 必须和 index.vue 中 dynamicColumns 的渲染顺序保持一致。
-  const columns: TableColumnList = [
-    { label: "国家", prop: "country", width: 130 },
-    { label: "状态", prop: "statusLabel", width: 110 },
-    { label: "分配方式", prop: "allocationModeLabel", width: 130 },
-    { label: "类型", prop: "proxyType", width: 110 },
-    { label: "代理地址", prop: "proxyAddress", minWidth: 220 },
-    { label: "用户名", prop: "username", minWidth: 140 },
-    { label: "密码", prop: "password", minWidth: 140 },
-    { label: "有效账号", prop: "validAccountCount", width: 110 },
-    { label: "来源", prop: "source", minWidth: 140 },
-    { label: "最近检测", prop: "lastSampleCheckAt", width: 180 },
-    { label: "失败次数", prop: "checkFailCount", width: 100 },
-    { label: "错误原因", prop: "lastCheckError", minWidth: 180 },
-    { label: "创建时间", prop: "createdAt", width: 180 }
-  ];
+  const columns = createIpManageTableColumns();
 
   function countryOptionLabel(option: IpCountryOption): string {
     const flag = option.flag ? `${option.flag} ` : "";

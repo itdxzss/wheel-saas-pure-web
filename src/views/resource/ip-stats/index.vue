@@ -63,8 +63,7 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
 
 <template>
   <div class="ip-stats-page">
-    <div class="ip-stats-title-row">
-      <h2>IP 数据统计</h2>
+    <div class="ip-stats-action-row">
       <el-button :icon="useRenderIcon(RefreshRight)" @click="refreshAll">
         刷新
       </el-button>
@@ -147,7 +146,10 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
           >
             查询
           </el-button>
-          <el-button :icon="useRenderIcon(RefreshRight)" @click="resetSearchForm">
+          <el-button
+            :icon="useRenderIcon(RefreshRight)"
+            @click="resetSearchForm"
+          >
             重置
           </el-button>
         </el-form-item>
@@ -323,17 +325,11 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
   padding: 16px;
 }
 
-.ip-stats-title-row {
+.ip-stats-action-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-bottom: 12px;
-}
-
-.ip-stats-title-row h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
 }
 
 .ip-stats-search {
