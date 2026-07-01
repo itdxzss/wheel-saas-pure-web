@@ -45,9 +45,15 @@ export interface IpProxyImportSampleRow {
   host: string;
   port: number;
   passed: boolean;
+  connectionStatus?: "success" | "failed" | string | null;
+  whatsappStatus?: string | null;
   outboundIp?: string | null;
   countryCode?: string | null;
   location?: string | null;
+  isp?: string | null;
+  checkedAt?: number | null;
+  detectedLatitude?: number | null;
+  detectedLongitude?: number | null;
   errorMessage?: string | null;
 }
 

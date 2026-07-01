@@ -1,5 +1,5 @@
 import { computed, onMounted, ref, watch } from "vue";
-import { ElMessageBox, type UploadUserFile } from "element-plus";
+import { ElMessageBox, type UploadRawFile, type UploadUserFile } from "element-plus";
 import {
   batchCheckIpProxies,
   batchDeleteIpProxies,
@@ -68,6 +68,7 @@ export function useResourceIpPage() {
   const importCheckPassed = ref(false);
   const importCheckErrors = ref<string[]>([]);
   const importCheckResult = ref<IpProxyImportSampleCheckResult | null>(null);
+  const showImportSampleCheckDialog = ref(false);
   const batchChecking = ref(false);
   // 单条检测期间用 Set 锁住所有检测入口:当前行显示 loading,其它行和批量按钮禁用。
   const checkingRowIds = ref<Set<number>>(new Set());
@@ -143,6 +144,30 @@ export function useResourceIpPage() {
     importCheckPassed.value = false;
     importCheckErrors.value = [];
     importCheckResult.value = null;
+  }
+
+  function importCheckFormSnapshot() {
+    const file = uploadFiles.value[0];
+    return {
+      allocationMode: importForm.value.allocationMode,
+      countryValue: importForm.value.countryValue,
+      fileName: file?.name ?? "",
+      fileSize: file?.size ?? file?.raw?.size ?? 0,
+      fileUid: file?.uid ?? "",
+      proxyType: importForm.value.proxyType,
+      source: importForm.value.source.trim()
+    };
+  }
+
+  function importCheckFormFingerprint(): string {
+    return JSON.stringify(importCheckFormSnapshot());
+  }
+
+  function importCheckFingerprint(text: string): string {
+    return JSON.stringify({
+      ...importCheckFormSnapshot(),
+      text
+    });
   }
 
   /** 打开导入弹窗时重置表单和上次导入错误。 */
@@ -292,8 +317,7 @@ export function useResourceIpPage() {
     searchIpList();
   }
 
-  /** 读取用户选择的 TXT 文件;文件内容由后端逐行解析和去重。 */
-  async function readSelectedFileText(): Promise<string | null> {
+  function selectedImportRawFile(): UploadRawFile | null {
     const rawFile = uploadFiles.value[0]?.raw;
     if (!rawFile) {
       message("请上传 TXT 文件", { type: "warning" });
@@ -303,12 +327,22 @@ export function useResourceIpPage() {
       message("仅支持 .txt 文件", { type: "warning" });
       return null;
     }
+    return rawFile;
+  }
+
+  async function readImportFileText(rawFile: UploadRawFile): Promise<string | null> {
     const text = await rawFile.text();
     if (!text.trim()) {
       message("TXT 文件内容不能为空", { type: "warning" });
       return null;
     }
     return text;
+  }
+
+  /** 读取用户选择的 TXT 文件;文件内容由后端逐行解析和去重。 */
+  async function readSelectedFileText(): Promise<string | null> {
+    const rawFile = selectedImportRawFile();
+    return rawFile ? readImportFileText(rawFile) : null;
   }
 
   async function sampleCheckImport(): Promise<void> {
@@ -320,14 +354,22 @@ export function useResourceIpPage() {
       message("请输入来源", { type: "warning" });
       return;
     }
-    const text = await readSelectedFileText();
-    if (text == null) return;
+    const rawFile = selectedImportRawFile();
+    if (!rawFile) return;
+    const requestFormFingerprint = importCheckFormFingerprint();
 
     importChecking.value = true;
     importCheckPassed.value = false;
     importCheckErrors.value = [];
     importCheckResult.value = null;
+    showImportSampleCheckDialog.value = true;
     try {
+      const text = await readImportFileText(rawFile);
+      if (text == null) return;
+      if (requestFormFingerprint !== importCheckFormFingerprint()) {
+        return;
+      }
+      const requestFingerprint = importCheckFingerprint(text);
       const result = await sampleCheckIpProxyImport({
         allocationMode: importForm.value.allocationMode,
         countryValue: importForm.value.countryValue,
@@ -335,6 +377,9 @@ export function useResourceIpPage() {
         source: importForm.value.source.trim(),
         text
       });
+      if (requestFingerprint !== importCheckFingerprint(text)) {
+        return;
+      }
       importCheckResult.value = result;
       importCheckPassed.value = result.passed;
       importCheckErrors.value = result.errors ?? [];
@@ -428,6 +473,7 @@ export function useResourceIpPage() {
     selectedRows,
     showCheckResultDialog,
     showImportDialog,
+    showImportSampleCheckDialog,
     total,
     uploadFiles,
     checkSelectedIps,

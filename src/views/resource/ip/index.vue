@@ -6,6 +6,7 @@ import type { IpManageRow } from "@/api/resource-ip-mapping";
 import { useResourceIpPage } from "./composables/useResourceIpPage";
 import IpCheckResultDialog from "./components/IpCheckResultDialog.vue";
 import IpImportDialog from "./components/IpImportDialog.vue";
+import IpImportSampleCheckDialog from "./components/IpImportSampleCheckDialog.vue";
 import Search from "~icons/ri/search-line";
 import RefreshRight from "~icons/ep/refresh-right";
 import Upload from "~icons/ep/upload";
@@ -31,6 +32,7 @@ const {
   guideCollapsed,
   importCheckErrors,
   importCheckPassed,
+  importCheckResult,
   importChecking,
   importErrors,
   importForm,
@@ -44,6 +46,7 @@ const {
   selectedRows,
   showCheckResultDialog,
   showImportDialog,
+  showImportSampleCheckDialog,
   total,
   uploadFiles,
   checkSelectedIps,
@@ -357,6 +360,12 @@ function checkTableRow(row: unknown): void {
       :loading="checkDialogLoading"
       :results="checkResults"
       @rerun="rerunActiveCheck"
+    />
+
+    <IpImportSampleCheckDialog
+      v-model="showImportSampleCheckDialog"
+      :loading="importChecking"
+      :result="importCheckResult"
     />
   </div>
 </template>

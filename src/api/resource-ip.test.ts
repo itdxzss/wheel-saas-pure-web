@@ -57,19 +57,31 @@ describe("resource IP API", () => {
           outboundIp: "103.10.10.10",
           countryCode: "US",
           location: "United States",
+          connectionStatus: "success",
+          whatsappStatus: "HTTP 400",
+          isp: "Example ISP",
+          checkedAt: 1_719_800_000_000,
+          detectedLatitude: 37.386,
+          detectedLongitude: -122.084,
           errorMessage: null
         }
       ],
       errors: []
     });
 
-    await sampleCheckIpProxyImport({
+    const result = await sampleCheckIpProxyImport({
       countryValue: "US",
       proxyType: "HTTP",
       source: "iproyal",
       text: "1.1.1.1:8080:u:p"
     });
 
+    assert.equal(result.samples[0].connectionStatus, "success");
+    assert.equal(result.samples[0].whatsappStatus, "HTTP 400");
+    assert.equal(result.samples[0].isp, "Example ISP");
+    assert.equal(result.samples[0].checkedAt, 1_719_800_000_000);
+    assert.equal(result.samples[0].detectedLatitude, 37.386);
+    assert.equal(result.samples[0].detectedLongitude, -122.084);
     assert.deepEqual(armadaCalls(), [
       {
         method: "post",

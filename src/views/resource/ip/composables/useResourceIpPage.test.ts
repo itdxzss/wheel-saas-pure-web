@@ -92,7 +92,22 @@ describe("resource IP page state", () => {
     resetArmadaMock({
       passed: true,
       sampleSize: 1,
-      samples: [],
+      samples: [
+        {
+          lineNo: 1,
+          host: "1.1.1.1",
+          port: 8080,
+          passed: true,
+          connectionStatus: "success",
+          whatsappStatus: "HTTP 400",
+          outboundIp: "103.10.10.10",
+          countryCode: "US",
+          location: "United States",
+          isp: "Example ISP",
+          checkedAt: 1_719_800_000_000,
+          errorMessage: null
+        }
+      ],
       errors: []
     });
     const page = useResourceIpPage();
@@ -102,7 +117,9 @@ describe("resource IP page state", () => {
 
     await page.sampleCheckImport();
 
+    assert.equal(page.showImportSampleCheckDialog.value, true);
     assert.equal(page.importCheckPassed.value, true);
+    assert.equal(page.importCheckResult.value?.samples[0].whatsappStatus, "HTTP 400");
     assert.deepEqual(armadaCalls(), [
       {
         method: "post",
@@ -129,6 +146,34 @@ describe("resource IP page state", () => {
     await nextTick();
 
     assert.equal(page.importCheckPassed.value, false);
+  });
+
+  it("ignores stale import sample-check response after import inputs change", async () => {
+    const pending = deferred<{
+      passed: boolean;
+      sampleSize: number;
+      samples: never[];
+      errors: string[];
+    }>();
+    resetArmadaMock(pending.promise);
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+    await nextTick();
+
+    const checking = page.sampleCheckImport();
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importChecking.value, true);
+
+    page.importForm.value.source = "changed";
+    await nextTick();
+    pending.resolve({ passed: true, sampleSize: 1, samples: [], errors: [] });
+    await checking;
+
+    assert.equal(page.importCheckPassed.value, false);
+    assert.equal(page.importCheckResult.value, null);
+    assert.equal(page.canSubmitImport.value, false);
   });
 
   it("opens the single-check dialog immediately and blocks other checks while pending", async () => {

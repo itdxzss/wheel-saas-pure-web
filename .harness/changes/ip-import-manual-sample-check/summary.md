@@ -8,7 +8,9 @@ IP 管理 TXT 批量导入不再由导入动作自动触发检测。业务人员
 
 - `src/api/resource-ip.ts` 新增导入前抽样检测接口封装。
 - `src/views/resource/ip/components/IpImportDialog.vue` 增加国家选择、检测按钮和导入按钮禁用状态。
+- `src/views/resource/ip/components/IpImportSampleCheckDialog.vue` 展示本次抽样检测的最多 5 条列表结果。
 - `src/views/resource/ip/composables/useResourceIpPage.ts` 保存检测通过状态,在导入参数变化时清空。
+- 检测请求返回时会校验当前导入内容是否已经变化,过期响应不会点亮导入按钮。
 
 ## 后端配合
 
