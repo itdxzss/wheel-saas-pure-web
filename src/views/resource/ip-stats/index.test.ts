@@ -19,6 +19,11 @@ describe("resource IP stats page template", () => {
     assert.match(pageSource, />\s*检测\s*</);
   });
 
+  it("renders country-level export action from the prototype", () => {
+    assert.match(pageSource, /@click="exportCountryProxies\(row\)"/);
+    assert.match(pageSource, />\s*导出该国家 IP\s*</);
+  });
+
   it("renders country sample check dialog like the prototype", () => {
     assert.match(pageSource, /国家 IP 抽样检测/);
     assert.match(pageSource, /IP 总数量/);

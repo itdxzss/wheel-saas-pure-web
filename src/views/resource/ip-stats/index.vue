@@ -41,6 +41,8 @@ const {
   detailTotal,
   detailVisible,
   errorMessage,
+  exportingCountryRegion,
+  exportCountryProxies: runExportCountryProxies,
   formatRate,
   formatTime,
   loadCountryRows,
@@ -83,6 +85,10 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
 
 function sampleCheckCountry(row: unknown): void {
   void runSampleCheckCountry(row as IpCountryStatsRow);
+}
+
+function exportCountryProxies(row: unknown): void {
+  void runExportCountryProxies(row as IpCountryStatsRow);
 }
 
 function checkDetailIp(row: unknown): void {
@@ -315,7 +321,7 @@ function checkDetailIp(row: unknown): void {
             v-if="!dynamicColumns[9].hide"
             label="操作"
             fixed="right"
-            width="160"
+            width="250"
           >
             <template #default="{ row }">
               <el-button link type="primary" @click="openCountryDetail(row)">
@@ -323,6 +329,14 @@ function checkDetailIp(row: unknown): void {
               </el-button>
               <el-button link type="primary" @click="sampleCheckCountry(row)">
                 检测
+              </el-button>
+              <el-button
+                link
+                type="primary"
+                :loading="exportingCountryRegion === row.region"
+                @click="exportCountryProxies(row)"
+              >
+                导出该国家 IP
               </el-button>
             </template>
           </el-table-column>

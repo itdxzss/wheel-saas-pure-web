@@ -6,6 +6,7 @@ const projectRoot = pathResolve(import.meta.dirname, "../../..");
 const armadaDouble = pathResolve(import.meta.dirname, "armada-test-double.ts");
 const httpDouble = pathResolve(import.meta.dirname, "http-test-double.ts");
 const timeDouble = pathResolve(import.meta.dirname, "time-test-double.ts");
+const messageDouble = pathResolve(import.meta.dirname, "message-test-double.ts");
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier === "@/api/armada") {
@@ -16,6 +17,9 @@ export async function resolve(specifier, context, nextResolve) {
   }
   if (specifier === "@/utils/time") {
     return { url: pathToFileURL(timeDouble).href, shortCircuit: true };
+  }
+  if (specifier === "@/utils/message") {
+    return { url: pathToFileURL(messageDouble).href, shortCircuit: true };
   }
   if (specifier.startsWith("@/")) {
     const target = pathResolve(projectRoot, "src", `${specifier.slice(2)}.ts`);

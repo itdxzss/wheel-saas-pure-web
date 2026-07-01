@@ -1,6 +1,8 @@
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
 import type { IpProxyCheckResult } from "@/api/resource-ip";
+import { http } from "@/utils/http";
+import type { PureHttpResponse } from "@/utils/http/types.d";
 import {
   normalizeIpAllocationMode,
   normalizeProtocolLabel,
@@ -105,6 +107,11 @@ export interface IpStatsCountrySampleStats {
   unavailableIpCount: number;
 }
 
+export interface IpStatsCountryExport {
+  filename: string;
+  blob: Blob;
+}
+
 interface IpStatsCountryParams {
   keyword?: string;
   protocol?: number;
@@ -129,6 +136,44 @@ interface IpStatsRegionProxyParams {
 function trimToUndefined(value?: string | null): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function headerValue(
+  headers: PureHttpResponse["headers"],
+  name: string
+): string | undefined {
+  const getter = headers as { get?: (key: string) => unknown };
+  const viaGetter = getter.get?.(name);
+  if (typeof viaGetter === "string") return viaGetter;
+
+  const record = headers as Record<string, unknown>;
+  const direct = record[name] ?? record[name.toLowerCase()];
+  return typeof direct === "string" ? direct : undefined;
+}
+
+function decodeFilename(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function filenameFromContentDisposition(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  const encoded = /filename\*=(?:UTF-8'')?("?)([^";]+)\1/i.exec(value);
+  if (encoded?.[2]) {
+    return decodeFilename(encoded[2]);
+  }
+
+  const plain = /filename=("?)([^";]+)\1/i.exec(value);
+  return plain?.[2];
+}
+
+function fallbackCountryExportFilename(region: string): string {
+  const safeRegion = region.trim().replace(/[\\/:*?"<>|\x00-\x1f\x7f]+/g, "_");
+  return `ip-proxies-${safeRegion || "country"}.txt`;
 }
 
 function toCountryStatsParams(
@@ -211,4 +256,27 @@ export function getIpStatsCountrySampleStats(
     "get",
     `/api/ip-proxies/stats/countries/${encodeURIComponent(region)}/sample-check/stats`
   );
+}
+
+export function exportIpStatsCountryProxies(
+  region: string
+): Promise<IpStatsCountryExport> {
+  let filename: string | undefined;
+  return http
+    .request<Blob>(
+      "get",
+      `/api/ip-proxies/stats/countries/${encodeURIComponent(region)}/export`,
+      { responseType: "blob" },
+      {
+        beforeResponseCallback: response => {
+          filename = filenameFromContentDisposition(
+            headerValue(response.headers, "Content-Disposition")
+          );
+        }
+      }
+    )
+    .then(blob => ({
+      filename: filename || fallbackCountryExportFilename(region),
+      blob
+    }));
 }

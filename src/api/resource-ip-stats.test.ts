@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
+import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
+  exportIpStatsCountryProxies,
   getIpStatsSummary,
   getIpStatsCountrySampleStats,
   listIpStatsCountries,
@@ -174,5 +176,28 @@ describe("resource IP stats API", () => {
     assert.equal(result.list[0].proxyHost, "1.2.3.4");
     assert.equal(result.list[0].proxyPort, 1080);
     assert.equal(result.list[0].allocationModeLabel, "混合分组");
+  });
+
+  it("downloads country IP exports as blobs and uses backend filename", async () => {
+    const blob = new Blob(["1.2.3.4:8000:user:pass\n"], {
+      type: "text/plain"
+    });
+    resetHttpMock(blob, {
+      "content-disposition":
+        "attachment; filename*=UTF-8''ip-proxies-%E5%8D%B0%E5%BA%A6.txt"
+    });
+
+    const result = await exportIpStatsCountryProxies("印度");
+
+    assert.equal(result.filename, "ip-proxies-印度.txt");
+    assert.equal(result.blob, blob);
+    assert.deepEqual(httpCalls(), [
+      {
+        method: "get",
+        url: "/api/ip-proxies/stats/countries/%E5%8D%B0%E5%BA%A6/export",
+        opts: { responseType: "blob" },
+        configKeys: ["beforeResponseCallback"]
+      }
+    ]);
   });
 });

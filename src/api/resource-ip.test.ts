@@ -142,6 +142,7 @@ describe("resource IP API", () => {
       whatsappStatus: "unknown",
       outboundIp: "8.8.8.8",
       countryCode: "US",
+      detectedRegion: "美国",
       region: "California",
       location: "Mountain View",
       isp: "Google",

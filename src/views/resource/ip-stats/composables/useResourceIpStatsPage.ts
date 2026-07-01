@@ -1,5 +1,6 @@
 import { computed, onMounted, ref } from "vue";
 import {
+  exportIpStatsCountryProxies,
   getIpStatsSummary,
   getIpStatsCountrySampleStats,
   listIpStatsCountries,
@@ -88,6 +89,7 @@ export function useResourceIpStatsPage() {
   const detailCheckingRowIds = ref<Set<number>>(new Set());
   const checkDialogLoading = ref(false);
   const checkDialogErrorMessage = ref("");
+  const exportingCountryRegion = ref<string | null>(null);
   const errorMessage = ref("");
 
   const searchForm = ref<IpStatsSearchForm>({
@@ -235,6 +237,17 @@ export function useResourceIpStatsPage() {
     };
   }
 
+  function downloadFile(filename: string, blob: Blob): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function loadSummary(): Promise<void> {
     summaryLoading.value = true;
     try {
@@ -363,6 +376,23 @@ export function useResourceIpStatsPage() {
     }
   }
 
+  async function exportCountryProxies(row: IpCountryStatsRow): Promise<void> {
+    if (exportingCountryRegion.value) return;
+
+    exportingCountryRegion.value = row.region;
+    try {
+      const result = await exportIpStatsCountryProxies(row.region);
+      downloadFile(result.filename, result.blob);
+      message("国家 IP 已导出", { type: "success" });
+    } catch (error) {
+      message(apiErrorMessage(error, "导出国家 IP 失败"), {
+        type: "error"
+      });
+    } finally {
+      exportingCountryRegion.value = null;
+    }
+  }
+
   async function confirmSampleCheckCountry(): Promise<void> {
     const country = sampleDialogCountry.value;
     if (!country || sampleChecking.value) return;
@@ -383,7 +413,16 @@ export function useResourceIpStatsPage() {
 
     sampleChecking.value = true;
     try {
-      await sampleCheckIpStatsCountry(country.region, normalizedSampleCount);
+      const result = await sampleCheckIpStatsCountry(
+        country.region,
+        normalizedSampleCount
+      );
+      activeCheckRow.value = null;
+      activeDetailCheckRow.value = null;
+      checkDialogErrorMessage.value = "";
+      checkDialogLoading.value = false;
+      checkResults.value = result.results ?? [];
+      showCheckResultDialog.value = true;
       message(
         `已完成 ${country.region} ${normalizedSampleCount} 个 IP 抽样检测`,
         {
@@ -505,6 +544,8 @@ export function useResourceIpStatsPage() {
     detailTotal,
     detailVisible,
     errorMessage,
+    exportingCountryRegion,
+    exportCountryProxies,
     formatRate,
     formatTime,
     confirmSampleCheckCountry,

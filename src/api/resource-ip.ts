@@ -71,6 +71,7 @@ export interface IpProxyCheckResult {
   whatsappStatus?: string | null;
   outboundIp?: string | null;
   countryCode?: string | null;
+  detectedRegion?: string | null;
   region?: string | null;
   location?: string | null;
   isp?: string | null;

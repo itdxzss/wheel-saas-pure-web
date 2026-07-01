@@ -62,10 +62,12 @@ function coordinateLabel(row: Partial<IpProxyCheckResult>): string {
   return `${row.detectedLatitude}, ${row.detectedLongitude}`;
 }
 
-/** 优先展示检测国家码和后端最终 region;没有 region 时退回检测位置文本。 */
+/** 归属地只展示检测结果,不使用导入/分组用的业务 region。 */
 function regionLabel(row: Partial<IpProxyCheckResult>): string {
   return (
-    [row.countryCode, row.region || row.location].filter(Boolean).join(" / ") ||
+    [[row.detectedRegion, row.countryCode].filter(Boolean).join(" / "), row.location]
+      .filter(Boolean)
+      .join(" / ") ||
     "-"
   );
 }

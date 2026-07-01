@@ -19,6 +19,10 @@ const timeDouble = resolve(
   import.meta.dirname,
   "time-test-double.ts"
 );
+const messageDouble = resolve(
+  import.meta.dirname,
+  "message-test-double.ts"
+);
 
 require("node:module")._resolveFilename = function resolveTestAlias(
   request,
@@ -48,6 +52,15 @@ require("node:module")._resolveFilename = function resolveTestAlias(
     return originalResolveFilename.call(
       this,
       timeDouble,
+      parent,
+      isMain,
+      options
+    );
+  }
+  if (request === "@/utils/message") {
+    return originalResolveFilename.call(
+      this,
+      messageDouble,
       parent,
       isMain,
       options

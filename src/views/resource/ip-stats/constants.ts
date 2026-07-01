@@ -47,7 +47,7 @@ export const ipStatsCountryColumns: TableColumnList = [
   { label: "不可用率", prop: "unavailableRate", width: 120 },
   { label: "最近抽检时间", prop: "lastSampleCheckAt", width: 180 },
   { label: "资源状态", prop: "resourceRisk", width: 140 },
-  { label: "操作", prop: "operation", fixed: "right", width: 160 }
+  { label: "操作", prop: "operation", fixed: "right", width: 250 }
 ];
 
 export const ipStatsDetailColumns: TableColumnList = [
