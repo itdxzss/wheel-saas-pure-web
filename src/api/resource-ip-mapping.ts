@@ -36,7 +36,7 @@ export interface IpProxyListQuery {
 }
 
 export interface BackendIpProxyListParams {
-  region?: string;
+  countryValue?: string;
   protocol?: number;
   source?: string;
   page?: number;
@@ -51,6 +51,12 @@ const proxyProtocolCodes: Record<ProxyTypeLabel, number> = {
 function trimToUndefined(value?: string | null): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function toCountryValue(value?: string | null): string | undefined {
+  const trimmed = trimToUndefined(value);
+  if (!trimmed) return undefined;
+  return trimmed === "混合（不限国家）" ? "MIXED" : trimmed;
 }
 
 export function proxyTypeToProtocol(value?: string): number | undefined {
@@ -84,7 +90,7 @@ export function toIpProxyListParams(
   query: IpProxyListQuery
 ): BackendIpProxyListParams {
   return {
-    region: trimToUndefined(query.country),
+    countryValue: toCountryValue(query.country),
     protocol: proxyTypeToProtocol(query.proxyType),
     source: trimToUndefined(query.source),
     page: query.page,

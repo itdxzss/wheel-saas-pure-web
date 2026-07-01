@@ -10,6 +10,19 @@ import {
   type ProxyTypeLabel
 } from "@/api/resource-ip-mapping";
 
+export interface IpCountryOption {
+  value: string;
+  iso2: string | null;
+  nameZh: string;
+  phonePrefix: string;
+  flag: string;
+  virtual: boolean;
+}
+
+interface IpCountryOptionsResponse {
+  rows?: IpCountryOption[] | null;
+}
+
 export interface IpProxyImportInput {
   country: string;
   proxyType: ProxyTypeLabel;
@@ -43,7 +56,7 @@ export function importIpProxies(
 ): Promise<IpProxyImportResult> {
   return armadaRequest<IpProxyImportResult>("post", "/api/ip-proxies/import", {
     data: {
-      region: input.country,
+      countryValue: input.country,
       protocol: proxyTypeToProtocol(input.proxyType),
       source: input.source,
       text: input.text
@@ -59,4 +72,13 @@ export function batchDeleteIpProxies(ids: number[]): Promise<void> {
 
 export async function listTenantIpRegions(): Promise<string[]> {
   return armadaRequest<string[]>("get", "/api/ip-proxies/regions");
+}
+
+export async function listIpCountryOptions(): Promise<IpCountryOption[]> {
+  const result = await armadaRequest<IpCountryOptionsResponse>(
+    "get",
+    "/api/admin/countries/options",
+    { params: { scope: "ip" } }
+  );
+  return result.rows ?? [];
 }

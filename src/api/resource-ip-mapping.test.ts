@@ -43,7 +43,7 @@ describe("resource IP mapping", () => {
         pageSize: 50
       }),
       {
-        region: "混合（不限国家）",
+        countryValue: "MIXED",
         protocol: 1,
         source: "ipidea",
         page: 2,

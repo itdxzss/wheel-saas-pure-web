@@ -3,8 +3,9 @@ import { ElMessageBox, type UploadUserFile } from "element-plus";
 import {
   batchDeleteIpProxies,
   importIpProxies,
+  listIpCountryOptions,
   listIpProxies,
-  listTenantIpRegions
+  type IpCountryOption
 } from "@/api/resource-ip";
 import { apiErrorMessage } from "@/utils/api-error";
 import { message } from "@/utils/message";
@@ -22,16 +23,8 @@ export interface IpImportForm {
   source: string;
 }
 
-const defaultCountryOptions = [
-  "混合（不限国家）",
-  "巴基斯坦",
-  "印度",
-  "马来西亚",
-  "印度尼西亚"
-];
-
 export function useResourceIpPage() {
-  const countryOptions = ref<string[]>([...defaultCountryOptions]);
+  const countryOptions = ref<IpCountryOption[]>([]);
   const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKS5"];
   const searchForm = ref<IpSearchForm>({
     country: "",
@@ -68,20 +61,15 @@ export function useResourceIpPage() {
     { label: "创建时间", prop: "createdAt", width: 180 }
   ];
 
-  function mergeCountryOptions(regions: string[]): void {
-    const seen = new Set<string>();
-    countryOptions.value = [...defaultCountryOptions, ...regions]
-      .map(region => region.trim())
-      .filter(region => {
-        if (!region || seen.has(region)) return false;
-        seen.add(region);
-        return true;
-      });
+  function countryOptionLabel(option: IpCountryOption): string {
+    const flag = option.flag ? `${option.flag} ` : "";
+    const prefix = option.phonePrefix ? ` ${option.phonePrefix}` : "";
+    return `${flag}${option.nameZh}${prefix}`;
   }
 
   async function loadCountryOptions(): Promise<void> {
     try {
-      mergeCountryOptions(await listTenantIpRegions());
+      countryOptions.value = await listIpCountryOptions();
     } catch (error) {
       message(apiErrorMessage(error, "IP 国家加载失败"), { type: "warning" });
     }
@@ -99,7 +87,6 @@ export function useResourceIpPage() {
       rows.value = result.list ?? [];
       total.value = result.total ?? 0;
       selectedRows.value = [];
-      mergeCountryOptions(rows.value.map(row => row.country));
     } catch (error) {
       rows.value = [];
       total.value = 0;
@@ -145,7 +132,6 @@ export function useResourceIpPage() {
       await batchDeleteIpProxies(ids);
       message("IP 删除成功", { type: "success" });
       await refreshIpList();
-      void loadCountryOptions();
     } catch (error) {
       message(apiErrorMessage(error, "IP 删除失败"), { type: "error" });
     } finally {
@@ -215,7 +201,6 @@ export function useResourceIpPage() {
         showImportDialog.value = false;
       }
       await refreshIpList();
-      void loadCountryOptions();
     } catch (error) {
       message(apiErrorMessage(error, "IP 导入失败"), { type: "error" });
     } finally {
@@ -231,6 +216,7 @@ export function useResourceIpPage() {
   return {
     columns,
     countryOptions,
+    countryOptionLabel,
     deleting,
     errorMessage,
     guideCollapsed,

@@ -4,6 +4,7 @@ import {
   type UploadRawFile,
   type UploadUserFile
 } from "element-plus";
+import type { IpCountryOption } from "@/api/resource-ip";
 import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
 import type { IpImportForm } from "../composables/useResourceIpPage";
 
@@ -12,7 +13,8 @@ defineOptions({
 });
 
 defineProps<{
-  countryOptions: string[];
+  countryOptions: IpCountryOption[];
+  countryOptionLabel: (option: IpCountryOption) => string;
   importErrors: string[];
   importing: boolean;
   proxyTypeOptions: ProxyTypeLabel[];
@@ -86,10 +88,18 @@ function submit(): void {
           >
             <el-option
               v-for="country in countryOptions"
-              :key="country"
-              :label="country"
-              :value="country"
-            />
+              :key="country.value"
+              :label="countryOptionLabel(country)"
+              :value="country.value"
+            >
+              <span class="ip-country-option">
+                <span>{{ country.flag }}</span>
+                <span>{{ country.nameZh }}</span>
+                <span v-if="country.phonePrefix" class="ip-country-prefix">
+                  {{ country.phonePrefix }}
+                </span>
+              </span>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="代理类型" required>
@@ -195,6 +205,16 @@ function submit(): void {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 0.55fr);
   gap: 18px;
+}
+
+.ip-country-option {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ip-country-prefix {
+  color: var(--el-text-color-secondary);
 }
 
 .ip-upload-icon {

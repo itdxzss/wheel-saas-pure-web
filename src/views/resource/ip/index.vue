@@ -16,6 +16,7 @@ defineOptions({
 const {
   columns,
   countryOptions,
+  countryOptionLabel,
   deleting,
   errorMessage,
   guideCollapsed,
@@ -119,10 +120,18 @@ const {
           >
             <el-option
               v-for="country in countryOptions"
-              :key="country"
-              :label="country"
-              :value="country"
-            />
+              :key="country.value"
+              :label="countryOptionLabel(country)"
+              :value="country.value"
+            >
+              <span class="ip-country-option">
+                <span>{{ country.flag }}</span>
+                <span>{{ country.nameZh }}</span>
+                <span v-if="country.phonePrefix" class="ip-country-prefix">
+                  {{ country.phonePrefix }}
+                </span>
+              </span>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="类型">
@@ -283,6 +292,7 @@ const {
       v-model:form="importForm"
       v-model:upload-files="uploadFiles"
       :country-options="countryOptions"
+      :country-option-label="countryOptionLabel"
       :import-errors="importErrors"
       :importing="importing"
       :proxy-type-options="proxyTypeOptions"
@@ -393,6 +403,16 @@ const {
 
 .ip-filter-control {
   width: 180px;
+}
+
+.ip-country-option {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ip-country-prefix {
+  color: var(--el-text-color-secondary);
 }
 
 .ip-filter-control--sm {

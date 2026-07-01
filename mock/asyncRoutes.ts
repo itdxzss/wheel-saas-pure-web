@@ -219,6 +219,18 @@ const operationRouter = {
         module_key: "resource_ip",
         perm_key: "tenant:resource:ips:list"
       }
+    },
+    {
+      path: "/resource/ip-stats",
+      component: "resource/ip-stats/index",
+      name: "ResourceIpStats",
+      meta: {
+        title: "IP 数据统计",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "resource_ip_stats",
+        perm_key: "tenant:resource:ip-stats:list"
+      }
     }
   ]
 };
