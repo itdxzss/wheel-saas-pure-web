@@ -1,8 +1,10 @@
 import { computed, onMounted, ref } from "vue";
+import { ElMessageBox } from "element-plus";
 import {
   getIpStatsSummary,
   listIpStatsCountries,
   listIpStatsRegionProxies,
+  sampleCheckIpStatsCountry,
   type IpCountryStatsRow,
   type IpStatsDetailRow,
   type IpStatsRisk,
@@ -66,6 +68,9 @@ const sortFieldMap: Record<string, IpStatsSortField> = {
   availableRate: "availableRate",
   unavailableRate: "unavailableRate"
 };
+
+// 后端复用 IP 管理批量检测能力,单次最多检测 20 个 IP。
+const maxCountrySampleCheckCount = 20;
 
 export function useResourceIpStatsPage() {
   const summary = ref<IpStatsSummary>({ ...defaultSummary });
@@ -281,6 +286,67 @@ export function useResourceIpStatsPage() {
     await loadDetailRows();
   }
 
+  async function sampleCheckCountry(row: IpCountryStatsRow): Promise<void> {
+    if (row.totalIpCount <= 0) {
+      message("当前国家暂无 IP 可检测", { type: "warning" });
+      return;
+    }
+
+    let sampleCountText = "";
+    try {
+      const result = await ElMessageBox.prompt(
+        `当前国家 IP 总数 ${row.totalIpCount}，请输入抽样检测数量`,
+        `国家 IP 抽样检测 - ${row.region}`,
+        {
+          confirmButtonText: "检测",
+          cancelButtonText: "取消",
+          inputType: "number",
+          inputValue: String(
+            Math.min(row.totalIpCount, 10, maxCountrySampleCheckCount)
+          ),
+          inputPattern: /^[1-9]\d*$/,
+          inputErrorMessage: "请输入大于 0 的整数"
+        }
+      );
+      sampleCountText = result.value;
+    } catch {
+      return;
+    }
+
+    const sampleCount = Number(sampleCountText);
+    if (!Number.isInteger(sampleCount) || sampleCount <= 0) {
+      message("请输入大于 0 的整数", { type: "warning" });
+      return;
+    }
+    if (sampleCount > row.totalIpCount) {
+      message(`抽样检测数量不能超过当前国家 IP 总数量 ${row.totalIpCount}`, {
+        type: "warning"
+      });
+      return;
+    }
+    if (sampleCount > maxCountrySampleCheckCount) {
+      message(`一次最多检测 ${maxCountrySampleCheckCount} 个 IP`, {
+        type: "warning"
+      });
+      return;
+    }
+
+    countryLoading.value = true;
+    try {
+      await sampleCheckIpStatsCountry(row.region, sampleCount);
+      message(`已完成 ${row.region} ${sampleCount} 个 IP 抽样检测`, {
+        type: "success"
+      });
+      await Promise.all([loadRankRows(), loadCountryRows()]);
+    } catch (error) {
+      message(apiErrorMessage(error, "国家 IP 抽样检测失败"), {
+        type: "error"
+      });
+    } finally {
+      countryLoading.value = false;
+    }
+  }
+
   async function loadDetailRows(): Promise<void> {
     const country = selectedCountry.value;
     if (!country) return;
@@ -355,6 +421,7 @@ export function useResourceIpStatsPage() {
     resetSearchForm,
     riskOptions,
     riskTagType,
+    sampleCheckCountry,
     searchCountries,
     searchDetailRows,
     searchForm,

@@ -4,7 +4,8 @@ import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import {
   getIpStatsSummary,
   listIpStatsCountries,
-  listIpStatsRegionProxies
+  listIpStatsRegionProxies,
+  sampleCheckIpStatsCountry
 } from "./resource-ip-stats";
 
 describe("resource IP stats API", () => {
@@ -64,6 +65,31 @@ describe("resource IP stats API", () => {
             page: 2,
             pageSize: 20
           }
+        }
+      }
+    ]);
+  });
+
+  it("posts country sample check count to backend", async () => {
+    resetArmadaMock({
+      region: "印度",
+      sampleCount: 3,
+      lastSampleCheckAt: 1_719_900_000_000,
+      results: []
+    });
+
+    const result = await sampleCheckIpStatsCountry("印度", 3);
+
+    assert.equal(result.lastSampleCheckAt, 1_719_900_000_000);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/ip-proxies/stats/countries/%E5%8D%B0%E5%BA%A6/sample-check",
+        opts: {
+          data: { sampleCount: 3 }
+        },
+        config: {
+          timeout: 120000
         }
       }
     ]);

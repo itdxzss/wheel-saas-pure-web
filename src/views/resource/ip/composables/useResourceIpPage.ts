@@ -57,7 +57,7 @@ export function useResourceIpPage() {
     value: IpAllocationMode;
   }> = [
     { label: "智能分配(smart)", value: "smart" },
-    { label: "混合分组(mixed)", value: "mixed" }
+    { label: "混合国家(mixed)", value: "mixed" }
   ];
   const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKETS"];
   const searchForm = ref<IpSearchForm>({

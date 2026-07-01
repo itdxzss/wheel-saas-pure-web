@@ -45,8 +45,9 @@ export const ipStatsCountryColumns: TableColumnList = [
   { label: "不可用 IP 数", prop: "unavailableIpCount", width: 130 },
   { label: "可用率", prop: "availableRate", width: 120 },
   { label: "不可用率", prop: "unavailableRate", width: 120 },
+  { label: "最近抽检时间", prop: "lastSampleCheckAt", width: 180 },
   { label: "资源状态", prop: "resourceRisk", width: 140 },
-  { label: "操作", prop: "operation", fixed: "right", width: 120 }
+  { label: "操作", prop: "operation", fixed: "right", width: 160 }
 ];
 
 export const ipStatsDetailColumns: TableColumnList = [

@@ -47,6 +47,7 @@ const {
   resetSearchForm,
   riskOptions,
   riskTagType,
+  sampleCheckCountry: runSampleCheckCountry,
   searchCountries,
   searchDetailRows,
   searchForm,
@@ -58,6 +59,10 @@ const {
 
 function openCountryDetail(row: unknown, status: number | "" = ""): void {
   void openDetail(row as IpCountryStatsRow, status);
+}
+
+function sampleCheckCountry(row: unknown): void {
+  void runSampleCheckCountry(row as IpCountryStatsRow);
 }
 </script>
 
@@ -262,6 +267,16 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
           </el-table-column>
           <el-table-column
             v-if="!dynamicColumns[7].hide"
+            prop="lastSampleCheckAt"
+            label="最近抽检时间"
+            width="180"
+          >
+            <template #default="{ row }">
+              {{ formatTime(row.lastSampleCheckAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[8].hide"
             prop="resourceRisk"
             label="资源状态"
             width="140"
@@ -273,14 +288,17 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
             </template>
           </el-table-column>
           <el-table-column
-            v-if="!dynamicColumns[8].hide"
+            v-if="!dynamicColumns[9].hide"
             label="操作"
             fixed="right"
-            width="120"
+            width="160"
           >
             <template #default="{ row }">
               <el-button link type="primary" @click="openCountryDetail(row)">
                 查看明细
+              </el-button>
+              <el-button link type="primary" @click="sampleCheckCountry(row)">
+                检测
               </el-button>
             </template>
           </el-table-column>

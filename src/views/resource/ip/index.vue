@@ -69,7 +69,7 @@ function checkTableRow(row: unknown): void {
           <div class="ip-guide-title">温馨提示：</div>
           <div v-show="!guideCollapsed" class="ip-guide-sub">
             TXT
-            导入不再手选国家：智能分配会检测出口国家并落对应国家，混合分组会直接进入混合分组；建议保留混合分组兜底，避免账号缺少可用
+            导入不再手选国家：智能分配会检测出口国家并落对应国家，混合国家会直接进入混合国家；建议保留混合国家兜底，避免账号缺少可用
             IP。
           </div>
         </div>

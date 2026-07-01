@@ -1,5 +1,6 @@
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
+import type { IpProxyCheckResult } from "@/api/resource-ip";
 import {
   normalizeIpAllocationMode,
   normalizeProtocolLabel,
@@ -43,6 +44,7 @@ export interface IpCountryStatsRow {
   unavailableIpCount: number;
   availableRate: number;
   unavailableRate: number;
+  lastSampleCheckAt: number | null;
   resourceRisk: IpStatsRisk;
   resourceRiskLabel: string;
 }
@@ -88,6 +90,13 @@ export interface IpStatsRegionProxyQuery {
   keyword?: string;
   page?: number;
   pageSize?: number;
+}
+
+export interface IpStatsCountrySampleCheckResult {
+  region: string;
+  sampleCount: number;
+  lastSampleCheckAt: number;
+  results: IpProxyCheckResult[];
 }
 
 interface IpStatsCountryParams {
@@ -176,4 +185,17 @@ export function listIpStatsRegionProxies(
       protocolLabel: normalizeProtocolLabel(row.protocolLabel) ?? row.protocolLabel
     }))
   }));
+}
+
+export function sampleCheckIpStatsCountry(
+  region: string,
+  sampleCount: number
+): Promise<IpStatsCountrySampleCheckResult> {
+  // 国家级抽检会真实访问外部代理,超时时间与 IP 管理批量检测保持一致。
+  return armadaRequest<IpStatsCountrySampleCheckResult>(
+    "post",
+    `/api/ip-proxies/stats/countries/${encodeURIComponent(region)}/sample-check`,
+    { data: { sampleCount } },
+    { timeout: 120000 }
+  );
 }

@@ -55,6 +55,15 @@ describe("resource IP page state", () => {
     );
   });
 
+  it("names mixed allocation as mixed country in the import dialog options", () => {
+    const page = useResourceIpPage();
+
+    assert.deepEqual(page.allocationModeOptions, [
+      { label: "智能分配(smart)", value: "smart" },
+      { label: "混合国家(mixed)", value: "mixed" }
+    ]);
+  });
+
   it("opens the single-check dialog immediately and blocks other checks while pending", async () => {
     const pending = deferred<IpProxyCheckResult>();
     resetArmadaMock(pending.promise);

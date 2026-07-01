@@ -74,7 +74,7 @@ const proxyProtocolCodes: Record<ProxyTypeLabel, number> = {
 
 const ipAllocationModes: Record<IpAllocationMode, string> = {
   smart: "智能分配",
-  mixed: "混合分组"
+  mixed: "混合国家"
 };
 
 /** 空字符串不传给后端,让后端使用默认筛选语义。 */

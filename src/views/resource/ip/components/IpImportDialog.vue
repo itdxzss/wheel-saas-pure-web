@@ -93,7 +93,7 @@ function submit(): void {
             />
           </el-radio-group>
           <div class="allocation-mode-help">
-            智能会导入后检测出口国家并落对应国家；混合会直接进入混合分组。
+            智能会导入后检测出口国家并落对应国家；混合会直接进入混合国家。
           </div>
         </el-form-item>
         <el-form-item label="代理类型" required>

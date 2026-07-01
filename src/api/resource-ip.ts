@@ -27,7 +27,7 @@ interface IpCountryOptionsResponse {
 /**
  * TXT 导入不再携带国家字段。
  *
- * 后端根据 allocationMode 决定落库策略:smart 会检测出口国家,mixed 会进入混合分组。
+ * 后端根据 allocationMode 决定落库策略:smart 会检测出口国家,mixed 会进入混合国家。
  */
 export interface IpProxyImportInput {
   allocationMode: IpAllocationMode;
