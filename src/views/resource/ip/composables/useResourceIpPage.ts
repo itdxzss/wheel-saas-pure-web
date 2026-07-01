@@ -1,4 +1,4 @@
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { ElMessageBox, type UploadUserFile } from "element-plus";
 import {
   batchCheckIpProxies,
@@ -7,8 +7,10 @@ import {
   importIpProxies,
   listIpCountryOptions,
   listIpProxies,
+  sampleCheckIpProxyImport,
   type IpCountryOption,
-  type IpProxyCheckResult
+  type IpProxyCheckResult,
+  type IpProxyImportSampleCheckResult
 } from "@/api/resource-ip";
 import { apiErrorMessage } from "@/utils/api-error";
 import { message } from "@/utils/message";
@@ -26,6 +28,7 @@ interface IpSearchForm {
 
 export interface IpImportForm {
   allocationMode: IpAllocationMode;
+  countryValue: string;
   proxyType: ProxyTypeLabel;
   source: string;
 }
@@ -50,15 +53,8 @@ export function createIpManageTableColumns(): TableColumnList {
  * 组件只负责渲染,API 契约和导入/检测流程统一由 composable 维护,避免页面模板继续膨胀。
  */
 export function useResourceIpPage() {
-  // 国家选项仅用于列表筛选;TXT 导入国家由后端智能检测决定。
+  // 国家选项同时服务列表筛选和 TXT 导入手动选择国家。
   const countryOptions = ref<IpCountryOption[]>([]);
-  const allocationModeOptions: Array<{
-    label: string;
-    value: IpAllocationMode;
-  }> = [
-    { label: "智能分配(smart)", value: "smart" },
-    { label: "混合国家(mixed)", value: "mixed" }
-  ];
   const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKS5"];
   const searchForm = ref<IpSearchForm>({
     country: "",
@@ -68,6 +64,10 @@ export function useResourceIpPage() {
   const loading = ref(false);
   const deleting = ref(false);
   const importing = ref(false);
+  const importChecking = ref(false);
+  const importCheckPassed = ref(false);
+  const importCheckErrors = ref<string[]>([]);
+  const importCheckResult = ref<IpProxyImportSampleCheckResult | null>(null);
   const batchChecking = ref(false);
   // 单条检测期间用 Set 锁住所有检测入口:当前行显示 loading,其它行和批量按钮禁用。
   const checkingRowIds = ref<Set<number>>(new Set());
@@ -85,6 +85,7 @@ export function useResourceIpPage() {
   const showImportDialog = ref(false);
   const importForm = ref<IpImportForm>({
     allocationMode: "smart",
+    countryValue: "",
     proxyType: "HTTP",
     source: ""
   });
@@ -96,6 +97,9 @@ export function useResourceIpPage() {
 
   // 必须和 index.vue 中 dynamicColumns 的渲染顺序保持一致。
   const columns = createIpManageTableColumns();
+  const canSubmitImport = computed(
+    () => importCheckPassed.value && !importing.value && !importChecking.value
+  );
 
   function countryOptionLabel(option: IpCountryOption): string {
     const flag = option.flag ? `${option.flag} ` : "";
@@ -135,15 +139,23 @@ export function useResourceIpPage() {
     }
   }
 
+  function clearImportCheckState(): void {
+    importCheckPassed.value = false;
+    importCheckErrors.value = [];
+    importCheckResult.value = null;
+  }
+
   /** 打开导入弹窗时重置表单和上次导入错误。 */
   function openImportDialog(): void {
     importForm.value = {
       allocationMode: "smart",
+      countryValue: "",
       proxyType: "HTTP",
       source: ""
     };
     uploadFiles.value = [];
     importErrors.value = [];
+    clearImportCheckState();
     showImportDialog.value = true;
   }
 
@@ -299,10 +311,56 @@ export function useResourceIpPage() {
     return text;
   }
 
-  /** 提交导入时不带国家字段,只提交分配方式/协议/来源/文本。 */
-  async function submitImport(): Promise<void> {
+  async function sampleCheckImport(): Promise<void> {
+    if (!importForm.value.countryValue) {
+      message("请选择国家", { type: "warning" });
+      return;
+    }
     if (!importForm.value.source.trim()) {
       message("请输入来源", { type: "warning" });
+      return;
+    }
+    const text = await readSelectedFileText();
+    if (text == null) return;
+
+    importChecking.value = true;
+    importCheckPassed.value = false;
+    importCheckErrors.value = [];
+    importCheckResult.value = null;
+    try {
+      const result = await sampleCheckIpProxyImport({
+        allocationMode: importForm.value.allocationMode,
+        countryValue: importForm.value.countryValue,
+        proxyType: importForm.value.proxyType,
+        source: importForm.value.source.trim(),
+        text
+      });
+      importCheckResult.value = result;
+      importCheckPassed.value = result.passed;
+      importCheckErrors.value = result.errors ?? [];
+      if (!result.passed) {
+        message("抽样检测未通过", { type: "warning" });
+      }
+    } catch (error) {
+      clearImportCheckState();
+      message(apiErrorMessage(error, "抽样检测失败"), { type: "error" });
+    } finally {
+      importChecking.value = false;
+    }
+  }
+
+  /** 提交导入时带业务人员手选国家;检测结果不会回填国家字段。 */
+  async function submitImport(): Promise<void> {
+    if (!importForm.value.countryValue) {
+      message("请选择国家", { type: "warning" });
+      return;
+    }
+    if (!importForm.value.source.trim()) {
+      message("请输入来源", { type: "warning" });
+      return;
+    }
+    if (!importCheckPassed.value) {
+      message("请先完成抽样检测", { type: "warning" });
       return;
     }
     const text = await readSelectedFileText();
@@ -313,6 +371,7 @@ export function useResourceIpPage() {
     try {
       const result = await importIpProxies({
         allocationMode: importForm.value.allocationMode,
+        countryValue: importForm.value.countryValue,
         proxyType: importForm.value.proxyType,
         source: importForm.value.source.trim(),
         text
@@ -336,10 +395,13 @@ export function useResourceIpPage() {
     void loadCountryOptions();
   });
 
+  watch(importForm, clearImportCheckState, { deep: true });
+  watch(uploadFiles, clearImportCheckState, { deep: true });
+
   return {
-    allocationModeOptions,
     activeCheckRow,
     batchChecking,
+    canSubmitImport,
     checkDialogErrorMessage,
     checkDialogLoading,
     checkResults,
@@ -351,6 +413,10 @@ export function useResourceIpPage() {
     errorMessage,
     guideCollapsed,
     importErrors,
+    importCheckErrors,
+    importCheckPassed,
+    importCheckResult,
+    importChecking,
     importForm,
     importing,
     loading,
@@ -372,6 +438,7 @@ export function useResourceIpPage() {
     refreshIpList,
     rerunActiveCheck,
     resetSearchForm,
+    sampleCheckImport,
     searchIpList,
     submitImport
   };

@@ -24,13 +24,9 @@ interface IpCountryOptionsResponse {
   rows?: IpCountryOption[] | null;
 }
 
-/**
- * TXT 导入不再携带国家字段。
- *
- * 后端根据 allocationMode 决定落库策略:smart 会检测出口国家,mixed 会进入混合国家。
- */
 export interface IpProxyImportInput {
-  allocationMode: IpAllocationMode;
+  countryValue: string;
+  allocationMode?: IpAllocationMode;
   proxyType: ProxyTypeLabel;
   source: string;
   text: string;
@@ -41,6 +37,24 @@ export interface IpProxyImportResult {
   insertedRows: number;
   skippedRows: number;
   failedRows: number;
+  errors: string[];
+}
+
+export interface IpProxyImportSampleRow {
+  lineNo: number;
+  host: string;
+  port: number;
+  passed: boolean;
+  outboundIp?: string | null;
+  countryCode?: string | null;
+  location?: string | null;
+  errorMessage?: string | null;
+}
+
+export interface IpProxyImportSampleCheckResult {
+  passed: boolean;
+  sampleSize: number;
+  samples: IpProxyImportSampleRow[];
   errors: string[];
 }
 
@@ -74,13 +88,36 @@ export function listIpProxies(
   }));
 }
 
+function importAllocationModeOf(input: IpProxyImportInput): IpAllocationMode {
+  return input.countryValue === "MIXED" ? "mixed" : input.allocationMode ?? "smart";
+}
+
+export function sampleCheckIpProxyImport(
+  input: IpProxyImportInput
+): Promise<IpProxyImportSampleCheckResult> {
+  return armadaRequest<IpProxyImportSampleCheckResult>(
+    "post",
+    "/api/ip-proxies/import/sample-check",
+    {
+      data: {
+        allocationMode: importAllocationModeOf(input),
+        countryValue: input.countryValue,
+        protocol: proxyTypeToProtocol(input.proxyType),
+        source: input.source,
+        text: input.text
+      }
+    },
+    { timeout: 120000 }
+  );
+}
+
 export function importIpProxies(
   input: IpProxyImportInput
 ): Promise<IpProxyImportResult> {
-  // 不发送 countryValue:导入国家由后端真实检测结果决定。
   return armadaRequest<IpProxyImportResult>("post", "/api/ip-proxies/import", {
     data: {
-      allocationMode: input.allocationMode,
+      allocationMode: importAllocationModeOf(input),
+      countryValue: input.countryValue,
       protocol: proxyTypeToProtocol(input.proxyType),
       source: input.source,
       text: input.text

@@ -4,10 +4,8 @@ import {
   type UploadRawFile,
   type UploadUserFile
 } from "element-plus";
-import type {
-  IpAllocationMode,
-  ProxyTypeLabel
-} from "@/api/resource-ip-mapping";
+import type { IpCountryOption } from "@/api/resource-ip";
+import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
 import type { IpImportForm } from "../composables/useResourceIpPage";
 
 defineOptions({
@@ -15,13 +13,19 @@ defineOptions({
 });
 
 defineProps<{
-  allocationModeOptions: Array<{ label: string; value: IpAllocationMode }>;
+  canSubmitImport: boolean;
+  countryOptionLabel: (option: IpCountryOption) => string;
+  countryOptions: IpCountryOption[];
+  importCheckErrors: string[];
+  importCheckPassed: boolean;
+  importChecking: boolean;
   importErrors: string[];
   importing: boolean;
   proxyTypeOptions: ProxyTypeLabel[];
 }>();
 
 const emit = defineEmits<{
+  (event: "sample-check"): void;
   (event: "submit"): void;
 }>();
 
@@ -54,6 +58,10 @@ function handleUploadExceed(files: File[]): void {
 }
 
 /** 表单校验和文件读取放在父级 composable,弹窗只负责发出提交意图。 */
+function sampleCheck(): void {
+  emit("sample-check");
+}
+
 function submit(): void {
   emit("submit");
 }
@@ -76,25 +84,34 @@ function submit(): void {
       <code>proxy.example.com:443:oper:mysecretpass1</code>
       <code>proxy.example.com:443:oper:mysecretpass2</code>
       <p class="format-warn">
-        仅支持上述英文冒号格式；不符合规范的行将作为格式错误不予导入，并在导入后逐行提示。分配方式
+        仅支持上述英文冒号格式；不符合规范的行将作为格式错误不予导入，并在导入后逐行提示。国家
         / 来源 / 类型将作用于文件中全部记录。
       </p>
     </div>
 
     <el-form class="ip-import-form" :model="form" label-position="top">
       <div class="form-grid">
-        <el-form-item label="分配方式" required>
-          <el-radio-group v-model="form.allocationMode">
-            <el-radio-button
-              v-for="mode in allocationModeOptions"
-              :key="mode.value"
-              :label="mode.label"
-              :value="mode.value"
-            />
-          </el-radio-group>
-          <div class="allocation-mode-help">
-            智能会导入后检测出口国家并落对应国家；混合会直接进入混合国家。
-          </div>
+        <el-form-item label="国家" required>
+          <el-select
+            v-model="form.countryValue"
+            filterable
+            placeholder="请选择国家"
+          >
+            <el-option
+              v-for="country in countryOptions"
+              :key="country.value"
+              :label="countryOptionLabel(country)"
+              :value="country.value"
+            >
+              <span class="ip-country-option">
+                <span>{{ country.flag }}</span>
+                <span>{{ country.nameZh }}</span>
+                <span v-if="country.phonePrefix" class="ip-country-prefix">
+                  {{ country.phonePrefix }}
+                </span>
+              </span>
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="代理类型" required>
           <el-radio-group v-model="form.proxyType">
@@ -133,6 +150,28 @@ function submit(): void {
     </el-form>
 
     <el-alert
+      v-if="importCheckPassed"
+      class="ip-import-check"
+      type="success"
+      show-icon
+      :closable="false"
+      title="抽样检测通过，可开始导入"
+    />
+
+    <el-alert
+      v-else-if="importCheckErrors.length > 0"
+      class="ip-import-check"
+      type="error"
+      show-icon
+      :closable="false"
+      title="抽样检测未通过"
+    >
+      <ul class="ip-import-error-list">
+        <li v-for="item in importCheckErrors" :key="item">{{ item }}</li>
+      </ul>
+    </el-alert>
+
+    <el-alert
       v-if="importErrors.length > 0"
       class="ip-import-errors"
       type="warning"
@@ -147,7 +186,15 @@ function submit(): void {
 
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" :loading="importing" @click="submit">
+      <el-button :loading="importChecking" :disabled="importing" @click="sampleCheck">
+        检测
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="importing"
+        :disabled="!canSubmitImport"
+        @click="submit"
+      >
         开始导入
       </el-button>
     </template>
@@ -203,12 +250,6 @@ function submit(): void {
   gap: 18px;
 }
 
-.allocation-mode-help {
-  margin-top: 8px;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
-}
-
 .ip-upload-icon {
   font-size: 30px;
   line-height: 1;
@@ -225,9 +266,23 @@ function submit(): void {
   margin-top: 16px;
 }
 
+.ip-import-check {
+  margin-top: 16px;
+}
+
 .ip-import-error-list {
   padding-left: 18px;
   margin: 8px 0 0;
+}
+
+.ip-country-option {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ip-country-prefix {
+  color: var(--el-text-color-secondary);
 }
 
 @media (width <= 720px) {

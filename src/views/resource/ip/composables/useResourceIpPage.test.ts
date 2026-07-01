@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { nextTick } from "vue";
+import type { UploadRawFile } from "element-plus";
 import {
   armadaCalls,
   resetArmadaMock
@@ -36,6 +38,21 @@ function ipRow(id: number): IpManageRow {
   };
 }
 
+function setImportFile(page: ReturnType<typeof useResourceIpPage>, text: string) {
+  const raw = {
+    name: "ips.txt",
+    text: async () => text
+  } as unknown as UploadRawFile;
+  page.uploadFiles.value = [
+    {
+      name: "ips.txt",
+      status: "ready",
+      uid: 1,
+      raw
+    }
+  ];
+}
+
 describe("resource IP page state", () => {
   it("keeps IP management table columns aligned with the PRD list", () => {
     const columns = createIpManageTableColumns();
@@ -58,10 +75,60 @@ describe("resource IP page state", () => {
   it("names mixed allocation as mixed country in the import dialog options", () => {
     const page = useResourceIpPage();
 
-    assert.deepEqual(page.allocationModeOptions, [
-      { label: "智能分配(smart)", value: "smart" },
-      { label: "混合国家(mixed)", value: "mixed" }
+    assert.equal(page.importForm.value.allocationMode, "smart");
+  });
+
+  it("requires a passed import sample check before enabling import", () => {
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+
+    assert.equal(page.importCheckPassed.value, false);
+    assert.equal(page.canSubmitImport.value, false);
+  });
+
+  it("marks import sample check as passed after successful check", async () => {
+    resetArmadaMock({
+      passed: true,
+      sampleSize: 1,
+      samples: [],
+      errors: []
+    });
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.importCheckPassed.value, true);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/ip-proxies/import/sample-check",
+        opts: {
+          data: {
+            allocationMode: "smart",
+            countryValue: "US",
+            protocol: 1,
+            source: "iproyal",
+            text: "1.1.1.1:8080:u:p"
+          }
+        },
+        config: { timeout: 120000 }
+      }
     ]);
+  });
+
+  it("clears import sample-check pass when import inputs change", async () => {
+    const page = useResourceIpPage();
+    page.importCheckPassed.value = true;
+
+    page.importForm.value.source = "changed";
+    await nextTick();
+
+    assert.equal(page.importCheckPassed.value, false);
   });
 
   it("opens the single-check dialog immediately and blocks other checks while pending", async () => {

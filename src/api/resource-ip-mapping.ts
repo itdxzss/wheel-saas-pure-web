@@ -83,7 +83,7 @@ function trimToUndefined(value?: string | null): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-/** 列表筛选仍使用 countryValue;导入接口已经不再发送国家。 */
+/** 列表筛选和导入弹框都使用 countryValue,后端统一映射为当前 region 快照。 */
 function toCountryValue(value?: string | null): string | undefined {
   const trimmed = trimToUndefined(value);
   if (!trimmed) return undefined;

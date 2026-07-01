@@ -6,7 +6,8 @@ import {
   checkIpProxy,
   importIpProxies,
   listIpCountryOptions,
-  listTenantIpRegions
+  listTenantIpRegions,
+  sampleCheckIpProxyImport
 } from "./resource-ip";
 
 describe("resource IP API", () => {
@@ -43,7 +44,51 @@ describe("resource IP API", () => {
     ]);
   });
 
-  it("imports IP proxies without countryValue", async () => {
+  it("sample-checks IP import payloads with selected countryValue", async () => {
+    resetArmadaMock({
+      passed: true,
+      sampleSize: 1,
+      samples: [
+        {
+          lineNo: 1,
+          host: "1.1.1.1",
+          port: 8080,
+          passed: true,
+          outboundIp: "103.10.10.10",
+          countryCode: "US",
+          location: "United States",
+          errorMessage: null
+        }
+      ],
+      errors: []
+    });
+
+    await sampleCheckIpProxyImport({
+      countryValue: "US",
+      proxyType: "HTTP",
+      source: "iproyal",
+      text: "1.1.1.1:8080:u:p"
+    });
+
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/ip-proxies/import/sample-check",
+        opts: {
+          data: {
+            allocationMode: "smart",
+            countryValue: "US",
+            protocol: 1,
+            source: "iproyal",
+            text: "1.1.1.1:8080:u:p"
+          }
+        },
+        config: { timeout: 120000 }
+      }
+    ]);
+  });
+
+  it("imports IP proxies with selected countryValue", async () => {
     resetArmadaMock({
       totalRows: 1,
       insertedRows: 1,
@@ -53,6 +98,7 @@ describe("resource IP API", () => {
     });
 
     await importIpProxies({
+      countryValue: "US",
       allocationMode: "smart",
       proxyType: "SOCKS5",
       source: "iproyal",
@@ -66,6 +112,7 @@ describe("resource IP API", () => {
         opts: {
           data: {
             allocationMode: "smart",
+            countryValue: "US",
             protocol: 2,
             source: "iproyal",
             text: "1.1.1.1:8080:u:p"

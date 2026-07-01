@@ -17,8 +17,8 @@ defineOptions({
 
 const {
   activeCheckRow,
-  allocationModeOptions,
   batchChecking,
+  canSubmitImport,
   checkDialogErrorMessage,
   checkDialogLoading,
   checkResults,
@@ -29,6 +29,9 @@ const {
   deleting,
   errorMessage,
   guideCollapsed,
+  importCheckErrors,
+  importCheckPassed,
+  importChecking,
   importErrors,
   importForm,
   importing,
@@ -51,6 +54,7 @@ const {
   refreshIpList,
   rerunActiveCheck,
   resetSearchForm,
+  sampleCheckImport,
   searchIpList,
   submitImport
 } = useResourceIpPage();
@@ -69,8 +73,7 @@ function checkTableRow(row: unknown): void {
           <div class="ip-guide-title">温馨提示：</div>
           <div v-show="!guideCollapsed" class="ip-guide-sub">
             TXT
-            导入不再手选国家：智能分配会检测出口国家并落对应国家，混合国家会直接进入混合国家；建议保留混合国家兜底，避免账号缺少可用
-            IP。
+            导入需先手选国家并完成抽样检测；检测结果只判断代理可用性，不会覆盖已选择的国家。
           </div>
         </div>
         <el-button
@@ -334,10 +337,16 @@ function checkTableRow(row: unknown): void {
       v-model="showImportDialog"
       v-model:form="importForm"
       v-model:upload-files="uploadFiles"
-      :allocation-mode-options="allocationModeOptions"
+      :can-submit-import="canSubmitImport"
+      :country-option-label="countryOptionLabel"
+      :country-options="countryOptions"
+      :import-check-errors="importCheckErrors"
+      :import-check-passed="importCheckPassed"
+      :import-checking="importChecking"
       :import-errors="importErrors"
       :importing="importing"
       :proxy-type-options="proxyTypeOptions"
+      @sample-check="sampleCheckImport"
       @submit="submitImport"
     />
 
