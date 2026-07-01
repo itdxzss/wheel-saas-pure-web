@@ -90,11 +90,12 @@ export function importIpProxies(
 
 /** 对单条代理做真实出口检测,无 request body。 */
 export function checkIpProxy(id: number): Promise<IpProxyCheckResult> {
+  // 单条检测由用户盯着弹框等待,产品要求给真实代理探测留足 20 秒。
   return armadaRequest<IpProxyCheckResult>(
     "post",
     `/api/ip-proxies/${id}/check`,
     undefined,
-    { timeout: 30000 }
+    { timeout: 20000 }
   );
 }
 

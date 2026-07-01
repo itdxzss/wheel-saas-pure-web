@@ -99,7 +99,7 @@ describe("resource IP API", () => {
         method: "post",
         url: "/api/ip-proxies/9/check",
         opts: undefined,
-        config: { timeout: 30000 }
+        config: { timeout: 20000 }
       }
     ]);
   });

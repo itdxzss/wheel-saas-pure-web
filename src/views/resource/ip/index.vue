@@ -2,6 +2,7 @@
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import type { IpManageRow } from "@/api/resource-ip-mapping";
 import { useResourceIpPage } from "./composables/useResourceIpPage";
 import IpCheckResultDialog from "./components/IpCheckResultDialog.vue";
 import IpImportDialog from "./components/IpImportDialog.vue";
@@ -15,8 +16,11 @@ defineOptions({
 });
 
 const {
+  activeCheckRow,
   allocationModeOptions,
   batchChecking,
+  checkDialogErrorMessage,
+  checkDialogLoading,
   checkResults,
   checkingRowIds,
   columns,
@@ -45,10 +49,16 @@ const {
   onSelectionChange,
   openImportDialog,
   refreshIpList,
+  rerunActiveCheck,
   resetSearchForm,
   searchIpList,
   submitImport
 } = useResourceIpPage();
+
+function checkTableRow(row: unknown): void {
+  // 传整行给 composable,弹框才能在接口返回前立即展示代理地址、来源和协议。
+  void checkSingleIp(row as IpManageRow);
+}
 </script>
 
 <template>
@@ -215,7 +225,7 @@ const {
         <el-button
           plain
           :loading="batchChecking"
-          :disabled="selectedRows.length === 0"
+          :disabled="selectedRows.length === 0 || checkingRowIds.size > 0"
           :icon="useRenderIcon(Search)"
           @click="checkSelectedIps"
         >
@@ -296,7 +306,11 @@ const {
                 link
                 type="primary"
                 :loading="checkingRowIds.has(row.id)"
-                @click="checkSingleIp(row.id)"
+                :disabled="
+                  batchChecking ||
+                  (checkingRowIds.size > 0 && !checkingRowIds.has(row.id))
+                "
+                @click="checkTableRow(row)"
               >
                 检测
               </el-button>
@@ -329,7 +343,11 @@ const {
 
     <IpCheckResultDialog
       v-model="showCheckResultDialog"
+      :active-row="activeCheckRow"
+      :error-message="checkDialogErrorMessage"
+      :loading="checkDialogLoading"
       :results="checkResults"
+      @rerun="rerunActiveCheck"
     />
   </div>
 </template>

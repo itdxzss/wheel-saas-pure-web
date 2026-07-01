@@ -69,11 +69,17 @@ export function useResourceIpPage() {
   const deleting = ref(false);
   const importing = ref(false);
   const batchChecking = ref(false);
+  // 单条检测期间用 Set 锁住所有检测入口:当前行显示 loading,其它行和批量按钮禁用。
   const checkingRowIds = ref<Set<number>>(new Set());
+  // 弹框先打开再等接口返回,这两个状态驱动弹框里的“检测中”和异常提示。
+  const checkDialogLoading = ref(false);
+  const checkDialogErrorMessage = ref("");
   const errorMessage = ref("");
   const guideCollapsed = ref(false);
   const rows = ref<IpManageRow[]>([]);
   const selectedRows = ref<IpManageRow[]>([]);
+  // 只要 activeCheckRow 有值,检测弹框就按“单条代理检测”卡片展示;为空则展示批量结果表。
+  const activeCheckRow = ref<IpManageRow | null>(null);
   const showCheckResultDialog = ref(false);
   const checkResults = ref<IpProxyCheckResult[]>([]);
   const showImportDialog = ref(false);
@@ -188,25 +194,46 @@ export function useResourceIpPage() {
     checkingRowIds.value = nextIds;
   }
 
-  /** 单条检测调用后端真实检测接口,完成后刷新列表以同步检测字段。 */
-  async function checkSingleIp(id: number): Promise<void> {
-    if (checkingRowIds.value.has(id)) return;
+  /** 兼容旧调用传 id 和页面新调用传整行;整行能让弹框立即展示代理地址/来源。 */
+  function resolveCheckRow(target: IpManageRow | number): IpManageRow | null {
+    if (typeof target !== "number") return target;
+    return rows.value.find(row => row.id === target) ?? null;
+  }
+
+  function resolveCheckId(target: IpManageRow | number): number {
+    return typeof target === "number" ? target : target.id;
+  }
+
+  /** 单条检测点击后立即打开弹框,检测期间锁住其它检测入口。 */
+  async function checkSingleIp(target: IpManageRow | number): Promise<void> {
+    if (checkingRowIds.value.size > 0 || batchChecking.value) return;
+    const id = resolveCheckId(target);
+    const row = resolveCheckRow(target);
+    // 先落 UI pending 态,再发起网络请求;这样慢代理也能立即给用户明确反馈。
     setRowChecking(id, true);
+    activeCheckRow.value = row;
+    checkResults.value = [];
+    checkDialogErrorMessage.value = "";
+    checkDialogLoading.value = true;
+    showCheckResultDialog.value = true;
     try {
       const result = await checkIpProxy(id);
       checkResults.value = [result];
-      showCheckResultDialog.value = true;
+      // 检测结果会回写代理状态/出口信息,刷新列表让表格与弹框结果保持一致。
       await refreshIpList();
     } catch (error) {
-      message(apiErrorMessage(error, "IP 检测失败"), { type: "error" });
+      const errorText = apiErrorMessage(error, "IP 检测失败");
+      checkDialogErrorMessage.value = errorText;
+      message(errorText, { type: "error" });
     } finally {
+      checkDialogLoading.value = false;
       setRowChecking(id, false);
     }
   }
 
   /** 批量检测前端先做 20 条限制,和后端同步,避免发起过长的真实检测请求。 */
   async function checkSelectedIps(): Promise<void> {
-    if (batchChecking.value) return;
+    if (batchChecking.value || checkingRowIds.value.size > 0) return;
     if (selectedRows.value.length === 0) {
       message("请选择要检测的 IP", { type: "warning" });
       return;
@@ -217,6 +244,10 @@ export function useResourceIpPage() {
     }
 
     batchChecking.value = true;
+    // 批量检测复用同一个弹框组件,必须清空单条上下文,否则会误渲染成单条检测卡片。
+    activeCheckRow.value = null;
+    checkDialogErrorMessage.value = "";
+    checkDialogLoading.value = false;
     try {
       const results = await batchCheckIpProxies(
         selectedRows.value.map(row => row.id)
@@ -229,6 +260,12 @@ export function useResourceIpPage() {
     } finally {
       batchChecking.value = false;
     }
+  }
+
+  function rerunActiveCheck(): void {
+    // 重新检测只服务单条弹框;批量弹框没有 activeCheckRow,这里自然不触发。
+    if (!activeCheckRow.value) return;
+    void checkSingleIp(activeCheckRow.value);
   }
 
   function searchIpList(): void {
@@ -301,7 +338,10 @@ export function useResourceIpPage() {
 
   return {
     allocationModeOptions,
+    activeCheckRow,
     batchChecking,
+    checkDialogErrorMessage,
+    checkDialogLoading,
     checkResults,
     checkingRowIds,
     columns,
@@ -330,6 +370,7 @@ export function useResourceIpPage() {
     onSelectionChange,
     openImportDialog,
     refreshIpList,
+    rerunActiveCheck,
     resetSearchForm,
     searchIpList,
     submitImport
