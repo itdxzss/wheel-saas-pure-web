@@ -39,6 +39,7 @@ describe("resource IP stats API", () => {
     await listIpStatsCountries({
       keyword: " 印度 ",
       proxyType: "HTTP",
+      allocationMode: "smart",
       source: " iproyal ",
       risk: "no_ip",
       sortField: "availableRate",
@@ -55,6 +56,7 @@ describe("resource IP stats API", () => {
           params: {
             keyword: "印度",
             protocol: 1,
+            allocationMode: "smart",
             source: "iproyal",
             risk: "no_ip",
             sortField: "availableRate",
@@ -72,6 +74,8 @@ describe("resource IP stats API", () => {
       list: [
         {
           id: 1,
+          proxyHost: "1.2.3.4",
+          proxyPort: 1080,
           proxyAddress: "1.2.3.4:1080",
           protocol: 2,
           protocolLabel: "SOCKS5",
@@ -80,6 +84,8 @@ describe("resource IP stats API", () => {
           statusLabel: "使用中",
           boundAccountId: 1001,
           source: "供应商A",
+          allocationMode: "mixed",
+          allocationModeLabel: "混合分组",
           ownership: 1,
           ownershipLabel: "租户自有",
           lastSampleCheckAt: null,
@@ -95,6 +101,7 @@ describe("resource IP stats API", () => {
     const result = await listIpStatsRegionProxies("混合（不限国家）", {
       status: 2,
       proxyType: "SOCKETS",
+      allocationMode: "mixed",
       source: "供应商A",
       keyword: "1.2.3.4",
       page: 1,
@@ -109,6 +116,7 @@ describe("resource IP stats API", () => {
           params: {
             status: 2,
             protocol: 2,
+            allocationMode: "mixed",
             source: "供应商A",
             keyword: "1.2.3.4",
             page: 1,
@@ -118,5 +126,8 @@ describe("resource IP stats API", () => {
       }
     ]);
     assert.equal(result.list[0].protocolLabel, "SOCKETS");
+    assert.equal(result.list[0].proxyHost, "1.2.3.4");
+    assert.equal(result.list[0].proxyPort, 1080);
+    assert.equal(result.list[0].allocationModeLabel, "混合分组");
   });
 });

@@ -3,6 +3,7 @@ import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useResourceIpPage } from "./composables/useResourceIpPage";
+import IpCheckResultDialog from "./components/IpCheckResultDialog.vue";
 import IpImportDialog from "./components/IpImportDialog.vue";
 import Search from "~icons/ri/search-line";
 import RefreshRight from "~icons/ep/refresh-right";
@@ -14,6 +15,10 @@ defineOptions({
 });
 
 const {
+  allocationModeOptions,
+  batchChecking,
+  checkResults,
+  checkingRowIds,
   columns,
   countryOptions,
   countryOptionLabel,
@@ -30,9 +35,12 @@ const {
   rows,
   searchForm,
   selectedRows,
+  showCheckResultDialog,
   showImportDialog,
   total,
   uploadFiles,
+  checkSelectedIps,
+  checkSingleIp,
   deleteSelectedIps,
   onSelectionChange,
   openImportDialog,
@@ -41,6 +49,21 @@ const {
   searchIpList,
   submitImport
 } = useResourceIpPage();
+
+/** 后端状态码:1=空闲,2=使用中,3=不可用。颜色只做扫描辅助,不改变业务状态。 */
+function statusTagType(status: number | null): "success" | "warning" | "danger" | "info" {
+  if (status === 1) return "success";
+  if (status === 2) return "warning";
+  if (status === 3) return "danger";
+  return "info";
+}
+
+/** 分配方式是导入策略:smart 会按检测国家落池,mixed 直接进入混合分组。 */
+function allocationTagType(mode: string): "primary" | "warning" | "info" {
+  if (mode === "smart") return "primary";
+  if (mode === "mixed") return "warning";
+  return "info";
+}
 </script>
 
 <template>
@@ -50,9 +73,8 @@ const {
         <div>
           <div class="ip-guide-title">温馨提示：</div>
           <div v-show="!guideCollapsed" class="ip-guide-sub">
-            请根据进号的国家上传对应国家代理
-            IP；建议同时保留一批混合（AnyWay）作为兜底，避免账号因缺少国家 IP
-            无法使用。
+            TXT 导入不再手选国家：智能分配会检测出口国家并落对应国家，混合分组会直接进入混合分组；建议保留混合分组兜底，避免账号缺少可用
+            IP。
           </div>
         </div>
         <el-button
@@ -204,6 +226,15 @@ const {
         >
           批量删除
         </el-button>
+        <el-button
+          plain
+          :loading="batchChecking"
+          :disabled="selectedRows.length === 0"
+          :icon="useRenderIcon(Search)"
+          @click="checkSelectedIps"
+        >
+          批量检测
+        </el-button>
       </template>
 
       <template #default="{ dynamicColumns }">
@@ -223,6 +254,30 @@ const {
           />
           <el-table-column
             v-if="!dynamicColumns[1].hide"
+            prop="statusLabel"
+            label="状态"
+            width="110"
+          >
+            <template #default="{ row }">
+              <el-tag size="small" :type="statusTagType(row.status)">
+                {{ row.statusLabel || row.status || "-" }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[2].hide"
+            prop="allocationModeLabel"
+            label="分配方式"
+            width="130"
+          >
+            <template #default="{ row }">
+              <el-tag size="small" :type="allocationTagType(row.allocationMode)">
+                {{ row.allocationModeLabel || row.allocationMode || "-" }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[3].hide"
             prop="proxyType"
             label="类型"
             width="110"
@@ -234,45 +289,80 @@ const {
             </template>
           </el-table-column>
           <el-table-column
-            v-if="!dynamicColumns[2].hide"
+            v-if="!dynamicColumns[4].hide"
             prop="proxyAddress"
             label="代理地址"
             min-width="220"
             show-overflow-tooltip
           />
           <el-table-column
-            v-if="!dynamicColumns[3].hide"
+            v-if="!dynamicColumns[5].hide"
             prop="username"
             label="用户名"
             min-width="140"
             show-overflow-tooltip
           />
           <el-table-column
-            v-if="!dynamicColumns[4].hide"
+            v-if="!dynamicColumns[6].hide"
             prop="password"
             label="密码"
             min-width="140"
             show-overflow-tooltip
           />
           <el-table-column
-            v-if="!dynamicColumns[5].hide"
+            v-if="!dynamicColumns[7].hide"
             prop="validAccountCount"
             label="有效账号"
             width="110"
           />
           <el-table-column
-            v-if="!dynamicColumns[6].hide"
+            v-if="!dynamicColumns[8].hide"
             prop="source"
             label="来源"
             min-width="140"
             show-overflow-tooltip
           />
           <el-table-column
-            v-if="!dynamicColumns[7].hide"
+            v-if="!dynamicColumns[9].hide"
+            prop="lastSampleCheckAt"
+            label="最近检测"
+            width="180"
+          />
+          <el-table-column
+            v-if="!dynamicColumns[10].hide"
+            prop="checkFailCount"
+            label="失败次数"
+            width="100"
+          />
+          <el-table-column
+            v-if="!dynamicColumns[11].hide"
+            prop="lastCheckError"
+            label="错误原因"
+            min-width="180"
+            show-overflow-tooltip
+          >
+            <template #default="{ row }">
+              {{ row.lastCheckError || "-" }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[12].hide"
             prop="createdAt"
             label="创建时间"
             width="180"
           />
+          <el-table-column label="操作" fixed="right" width="100">
+            <template #default="{ row }">
+              <el-button
+                link
+                type="primary"
+                :loading="checkingRowIds.has(row.id)"
+                @click="checkSingleIp(row.id)"
+              >
+                检测
+              </el-button>
+            </template>
+          </el-table-column>
           <template #empty>
             <el-empty description="暂无 IP 数据" />
           </template>
@@ -291,12 +381,16 @@ const {
       v-model="showImportDialog"
       v-model:form="importForm"
       v-model:upload-files="uploadFiles"
-      :country-options="countryOptions"
-      :country-option-label="countryOptionLabel"
+      :allocation-mode-options="allocationModeOptions"
       :import-errors="importErrors"
       :importing="importing"
       :proxy-type-options="proxyTypeOptions"
       @submit="submitImport"
+    />
+
+    <IpCheckResultDialog
+      v-model="showCheckResultDialog"
+      :results="checkResults"
     />
   </div>
 </template>
@@ -333,18 +427,18 @@ const {
 }
 
 .ip-guide-body {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .ip-provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .ip-provider-card {
-  min-height: 96px;
-  padding: 14px;
+  min-height: 84px;
+  padding: 12px;
   background: #fff;
   border: 1px solid #dceaf6;
   border-radius: 8px;

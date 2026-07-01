@@ -2,7 +2,10 @@
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import type { IpCountryStatsRow, IpStatsDetailRow } from "@/api/resource-ip-stats";
-import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
+import type {
+  IpAllocationMode,
+  ProxyTypeLabel
+} from "@/api/resource-ip-mapping";
 import type { IpStatsDetailSearchForm } from "../composables/useResourceIpStatsPage";
 
 defineOptions({
@@ -11,6 +14,7 @@ defineOptions({
 
 const props = defineProps<{
   columns: TableColumnList;
+  allocationModeOptions: Array<{ label: string; value: IpAllocationMode | "" }>;
   country: IpCountryStatsRow | null;
   detailStatusOptions: Array<{ label: string; value: number | "" }>;
   formatTime: (value: number | null | undefined) => string;
@@ -98,6 +102,19 @@ const drawerTitle = computed(() =>
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="分配方式">
+          <el-select
+            v-model="searchForm.allocationMode"
+            class="ip-detail-filter-control ip-detail-filter-control--sm"
+          >
+            <el-option
+              v-for="mode in allocationModeOptions"
+              :key="mode.value"
+              :label="mode.label"
+              :value="mode.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="来源">
           <el-input
             v-model="searchForm.source"
@@ -116,13 +133,23 @@ const drawerTitle = computed(() =>
       <el-table v-loading="loading" :data="rows" row-key="id" border>
         <el-table-column
           v-if="!columns[0].hide"
-          prop="proxyAddress"
+          prop="proxyHost"
           label="IP 地址"
-          min-width="180"
+          min-width="160"
           show-overflow-tooltip
         />
         <el-table-column
           v-if="!columns[1].hide"
+          prop="proxyPort"
+          label="端口"
+          width="100"
+        >
+          <template #default="{ row }">
+            {{ row.proxyPort ?? "-" }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!columns[2].hide"
           prop="protocolLabel"
           label="协议类型"
           width="110"
@@ -132,20 +159,26 @@ const drawerTitle = computed(() =>
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!columns[2].hide"
+          v-if="!columns[3].hide"
+          prop="allocationModeLabel"
+          label="分配方式"
+          width="120"
+        />
+        <el-table-column
+          v-if="!columns[4].hide"
           prop="source"
           label="来源"
           min-width="140"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!columns[3].hide"
+          v-if="!columns[5].hide"
           prop="statusLabel"
           label="状态"
           width="110"
         />
         <el-table-column
-          v-if="!columns[4].hide"
+          v-if="!columns[6].hide"
           prop="boundAccountId"
           label="当前使用账号"
           min-width="130"
@@ -155,13 +188,7 @@ const drawerTitle = computed(() =>
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!columns[5].hide"
-          prop="ownershipLabel"
-          label="归属"
-          width="120"
-        />
-        <el-table-column
-          v-if="!columns[6].hide"
+          v-if="!columns[7].hide"
           prop="lastSampleCheckAt"
           label="最近抽检时间"
           width="180"
@@ -171,7 +198,7 @@ const drawerTitle = computed(() =>
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!columns[7].hide"
+          v-if="!columns[8].hide"
           prop="createdAt"
           label="创建时间"
           width="180"
@@ -181,7 +208,7 @@ const drawerTitle = computed(() =>
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!columns[8].hide"
+          v-if="!columns[9].hide"
           prop="boundAt"
           label="绑定时间"
           width="180"

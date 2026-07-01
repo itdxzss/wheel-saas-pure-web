@@ -1,7 +1,19 @@
 import type { IpStatsRisk } from "@/api/resource-ip-stats";
-import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
+import type {
+  IpAllocationMode,
+  ProxyTypeLabel
+} from "@/api/resource-ip-mapping";
 
 export const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKETS"];
+
+export const allocationModeOptions: Array<{
+  label: string;
+  value: IpAllocationMode | "";
+}> = [
+  { label: "全部", value: "" },
+  { label: "智能分配", value: "smart" },
+  { label: "混合分组", value: "mixed" }
+];
 
 export const riskOptions: Array<{
   label: string;
@@ -38,12 +50,13 @@ export const ipStatsCountryColumns: TableColumnList = [
 ];
 
 export const ipStatsDetailColumns: TableColumnList = [
-  { label: "IP 地址", prop: "proxyAddress", minWidth: 180 },
+  { label: "IP 地址", prop: "proxyHost", minWidth: 160 },
+  { label: "端口", prop: "proxyPort", width: 100 },
   { label: "协议类型", prop: "protocolLabel", width: 110 },
+  { label: "分配方式", prop: "allocationModeLabel", width: 120 },
   { label: "来源", prop: "source", minWidth: 140 },
   { label: "状态", prop: "statusLabel", width: 110 },
   { label: "当前使用账号", prop: "boundAccountId", minWidth: 130 },
-  { label: "归属", prop: "ownershipLabel", width: 120 },
   { label: "最近抽检时间", prop: "lastSampleCheckAt", width: 180 },
   { label: "创建时间", prop: "createdAt", width: 180 },
   { label: "绑定时间", prop: "boundAt", width: 180 }

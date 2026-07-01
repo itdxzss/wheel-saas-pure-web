@@ -1,8 +1,10 @@
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
 import {
+  normalizeIpAllocationMode,
   normalizeProtocolLabel,
   proxyTypeToProtocol,
+  type IpAllocationMode,
   type ProxyTypeLabel
 } from "@/api/resource-ip-mapping";
 
@@ -47,6 +49,8 @@ export interface IpCountryStatsRow {
 
 export interface IpStatsDetailRow {
   id: number;
+  proxyHost: string;
+  proxyPort: number | null;
   proxyAddress: string;
   protocol: number | null;
   protocolLabel: string;
@@ -55,6 +59,8 @@ export interface IpStatsDetailRow {
   statusLabel: string;
   boundAccountId: number | null;
   source: string;
+  allocationMode: IpAllocationMode | string | null;
+  allocationModeLabel: string;
   ownership: number | null;
   ownershipLabel: string;
   lastSampleCheckAt: number | null;
@@ -65,6 +71,7 @@ export interface IpStatsDetailRow {
 export interface IpStatsCountryQuery {
   keyword?: string;
   proxyType?: ProxyTypeLabel | "";
+  allocationMode?: IpAllocationMode | "";
   source?: string;
   risk?: IpStatsRisk | "";
   sortField?: IpStatsSortField;
@@ -76,6 +83,7 @@ export interface IpStatsCountryQuery {
 export interface IpStatsRegionProxyQuery {
   status?: number | "";
   proxyType?: ProxyTypeLabel | "";
+  allocationMode?: IpAllocationMode | "";
   source?: string;
   keyword?: string;
   page?: number;
@@ -85,6 +93,7 @@ export interface IpStatsRegionProxyQuery {
 interface IpStatsCountryParams {
   keyword?: string;
   protocol?: number;
+  allocationMode?: IpAllocationMode;
   source?: string;
   risk?: IpStatsRisk;
   sortField?: IpStatsSortField;
@@ -96,6 +105,7 @@ interface IpStatsCountryParams {
 interface IpStatsRegionProxyParams {
   status?: number;
   protocol?: number;
+  allocationMode?: IpAllocationMode;
   source?: string;
   keyword?: string;
   page?: number;
@@ -113,6 +123,7 @@ function toCountryStatsParams(
   return {
     keyword: trimToUndefined(query.keyword),
     protocol: proxyTypeToProtocol(query.proxyType),
+    allocationMode: normalizeIpAllocationMode(query.allocationMode),
     source: trimToUndefined(query.source),
     risk: query.risk || undefined,
     sortField: query.sortField,
@@ -128,6 +139,7 @@ function toRegionProxyParams(
   return {
     status: typeof query.status === "number" ? query.status : undefined,
     protocol: proxyTypeToProtocol(query.proxyType),
+    allocationMode: normalizeIpAllocationMode(query.allocationMode),
     source: trimToUndefined(query.source),
     keyword: trimToUndefined(query.keyword),
     page: query.page,

@@ -4,8 +4,10 @@ import {
   type UploadRawFile,
   type UploadUserFile
 } from "element-plus";
-import type { IpCountryOption } from "@/api/resource-ip";
-import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
+import type {
+  IpAllocationMode,
+  ProxyTypeLabel
+} from "@/api/resource-ip-mapping";
 import type { IpImportForm } from "../composables/useResourceIpPage";
 
 defineOptions({
@@ -13,8 +15,7 @@ defineOptions({
 });
 
 defineProps<{
-  countryOptions: IpCountryOption[];
-  countryOptionLabel: (option: IpCountryOption) => string;
+  allocationModeOptions: Array<{ label: string; value: IpAllocationMode }>;
   importErrors: string[];
   importing: boolean;
   proxyTypeOptions: ProxyTypeLabel[];
@@ -30,6 +31,7 @@ const uploadFiles = defineModel<UploadUserFile[]>("uploadFiles", {
   required: true
 });
 
+/** el-upload 超出 1 个文件时用新文件替换旧文件,匹配“单个 TXT 批次”的导入语义。 */
 function replaceUploadFile(file: File): void {
   const rawFile = file as UploadRawFile;
   rawFile.uid = genFileId();
@@ -44,12 +46,14 @@ function replaceUploadFile(file: File): void {
   ];
 }
 
+/** 用户重复选择文件时保留最后一次选择,避免导入多个批次混在一起。 */
 function handleUploadExceed(files: File[]): void {
   const [file] = files;
   if (!file) return;
   replaceUploadFile(file);
 }
 
+/** 表单校验和文件读取放在父级 composable,弹窗只负责发出提交意图。 */
 function submit(): void {
   emit("submit");
 }
@@ -72,35 +76,25 @@ function submit(): void {
       <code>proxy.example.com:443:oper:mysecretpass1</code>
       <code>proxy.example.com:443:oper:mysecretpass2</code>
       <p class="format-warn">
-        仅支持上述英文冒号格式；不符合规范的行将作为格式错误不予导入，并在导入后逐行提示。所选国家
+        仅支持上述英文冒号格式；不符合规范的行将作为格式错误不予导入，并在导入后逐行提示。分配方式
         / 来源 / 类型将作用于文件中全部记录。
       </p>
     </div>
 
     <el-form class="ip-import-form" :model="form" label-position="top">
       <div class="form-grid">
-        <el-form-item label="国家" required>
-          <el-select
-            v-model="form.country"
-            clearable
-            filterable
-            placeholder="请选择国家"
-          >
-            <el-option
-              v-for="country in countryOptions"
-              :key="country.value"
-              :label="countryOptionLabel(country)"
-              :value="country.value"
-            >
-              <span class="ip-country-option">
-                <span>{{ country.flag }}</span>
-                <span>{{ country.nameZh }}</span>
-                <span v-if="country.phonePrefix" class="ip-country-prefix">
-                  {{ country.phonePrefix }}
-                </span>
-              </span>
-            </el-option>
-          </el-select>
+        <el-form-item label="分配方式" required>
+          <el-radio-group v-model="form.allocationMode">
+            <el-radio-button
+              v-for="mode in allocationModeOptions"
+              :key="mode.value"
+              :label="mode.label"
+              :value="mode.value"
+            />
+          </el-radio-group>
+          <div class="allocation-mode-help">
+            智能会导入后检测出口国家并落对应国家；混合会直接进入混合分组。
+          </div>
         </el-form-item>
         <el-form-item label="代理类型" required>
           <el-radio-group v-model="form.proxyType">
@@ -203,17 +197,15 @@ function submit(): void {
 
 .form-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.55fr);
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(220px, 0.55fr);
   gap: 18px;
 }
 
-.ip-country-option {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.ip-country-prefix {
+.allocation-mode-help {
+  margin-top: 8px;
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import {
+  batchCheckIpProxies,
+  checkIpProxy,
   importIpProxies,
   listIpCountryOptions,
   listTenantIpRegions
@@ -41,7 +43,7 @@ describe("resource IP API", () => {
     ]);
   });
 
-  it("imports IP proxies with countryValue instead of legacy region", async () => {
+  it("imports IP proxies without countryValue", async () => {
     resetArmadaMock({
       totalRows: 1,
       insertedRows: 1,
@@ -51,8 +53,8 @@ describe("resource IP API", () => {
     });
 
     await importIpProxies({
-      country: "IN",
-      proxyType: "HTTP",
+      allocationMode: "smart",
+      proxyType: "SOCKETS",
       source: "iproyal",
       text: "1.1.1.1:8080:u:p"
     });
@@ -63,12 +65,54 @@ describe("resource IP API", () => {
         url: "/api/ip-proxies/import",
         opts: {
           data: {
-            countryValue: "IN",
-            protocol: 1,
+            allocationMode: "smart",
+            protocol: 2,
             source: "iproyal",
             text: "1.1.1.1:8080:u:p"
           }
         }
+      }
+    ]);
+  });
+
+  it("checks a single IP proxy without request body", async () => {
+    const result = {
+      id: 9,
+      checkStatus: "success",
+      connectionStatus: "空闲",
+      whatsappStatus: "unknown",
+      outboundIp: "8.8.8.8",
+      countryCode: "US",
+      region: "California",
+      location: "Mountain View",
+      isp: "Google",
+      detectedLatitude: 37.386,
+      detectedLongitude: -122.084,
+      checkedAt: 1704067200000,
+      errorMessage: null
+    };
+    resetArmadaMock(result);
+
+    assert.deepEqual(await checkIpProxy(9), result);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/ip-proxies/9/check",
+        opts: undefined
+      }
+    ]);
+  });
+
+  it("checks selected IP proxies with ids body", async () => {
+    resetArmadaMock([]);
+
+    await batchCheckIpProxies([1, 2, 3]);
+
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/ip-proxies/check",
+        opts: { data: { ids: [1, 2, 3] } }
       }
     ]);
   });

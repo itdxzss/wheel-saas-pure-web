@@ -15,6 +15,7 @@ defineOptions({
 });
 
 const {
+  allocationModeOptions,
   countryColumns,
   countryLoading,
   countryRows,
@@ -113,6 +114,19 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
               :key="type"
               :label="type"
               :value="type"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="分配方式">
+          <el-select
+            v-model="searchForm.allocationMode"
+            class="ip-stats-filter-control ip-stats-filter-control--sm"
+          >
+            <el-option
+              v-for="mode in allocationModeOptions"
+              :key="mode.value"
+              :label="mode.label"
+              :value="mode.value"
             />
           </el-select>
         </el-form-item>
@@ -287,6 +301,7 @@ function openCountryDetail(row: unknown, status: number | "" = ""): void {
       v-model:page="detailPage"
       v-model:page-size="detailPageSize"
       v-model:search-form="detailSearchForm"
+      :allocation-mode-options="allocationModeOptions"
       :columns="detailColumns"
       :country="selectedCountry"
       :detail-status-options="detailStatusOptions"

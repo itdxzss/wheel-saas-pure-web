@@ -10,11 +10,15 @@ import {
   type IpStatsSortOrder,
   type IpStatsSummary
 } from "@/api/resource-ip-stats";
-import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
+import type {
+  IpAllocationMode,
+  ProxyTypeLabel
+} from "@/api/resource-ip-mapping";
 import { apiErrorMessage } from "@/utils/api-error";
 import { message } from "@/utils/message";
 import { formatEpochMillis } from "@/utils/time";
 import {
+  allocationModeOptions,
   detailStatusOptions,
   ipStatsCountryColumns,
   ipStatsDetailColumns,
@@ -26,6 +30,7 @@ import {
 export interface IpStatsSearchForm {
   keyword: string;
   proxyType: ProxyTypeLabel | "";
+  allocationMode: IpAllocationMode | "";
   source: string;
   risk: IpStatsRisk | "";
 }
@@ -33,6 +38,7 @@ export interface IpStatsSearchForm {
 export interface IpStatsDetailSearchForm {
   keyword: string;
   proxyType: ProxyTypeLabel | "";
+  allocationMode: IpAllocationMode | "";
   source: string;
   status: number | "";
 }
@@ -72,12 +78,14 @@ export function useResourceIpStatsPage() {
   const searchForm = ref<IpStatsSearchForm>({
     keyword: "",
     proxyType: "",
+    allocationMode: "",
     source: "",
     risk: ""
   });
   const detailSearchForm = ref<IpStatsDetailSearchForm>({
     keyword: "",
     proxyType: "",
+    allocationMode: "",
     source: "",
     status: ""
   });
@@ -238,6 +246,7 @@ export function useResourceIpStatsPage() {
     searchForm.value = {
       keyword: "",
       proxyType: "",
+      allocationMode: "",
       source: "",
       risk: ""
     };
@@ -263,6 +272,7 @@ export function useResourceIpStatsPage() {
     detailSearchForm.value = {
       keyword: "",
       proxyType: searchForm.value.proxyType,
+      allocationMode: searchForm.value.allocationMode,
       source: searchForm.value.source,
       status
     };
@@ -303,6 +313,7 @@ export function useResourceIpStatsPage() {
     detailSearchForm.value = {
       keyword: "",
       proxyType: searchForm.value.proxyType,
+      allocationMode: searchForm.value.allocationMode,
       source: searchForm.value.source,
       status: ""
     };
@@ -315,6 +326,7 @@ export function useResourceIpStatsPage() {
   });
 
   return {
+    allocationModeOptions,
     countryColumns: ipStatsCountryColumns,
     countryLoading,
     countryRows,

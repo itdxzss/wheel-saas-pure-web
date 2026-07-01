@@ -1,15 +1,22 @@
 import { onMounted, ref } from "vue";
 import { ElMessageBox, type UploadUserFile } from "element-plus";
 import {
+  batchCheckIpProxies,
   batchDeleteIpProxies,
+  checkIpProxy,
   importIpProxies,
   listIpCountryOptions,
   listIpProxies,
-  type IpCountryOption
+  type IpCountryOption,
+  type IpProxyCheckResult
 } from "@/api/resource-ip";
 import { apiErrorMessage } from "@/utils/api-error";
 import { message } from "@/utils/message";
-import type { IpManageRow, ProxyTypeLabel } from "@/api/resource-ip-mapping";
+import type {
+  IpAllocationMode,
+  IpManageRow,
+  ProxyTypeLabel
+} from "@/api/resource-ip-mapping";
 
 interface IpSearchForm {
   country: string;
@@ -18,13 +25,26 @@ interface IpSearchForm {
 }
 
 export interface IpImportForm {
-  country: string;
+  allocationMode: IpAllocationMode;
   proxyType: ProxyTypeLabel;
   source: string;
 }
 
+/**
+ * IP 管理页的状态与动作集中在这里。
+ *
+ * 组件只负责渲染,API 契约和导入/检测流程统一由 composable 维护,避免页面模板继续膨胀。
+ */
 export function useResourceIpPage() {
+  // 国家选项仅用于列表筛选;TXT 导入国家由后端智能检测决定。
   const countryOptions = ref<IpCountryOption[]>([]);
+  const allocationModeOptions: Array<{
+    label: string;
+    value: IpAllocationMode;
+  }> = [
+    { label: "智能分配(smart)", value: "smart" },
+    { label: "混合分组(mixed)", value: "mixed" }
+  ];
   const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKETS"];
   const searchForm = ref<IpSearchForm>({
     country: "",
@@ -34,13 +54,17 @@ export function useResourceIpPage() {
   const loading = ref(false);
   const deleting = ref(false);
   const importing = ref(false);
+  const batchChecking = ref(false);
+  const checkingRowIds = ref<Set<number>>(new Set());
   const errorMessage = ref("");
   const guideCollapsed = ref(false);
   const rows = ref<IpManageRow[]>([]);
   const selectedRows = ref<IpManageRow[]>([]);
+  const showCheckResultDialog = ref(false);
+  const checkResults = ref<IpProxyCheckResult[]>([]);
   const showImportDialog = ref(false);
   const importForm = ref<IpImportForm>({
-    country: "",
+    allocationMode: "smart",
     proxyType: "HTTP",
     source: ""
   });
@@ -50,14 +74,20 @@ export function useResourceIpPage() {
   const pageSize = ref(10);
   const total = ref(0);
 
+  // 必须和 index.vue 中 dynamicColumns 的渲染顺序保持一致。
   const columns: TableColumnList = [
     { label: "国家", prop: "country", width: 130 },
+    { label: "状态", prop: "statusLabel", width: 110 },
+    { label: "分配方式", prop: "allocationModeLabel", width: 130 },
     { label: "类型", prop: "proxyType", width: 110 },
     { label: "代理地址", prop: "proxyAddress", minWidth: 220 },
     { label: "用户名", prop: "username", minWidth: 140 },
     { label: "密码", prop: "password", minWidth: 140 },
     { label: "有效账号", prop: "validAccountCount", width: 110 },
     { label: "来源", prop: "source", minWidth: 140 },
+    { label: "最近检测", prop: "lastSampleCheckAt", width: 180 },
+    { label: "失败次数", prop: "checkFailCount", width: 100 },
+    { label: "错误原因", prop: "lastCheckError", minWidth: 180 },
     { label: "创建时间", prop: "createdAt", width: 180 }
   ];
 
@@ -67,6 +97,7 @@ export function useResourceIpPage() {
     return `${flag}${option.nameZh}${prefix}`;
   }
 
+  /** 加载国家主数据供筛选框使用,失败时不阻断列表加载。 */
   async function loadCountryOptions(): Promise<void> {
     try {
       countryOptions.value = await listIpCountryOptions();
@@ -75,6 +106,7 @@ export function useResourceIpPage() {
     }
   }
 
+  /** 刷新列表并清空已选行,避免批量操作拿到过期选择。 */
   async function refreshIpList(): Promise<void> {
     loading.value = true;
     errorMessage.value = "";
@@ -97,9 +129,10 @@ export function useResourceIpPage() {
     }
   }
 
+  /** 打开导入弹窗时重置表单和上次导入错误。 */
   function openImportDialog(): void {
     importForm.value = {
-      country: "",
+      allocationMode: "smart",
       proxyType: "HTTP",
       source: ""
     };
@@ -108,6 +141,7 @@ export function useResourceIpPage() {
     showImportDialog.value = true;
   }
 
+  /** 批量删除会根据是否绑定账号调整确认文案。 */
   async function deleteSelectedIps(): Promise<void> {
     if (selectedRows.value.length === 0) return;
     const ids = selectedRows.value.map(row => row.id);
@@ -143,6 +177,60 @@ export function useResourceIpPage() {
     selectedRows.value = selection;
   }
 
+  /** 用 Set 管理行内检测 loading,避免某一行检测时锁住整张表。 */
+  function setRowChecking(id: number, checking: boolean): void {
+    const nextIds = new Set(checkingRowIds.value);
+    if (checking) {
+      nextIds.add(id);
+    } else {
+      nextIds.delete(id);
+    }
+    checkingRowIds.value = nextIds;
+  }
+
+  /** 单条检测调用后端真实检测接口,完成后刷新列表以同步检测字段。 */
+  async function checkSingleIp(id: number): Promise<void> {
+    if (checkingRowIds.value.has(id)) return;
+    setRowChecking(id, true);
+    try {
+      const result = await checkIpProxy(id);
+      checkResults.value = [result];
+      showCheckResultDialog.value = true;
+      await refreshIpList();
+    } catch (error) {
+      message(apiErrorMessage(error, "IP 检测失败"), { type: "error" });
+    } finally {
+      setRowChecking(id, false);
+    }
+  }
+
+  /** 批量检测前端先做 20 条限制,和后端同步,避免发起过长的真实检测请求。 */
+  async function checkSelectedIps(): Promise<void> {
+    if (batchChecking.value) return;
+    if (selectedRows.value.length === 0) {
+      message("请选择要检测的 IP", { type: "warning" });
+      return;
+    }
+    if (selectedRows.value.length > 20) {
+      message("批量检测最多选择 20 个 IP", { type: "warning" });
+      return;
+    }
+
+    batchChecking.value = true;
+    try {
+      const results = await batchCheckIpProxies(
+        selectedRows.value.map(row => row.id)
+      );
+      checkResults.value = results;
+      showCheckResultDialog.value = true;
+      await refreshIpList();
+    } catch (error) {
+      message(apiErrorMessage(error, "批量检测失败"), { type: "error" });
+    } finally {
+      batchChecking.value = false;
+    }
+  }
+
   function searchIpList(): void {
     page.value = 1;
     void refreshIpList();
@@ -155,6 +243,7 @@ export function useResourceIpPage() {
     searchIpList();
   }
 
+  /** 读取用户选择的 TXT 文件;文件内容由后端逐行解析和去重。 */
   async function readSelectedFileText(): Promise<string | null> {
     const rawFile = uploadFiles.value[0]?.raw;
     if (!rawFile) {
@@ -173,11 +262,8 @@ export function useResourceIpPage() {
     return text;
   }
 
+  /** 提交导入时不带国家字段,只提交分配方式/协议/来源/文本。 */
   async function submitImport(): Promise<void> {
-    if (!importForm.value.country) {
-      message("请选择国家", { type: "warning" });
-      return;
-    }
     if (!importForm.value.source.trim()) {
       message("请输入来源", { type: "warning" });
       return;
@@ -189,7 +275,7 @@ export function useResourceIpPage() {
     importErrors.value = [];
     try {
       const result = await importIpProxies({
-        country: importForm.value.country,
+        allocationMode: importForm.value.allocationMode,
         proxyType: importForm.value.proxyType,
         source: importForm.value.source.trim(),
         text
@@ -214,6 +300,10 @@ export function useResourceIpPage() {
   });
 
   return {
+    allocationModeOptions,
+    batchChecking,
+    checkResults,
+    checkingRowIds,
     columns,
     countryOptions,
     countryOptionLabel,
@@ -230,9 +320,12 @@ export function useResourceIpPage() {
     rows,
     searchForm,
     selectedRows,
+    showCheckResultDialog,
     showImportDialog,
     total,
     uploadFiles,
+    checkSelectedIps,
+    checkSingleIp,
     deleteSelectedIps,
     onSelectionChange,
     openImportDialog,
