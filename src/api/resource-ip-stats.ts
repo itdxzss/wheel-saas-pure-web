@@ -1,11 +1,13 @@
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
 import {
+  normalizeProtocolLabel,
   proxyTypeToProtocol,
   type ProxyTypeLabel
 } from "@/api/resource-ip-mapping";
 
 export type IpStatsRisk =
+  | "no_ip"
   | "normal"
   | "no_idle"
   | "low_available"
@@ -27,6 +29,8 @@ export interface IpStatsSummary {
   idleIpCount: number;
   unavailableIpCount: number;
   coveredRegionCount: number;
+  supportedCountryCount: number;
+  noIpCountryCount: number;
 }
 
 export interface IpCountryStatsRow {
@@ -153,5 +157,11 @@ export function listIpStatsRegionProxies(
     "get",
     `/api/ip-proxies/stats/countries/${encodeURIComponent(region)}/proxies`,
     { params: toRegionProxyParams(query) }
-  );
+  ).then(result => ({
+    ...result,
+    list: (result.list ?? []).map(row => ({
+      ...row,
+      protocolLabel: normalizeProtocolLabel(row.protocolLabel) ?? row.protocolLabel
+    }))
+  }));
 }

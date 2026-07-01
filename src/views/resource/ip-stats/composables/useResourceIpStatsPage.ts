@@ -47,7 +47,9 @@ const defaultSummary: IpStatsSummary = {
   inUseIpCount: 0,
   idleIpCount: 0,
   unavailableIpCount: 0,
-  coveredRegionCount: 0
+  coveredRegionCount: 0,
+  supportedCountryCount: 0,
+  noIpCountryCount: 0
 };
 
 const sortFieldMap: Record<string, IpStatsSortField> = {
@@ -100,15 +102,22 @@ export function useResourceIpStatsPage() {
       key: "total",
       label: "IP 总数量",
       value: summary.value.totalIpCount,
-      sub: "当前系统所有导入 IP 数量",
+      sub: "包含真实国家和混合池 IP",
       type: "primary"
     },
     {
       key: "covered",
-      label: "覆盖地区数",
-      value: summary.value.coveredRegionCount,
-      sub: "已有 IP 的国家/地区数量",
+      label: "覆盖国家数",
+      value: `${summary.value.coveredRegionCount} / ${summary.value.supportedCountryCount}`,
+      sub: "有 IP 的真实国家 / 支持国家",
       type: "success"
+    },
+    {
+      key: "noIp",
+      label: "无 IP 国家数",
+      value: summary.value.noIpCountryCount,
+      sub: "支持国家中 IP 总数为 0",
+      type: "danger"
     },
     {
       key: "inUse",

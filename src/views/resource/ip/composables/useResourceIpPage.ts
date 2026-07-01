@@ -25,7 +25,7 @@ export interface IpImportForm {
 
 export function useResourceIpPage() {
   const countryOptions = ref<IpCountryOption[]>([]);
-  const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKS5"];
+  const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKETS"];
   const searchForm = ref<IpSearchForm>({
     country: "",
     proxyType: "",

@@ -14,12 +14,16 @@ describe("resource IP stats API", () => {
       inUseIpCount: 2,
       idleIpCount: 7,
       unavailableIpCount: 1,
-      coveredRegionCount: 3
+      coveredRegionCount: 3,
+      supportedCountryCount: 12,
+      noIpCountryCount: 9
     });
 
     const summary = await getIpStatsSummary();
 
     assert.equal(summary.totalIpCount, 10);
+    assert.equal(summary.supportedCountryCount, 12);
+    assert.equal(summary.noIpCountryCount, 9);
     assert.deepEqual(armadaCalls(), [
       {
         method: "get",
@@ -36,7 +40,7 @@ describe("resource IP stats API", () => {
       keyword: " 印度 ",
       proxyType: "HTTP",
       source: " iproyal ",
-      risk: "no_idle",
+      risk: "no_ip",
       sortField: "availableRate",
       sortOrder: "asc",
       page: 2,
@@ -52,7 +56,7 @@ describe("resource IP stats API", () => {
             keyword: "印度",
             protocol: 1,
             source: "iproyal",
-            risk: "no_idle",
+            risk: "no_ip",
             sortField: "availableRate",
             sortOrder: "asc",
             page: 2,
@@ -64,11 +68,33 @@ describe("resource IP stats API", () => {
   });
 
   it("loads encoded region proxy details", async () => {
-    resetArmadaMock({ list: [], total: 0, page: 1, pageSize: 10 });
+    resetArmadaMock({
+      list: [
+        {
+          id: 1,
+          proxyAddress: "1.2.3.4:1080",
+          protocol: 2,
+          protocolLabel: "SOCKS5",
+          region: "混合（不限国家）",
+          status: 2,
+          statusLabel: "使用中",
+          boundAccountId: 1001,
+          source: "供应商A",
+          ownership: 1,
+          ownershipLabel: "租户自有",
+          lastSampleCheckAt: null,
+          createdAt: null,
+          boundAt: null
+        }
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10
+    });
 
-    await listIpStatsRegionProxies("混合（不限国家）", {
+    const result = await listIpStatsRegionProxies("混合（不限国家）", {
       status: 2,
-      proxyType: "SOCKS5",
+      proxyType: "SOCKETS",
       source: "供应商A",
       keyword: "1.2.3.4",
       page: 1,
@@ -91,5 +117,6 @@ describe("resource IP stats API", () => {
         }
       }
     ]);
+    assert.equal(result.list[0].protocolLabel, "SOCKETS");
   });
 });

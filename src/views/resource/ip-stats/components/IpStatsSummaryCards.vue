@@ -7,7 +7,7 @@ defineProps<{
   cards: Array<{
     key: string;
     label: string;
-    value: number;
+    value: number | string;
     sub: string;
     type: string;
   }>;

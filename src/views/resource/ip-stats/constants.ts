@@ -1,7 +1,7 @@
 import type { IpStatsRisk } from "@/api/resource-ip-stats";
 import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
 
-export const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKS5"];
+export const proxyTypeOptions: ProxyTypeLabel[] = ["HTTP", "SOCKETS"];
 
 export const riskOptions: Array<{
   label: string;
@@ -9,6 +9,7 @@ export const riskOptions: Array<{
 }> = [
   { label: "全部", value: "" },
   { label: "正常", value: "normal" },
+  { label: "无 IP", value: "no_ip" },
   { label: "无空闲 IP", value: "no_idle" },
   { label: "可用不足", value: "low_available" },
   { label: "不可用偏高", value: "high_unavailable" }
@@ -50,6 +51,6 @@ export const ipStatsDetailColumns: TableColumnList = [
 
 export function riskTagType(risk: IpStatsRisk): "success" | "warning" | "danger" | "info" {
   if (risk === "normal") return "success";
-  if (risk === "high_unavailable") return "danger";
+  if (risk === "no_ip" || risk === "high_unavailable") return "danger";
   return risk === "no_idle" || risk === "low_available" ? "warning" : "info";
 }

@@ -1,6 +1,6 @@
 import { formatEpochMillis } from "@/utils/time";
 
-export type ProxyTypeLabel = "HTTP" | "SOCKS5";
+export type ProxyTypeLabel = "HTTP" | "SOCKETS";
 
 export interface BackendIpProxyRow {
   id: number;
@@ -45,7 +45,7 @@ export interface BackendIpProxyListParams {
 
 const proxyProtocolCodes: Record<ProxyTypeLabel, number> = {
   HTTP: 1,
-  SOCKS5: 2
+  SOCKETS: 2
 };
 
 function trimToUndefined(value?: string | null): string | undefined {
@@ -60,23 +60,32 @@ function toCountryValue(value?: string | null): string | undefined {
 }
 
 export function proxyTypeToProtocol(value?: string): number | undefined {
-  if (value === "HTTP" || value === "SOCKS5") {
+  if (value === "HTTP" || value === "SOCKETS") {
     return proxyProtocolCodes[value];
+  }
+  if (value === "SOCKS5") {
+    return proxyProtocolCodes.SOCKETS;
   }
   return undefined;
 }
 
 function protocolLabelOf(code?: number | null): string {
   if (code === proxyProtocolCodes.HTTP) return "HTTP";
-  if (code === proxyProtocolCodes.SOCKS5) return "SOCKS5";
+  if (code === proxyProtocolCodes.SOCKETS) return "SOCKETS";
   return code == null ? "" : String(code);
+}
+
+export function normalizeProtocolLabel(label?: string | null): string | undefined {
+  if (!label) return undefined;
+  return label === "SOCKS5" ? "SOCKETS" : label;
 }
 
 export function normalizeIpProxyRow(row: BackendIpProxyRow): IpManageRow {
   return {
     id: row.id,
     country: row.region ?? "",
-    proxyType: row.protocolLabel || protocolLabelOf(row.protocol),
+    proxyType:
+      normalizeProtocolLabel(row.protocolLabel) || protocolLabelOf(row.protocol),
     proxyAddress: row.proxyAddress ?? "",
     username: row.username ?? "",
     password: row.password ?? "",
