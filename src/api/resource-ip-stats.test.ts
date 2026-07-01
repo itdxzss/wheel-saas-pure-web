@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import {
   getIpStatsSummary,
+  getIpStatsCountrySampleStats,
   listIpStatsCountries,
   listIpStatsRegionProxies,
   sampleCheckIpStatsCountry
@@ -91,6 +92,27 @@ describe("resource IP stats API", () => {
         config: {
           timeout: 120000
         }
+      }
+    ]);
+  });
+
+  it("loads country sample check stats", async () => {
+    resetArmadaMock({
+      region: "印度",
+      totalIpCount: 30,
+      availableIpCount: 20,
+      inUseIpCount: 7,
+      unavailableIpCount: 3
+    });
+
+    const result = await getIpStatsCountrySampleStats("印度");
+
+    assert.equal(result.totalIpCount, 30);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "get",
+        url: "/api/ip-proxies/stats/countries/%E5%8D%B0%E5%BA%A6/sample-check/stats",
+        opts: undefined
       }
     ]);
   });

@@ -19,6 +19,7 @@ const {
   countryColumns,
   countryLoading,
   countryRows,
+  confirmSampleCheckCountry,
   detailColumns,
   detailLoading,
   detailPage,
@@ -47,7 +48,14 @@ const {
   resetSearchForm,
   riskOptions,
   riskTagType,
+  sampleChecking,
   sampleCheckCountry: runSampleCheckCountry,
+  sampleCount,
+  sampleDialogError,
+  sampleDialogLoading,
+  sampleDialogStats,
+  sampleDialogTitle,
+  sampleDialogVisible,
   searchCountries,
   searchDetailRows,
   searchForm,
@@ -335,6 +343,72 @@ function sampleCheckCountry(row: unknown): void {
       @reset="resetDetailSearchForm"
       @search="searchDetailRows"
     />
+
+    <el-dialog
+      v-model="sampleDialogVisible"
+      :title="sampleDialogTitle"
+      aria-label="国家 IP 抽样检测"
+      width="520px"
+      destroy-on-close
+    >
+      <div v-loading="sampleDialogLoading" class="ip-stats-sample-dialog">
+        <div class="ip-stats-sample-sub">
+          当前国家共有 {{ sampleDialogStats.totalIpCount }} 个 IP，可输入抽样检测数量后随机抽取执行检测。
+        </div>
+        <div class="ip-stats-sample-stats">
+          <div class="ip-stats-sample-stat">
+            <span>IP 总数量</span>
+            <b>{{ sampleDialogStats.totalIpCount }}</b>
+          </div>
+          <div class="ip-stats-sample-stat ip-stats-sample-stat--ok">
+            <span>可用数量</span>
+            <b>{{ sampleDialogStats.availableIpCount }}</b>
+          </div>
+          <div class="ip-stats-sample-stat ip-stats-sample-stat--warn">
+            <span>使用中数量</span>
+            <b>{{ sampleDialogStats.inUseIpCount }}</b>
+          </div>
+          <div class="ip-stats-sample-stat ip-stats-sample-stat--bad">
+            <span>不可用数量</span>
+            <b>{{ sampleDialogStats.unavailableIpCount }}</b>
+          </div>
+        </div>
+        <el-form label-position="top">
+          <el-form-item label="抽样检测数量" :error="sampleDialogError">
+            <el-input-number
+              v-model="sampleCount"
+              class="ip-stats-sample-input"
+              :min="1"
+              :max="sampleDialogStats.totalIpCount"
+              :step="1"
+              step-strictly
+              controls-position="right"
+              :disabled="sampleDialogStats.totalIpCount === 0"
+              placeholder="请输入抽样检测数量"
+              @keyup.enter="confirmSampleCheckCountry"
+            />
+          </el-form-item>
+        </el-form>
+        <div class="ip-stats-sample-tip">
+          {{
+            sampleDialogStats.totalIpCount
+              ? `数量需大于 0，且不能超过当前国家 IP 总数量 ${sampleDialogStats.totalIpCount}。`
+              : "当前国家暂无 IP，无法执行抽样检测。"
+          }}
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="sampleDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="sampleChecking"
+          :disabled="sampleDialogStats.totalIpCount === 0"
+          @click="confirmSampleCheckCountry"
+        >
+          检测
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -371,5 +445,70 @@ function sampleCheckCountry(row: unknown): void {
 
 .ip-stats-error {
   margin-bottom: 12px;
+}
+
+.ip-stats-sample-dialog {
+  min-height: 220px;
+}
+
+.ip-stats-sample-sub {
+  margin-bottom: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
+.ip-stats-sample-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.ip-stats-sample-stat {
+  padding: 10px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
+  background: var(--el-fill-color-lighter);
+}
+
+.ip-stats-sample-stat span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.ip-stats-sample-stat b {
+  font-size: 20px;
+  color: var(--el-text-color-primary);
+}
+
+.ip-stats-sample-stat--ok b {
+  color: var(--el-color-success);
+}
+
+.ip-stats-sample-stat--warn b {
+  color: var(--el-color-warning);
+}
+
+.ip-stats-sample-stat--bad b {
+  color: var(--el-color-danger);
+}
+
+.ip-stats-sample-input {
+  width: 100%;
+}
+
+.ip-stats-sample-tip {
+  margin-top: -8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+@media (max-width: 640px) {
+  .ip-stats-sample-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

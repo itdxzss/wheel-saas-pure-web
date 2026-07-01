@@ -18,4 +18,14 @@ describe("resource IP stats page template", () => {
     assert.match(pageSource, /@click="sampleCheckCountry\(row\)"/);
     assert.match(pageSource, />\s*检测\s*</);
   });
+
+  it("renders country sample check dialog like the prototype", () => {
+    assert.match(pageSource, /国家 IP 抽样检测/);
+    assert.match(pageSource, /IP 总数量/);
+    assert.match(pageSource, /可用数量/);
+    assert.match(pageSource, /使用中数量/);
+    assert.match(pageSource, /不可用数量/);
+    assert.match(pageSource, /抽样检测数量/);
+    assert.match(pageSource, /:max="sampleDialogStats\.totalIpCount"/);
+  });
 });

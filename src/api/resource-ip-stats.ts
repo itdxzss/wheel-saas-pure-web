@@ -99,6 +99,14 @@ export interface IpStatsCountrySampleCheckResult {
   results: IpProxyCheckResult[];
 }
 
+export interface IpStatsCountrySampleStats {
+  region: string;
+  totalIpCount: number;
+  availableIpCount: number;
+  inUseIpCount: number;
+  unavailableIpCount: number;
+}
+
 interface IpStatsCountryParams {
   keyword?: string;
   protocol?: number;
@@ -191,11 +199,20 @@ export function sampleCheckIpStatsCountry(
   region: string,
   sampleCount: number
 ): Promise<IpStatsCountrySampleCheckResult> {
-  // 国家级抽检会真实访问外部代理,超时时间与 IP 管理批量检测保持一致。
+  // 国家级抽检会真实访问外部代理,需要给真实代理探测留足时间。
   return armadaRequest<IpStatsCountrySampleCheckResult>(
     "post",
     `/api/ip-proxies/stats/countries/${encodeURIComponent(region)}/sample-check`,
     { data: { sampleCount } },
     { timeout: 120000 }
+  );
+}
+
+export function getIpStatsCountrySampleStats(
+  region: string
+): Promise<IpStatsCountrySampleStats> {
+  return armadaRequest<IpStatsCountrySampleStats>(
+    "get",
+    `/api/ip-proxies/stats/countries/${encodeURIComponent(region)}/sample-check/stats`
   );
 }

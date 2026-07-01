@@ -1,11 +1,12 @@
 import { computed, onMounted, ref } from "vue";
-import { ElMessageBox } from "element-plus";
 import {
   getIpStatsSummary,
+  getIpStatsCountrySampleStats,
   listIpStatsCountries,
   listIpStatsRegionProxies,
   sampleCheckIpStatsCountry,
   type IpCountryStatsRow,
+  type IpStatsCountrySampleStats,
   type IpStatsDetailRow,
   type IpStatsRisk,
   type IpStatsSortField,
@@ -69,8 +70,13 @@ const sortFieldMap: Record<string, IpStatsSortField> = {
   unavailableRate: "unavailableRate"
 };
 
-// 后端复用 IP 管理批量检测能力,单次最多检测 20 个 IP。
-const maxCountrySampleCheckCount = 20;
+const defaultSampleStats: IpStatsCountrySampleStats = {
+  region: "",
+  totalIpCount: 0,
+  availableIpCount: 0,
+  inUseIpCount: 0,
+  unavailableIpCount: 0
+};
 
 export function useResourceIpStatsPage() {
   const summary = ref<IpStatsSummary>({ ...defaultSummary });
@@ -100,6 +106,15 @@ export function useResourceIpStatsPage() {
   const detailRows = ref<IpStatsDetailRow[]>([]);
   const selectedCountry = ref<IpCountryStatsRow | null>(null);
   const detailVisible = ref(false);
+  const sampleDialogVisible = ref(false);
+  const sampleDialogLoading = ref(false);
+  const sampleChecking = ref(false);
+  const sampleDialogCountry = ref<IpCountryStatsRow | null>(null);
+  const sampleDialogStats = ref<IpStatsCountrySampleStats>({
+    ...defaultSampleStats
+  });
+  const sampleCount = ref<number | undefined>();
+  const sampleDialogError = ref("");
 
   const page = ref(1);
   const pageSize = ref(20);
@@ -165,6 +180,11 @@ export function useResourceIpStatsPage() {
       ["不可用", row.unavailableIpCount],
       ["可用率", `${formatRate(row.availableRate)}%`]
     ];
+  });
+
+  const sampleDialogTitle = computed(() => {
+    const country = sampleDialogCountry.value;
+    return country ? `国家 IP 抽样检测 - ${country.region}` : "国家 IP 抽样检测";
   });
 
   function formatRate(value: number | null | undefined): string {
@@ -287,63 +307,63 @@ export function useResourceIpStatsPage() {
   }
 
   async function sampleCheckCountry(row: IpCountryStatsRow): Promise<void> {
-    if (row.totalIpCount <= 0) {
-      message("当前国家暂无 IP 可检测", { type: "warning" });
-      return;
-    }
-
-    let sampleCountText = "";
+    sampleDialogCountry.value = row;
+    sampleDialogStats.value = {
+      region: row.region,
+      totalIpCount: row.totalIpCount,
+      availableIpCount: row.idleIpCount,
+      inUseIpCount: row.inUseIpCount,
+      unavailableIpCount: row.unavailableIpCount
+    };
+    sampleCount.value = undefined;
+    sampleDialogError.value = "";
+    sampleDialogVisible.value = true;
+    sampleDialogLoading.value = true;
     try {
-      const result = await ElMessageBox.prompt(
-        `当前国家 IP 总数 ${row.totalIpCount}，请输入抽样检测数量`,
-        `国家 IP 抽样检测 - ${row.region}`,
-        {
-          confirmButtonText: "检测",
-          cancelButtonText: "取消",
-          inputType: "number",
-          inputValue: String(
-            Math.min(row.totalIpCount, 10, maxCountrySampleCheckCount)
-          ),
-          inputPattern: /^[1-9]\d*$/,
-          inputErrorMessage: "请输入大于 0 的整数"
-        }
-      );
-      sampleCountText = result.value;
-    } catch {
+      sampleDialogStats.value = await getIpStatsCountrySampleStats(row.region);
+    } catch (error) {
+      sampleDialogVisible.value = false;
+      message(apiErrorMessage(error, "国家 IP 抽样检测统计加载失败"), {
+        type: "error"
+      });
+    } finally {
+      sampleDialogLoading.value = false;
+    }
+  }
+
+  async function confirmSampleCheckCountry(): Promise<void> {
+    const country = sampleDialogCountry.value;
+    if (!country || sampleChecking.value) return;
+
+    sampleDialogError.value = "";
+    const normalizedSampleCount = Number(sampleCount.value);
+    if (!Number.isInteger(normalizedSampleCount) || normalizedSampleCount <= 0) {
+      sampleDialogError.value = "请输入大于 0 的整数抽样检测数量。";
+      return;
+    }
+    if (normalizedSampleCount > sampleDialogStats.value.totalIpCount) {
+      sampleDialogError.value =
+        `抽样检测数量不能超过当前国家 IP 总数量 ${sampleDialogStats.value.totalIpCount}。`;
       return;
     }
 
-    const sampleCount = Number(sampleCountText);
-    if (!Number.isInteger(sampleCount) || sampleCount <= 0) {
-      message("请输入大于 0 的整数", { type: "warning" });
-      return;
-    }
-    if (sampleCount > row.totalIpCount) {
-      message(`抽样检测数量不能超过当前国家 IP 总数量 ${row.totalIpCount}`, {
-        type: "warning"
-      });
-      return;
-    }
-    if (sampleCount > maxCountrySampleCheckCount) {
-      message(`一次最多检测 ${maxCountrySampleCheckCount} 个 IP`, {
-        type: "warning"
-      });
-      return;
-    }
-
-    countryLoading.value = true;
+    sampleChecking.value = true;
     try {
-      await sampleCheckIpStatsCountry(row.region, sampleCount);
-      message(`已完成 ${row.region} ${sampleCount} 个 IP 抽样检测`, {
+      await sampleCheckIpStatsCountry(country.region, normalizedSampleCount);
+      message(`已完成 ${country.region} ${normalizedSampleCount} 个 IP 抽样检测`, {
         type: "success"
       });
-      await Promise.all([loadRankRows(), loadCountryRows()]);
+      sampleDialogVisible.value = false;
+      await refreshAll();
+      if (detailVisible.value && selectedCountry.value?.region === country.region) {
+        await loadDetailRows();
+      }
     } catch (error) {
       message(apiErrorMessage(error, "国家 IP 抽样检测失败"), {
         type: "error"
       });
     } finally {
-      countryLoading.value = false;
+      sampleChecking.value = false;
     }
   }
 
@@ -409,6 +429,7 @@ export function useResourceIpStatsPage() {
     errorMessage,
     formatRate,
     formatTime,
+    confirmSampleCheckCountry,
     openDetail,
     page,
     pageSize,
@@ -421,7 +442,15 @@ export function useResourceIpStatsPage() {
     resetSearchForm,
     riskOptions,
     riskTagType,
+    sampleChecking,
     sampleCheckCountry,
+    sampleCount,
+    sampleDialogCountry,
+    sampleDialogError,
+    sampleDialogLoading,
+    sampleDialogStats,
+    sampleDialogTitle,
+    sampleDialogVisible,
     searchCountries,
     searchDetailRows,
     searchForm,
