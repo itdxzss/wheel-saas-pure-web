@@ -199,22 +199,12 @@ const drawerTitle = computed(() =>
         </el-table-column>
         <el-table-column
           v-if="!columns[8].hide"
-          prop="createdAt"
-          label="创建时间"
-          width="180"
+          prop="failCount"
+          label="失败次数"
+          width="100"
         >
           <template #default="{ row }">
-            {{ formatTime(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!columns[9].hide"
-          prop="boundAt"
-          label="绑定时间"
-          width="180"
-        >
-          <template #default="{ row }">
-            {{ formatTime(row.boundAt) }}
+            {{ row.failCount ?? 0 }}
           </template>
         </el-table-column>
         <template #empty>

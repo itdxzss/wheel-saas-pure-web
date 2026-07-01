@@ -137,8 +137,7 @@ describe("resource IP stats API", () => {
           ownership: 1,
           ownershipLabel: "租户自有",
           lastSampleCheckAt: null,
-          createdAt: null,
-          boundAt: null
+          failCount: 0
         }
       ],
       total: 1,

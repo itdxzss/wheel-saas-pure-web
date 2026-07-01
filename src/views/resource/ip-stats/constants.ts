@@ -59,8 +59,7 @@ export const ipStatsDetailColumns: TableColumnList = [
   { label: "状态", prop: "statusLabel", width: 110 },
   { label: "当前使用账号", prop: "boundAccountId", minWidth: 130 },
   { label: "最近抽检时间", prop: "lastSampleCheckAt", width: 180 },
-  { label: "创建时间", prop: "createdAt", width: 180 },
-  { label: "绑定时间", prop: "boundAt", width: 180 }
+  { label: "失败次数", prop: "failCount", width: 100 }
 ];
 
 export function riskTagType(risk: IpStatsRisk): "success" | "warning" | "danger" | "info" {

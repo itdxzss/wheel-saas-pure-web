@@ -66,8 +66,7 @@ export interface IpStatsDetailRow {
   ownership: number | null;
   ownershipLabel: string;
   lastSampleCheckAt: number | null;
-  createdAt: number | null;
-  boundAt: number | null;
+  failCount: number | null;
 }
 
 export interface IpStatsCountryQuery {
