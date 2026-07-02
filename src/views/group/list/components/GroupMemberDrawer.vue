@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox, type UploadFile } from "element-plus";
 import {
   demoteGroupMembers,
-  getGroupDetail,
+  getGroupMembers,
   kickGroupMembers,
   promoteGroupMembers,
   updateGroupProfile,
@@ -11,10 +11,12 @@ import {
   uploadGroupAvatar,
   type GroupDetail,
   type GroupListRow,
-  type GroupMember
+  type GroupMember,
+  type GroupMemberList
 } from "@/api/group";
 import { apiErrorMessage } from "@/utils/api-error";
 import { timedMessageOptions } from "../constants";
+import { groupMemberFallbackReason } from "../group-member-availability";
 
 defineOptions({
   name: "GroupMemberDrawer"
@@ -92,6 +94,25 @@ function fallbackDetail(group: GroupListRow, reason: string): GroupDetail {
   };
 }
 
+function memberListDetail(
+  group: GroupListRow,
+  memberList: GroupMemberList
+): GroupDetail {
+  return {
+    id: group.id,
+    groupJid: memberList.groupJid || group.groupJid,
+    groupName: displayGroupName(group),
+    url: group.url,
+    description: group.remark,
+    memberCount: memberList.total,
+    membersAvailable: true,
+    membersUnavailableReason: null,
+    locked: null,
+    announcementOnly: null,
+    members: memberList.members
+  };
+}
+
 function resetState(): void {
   detail.value = null;
   memberSearch.value = "";
@@ -114,7 +135,12 @@ async function loadDetail(): Promise<void> {
   loading.value = true;
   selectedJids.value = [];
   try {
-    detail.value = await getGroupDetail(group.id);
+    const fallbackReason = groupMemberFallbackReason(group);
+    if (fallbackReason) {
+      detail.value = fallbackDetail(group, fallbackReason);
+      return;
+    }
+    detail.value = memberListDetail(group, await getGroupMembers(group.id));
     if (detail.value.locked != null) {
       permissions.editGroupSettings = !detail.value.locked;
     }
@@ -124,7 +150,7 @@ async function loadDetail(): Promise<void> {
   } catch (error) {
     detail.value = fallbackDetail(
       group,
-      apiErrorMessage(error, "成员数据待接入")
+      apiErrorMessage(error, "成员数据加载失败")
     );
   } finally {
     loading.value = false;
@@ -396,7 +422,7 @@ onBeforeUnmount(resetState);
           show-icon
         >
           <template #title>
-            成员数据待接入：{{
+            成员数据暂不可用：{{
               detail?.membersUnavailableReason || "后端接口未返回成员数据"
             }}
           </template>

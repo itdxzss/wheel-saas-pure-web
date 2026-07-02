@@ -155,6 +155,10 @@ export function updateJoinTask(
   });
 }
 
+export function startJoinTask(id: number): Promise<void> {
+  return armadaRequest<void>("post", `/api/join-tasks/${id}/start`);
+}
+
 export function getJoinTaskResults(id: number): Promise<JoinResultRow[]> {
   return armadaRequest<JoinResultRow[]>("get", `/api/join-tasks/${id}/results`);
 }

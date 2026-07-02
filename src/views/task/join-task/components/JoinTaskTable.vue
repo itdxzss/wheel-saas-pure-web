@@ -35,7 +35,7 @@ const emit = defineEmits<{
   (
     event: "row-action",
     row: JoinTaskRow,
-    action: "detail" | "edit" | "copy"
+    action: "detail" | "edit" | "copy" | "start"
   ): void;
   (event: "selection-change", rows: JoinTaskRow[]): void;
   (event: "update:page", value: number): void;
@@ -182,7 +182,7 @@ function asJoinTaskRow(row: unknown): JoinTaskRow {
             {{ formatEpoch(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="170">
+        <el-table-column label="操作" fixed="right" width="220">
           <template #default="{ row }">
             <el-button
               link
@@ -205,6 +205,14 @@ function asJoinTaskRow(row: unknown): JoinTaskRow {
               @click="emit('row-action', asJoinTaskRow(row), 'copy')"
             >
               复制
+            </el-button>
+            <el-button
+              link
+              type="success"
+              :disabled="row.status !== 'DRAFT'"
+              @click="emit('row-action', asJoinTaskRow(row), 'start')"
+            >
+              启动
             </el-button>
           </template>
         </el-table-column>

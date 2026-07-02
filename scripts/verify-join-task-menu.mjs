@@ -64,15 +64,13 @@ expectIncludes(
     "createJoinTask",
     "getJoinTaskDetail",
     "updateJoinTask",
+    "startJoinTask",
+    '`/api/join-tasks/${id}/start`',
     "getJoinTaskResults",
     "batchDeleteJoinTasks"
   ],
   "join task api"
 );
-
-if (api.includes("startJoinTask") || api.includes("/start")) {
-  throw new Error("join task api must not expose start before armada endpoint exists");
-}
 
 const constants = read("src/views/task/join-task/constants.ts");
 expectIncludes(
@@ -102,6 +100,7 @@ expectIncludes(
     "openEditDrawer",
     "openCopyDrawer",
     "submitEditor",
+    "startTask",
     "openDetailDrawer",
     "deleteSelected",
     "group-list"
@@ -121,6 +120,7 @@ expectIncludes(
     "JoinTaskTable",
     "JoinTaskEditorDrawer",
     "JoinTaskDetailDrawer",
+    "startTask",
     "任务名称",
     "账号分组",
     "分配方式",
@@ -145,7 +145,8 @@ expectIncludes(
     "批量删除",
     "明细",
     "编辑",
-    "复制"
+    "复制",
+    "启动"
   ],
   "join task table"
 );

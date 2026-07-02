@@ -49,6 +49,7 @@ const {
   searchForm,
   searchTasks,
   selectedCount,
+  startTask,
   submitEditor,
   total,
   toggleAdvanced
@@ -56,11 +57,12 @@ const {
 
 function runRowAction(
   row: JoinTaskRow,
-  action: "detail" | "edit" | "copy"
+  action: "detail" | "edit" | "copy" | "start"
 ): void {
   if (action === "detail") void openDetailDrawer(row);
   if (action === "edit") void openEditDrawer(row);
   if (action === "copy") void openCopyDrawer(row);
+  if (action === "start") void startTask(row);
 }
 </script>
 
@@ -208,7 +210,13 @@ function runRowAction(
 <style scoped>
 .join-task-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+  min-width: 0;
+}
+
+.join-task-page > * {
+  min-width: 0;
 }
 
 .join-task-search {

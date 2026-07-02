@@ -16,6 +16,7 @@ import {
   getJoinTaskResults,
   listJoinTaskIntervals,
   listJoinTasks,
+  startJoinTask,
   updateJoinTask,
   type CreateJoinTaskRequest,
   type JoinResultRow,
@@ -106,6 +107,7 @@ export interface JoinTaskPageState {
   searchForm: JoinTaskSearchForm;
   searchTasks: () => void;
   selectedCount: ComputedRef<number>;
+  startTask: (row: JoinTaskRow) => Promise<void>;
   submitEditor: () => Promise<void>;
   total: Ref<number>;
   toggleAdvanced: () => void;
@@ -526,6 +528,24 @@ export function useJoinTaskPage(): JoinTaskPageState {
     }
   }
 
+  async function startTask(row: JoinTaskRow): Promise<void> {
+    if (row.status !== "DRAFT") {
+      ElMessage.warning("仅待启动的进群任务可启动");
+      return;
+    }
+
+    loading.value = true;
+    try {
+      await startJoinTask(row.id);
+      ElMessage.success("进群任务已启动");
+      await refreshTasks();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "启动进群任务失败"));
+    } finally {
+      loading.value = false;
+    }
+  }
+
   async function deleteSelected(): Promise<void> {
     if (!selectedRows.value.length) return;
     const ids = selectedRows.value.map(row => row.id);
@@ -625,6 +645,7 @@ export function useJoinTaskPage(): JoinTaskPageState {
     searchForm,
     searchTasks,
     selectedCount,
+    startTask,
     submitEditor,
     total,
     toggleAdvanced

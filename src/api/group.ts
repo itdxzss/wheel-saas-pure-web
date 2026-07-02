@@ -46,6 +46,28 @@ export interface GroupMember {
   locked?: boolean | null;
 }
 
+interface BackendGroupMember {
+  jid?: string | null;
+  phone?: string | null;
+  admin?: boolean | null;
+  owner?: boolean | null;
+  role?: string | null;
+}
+
+interface BackendGroupMemberList {
+  groupLinkId: number;
+  groupJid: string;
+  total: number;
+  members: BackendGroupMember[];
+}
+
+export interface GroupMemberList {
+  groupLinkId: number;
+  groupJid: string;
+  total: number;
+  members: GroupMember[];
+}
+
 export interface GroupDetail {
   id: number;
   groupJid?: string | null;
@@ -95,6 +117,35 @@ function toListParams(query: GroupListQuery) {
   };
 }
 
+function toGroupMember(member: BackendGroupMember): GroupMember {
+  const role = member.owner
+    ? "OWNER"
+    : member.admin || member.role === "admin"
+      ? "ADMIN"
+      : "MEMBER";
+  const roleText =
+    role === "OWNER" ? "群主" : role === "ADMIN" ? "管理员" : "成员";
+  const jid = member.jid ?? member.phone ?? "";
+  const phone = member.phone ?? jid;
+  return {
+    jid,
+    phone,
+    name: phone,
+    role,
+    roleText,
+    locked: role === "OWNER"
+  };
+}
+
+function toGroupMemberList(data: BackendGroupMemberList): GroupMemberList {
+  return {
+    groupLinkId: data.groupLinkId,
+    groupJid: data.groupJid,
+    total: data.total,
+    members: (data.members ?? []).map(toGroupMember)
+  };
+}
+
 export function listGroups(
   query: GroupListQuery = {}
 ): Promise<PageResponse<GroupListRow>> {
@@ -109,8 +160,12 @@ export function batchDeleteGroups(ids: number[]): Promise<number> {
   });
 }
 
-export function getGroupDetail(id: number): Promise<GroupDetail> {
-  return armadaRequest<GroupDetail>("get", `/api/group-links/${id}/detail`);
+export async function getGroupMembers(id: number): Promise<GroupMemberList> {
+  const data = await armadaRequest<BackendGroupMemberList>(
+    "get",
+    `/api/group-links/${id}/members`
+  );
+  return toGroupMemberList(data);
 }
 
 export function updateGroupProfile(
