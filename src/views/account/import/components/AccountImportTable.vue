@@ -189,32 +189,38 @@ function exportRow(row: AccountImportTask, command: string): void {
           width="170"
         >
           <template #default="{ row }">
-            <el-button link type="primary" @click="emit('detail', toTask(row))">
-              明细
-            </el-button>
-            <el-dropdown
-              trigger="click"
-              @command="command => exportRow(toTask(row), String(command))"
-            >
+            <div class="account-import-actions">
               <el-button
                 link
                 type="primary"
-                :loading="exportingTaskId === toTask(row).id"
+                @click="emit('detail', toTask(row))"
               >
-                导出
+                明细
               </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="item in exportOptions"
-                    :key="item.value"
-                    :command="item.value"
-                  >
-                    {{ item.label }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+              <el-dropdown
+                trigger="click"
+                @command="command => exportRow(toTask(row), String(command))"
+              >
+                <el-button
+                  link
+                  type="primary"
+                  :loading="exportingTaskId === toTask(row).id"
+                >
+                  导出
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-for="item in exportOptions"
+                      :key="item.value"
+                      :command="item.value"
+                    >
+                      {{ item.label }}
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
         <template #empty>
@@ -237,5 +243,12 @@ small {
   display: block;
   margin-top: 4px;
   color: var(--el-text-color-secondary);
+}
+
+.account-import-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
 }
 </style>
