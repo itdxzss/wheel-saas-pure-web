@@ -121,15 +121,20 @@ export function sampleCheckIpProxyImport(
 export function importIpProxies(
   input: IpProxyImportInput
 ): Promise<IpProxyImportResult> {
-  return armadaRequest<IpProxyImportResult>("post", "/api/ip-proxies/import", {
-    data: {
-      allocationMode: importAllocationModeOf(input),
-      countryValue: input.countryValue,
-      protocol: proxyTypeToProtocol(input.proxyType),
-      source: input.source,
-      text: input.text
-    }
-  });
+  return armadaRequest<IpProxyImportResult>(
+    "post",
+    "/api/ip-proxies/import",
+    {
+      data: {
+        allocationMode: importAllocationModeOf(input),
+        countryValue: input.countryValue,
+        protocol: proxyTypeToProtocol(input.proxyType),
+        source: input.source,
+        text: input.text
+      }
+    },
+    { timeout: 120000 }
+  );
 }
 
 /** 对单条代理做真实出口检测,无 request body。 */

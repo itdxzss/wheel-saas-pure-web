@@ -22,6 +22,9 @@ const props = withDefaults(
 );
 
 const visible = defineModel<boolean>({ required: true });
+const emit = defineEmits<{
+  (event: "rerun"): void;
+}>();
 
 const rows = computed(() => props.result?.samples ?? []);
 const successCount = computed(() => rows.value.filter(row => row.passed).length);
@@ -133,6 +136,9 @@ function checkedAtLabel(value?: number | null): string {
     </div>
 
     <template #footer>
+      <el-button :loading="loading" @click="emit('rerun')">
+        重新检测
+      </el-button>
       <el-button @click="visible = false">关闭</el-button>
     </template>
   </el-dialog>

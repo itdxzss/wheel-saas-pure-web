@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   genFileId,
+  type UploadFile,
   type UploadRawFile,
   type UploadUserFile
 } from "element-plus";
@@ -25,6 +26,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (event: "file-selected"): void;
   (event: "sample-check"): void;
   (event: "submit"): void;
 }>();
@@ -48,6 +50,7 @@ function replaceUploadFile(file: File): void {
       uid: rawFile.uid
     }
   ];
+  emit("file-selected");
 }
 
 /** 用户重复选择文件时保留最后一次选择,避免导入多个批次混在一起。 */
@@ -55,6 +58,11 @@ function handleUploadExceed(files: File[]): void {
   const [file] = files;
   if (!file) return;
   replaceUploadFile(file);
+}
+
+function handleUploadChange(file: UploadFile): void {
+  if (!file.raw || file.status !== "ready") return;
+  emit("file-selected");
 }
 
 /** 表单校验和文件读取放在父级 composable,弹窗只负责发出提交意图。 */
@@ -138,6 +146,7 @@ function submit(): void {
           accept=".txt,text/plain"
           :auto-upload="false"
           :limit="1"
+          :on-change="handleUploadChange"
           :on-exceed="handleUploadExceed"
         >
           <div class="ip-upload-icon">↥</div>

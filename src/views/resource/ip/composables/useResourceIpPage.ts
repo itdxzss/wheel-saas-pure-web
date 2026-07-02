@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { ElMessageBox, type UploadRawFile, type UploadUserFile } from "element-plus";
 import {
   batchCheckIpProxies,
@@ -346,6 +346,7 @@ export function useResourceIpPage() {
   }
 
   async function sampleCheckImport(): Promise<void> {
+    if (importChecking.value) return;
     if (!importForm.value.countryValue) {
       message("请选择国家", { type: "warning" });
       return;
@@ -392,6 +393,15 @@ export function useResourceIpPage() {
     } finally {
       importChecking.value = false;
     }
+  }
+
+  async function autoSampleCheckImport(): Promise<void> {
+    await nextTick();
+    await sampleCheckImport();
+  }
+
+  async function rerunImportSampleCheck(): Promise<void> {
+    await sampleCheckImport();
   }
 
   /** 提交导入时带业务人员手选国家;检测结果不会回填国家字段。 */
@@ -486,6 +496,8 @@ export function useResourceIpPage() {
     resetSearchForm,
     sampleCheckImport,
     searchIpList,
+    autoSampleCheckImport,
+    rerunImportSampleCheck,
     submitImport
   };
 }

@@ -129,7 +129,8 @@ describe("resource IP API", () => {
             source: "iproyal",
             text: "1.1.1.1:8080:u:p"
           }
-        }
+        },
+        config: { timeout: 120000 }
       }
     ]);
   });

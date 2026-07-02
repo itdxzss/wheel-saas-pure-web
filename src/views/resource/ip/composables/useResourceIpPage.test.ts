@@ -138,6 +138,67 @@ describe("resource IP page state", () => {
     ]);
   });
 
+  it("automatically opens sample check after a txt file is selected", async () => {
+    resetArmadaMock({
+      passed: true,
+      sampleSize: 1,
+      samples: [],
+      errors: []
+    });
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+
+    await page.autoSampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importCheckPassed.value, true);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/ip-proxies/import/sample-check",
+        opts: {
+          data: {
+            allocationMode: "smart",
+            countryValue: "US",
+            protocol: 1,
+            source: "iproyal",
+            text: "1.1.1.1:8080:u:p"
+          }
+        },
+        config: { timeout: 120000 }
+      }
+    ]);
+  });
+
+  it("reruns import sample check from the result dialog", async () => {
+    resetArmadaMock({
+      passed: true,
+      sampleSize: 1,
+      samples: [],
+      errors: []
+    });
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+
+    await page.sampleCheckImport();
+    await page.rerunImportSampleCheck();
+
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importCheckPassed.value, true);
+    assert.equal(armadaCalls().length, 2);
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      [
+        "/api/ip-proxies/import/sample-check",
+        "/api/ip-proxies/import/sample-check"
+      ]
+    );
+  });
+
   it("clears import sample-check pass when import inputs change", async () => {
     const page = useResourceIpPage();
     page.importCheckPassed.value = true;

@@ -56,7 +56,9 @@ const {
   openImportDialog,
   refreshIpList,
   rerunActiveCheck,
+  rerunImportSampleCheck,
   resetSearchForm,
+  autoSampleCheckImport,
   sampleCheckImport,
   searchIpList,
   submitImport
@@ -349,6 +351,7 @@ function checkTableRow(row: unknown): void {
       :import-errors="importErrors"
       :importing="importing"
       :proxy-type-options="proxyTypeOptions"
+      @file-selected="autoSampleCheckImport"
       @sample-check="sampleCheckImport"
       @submit="submitImport"
     />
@@ -366,6 +369,7 @@ function checkTableRow(row: unknown): void {
       v-model="showImportSampleCheckDialog"
       :loading="importChecking"
       :result="importCheckResult"
+      @rerun="rerunImportSampleCheck"
     />
   </div>
 </template>
