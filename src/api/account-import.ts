@@ -245,6 +245,7 @@ function toListQuery(params: ListAccountImportTasksParams) {
     accountGroupId: params.accountGroupId,
     deviceOs: params.deviceOs ?? deviceOsCode(params.device),
     accountType: params.accountType ?? accountTypeCode(params.account_type),
+    login: params.login,
     status: statusCode(params.status)
   };
 }
