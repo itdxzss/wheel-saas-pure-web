@@ -112,7 +112,7 @@ const visible = defineModel<boolean>({ required: true });
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            {{ row.reason || "-" }}
+            {{ row.reasonLabel || row.reason || "-" }}
           </template>
         </el-table-column>
       </el-table>

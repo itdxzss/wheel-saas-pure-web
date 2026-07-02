@@ -60,6 +60,7 @@ export interface JoinResultRow {
   link?: string | null;
   status: JoinResultStatus;
   reason?: string | null;
+  reasonLabel?: string | null;
   isAdmin: boolean;
 }
 

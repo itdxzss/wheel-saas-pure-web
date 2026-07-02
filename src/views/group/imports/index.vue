@@ -111,8 +111,6 @@ const importStatusOptions = [
 const columns: TableColumnList = [
   { label: "ID", prop: "id", width: 90 },
   { label: "WS链接分组", prop: "linkLabelName", minWidth: 180 },
-  { label: "国家/区域", prop: "region", width: 120 },
-  { label: "活跃链接", prop: "linkCount", width: 110 },
   { label: "最近来源文件", prop: "sourceFile", minWidth: 180 },
   { label: "导入次数", prop: "fileCount", width: 110 },
   { label: "总行数", prop: "totalRows", width: 100 },
@@ -587,21 +585,6 @@ onMounted(() => {
           />
           <el-table-column
             v-if="!dynamicColumns[2].hide"
-            prop="region"
-            label="国家/区域"
-            width="120"
-            show-overflow-tooltip
-          >
-            <template #default="{ row }">{{ row.region || "-" }}</template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[3].hide"
-            prop="linkCount"
-            label="活跃链接"
-            width="110"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[4].hide"
             prop="sourceFile"
             label="最近来源文件"
             min-width="180"
@@ -610,37 +593,37 @@ onMounted(() => {
             <template #default="{ row }">{{ sourceFileText(row) }}</template>
           </el-table-column>
           <el-table-column
-            v-if="!dynamicColumns[5].hide"
+            v-if="!dynamicColumns[3].hide"
             prop="fileCount"
             label="导入次数"
             width="110"
           />
           <el-table-column
-            v-if="!dynamicColumns[6].hide"
+            v-if="!dynamicColumns[4].hide"
             prop="totalRows"
             label="总行数"
             width="100"
           />
           <el-table-column
-            v-if="!dynamicColumns[7].hide"
+            v-if="!dynamicColumns[5].hide"
             prop="successRows"
             label="成功"
             width="100"
           />
           <el-table-column
-            v-if="!dynamicColumns[8].hide"
+            v-if="!dynamicColumns[6].hide"
             prop="failedRows"
             label="失败"
             width="100"
           />
           <el-table-column
-            v-if="!dynamicColumns[9].hide"
+            v-if="!dynamicColumns[7].hide"
             prop="importedAt"
             label="最近导入"
             width="180"
           />
           <el-table-column
-            v-if="!dynamicColumns[10].hide"
+            v-if="!dynamicColumns[8].hide"
             prop="status"
             label="状态"
             width="110"
