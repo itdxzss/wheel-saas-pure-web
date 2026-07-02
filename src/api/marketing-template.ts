@@ -2,7 +2,7 @@ import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
 
 export type MarketingTemplateLinkMode = 1 | 2;
-export type MarketingTemplateButtonType = "link" | "copy" | "quick";
+export type MarketingTemplateButtonType = "link" | "phone" | "copy" | "quick";
 
 type BackendButtonType = "LINK_JUMP" | "COPY_CONTENT" | "QUICK_REPLY";
 
@@ -92,7 +92,7 @@ function fromBackendButtonType(
 function toBackendButtonType(
   type: MarketingTemplateButtonType
 ): BackendButtonType {
-  if (type === "link") return "LINK_JUMP";
+  if (type === "link" || type === "phone") return "LINK_JUMP";
   if (type === "copy") return "COPY_CONTENT";
   return "QUICK_REPLY";
 }
@@ -157,6 +157,16 @@ export function listMarketingTemplates(
   }));
 }
 
+export function createMarketingTemplate(
+  data: MarketingTemplateWrite
+): Promise<MarketingTemplateRow> {
+  return armadaRequest<BackendMarketingTemplate>(
+    "post",
+    "/api/marketing-templates",
+    { data: toWritePayload(data) }
+  ).then(normalizeMarketingTemplate);
+}
+
 export function updateMarketingTemplate(
   id: number,
   data: MarketingTemplateWrite
@@ -166,6 +176,21 @@ export function updateMarketingTemplate(
     `/api/marketing-templates/${id}`,
     { data: toWritePayload(data) }
   ).then(normalizeMarketingTemplate);
+}
+
+export function cloneMarketingTemplate(
+  id: number
+): Promise<MarketingTemplateRow> {
+  return armadaRequest<BackendMarketingTemplate>(
+    "post",
+    `/api/marketing-templates/${id}/clone`
+  ).then(normalizeMarketingTemplate);
+}
+
+export function batchDeleteMarketingTemplates(ids: number[]): Promise<void> {
+  return armadaRequest<void>("post", "/api/marketing-templates/batch-delete", {
+    data: { ids }
+  });
 }
 
 export function toMarketingTemplatePayload(

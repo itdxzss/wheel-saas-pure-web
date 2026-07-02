@@ -14,6 +14,7 @@ const form = defineModel<MarketingTemplateForm>("form", { required: true });
 
 const props = defineProps<{
   mode: MarketingDrawerMode;
+  loading: boolean;
   title: string;
 }>();
 
@@ -208,7 +209,12 @@ watch(visible, opened => {
 
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
-      <el-button v-if="!isPreview()" type="primary" @click="emit('save')">
+      <el-button
+        v-if="!isPreview()"
+        type="primary"
+        :loading="props.loading"
+        @click="emit('save')"
+      >
         保存
       </el-button>
     </template>
@@ -246,8 +252,8 @@ watch(visible, opened => {
 
 .form-card-sub {
   margin-top: 4px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .drawer-select,
@@ -276,15 +282,15 @@ watch(visible, opened => {
   gap: 8px;
   justify-content: space-between;
   margin-top: 8px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .clear-image-button {
   margin-top: 8px;
 }
 
-@media (max-width: 980px) {
+@media (width <= 980px) {
   .marketing-template-drawer {
     grid-template-columns: 1fr;
   }

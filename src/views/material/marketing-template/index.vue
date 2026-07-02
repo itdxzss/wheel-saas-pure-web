@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import WheelPagination from "@/components/WheelPagination/index.vue";
@@ -31,10 +32,12 @@ const {
   page,
   pageSize,
   rows,
+  saving,
   searchForm,
   templateForm,
   total,
-  notifyApiPending,
+  cloneSelected,
+  deleteSelected,
   onSelectionChange,
   openCreateDrawer,
   openEditDrawer,
@@ -42,6 +45,7 @@ const {
   previewSelected,
   refreshTemplates,
   resetSearchForm,
+  saveTemplate,
   searchTemplates,
   toggleAdvanced
 } = useMarketingTemplatePage();
@@ -57,6 +61,10 @@ function promotionHref(value: string) {
 function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
   return row as MarketingTemplateRow;
 }
+
+onMounted(() => {
+  void refreshTemplates();
+});
 </script>
 
 <template>
@@ -147,7 +155,7 @@ function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
         <el-button
           :disabled="!hasSelection"
           :icon="useRenderIcon(CopyDocument)"
-          @click="notifyApiPending('复制营销模版')"
+          @click="cloneSelected"
         >
           复制
         </el-button>
@@ -163,7 +171,7 @@ function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
           plain
           :disabled="!hasSelection"
           :icon="useRenderIcon(Delete)"
-          @click="notifyApiPending('批量删除营销模版')"
+          @click="deleteSelected"
         >
           批量删除
         </el-button>
@@ -226,24 +234,6 @@ function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[4].hide"
-            prop="referenceTaskCount"
-            label="引用任务数"
-            width="120"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[5].hide"
-            prop="enabled"
-            label="状态"
-            width="100"
-          >
-            <template #default="{ row }">
-              <el-tag :type="row.enabled ? 'success' : 'info'" effect="plain">
-                {{ row.enabled ? "启用" : "停用" }}
-              </el-tag>
-            </template>
-          </el-table-column>
           <el-table-column label="操作" fixed="right" width="130">
             <template #default="{ row }">
               <el-button
@@ -271,6 +261,7 @@ function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
           v-model:current-page="page"
           v-model:page-size="pageSize"
           :total="total"
+          @change="refreshTemplates"
         />
       </template>
     </PureTableBar>
@@ -279,8 +270,9 @@ function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
       v-model="drawerVisible"
       v-model:form="templateForm"
       :mode="drawerMode"
+      :loading="saving"
       :title="drawerTitle"
-      @save="notifyApiPending('保存营销模版')"
+      @save="saveTemplate"
     />
   </div>
 </template>
@@ -291,8 +283,8 @@ function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
 }
 
 .marketing-template-search {
-  margin-bottom: 8px;
   padding: 16px 16px 0;
+  margin-bottom: 8px;
   border-radius: 4px;
 }
 
