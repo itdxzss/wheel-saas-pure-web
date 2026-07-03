@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  accountImportIpAllocationModeOptions,
   detailStatusOptions,
   exportOptions,
   importKindOptions
@@ -26,5 +27,16 @@ describe("account import constants", () => {
       .map(option => option.value);
 
     assert.deepEqual(disabledKinds, ["six", "fullparam"]);
+  });
+
+  it("uses smart and mixed IP allocation modes for account import", () => {
+    assert.deepEqual(
+      accountImportIpAllocationModeOptions.map(option => option.value),
+      ["smart", "mixed"]
+    );
+    assert.deepEqual(
+      accountImportIpAllocationModeOptions.map(option => option.label),
+      ["智能分配", "混合国家"]
+    );
   });
 });

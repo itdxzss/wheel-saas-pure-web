@@ -7,6 +7,7 @@ import type { PureHttpResponse } from "@/utils/http/types.d";
 export type AccountImportType = "六段号" | "JSON号" | "全参账号" | string;
 export type AccountImportStatus = "导入中" | "已完成" | string;
 export type AccountImportProgress = string;
+export type AccountImportIpAllocationMode = "smart" | "mixed";
 
 export interface AccountImportTask {
   id: number;
@@ -18,6 +19,7 @@ export interface AccountImportTask {
   account_type: string;
   service?: string | null;
   ip_mode?: string | null;
+  ip_allocation_mode?: AccountImportIpAllocationMode | string | null;
   total: number;
   imported: number;
   success: number;
@@ -74,6 +76,7 @@ export interface CreateAccountImportTaskRequest {
   account_type?: string | null;
   service?: string | null;
   ip_mode?: string | null;
+  ip_allocation_mode?: AccountImportIpAllocationMode | string | null;
   remark?: string | null;
   text?: string | null;
   total?: number | null;
@@ -83,6 +86,21 @@ export interface AccountImportExport {
   filename: string;
   blob: Blob;
 }
+
+export type AccountImportExportFilenameHint = Partial<
+  Pick<
+    AccountImportTask,
+    | "import_type"
+    | "total"
+    | "imported"
+    | "success"
+    | "fail"
+    | "login_success"
+    | "login_failed"
+    | "login_fail"
+    | "abnormal"
+  >
+>;
 
 export interface ListAccountImportTasksParams {
   page?: number;
@@ -108,6 +126,7 @@ interface ArmadaAccountImportBatch {
   deviceOs?: number | null;
   accountType?: number | null;
   ipRegion?: string | null;
+  ipAllocationMode?: string | null;
   totalRows?: number | null;
   importedRows?: number | null;
   duplicateRows?: number | null;
@@ -173,6 +192,20 @@ function accountTypeLabel(value?: number | null): string {
   return "-";
 }
 
+function ipAllocationModeLabel(value?: string | null): string {
+  if (value === "smart") return "智能分配";
+  if (value === "mixed" || value === "mixed_country") return "混合国家";
+  return value || "";
+}
+
+function normalizeAccountImportIpAllocationMode(
+  value?: string | null
+): AccountImportIpAllocationMode | undefined {
+  if (value === "smart" || value === "mixed") return value;
+  if (value === "mixed_country") return "mixed";
+  return undefined;
+}
+
 function statusCode(value?: string | number | null): number | undefined {
   if (typeof value === "number") return value;
   if (value === "导入中" || value === "进行中") return 1;
@@ -231,9 +264,68 @@ function filenameFromContentDisposition(value?: string): string | undefined {
   return plain?.[2];
 }
 
-function fallbackExportFilename(id: number, scope: string, blob: Blob): string {
+function countValue(value?: number | null): number {
+  return Number.isFinite(value) && Number(value) > 0 ? Number(value) : 0;
+}
+
+function compactExportDate(date = new Date()): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0")
+  ].join("");
+}
+
+function fallbackSuccessCount(hint: AccountImportExportFilenameHint): number {
+  const loginFail = Math.max(
+    countValue(hint.login_fail),
+    countValue(hint.login_failed)
+  );
+  const loginTotal =
+    countValue(hint.login_success) + loginFail + countValue(hint.abnormal);
+  if (loginTotal > 0) return countValue(hint.login_success);
+  return countValue(hint.success ?? hint.imported);
+}
+
+function fallbackFailCount(hint: AccountImportExportFilenameHint): number {
+  const loginFail = Math.max(
+    countValue(hint.login_fail),
+    countValue(hint.login_failed)
+  );
+  return countValue(hint.fail) + loginFail + countValue(hint.abnormal);
+}
+
+function fallbackExtension(
+  blob: Blob,
+  hint?: AccountImportExportFilenameHint
+): string {
   const extension = blob.type.includes("zip") ? "zip" : "txt";
-  return `account-import-${id}-${scope}.${extension}`;
+  if (extension === "zip") return extension;
+  return hint?.import_type === "JSON号" ? "zip" : "txt";
+}
+
+function fallbackExportFilename(
+  id: number,
+  scope: string,
+  blob: Blob,
+  hint?: AccountImportExportFilenameHint
+): string {
+  const extension = fallbackExtension(blob, hint);
+  if (!hint) return `account-import-${id}-${scope}.${extension}`;
+
+  // 跨域环境可能读不到 Content-Disposition，fallback 仍要保持后端统一命名口径。
+  const date = compactExportDate();
+  const successCount = fallbackSuccessCount(hint);
+  const failCount = fallbackFailCount(hint);
+  if (scope === "success") {
+    return `账号导入_${date}_成功_${successCount}个.${extension}`;
+  }
+  if (scope === "fail") {
+    return `账号导入_${date}_失败_${failCount}个.${extension}`;
+  }
+  const totalCount =
+    hint.total == null ? successCount + failCount : countValue(hint.total);
+  return `账号导入_${date}_全部_共${totalCount}个_成功${successCount}个_失败${failCount}个.${extension}`;
 }
 
 function toListQuery(params: ListAccountImportTasksParams) {
@@ -265,7 +357,8 @@ function toTask(row: ArmadaAccountImportBatch): AccountImportTask {
     device: deviceOsLabel(row.deviceOs),
     account_type: accountTypeLabel(row.accountType),
     service: null,
-    ip_mode: row.ipRegion ?? null,
+    ip_mode: ipAllocationModeLabel(row.ipAllocationMode) || row.ipRegion || null,
+    ip_allocation_mode: row.ipAllocationMode ?? null,
     total,
     imported,
     success: imported,
@@ -305,7 +398,11 @@ function toFormData(data: CreateAccountImportTaskRequest): FormData {
   if (deviceOs) form.append("deviceOs", String(deviceOs));
   const accountType = accountTypeCode(data.account_type);
   if (accountType) form.append("accountType", String(accountType));
-  if (data.ip_mode && !data.ip_mode.startsWith("系统自动")) {
+  const ipAllocationMode = normalizeAccountImportIpAllocationMode(
+    data.ip_allocation_mode
+  );
+  if (ipAllocationMode) form.append("ipAllocationMode", ipAllocationMode);
+  if (!ipAllocationMode && data.ip_mode && !data.ip_mode.startsWith("系统自动")) {
     form.append("ipRegion", data.ip_mode);
   }
   if (data.remark) form.append("remark", data.remark);
@@ -383,7 +480,8 @@ export function getAccountImportTask(
 
 export function exportAccountImportTask(
   id: number,
-  kind: string
+  kind: string,
+  filenameHint?: AccountImportExportFilenameHint
 ): Promise<AccountImportExport> {
   const scope = exportScope(kind);
   let filename: string | undefined;
@@ -404,7 +502,8 @@ export function exportAccountImportTask(
       }
     )
     .then(blob => ({
-      filename: filename || fallbackExportFilename(id, scope, blob),
+      filename:
+        filename || fallbackExportFilename(id, scope, blob, filenameHint),
       blob
     }));
 }

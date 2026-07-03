@@ -1,12 +1,4 @@
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  reactive,
-  ref,
-  type ComputedRef,
-  type Ref
-} from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref, type Ref } from "vue";
 import { ElMessage } from "element-plus";
 import {
   createAccountImportTask,
@@ -25,9 +17,8 @@ import {
   type AccountGroupApiRow,
   type AccountGroupWriteRequest
 } from "@/api/account-group";
-import { listTenantIpRegions } from "@/api/resource-ip";
 import { apiErrorMessage } from "@/utils/api-error";
-import { AUTO_IP_MODE, importKindLabelMap } from "../constants";
+import { importKindLabelMap } from "../constants";
 import type {
   AccountImportDetailStatus,
   AccountImportExportKind,
@@ -55,7 +46,6 @@ export interface AccountImportPageState {
   ) => Promise<void>;
   exportingTaskId: Ref<number | null>;
   groupLoading: Ref<boolean>;
-  ipRegionOptions: ComputedRef<string[]>;
   loadDetail: () => Promise<void>;
   loading: Ref<boolean>;
   openDetailDrawer: (row: AccountImportTask) => Promise<void>;
@@ -88,7 +78,6 @@ export function useAccountImportPage(): AccountImportPageState {
   });
   const rows = ref<AccountImportTask[]>([]);
   const accountGroups = ref<AccountGroupApiRow[]>([]);
-  const ipRegions = ref<string[]>([]);
   const loading = ref(false);
   const groupLoading = ref(false);
   const submittingImport = ref(false);
@@ -108,8 +97,6 @@ export function useAccountImportPage(): AccountImportPageState {
   const detailPageSize = ref(10);
   const detailTotal = ref(0);
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const ipRegionOptions = computed(() => [AUTO_IP_MODE, ...ipRegions.value]);
 
   function buildQuery(): ListAccountImportTasksParams {
     const query: ListAccountImportTasksParams = {
@@ -169,15 +156,6 @@ export function useAccountImportPage(): AccountImportPageState {
       ElMessage.warning(apiErrorMessage(error, "账号分组加载失败"));
     } finally {
       groupLoading.value = false;
-    }
-  }
-
-  async function loadIpRegionOptions(): Promise<void> {
-    try {
-      ipRegions.value = await listTenantIpRegions();
-    } catch (error) {
-      ipRegions.value = [];
-      ElMessage.warning(apiErrorMessage(error, "IP 区域加载失败"));
     }
   }
 
@@ -254,7 +232,7 @@ export function useAccountImportPage(): AccountImportPageState {
           group_id: payload.groupId,
           device: payload.device,
           account_type: payload.accountType,
-          ip_mode: payload.ipMode,
+          ip_allocation_mode: payload.ipAllocationMode,
           remark: payload.remark || null,
           file: payload.file
         });
@@ -269,7 +247,7 @@ export function useAccountImportPage(): AccountImportPageState {
           device: payload.device,
           account_type: payload.accountType,
           service: null,
-          ip_mode: payload.ipMode,
+          ip_allocation_mode: payload.ipAllocationMode,
           remark: payload.remark || null,
           text: payload.text ?? ""
         });
@@ -343,7 +321,7 @@ export function useAccountImportPage(): AccountImportPageState {
   ): Promise<void> {
     exportingTaskId.value = row.id;
     try {
-      const response = await exportAccountImportTask(row.id, kind);
+      const response = await exportAccountImportTask(row.id, kind, row);
       downloadFile(response.filename, response.blob);
       ElMessage.success("导出文件已生成");
     } catch (error) {
@@ -355,7 +333,6 @@ export function useAccountImportPage(): AccountImportPageState {
 
   onMounted(() => {
     void loadAccountGroups();
-    void loadIpRegionOptions();
     void refreshAccountImportList();
   });
 
@@ -378,7 +355,6 @@ export function useAccountImportPage(): AccountImportPageState {
     exportTask,
     exportingTaskId,
     groupLoading,
-    ipRegionOptions,
     loadDetail,
     loading,
     openDetailDrawer,

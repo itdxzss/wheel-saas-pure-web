@@ -1,10 +1,28 @@
 import type {
   AccountImportDetailStatus,
   AccountImportExportKind,
+  AccountImportIpAllocationMode,
   AccountImportKind
 } from "./types";
 
-export const AUTO_IP_MODE = "系统自动分配（根据账号国家分配）";
+export const DEFAULT_ACCOUNT_IMPORT_IP_ALLOCATION_MODE: AccountImportIpAllocationMode =
+  "smart";
+
+export const accountImportIpAllocationModeOptions: Array<{
+  label: string;
+  value: AccountImportIpAllocationMode;
+}> = [
+  { label: "智能分配", value: "smart" },
+  { label: "混合国家", value: "mixed" }
+];
+
+export const accountImportIpAllocationModeLabelMap: Record<
+  AccountImportIpAllocationMode,
+  string
+> = {
+  smart: "智能分配",
+  mixed: "混合国家"
+};
 
 export const importKindLabelMap: Record<AccountImportKind, string> = {
   six: "六段号",

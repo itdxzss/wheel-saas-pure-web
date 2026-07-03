@@ -35,7 +35,6 @@ const {
   exportTask,
   exportingTaskId,
   groupLoading,
-  ipRegionOptions,
   loadDetail,
   loading,
   openDetailDrawer,
@@ -214,7 +213,6 @@ async function handleSubmitImport(
       v-model="showImportDrawer"
       :groups="accountGroups"
       :group-loading="groupLoading"
-      :ip-regions="ipRegionOptions"
       :submitting="submittingImport"
       :create-group="createImportAccountGroup"
       @submit="handleSubmitImport"

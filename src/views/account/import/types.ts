@@ -1,4 +1,5 @@
 export type AccountImportKind = "six" | "json" | "fullparam";
+export type AccountImportIpAllocationMode = "smart" | "mixed";
 export type AccountImportDetailStatus = "" | "SUCCESS" | "FAIL" | "ABNORMAL";
 export type AccountImportExportKind = "ALL" | "SUCCESS" | "FAIL";
 
@@ -18,7 +19,7 @@ export interface AccountImportSubmitPayload {
   groupId: number;
   device: string;
   accountType: string;
-  ipMode: string;
+  ipAllocationMode: AccountImportIpAllocationMode;
   remark?: string | null;
   text?: string | null;
   file?: File | null;

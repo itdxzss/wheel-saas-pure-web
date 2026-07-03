@@ -6,7 +6,8 @@ import type {
   AccountGroupWriteRequest
 } from "@/api/account-group";
 import {
-  AUTO_IP_MODE,
+  DEFAULT_ACCOUNT_IMPORT_IP_ALLOCATION_MODE,
+  accountImportIpAllocationModeOptions,
   accountTypeOptions,
   deviceOptions,
   importKindLabelMap,
@@ -23,7 +24,6 @@ defineOptions({
 const props = defineProps<{
   groups: AccountGroupApiRow[];
   groupLoading: boolean;
-  ipRegions: string[];
   modelValue: boolean;
   submitting: boolean;
   createGroup: (
@@ -48,7 +48,7 @@ const form = reactive({
   groupId: "" as "" | number,
   device: "安卓",
   accountType: "个人",
-  ipMode: AUTO_IP_MODE,
+  ipAllocationMode: DEFAULT_ACCOUNT_IMPORT_IP_ALLOCATION_MODE,
   remark: "",
   text: "",
   filename: "",
@@ -75,7 +75,7 @@ function resetForm(): void {
   form.groupId = "";
   form.device = "安卓";
   form.accountType = "个人";
-  form.ipMode = AUTO_IP_MODE;
+  form.ipAllocationMode = DEFAULT_ACCOUNT_IMPORT_IP_ALLOCATION_MODE;
   form.remark = "";
   form.text = "";
   form.filename = "";
@@ -192,7 +192,7 @@ function submitDrawer(): void {
     groupId: Number(form.groupId),
     device: form.device,
     accountType: form.accountType,
-    ipMode: form.ipMode,
+    ipAllocationMode: form.ipAllocationMode,
     remark: form.remark.trim() || null,
     text: form.importKind === "json" ? null : form.text,
     file: form.importKind === "json" ? form.file : null
@@ -272,15 +272,15 @@ function submitDrawer(): void {
 
             <el-form-item label="选择IP">
               <el-select
-                v-model="form.ipMode"
+                v-model="form.ipAllocationMode"
                 class="drawer-control"
                 filterable
               >
                 <el-option
-                  v-for="region in ipRegions"
-                  :key="region"
-                  :label="region"
-                  :value="region"
+                  v-for="mode in accountImportIpAllocationModeOptions"
+                  :key="mode.value"
+                  :label="mode.label"
+                  :value="mode.value"
                 />
               </el-select>
             </el-form-item>
