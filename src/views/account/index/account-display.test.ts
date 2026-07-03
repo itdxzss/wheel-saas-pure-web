@@ -13,8 +13,8 @@ import {
 } from "./account-display";
 
 describe("account list display helpers", () => {
-  it("shows pending-online state for accounts without reported status", () => {
-    assert.equal(accountStatusLabel({ account_state: null }), "待上线");
+  it("shows blank labels for accounts without reported status", () => {
+    assert.equal(accountStatusLabel({ account_state: null }), "—");
     assert.equal(loginStateLabel(null), "—");
     assert.equal(riskStatusLabel(null), "—");
   });
@@ -47,9 +47,13 @@ describe("account list display helpers", () => {
     assert.equal(accountStatusTagType({ account_state: null }), "info");
   });
 
-  it("maps login states to tag types", () => {
+  it("maps login states to labels and tag types", () => {
+    assert.equal(loginStateLabel(1), "在线");
+    assert.equal(loginStateLabel(2), "离线");
+    assert.equal(loginStateLabel(3), "待上线");
     assert.equal(loginStateTagType(1), "success");
     assert.equal(loginStateTagType(2), "danger");
+    assert.equal(loginStateTagType(3), "warning");
     assert.equal(loginStateTagType(null), "info");
   });
 
@@ -72,12 +76,17 @@ describe("account list display helpers", () => {
     );
   });
 
-  it("adds pending-online statistic from total minus online and offline", () => {
+  it("uses backend pending-online and restricted account statistics", () => {
     const cards = buildAccountStatCards({
       total: 10,
       banned: 1,
+      unbound: 2,
+      muted: 3,
+      exported: 4,
+      restrictedTotal: 10,
       online: 3,
       offline: 2,
+      pendingOnline: 1,
       risk: 1,
       assigned: 4,
       unassigned: 6
@@ -87,15 +96,21 @@ describe("account list display helpers", () => {
       cards.map(card => [card.key, card.label, card.value]),
       [
         ["total", "总账号数", 10],
-        ["banned", "封禁账号", 1],
+        ["restricted", "异常账号", 10],
         ["online", "在线账号", 3],
         ["offline", "离线账号", 2],
-        ["pendingOnline", "待上线账号", 5],
+        ["pendingOnline", "待上线账号", 1],
         ["risk", "风控账号", 1],
         ["assigned", "已分配账号", 4],
         ["unassigned", "未分配账号", 6]
       ]
     );
+    assert.deepEqual(cards[1].subItems, [
+      { label: "封禁", value: 1 },
+      { label: "解绑", value: 2 },
+      { label: "禁言", value: 3 },
+      { label: "导出", value: 4 }
+    ]);
   });
 
   it("only enables delete for terminal and undispatched accounts", () => {

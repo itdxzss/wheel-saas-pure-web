@@ -56,6 +56,11 @@ const {
             <span>{{ card.label }}</span>
           </template>
         </el-statistic>
+        <div v-if="card.subItems?.length" class="account-stat-breakdown">
+          <span v-for="item in card.subItems" :key="item.label">
+            {{ item.label }} {{ item.value }}
+          </span>
+        </div>
       </el-card>
     </div>
 
@@ -336,6 +341,16 @@ const {
 
 .account-stat-card {
   border-radius: 6px;
+}
+
+.account-stat-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--el-text-color-secondary);
 }
 
 .account-list-search {

@@ -50,7 +50,7 @@ export interface AccountSearchForm {
   numberSource: "" | NumberSource;
   channelName: string;
   truthIp: string;
-  loginState: "" | "1" | "2";
+  loginState: "" | "1" | "2" | "3";
   riskStatus: "" | "1" | "2" | "3";
   accountStatus:
     | ""
@@ -69,8 +69,13 @@ export interface AccountSearchForm {
 const ZERO_SUMMARY: TenantAccountSummary = {
   total: 0,
   banned: 0,
+  unbound: 0,
+  muted: 0,
+  exported: 0,
+  restrictedTotal: 0,
   online: 0,
   offline: 0,
+  pendingOnline: 0,
   risk: 0,
   assigned: 0,
   unassigned: 0
@@ -131,7 +136,8 @@ export function useAccountListPage(): AccountListPageState {
   ];
   const loginStateOptions = [
     { label: "在线", value: "1" },
-    { label: "离线", value: "2" }
+    { label: "离线", value: "2" },
+    { label: "待上线", value: "3" }
   ];
   const accountTypeOptions: Array<{ label: string; value: AccountType }> = [
     { label: "个人号", value: 1 },

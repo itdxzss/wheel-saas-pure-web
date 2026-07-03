@@ -1,11 +1,12 @@
 import type { TenantAccount, TenantAccountSummary } from "../../../api/account";
 
-export type AccountTagType = "success" | "danger" | "info";
+export type AccountTagType = "success" | "danger" | "info" | "warning";
 
 export interface AccountStatCard {
   key: string;
   label: string;
   value: number;
+  subItems?: Array<{ label: string; value: number }>;
 }
 
 function compactLabels(values: Array<string | null | undefined>): string {
@@ -25,7 +26,7 @@ export function accountStatusLabel(
     4: "导出",
     5: "解绑"
   };
-  return row.account_state ? (map[row.account_state] ?? "-") : "待上线";
+  return row.account_state ? (map[row.account_state] ?? "-") : "—";
 }
 
 export function accountStatusTagType(
@@ -40,12 +41,16 @@ export function accountStatusTagType(
 }
 
 export function loginStateLabel(value?: number | null): string {
-  return value === 1 ? "在线" : value === 2 ? "离线" : "—";
+  if (value === 1) return "在线";
+  if (value === 2) return "离线";
+  if (value === 3) return "待上线";
+  return "—";
 }
 
 export function loginStateTagType(value?: number | null): AccountTagType {
   if (value === 1) return "success";
   if (value === 2) return "danger";
+  if (value === 3) return "warning";
   return "info";
 }
 
@@ -73,16 +78,22 @@ export function sourceLabel(
 export function buildAccountStatCards(
   summary: TenantAccountSummary
 ): AccountStatCard[] {
-  const pendingOnline = Math.max(
-    summary.total - summary.online - summary.offline,
-    0
-  );
   return [
     { key: "total", label: "总账号数", value: summary.total },
-    { key: "banned", label: "封禁账号", value: summary.banned },
+    {
+      key: "restricted",
+      label: "异常账号",
+      value: summary.restrictedTotal,
+      subItems: [
+        { label: "封禁", value: summary.banned },
+        { label: "解绑", value: summary.unbound },
+        { label: "禁言", value: summary.muted },
+        { label: "导出", value: summary.exported }
+      ]
+    },
     { key: "online", label: "在线账号", value: summary.online },
     { key: "offline", label: "离线账号", value: summary.offline },
-    { key: "pendingOnline", label: "待上线账号", value: pendingOnline },
+    { key: "pendingOnline", label: "待上线账号", value: summary.pendingOnline },
     { key: "risk", label: "风控账号", value: summary.risk },
     { key: "assigned", label: "已分配账号", value: summary.assigned },
     { key: "unassigned", label: "未分配账号", value: summary.unassigned }

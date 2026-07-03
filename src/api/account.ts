@@ -3,7 +3,7 @@ import { formatEpochMillis } from "@/utils/time";
 import { toTenantAccountListParams } from "./account-mapping";
 
 export type AccountState = 1 | 2 | 3 | 4 | 5;
-export type LoginState = 1 | 2;
+export type LoginState = 1 | 2 | 3;
 export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;
 export type NumberSource = 1 | 2 | 3;
@@ -78,8 +78,13 @@ export interface TenantAccountListQuery {
 export interface TenantAccountSummary {
   total: number;
   banned: number;
+  unbound: number;
+  muted: number;
+  exported: number;
+  restrictedTotal: number;
   online: number;
   offline: number;
+  pendingOnline: number;
   risk: number;
   assigned: number;
   unassigned: number;
