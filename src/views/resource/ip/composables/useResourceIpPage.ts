@@ -24,6 +24,7 @@ import type {
   ProxyTypeLabel
 } from "@/api/resource-ip-mapping";
 import {
+  IP_IMPORT_FORMAT_ERROR_TITLE,
   MIXED_COUNTRY_VALUE,
   ipAllocationModeOptions,
   validateIpImportTextFormat
@@ -381,10 +382,35 @@ export function useResourceIpPage() {
     importCheckPassed.value = false;
     importCheckResult.value = null;
     importCheckErrors.value = errors;
-    importCheckErrorTitle.value = "上传的文件中存在格式错误数据";
+    importCheckErrorTitle.value = IP_IMPORT_FORMAT_ERROR_TITLE;
     showImportSampleCheckDialog.value = false;
-    message("上传的文件中存在格式错误数据", { type: "warning" });
+    message(IP_IMPORT_FORMAT_ERROR_TITLE, { type: "warning" });
     return false;
+  }
+
+  function splitBackendImportFormatError(text: string): string | null {
+    if (!text.startsWith(IP_IMPORT_FORMAT_ERROR_TITLE)) {
+      return null;
+    }
+    const detail = text
+      .slice(IP_IMPORT_FORMAT_ERROR_TITLE.length)
+      .replace(/^[:：]\s*/, "")
+      .trim();
+    return detail || IP_IMPORT_FORMAT_ERROR_TITLE;
+  }
+
+  function applyBackendImportFormatError(text: string): boolean {
+    const detail = splitBackendImportFormatError(text);
+    if (!detail) {
+      return false;
+    }
+    importCheckPassed.value = false;
+    importCheckResult.value = null;
+    importCheckErrors.value = [detail];
+    importCheckErrorTitle.value = IP_IMPORT_FORMAT_ERROR_TITLE;
+    showImportSampleCheckDialog.value = false;
+    message(IP_IMPORT_FORMAT_ERROR_TITLE, { type: "warning" });
+    return true;
   }
 
   async function sampleCheckImport(): Promise<void> {
@@ -400,15 +426,18 @@ export function useResourceIpPage() {
     const rawFile = selectedImportRawFile();
     if (!rawFile) return;
     const requestFormFingerprint = importCheckFormFingerprint();
+    let requestText = "";
+    let requestFingerprint: string | null = null;
 
     try {
       const text = await readImportFileText(rawFile);
       if (text == null) return;
+      requestText = text;
       if (!ensureImportTextFormatPassed(text)) return;
       if (requestFormFingerprint !== importCheckFormFingerprint()) {
         return;
       }
-      const requestFingerprint = importCheckFingerprint(text);
+      requestFingerprint = importCheckFingerprint(text);
       importChecking.value = true;
       importCheckPassed.value = false;
       importCheckErrors.value = [];
@@ -434,8 +463,18 @@ export function useResourceIpPage() {
         message("抽样检测未通过", { type: "warning" });
       }
     } catch (error) {
+      if (
+        requestFingerprint !== null &&
+        requestFingerprint !== importCheckFingerprint(requestText)
+      ) {
+        return;
+      }
+      const text = apiErrorMessage(error, "抽样检测失败");
+      if (applyBackendImportFormatError(text)) {
+        return;
+      }
       clearImportCheckState();
-      message(apiErrorMessage(error, "抽样检测失败"), { type: "error" });
+      message(text, { type: "error" });
     } finally {
       importChecking.value = false;
     }
@@ -486,7 +525,11 @@ export function useResourceIpPage() {
       }
       await refreshIpList();
     } catch (error) {
-      message(apiErrorMessage(error, "IP 导入失败"), { type: "error" });
+      const text = apiErrorMessage(error, "IP 导入失败");
+      if (applyBackendImportFormatError(text)) {
+        return;
+      }
+      message(text, { type: "error" });
     } finally {
       importing.value = false;
     }

@@ -2,6 +2,7 @@ import type { IpAllocationMode } from "@/api/resource-ip-mapping";
 
 export const MIXED_COUNTRY_VALUE = "MIXED";
 export const MIXED_COUNTRY_LABEL = "混合（不限国家）";
+export const IP_IMPORT_FORMAT_ERROR_TITLE = "上传的文件中存在格式错误数据";
 
 export interface IpAllocationModeOption {
   label: string;
@@ -28,8 +29,10 @@ function lineError(lineNo: number, reason: string): string {
   return `第 ${lineNo} 行：${reason}`;
 }
 
-function isPositiveInteger(value: string): boolean {
-  return /^[1-9]\d*$/.test(value);
+function isValidPort(value: string): boolean {
+  if (!/^\d+$/.test(value)) return false;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= 65535;
 }
 
 /**
@@ -42,7 +45,11 @@ export function validateIpImportTextFormat(text: string): string[] {
 
   for (let index = 0; index < lines.length; index += 1) {
     const lineNo = index + 1;
-    const raw = lines[index].trim();
+    const line = lines[index];
+    if (index === lines.length - 1 && line === "") {
+      continue;
+    }
+    const raw = line.trim();
 
     if (!raw) {
       return [lineError(lineNo, "格式错误，空行不允许")];
@@ -58,8 +65,8 @@ export function validateIpImportTextFormat(text: string): string[] {
       return [lineError(lineNo, "格式错误，存在空字段")];
     }
 
-    if (!isPositiveInteger(portText)) {
-      return [lineError(lineNo, "格式错误，端口必须为正整数")];
+    if (!isValidPort(portText)) {
+      return [lineError(lineNo, "格式错误，端口必须为 1-65535 的整数")];
     }
   }
 

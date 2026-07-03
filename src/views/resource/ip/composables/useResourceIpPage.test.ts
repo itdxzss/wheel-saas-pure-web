@@ -146,6 +146,177 @@ describe("resource IP page state", () => {
     );
   });
 
+  it("stops before sample-checking when a txt line has the wrong field count", async () => {
+    resetArmadaMock({ passed: true, sampleSize: 1, samples: [], errors: [] });
+    resetMessageMock();
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p\nbad-line");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, false);
+    assert.equal(page.importCheckPassed.value, false);
+    assert.equal(
+      page.importCheckErrorTitle.value,
+      "上传的文件中存在格式错误数据"
+    );
+    assert.deepEqual(page.importCheckErrors.value, [
+      "第 2 行：格式错误，应为 代理地址:端口:用户名:密码"
+    ]);
+    assert.deepEqual(armadaCalls(), []);
+    assert.deepEqual(
+      messageCalls().map(call => call.text),
+      ["上传的文件中存在格式错误数据"]
+    );
+  });
+
+  it("stops before sample-checking when a txt line has an invalid port", async () => {
+    resetArmadaMock({ passed: true, sampleSize: 1, samples: [], errors: [] });
+    resetMessageMock();
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:0:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, false);
+    assert.equal(page.importCheckPassed.value, false);
+    assert.equal(
+      page.importCheckErrorTitle.value,
+      "上传的文件中存在格式错误数据"
+    );
+    assert.deepEqual(page.importCheckErrors.value, [
+      "第 1 行：格式错误，端口必须为 1-65535 的整数"
+    ]);
+    assert.deepEqual(armadaCalls(), []);
+  });
+
+  it("sample-checks a txt file with leading-zero port", async () => {
+    resetArmadaMock({ passed: true, sampleSize: 1, samples: [], errors: [] });
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:0001:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importCheckPassed.value, true);
+    assert.equal(armadaCalls().length, 1);
+  });
+
+  it("sample-checks a txt file with max port 65535", async () => {
+    resetArmadaMock({ passed: true, sampleSize: 1, samples: [], errors: [] });
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:65535:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importCheckPassed.value, true);
+    assert.equal(armadaCalls().length, 1);
+  });
+
+  it("stops before sample-checking when a txt port is above 65535", async () => {
+    resetArmadaMock({ passed: true, sampleSize: 1, samples: [], errors: [] });
+    resetMessageMock();
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:65536:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, false);
+    assert.equal(page.importCheckPassed.value, false);
+    assert.deepEqual(page.importCheckErrors.value, [
+      "第 1 行：格式错误，端口必须为 1-65535 的整数"
+    ]);
+    assert.deepEqual(armadaCalls(), []);
+  });
+
+  it("renders backend import format errors below the import form", async () => {
+    resetArmadaMock(
+      Promise.reject(
+        new Error(
+          "上传的文件中存在格式错误数据：第 2 行：格式错误，应为 代理地址:端口:用户名:密码"
+        )
+      )
+    );
+    resetMessageMock();
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, false);
+    assert.equal(page.importCheckPassed.value, false);
+    assert.equal(
+      page.importCheckErrorTitle.value,
+      "上传的文件中存在格式错误数据"
+    );
+    assert.deepEqual(page.importCheckErrors.value, [
+      "第 2 行：格式错误，应为 代理地址:端口:用户名:密码"
+    ]);
+    assert.deepEqual(
+      messageCalls().map(call => call.text),
+      ["上传的文件中存在格式错误数据"]
+    );
+  });
+
+  it("renders backend import format errors from submit below the import form", async () => {
+    resetArmadaMock(
+      Promise.reject(
+        new Error(
+          "上传的文件中存在格式错误数据：第 2 行：格式错误，应为 代理地址:端口:用户名:密码"
+        )
+      )
+    );
+    resetMessageMock();
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    page.importCheckPassed.value = true;
+    setImportFile(page, "1.1.1.1:8080:u:p");
+
+    await page.submitImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, false);
+    assert.equal(page.importCheckPassed.value, false);
+    assert.equal(
+      page.importCheckErrorTitle.value,
+      "上传的文件中存在格式错误数据"
+    );
+    assert.deepEqual(page.importCheckErrors.value, [
+      "第 2 行：格式错误，应为 代理地址:端口:用户名:密码"
+    ]);
+    assert.deepEqual(
+      messageCalls().map(call => call.text),
+      ["上传的文件中存在格式错误数据"]
+    );
+  });
+
+  it("sample-checks a txt file with a single terminal newline", async () => {
+    resetArmadaMock({ passed: true, sampleSize: 1, samples: [], errors: [] });
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p\n");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importCheckPassed.value, true);
+    assert.equal(armadaCalls().length, 1);
+  });
+
   it("requires a passed import sample check before enabling import", () => {
     const page = useResourceIpPage();
     page.importForm.value.countryValue = "US";
@@ -308,6 +479,39 @@ describe("resource IP page state", () => {
     assert.equal(page.importCheckPassed.value, false);
     assert.equal(page.importCheckResult.value, null);
     assert.equal(page.canSubmitImport.value, false);
+  });
+
+  it("ignores stale backend import format errors after import inputs change", async () => {
+    resetArmadaMock(
+      Promise.reject(
+        new Error(
+          "上传的文件中存在格式错误数据：第 2 行：格式错误，应为 代理地址:端口:用户名:密码"
+        )
+      )
+    );
+    resetMessageMock();
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+    await nextTick();
+
+    const checking = page.sampleCheckImport();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importChecking.value, true);
+
+    page.importForm.value.source = "changed";
+    await nextTick();
+    await checking;
+
+    assert.equal(page.importCheckPassed.value, false);
+    assert.equal(page.importCheckResult.value, null);
+    assert.deepEqual(page.importCheckErrors.value, []);
+    assert.equal(page.importCheckErrorTitle.value, "");
+    assert.equal(page.canSubmitImport.value, false);
+    assert.deepEqual(messageCalls(), []);
   });
 
   it("opens the single-check dialog immediately and blocks other checks while pending", async () => {
