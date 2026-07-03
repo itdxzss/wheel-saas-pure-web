@@ -42,7 +42,8 @@ export const importKindOptions: Array<{
     label: "全参账号",
     value: "fullparam",
     desc: "支持粘贴或上传 TXT，保留完整参数。",
-    accept: ".txt"
+    accept: ".txt",
+    disabled: true
   }
 ];
 

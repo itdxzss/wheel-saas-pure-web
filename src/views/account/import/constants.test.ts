@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { detailStatusOptions, exportOptions } from "./constants";
+import {
+  detailStatusOptions,
+  exportOptions,
+  importKindOptions
+} from "./constants";
 
 describe("account import constants", () => {
   it("keeps abnormal as a detail filter but not as an export option", () => {
@@ -14,5 +18,13 @@ describe("account import constants", () => {
       "detail filter should keep abnormal"
     );
     assert.equal(exportValues.includes("ABNORMAL"), false);
+  });
+
+  it("disables unsupported account import kinds", () => {
+    const disabledKinds = importKindOptions
+      .filter(option => option.disabled)
+      .map(option => option.value);
+
+    assert.deepEqual(disabledKinds, ["six", "fullparam"]);
   });
 });

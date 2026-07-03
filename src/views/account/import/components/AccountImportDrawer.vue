@@ -44,7 +44,7 @@ const uploadRef = ref<UploadInstance>();
 const groupDrawerVisible = ref(false);
 const groupSubmitting = ref(false);
 const form = reactive({
-  importKind: "six" as AccountImportKind,
+  importKind: "json" as AccountImportKind,
   groupId: "" as "" | number,
   device: "安卓",
   accountType: "个人",
@@ -71,7 +71,7 @@ watch(
 );
 
 function resetForm(): void {
-  form.importKind = "six";
+  form.importKind = "json";
   form.groupId = "";
   form.device = "安卓";
   form.accountType = "个人";

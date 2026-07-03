@@ -57,6 +57,9 @@ const currentPageSize = computed({
   get: () => props.pageSize,
   set: value => emit("update:pageSize", value)
 });
+const drawerTitle = computed(() =>
+  props.task ? `导入任务 ${props.task.id} · 明细` : "导入明细"
+);
 
 function formatDate(value?: string | null): string {
   if (!value) return "-";
@@ -72,14 +75,48 @@ function statusTagType(
   return "info";
 }
 
+function taskStatusTagType(status?: string): "success" | "warning" | "info" {
+  if (status === "已完成") return "success";
+  if (status === "导入中" || status === "进行中") return "warning";
+  return "info";
+}
+
 function filterDetail(value: string | number | boolean): void {
   emit("filter-change", value as AccountImportDetailStatus);
 }
 </script>
 
 <template>
-  <el-drawer v-model="visible" title="导入明细" size="820px" destroy-on-close>
+  <el-drawer
+    v-model="visible"
+    :title="drawerTitle"
+    size="820px"
+    destroy-on-close
+  >
     <div v-if="task" class="account-import-detail">
+      <div class="detail-summary">
+        <div class="detail-summary-main">
+          <div class="detail-summary-title">
+            <strong>导入明细</strong>
+            <el-tag type="success" effect="light">
+              {{ task.import_type || "未知类型" }}
+            </el-tag>
+            <el-tag :type="taskStatusTagType(task.status)" effect="light">
+              {{ task.status || "-" }}
+            </el-tag>
+          </div>
+          <div class="detail-summary-meta">
+            <span>{{ task.filename || "-" }}</span>
+            <span>创建时间 {{ formatDate(task.created_at) }}</span>
+            <span>当前展示 {{ detailRows.length }} 条明细记录</span>
+          </div>
+        </div>
+        <div class="detail-summary-actions">
+          <el-button @click="emit('export', task, 'ALL')">导出全部</el-button>
+          <el-button @click="emit('export', task, 'FAIL')">导出失败</el-button>
+        </div>
+      </div>
+
       <div class="detail-stats">
         <el-card shadow="never">
           <el-statistic title="登录成功" :value="task.login_success ?? 0" />
@@ -126,25 +163,7 @@ function filterDetail(value: string | number | boolean): void {
 
       <el-card class="mt-3" shadow="never">
         <template #header>
-          <div class="drawer-card-header">
-            <strong>失败原因概览</strong>
-            <div>
-              <el-button
-                link
-                type="primary"
-                @click="emit('export', task, 'ALL')"
-              >
-                导出全部
-              </el-button>
-              <el-button
-                link
-                type="primary"
-                @click="emit('export', task, 'FAIL')"
-              >
-                导出失败
-              </el-button>
-            </div>
-          </div>
+          <strong>失败原因概览</strong>
         </template>
         <el-empty
           v-if="failReasons.length === 0"
@@ -233,6 +252,54 @@ function filterDetail(value: string | number | boolean): void {
 </template>
 
 <style scoped>
+.detail-summary {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 4px;
+}
+
+.detail-summary-main {
+  min-width: 0;
+}
+
+.detail-summary-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.detail-summary-title strong {
+  font-size: 16px;
+  color: var(--el-text-color-primary);
+}
+
+.detail-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.detail-summary-meta span:not(:last-child)::after {
+  padding-left: 12px;
+  content: "·";
+}
+
+.detail-summary-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+}
+
 .detail-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(120px, 1fr));
@@ -241,9 +308,9 @@ function filterDetail(value: string | number | boolean): void {
 
 .drawer-card-header {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
 
 .fail-reason-list {
@@ -252,14 +319,32 @@ function filterDetail(value: string | number | boolean): void {
   gap: 8px;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
+  .detail-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-summary-actions {
+    flex-wrap: wrap;
+  }
+
+  .detail-summary-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-summary-meta span::after {
+    display: none;
+  }
+
   .detail-stats {
     grid-template-columns: 1fr;
   }
 
   .drawer-card-header {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>
