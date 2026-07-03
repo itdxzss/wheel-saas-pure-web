@@ -6,17 +6,27 @@ import {
   type UploadUserFile
 } from "element-plus";
 import type { IpCountryOption } from "@/api/resource-ip";
-import type { ProxyTypeLabel } from "@/api/resource-ip-mapping";
+import type {
+  IpAllocationMode,
+  ProxyTypeLabel
+} from "@/api/resource-ip-mapping";
 import type { IpImportForm } from "../composables/useResourceIpPage";
+import { MIXED_COUNTRY_LABEL } from "../ip-import-format";
 
 defineOptions({
   name: "IpImportDialog"
 });
 
 defineProps<{
+  allocationModeOptions: Array<{
+    description: string;
+    label: string;
+    value: IpAllocationMode;
+  }>;
   canSubmitImport: boolean;
   countryOptionLabel: (option: IpCountryOption) => string;
   countryOptions: IpCountryOption[];
+  importCheckErrorTitle: string;
   importCheckErrors: string[];
   importCheckPassed: boolean;
   importChecking: boolean;
@@ -92,15 +102,36 @@ function submit(): void {
       <code>proxy.example.com:443:oper:mysecretpass1</code>
       <code>proxy.example.com:443:oper:mysecretpass2</code>
       <p class="format-warn">
-        仅支持上述英文冒号格式；不符合规范的行将作为格式错误不予导入，并在导入后逐行提示。国家
-        / 来源 / 类型将作用于文件中全部记录。
+        仅支持上述英文冒号格式；上传后会先校验格式，格式无误再开始抽样检测。所选分配方式
+        / 国家 / 来源 / 类型将作用于文件中全部记录。
       </p>
     </div>
 
     <el-form class="ip-import-form" :model="form" label-position="top">
       <div class="form-grid">
+        <el-form-item label="分配方式" required>
+          <el-radio-group
+            v-model="form.allocationMode"
+            class="allocation-mode-group"
+          >
+            <el-radio-button
+              v-for="mode in allocationModeOptions"
+              :key="mode.value"
+              :label="mode.label"
+              :value="mode.value"
+            />
+          </el-radio-group>
+          <div class="field-tip">
+            {{
+              allocationModeOptions.find(
+                mode => mode.value === form.allocationMode
+              )?.description
+            }}
+          </div>
+        </el-form-item>
         <el-form-item label="国家" required>
           <el-select
+            v-if="form.allocationMode === 'smart'"
             v-model="form.countryValue"
             filterable
             placeholder="请选择国家"
@@ -120,6 +151,7 @@ function submit(): void {
               </span>
             </el-option>
           </el-select>
+          <el-input v-else :model-value="MIXED_COUNTRY_LABEL" disabled />
         </el-form-item>
         <el-form-item label="代理类型" required>
           <el-radio-group v-model="form.proxyType">
@@ -173,7 +205,7 @@ function submit(): void {
       type="error"
       show-icon
       :closable="false"
-      title="抽样检测未通过"
+      :title="importCheckErrorTitle || '抽样检测未通过'"
     >
       <ul class="ip-import-error-list">
         <li v-for="item in importCheckErrors" :key="item">{{ item }}</li>
@@ -195,7 +227,11 @@ function submit(): void {
 
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
-      <el-button :loading="importChecking" :disabled="importing" @click="sampleCheck">
+      <el-button
+        :loading="importChecking"
+        :disabled="importing"
+        @click="sampleCheck"
+      >
         检测
       </el-button>
       <el-button
@@ -255,8 +291,19 @@ function submit(): void {
   display: grid;
   grid-template-columns:
     minmax(0, 1fr)
+    minmax(0, 1fr)
     minmax(220px, 0.55fr);
   gap: 18px;
+}
+
+.allocation-mode-group {
+  width: 100%;
+}
+
+.field-tip {
+  margin-top: 6px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
 }
 
 .ip-upload-icon {

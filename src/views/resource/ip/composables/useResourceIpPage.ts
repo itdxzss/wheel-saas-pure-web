@@ -1,5 +1,9 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ElMessageBox, type UploadRawFile, type UploadUserFile } from "element-plus";
+import {
+  ElMessageBox,
+  type UploadRawFile,
+  type UploadUserFile
+} from "element-plus";
 import {
   batchCheckIpProxies,
   batchDeleteIpProxies,
@@ -19,6 +23,11 @@ import type {
   IpManageRow,
   ProxyTypeLabel
 } from "@/api/resource-ip-mapping";
+import {
+  MIXED_COUNTRY_VALUE,
+  ipAllocationModeOptions,
+  validateIpImportTextFormat
+} from "../ip-import-format";
 
 interface IpSearchForm {
   country: string;
@@ -67,6 +76,7 @@ export function useResourceIpPage() {
   const importChecking = ref(false);
   const importCheckPassed = ref(false);
   const importCheckErrors = ref<string[]>([]);
+  const importCheckErrorTitle = ref("");
   const importCheckResult = ref<IpProxyImportSampleCheckResult | null>(null);
   const showImportSampleCheckDialog = ref(false);
   const batchChecking = ref(false);
@@ -98,6 +108,7 @@ export function useResourceIpPage() {
 
   // 必须和 index.vue 中 dynamicColumns 的渲染顺序保持一致。
   const columns = createIpManageTableColumns();
+  const allocationModeOptions = ipAllocationModeOptions;
   const canSubmitImport = computed(
     () => importCheckPassed.value && !importing.value && !importChecking.value
   );
@@ -143,7 +154,18 @@ export function useResourceIpPage() {
   function clearImportCheckState(): void {
     importCheckPassed.value = false;
     importCheckErrors.value = [];
+    importCheckErrorTitle.value = "";
     importCheckResult.value = null;
+  }
+
+  function selectedImportCountryValue(): string {
+    return importForm.value.allocationMode === "mixed"
+      ? MIXED_COUNTRY_VALUE
+      : importForm.value.countryValue;
+  }
+
+  function importNeedsSelectedCountry(): boolean {
+    return importForm.value.allocationMode === "smart";
   }
 
   function importCheckFormSnapshot() {
@@ -330,7 +352,9 @@ export function useResourceIpPage() {
     return rawFile;
   }
 
-  async function readImportFileText(rawFile: UploadRawFile): Promise<string | null> {
+  async function readImportFileText(
+    rawFile: UploadRawFile
+  ): Promise<string | null> {
     const text = await rawFile.text();
     if (!text.trim()) {
       message("TXT 文件内容不能为空", { type: "warning" });
@@ -345,9 +369,27 @@ export function useResourceIpPage() {
     return rawFile ? readImportFileText(rawFile) : null;
   }
 
+  /**
+   * 格式错误必须挡在真实抽检前；慢代理检测不应该消耗在明显坏文件上。
+   * 错误沿用导入弹窗下方列表展示，但只放第一条，便于运营人员逐行修。
+   */
+  function ensureImportTextFormatPassed(text: string): boolean {
+    const errors = validateIpImportTextFormat(text);
+    if (errors.length === 0) {
+      return true;
+    }
+    importCheckPassed.value = false;
+    importCheckResult.value = null;
+    importCheckErrors.value = errors;
+    importCheckErrorTitle.value = "上传的文件中存在格式错误数据";
+    showImportSampleCheckDialog.value = false;
+    message("上传的文件中存在格式错误数据", { type: "warning" });
+    return false;
+  }
+
   async function sampleCheckImport(): Promise<void> {
     if (importChecking.value) return;
-    if (!importForm.value.countryValue) {
+    if (importNeedsSelectedCountry() && !importForm.value.countryValue) {
       message("请选择国家", { type: "warning" });
       return;
     }
@@ -359,21 +401,23 @@ export function useResourceIpPage() {
     if (!rawFile) return;
     const requestFormFingerprint = importCheckFormFingerprint();
 
-    importChecking.value = true;
-    importCheckPassed.value = false;
-    importCheckErrors.value = [];
-    importCheckResult.value = null;
-    showImportSampleCheckDialog.value = true;
     try {
       const text = await readImportFileText(rawFile);
       if (text == null) return;
+      if (!ensureImportTextFormatPassed(text)) return;
       if (requestFormFingerprint !== importCheckFormFingerprint()) {
         return;
       }
       const requestFingerprint = importCheckFingerprint(text);
+      importChecking.value = true;
+      importCheckPassed.value = false;
+      importCheckErrors.value = [];
+      importCheckErrorTitle.value = "";
+      importCheckResult.value = null;
+      showImportSampleCheckDialog.value = true;
       const result = await sampleCheckIpProxyImport({
         allocationMode: importForm.value.allocationMode,
-        countryValue: importForm.value.countryValue,
+        countryValue: selectedImportCountryValue(),
         proxyType: importForm.value.proxyType,
         source: importForm.value.source.trim(),
         text
@@ -384,6 +428,8 @@ export function useResourceIpPage() {
       importCheckResult.value = result;
       importCheckPassed.value = result.passed;
       importCheckErrors.value = result.errors ?? [];
+      importCheckErrorTitle.value =
+        importCheckErrors.value.length > 0 ? "抽样检测未通过" : "";
       if (!result.passed) {
         message("抽样检测未通过", { type: "warning" });
       }
@@ -404,9 +450,9 @@ export function useResourceIpPage() {
     await sampleCheckImport();
   }
 
-  /** 提交导入时带业务人员手选国家;检测结果不会回填国家字段。 */
+  /** 提交导入时按分配方式解析国家值;混合模式统一提交 MIXED。 */
   async function submitImport(): Promise<void> {
-    if (!importForm.value.countryValue) {
+    if (importNeedsSelectedCountry() && !importForm.value.countryValue) {
       message("请选择国家", { type: "warning" });
       return;
     }
@@ -420,13 +466,14 @@ export function useResourceIpPage() {
     }
     const text = await readSelectedFileText();
     if (text == null) return;
+    if (!ensureImportTextFormatPassed(text)) return;
 
     importing.value = true;
     importErrors.value = [];
     try {
       const result = await importIpProxies({
         allocationMode: importForm.value.allocationMode,
-        countryValue: importForm.value.countryValue,
+        countryValue: selectedImportCountryValue(),
         proxyType: importForm.value.proxyType,
         source: importForm.value.source.trim(),
         text
@@ -455,6 +502,7 @@ export function useResourceIpPage() {
 
   return {
     activeCheckRow,
+    allocationModeOptions,
     batchChecking,
     canSubmitImport,
     checkDialogErrorMessage,
@@ -468,6 +516,7 @@ export function useResourceIpPage() {
     errorMessage,
     guideCollapsed,
     importErrors,
+    importCheckErrorTitle,
     importCheckErrors,
     importCheckPassed,
     importCheckResult,

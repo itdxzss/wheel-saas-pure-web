@@ -6,6 +6,10 @@ import {
   armadaCalls,
   resetArmadaMock
 } from "@/api/__tests__/armada-test-double";
+import {
+  messageCalls,
+  resetMessageMock
+} from "@/api/__tests__/message-test-double";
 import type { IpProxyCheckResult } from "@/api/resource-ip";
 import type { IpManageRow } from "@/api/resource-ip-mapping";
 import {
@@ -38,7 +42,10 @@ function ipRow(id: number): IpManageRow {
   };
 }
 
-function setImportFile(page: ReturnType<typeof useResourceIpPage>, text: string) {
+function setImportFile(
+  page: ReturnType<typeof useResourceIpPage>,
+  text: string
+) {
   const raw = {
     name: "ips.txt",
     text: async () => text
@@ -76,6 +83,67 @@ describe("resource IP page state", () => {
     const page = useResourceIpPage();
 
     assert.equal(page.importForm.value.allocationMode, "smart");
+  });
+
+  it("sample-checks mixed-country imports without requiring a selected country", async () => {
+    resetArmadaMock({
+      passed: true,
+      sampleSize: 1,
+      samples: [],
+      errors: []
+    });
+    const page = useResourceIpPage();
+    page.importForm.value.allocationMode = "mixed";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, true);
+    assert.equal(page.importCheckPassed.value, true);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/ip-proxies/import/sample-check",
+        opts: {
+          data: {
+            allocationMode: "mixed",
+            countryValue: "MIXED",
+            protocol: 1,
+            source: "iproyal",
+            text: "1.1.1.1:8080:u:p"
+          }
+        },
+        config: { timeout: 120000 }
+      }
+    ]);
+  });
+
+  it("stops before sample-checking when the txt file has a blank line", async () => {
+    resetArmadaMock({
+      passed: true,
+      sampleSize: 1,
+      samples: [],
+      errors: []
+    });
+    resetMessageMock();
+    const page = useResourceIpPage();
+    page.importForm.value.countryValue = "US";
+    page.importForm.value.source = "iproyal";
+    setImportFile(page, "1.1.1.1:8080:u:p\n\n2.2.2.2:8080:u:p");
+
+    await page.sampleCheckImport();
+
+    assert.equal(page.showImportSampleCheckDialog.value, false);
+    assert.equal(page.importCheckPassed.value, false);
+    assert.deepEqual(page.importCheckErrors.value, [
+      "第 2 行：格式错误，空行不允许"
+    ]);
+    assert.deepEqual(armadaCalls(), []);
+    assert.deepEqual(
+      messageCalls().map(call => call.text),
+      ["上传的文件中存在格式错误数据"]
+    );
   });
 
   it("requires a passed import sample check before enabling import", () => {
@@ -119,7 +187,10 @@ describe("resource IP page state", () => {
 
     assert.equal(page.showImportSampleCheckDialog.value, true);
     assert.equal(page.importCheckPassed.value, true);
-    assert.equal(page.importCheckResult.value?.samples[0].whatsappStatus, "HTTP 400");
+    assert.equal(
+      page.importCheckResult.value?.samples[0].whatsappStatus,
+      "HTTP 400"
+    );
     assert.deepEqual(armadaCalls(), [
       {
         method: "post",
@@ -224,6 +295,8 @@ describe("resource IP page state", () => {
     await nextTick();
 
     const checking = page.sampleCheckImport();
+    await Promise.resolve();
+    await Promise.resolve();
     assert.equal(page.showImportSampleCheckDialog.value, true);
     assert.equal(page.importChecking.value, true);
 

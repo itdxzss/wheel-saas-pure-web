@@ -18,6 +18,7 @@ defineOptions({
 
 const {
   activeCheckRow,
+  allocationModeOptions,
   batchChecking,
   canSubmitImport,
   checkDialogErrorMessage,
@@ -30,6 +31,7 @@ const {
   deleting,
   errorMessage,
   guideCollapsed,
+  importCheckErrorTitle,
   importCheckErrors,
   importCheckPassed,
   importCheckResult,
@@ -342,9 +344,11 @@ function checkTableRow(row: unknown): void {
       v-model="showImportDialog"
       v-model:form="importForm"
       v-model:upload-files="uploadFiles"
+      :allocation-mode-options="allocationModeOptions"
       :can-submit-import="canSubmitImport"
       :country-option-label="countryOptionLabel"
       :country-options="countryOptions"
+      :import-check-error-title="importCheckErrorTitle"
       :import-check-errors="importCheckErrors"
       :import-check-passed="importCheckPassed"
       :import-checking="importChecking"

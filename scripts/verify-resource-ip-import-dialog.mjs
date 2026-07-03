@@ -50,11 +50,20 @@ expectIncludes(
     "proxy.example.com:443:oper:mysecretpass1",
     "proxy.example.com:443:oper:mysecretpass2",
     "英文冒号",
-    "不符合规范的行将作为格式错误不予导入",
-    "所选国家 / 来源 / 类型将作用于文件中全部记录",
+    "格式无误再开始抽样检测",
+    "分配方式",
+    "MIXED_COUNTRY_LABEL",
+    "所选分配方式 / 国家 / 来源 / 类型将作用于文件中全部记录",
     ':on-exceed="handleUploadExceed"'
   ],
   "resource IP import dialog"
+);
+
+const importFormat = read("src/views/resource/ip/ip-import-format.ts");
+expectIncludes(
+  importFormat,
+  ["混合（不限国家）", "智能分配", "混合国家", "空行不允许"],
+  "resource IP import format helper"
 );
 
 expectIncludes(
