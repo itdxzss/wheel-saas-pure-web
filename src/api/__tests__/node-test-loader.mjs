@@ -7,8 +7,15 @@ const armadaDouble = pathResolve(import.meta.dirname, "armada-test-double.ts");
 const httpDouble = pathResolve(import.meta.dirname, "http-test-double.ts");
 const timeDouble = pathResolve(import.meta.dirname, "time-test-double.ts");
 const messageDouble = pathResolve(import.meta.dirname, "message-test-double.ts");
+const elementPlusDouble = pathResolve(
+  import.meta.dirname,
+  "element-plus-test-double.ts"
+);
 
 export async function resolve(specifier, context, nextResolve) {
+  if (specifier === "element-plus") {
+    return { url: pathToFileURL(elementPlusDouble).href, shortCircuit: true };
+  }
   if (specifier === "@/api/armada") {
     return { url: pathToFileURL(armadaDouble).href, shortCircuit: true };
   }

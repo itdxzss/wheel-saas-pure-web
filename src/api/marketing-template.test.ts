@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
+import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   batchDeleteMarketingTemplates,
   cloneMarketingTemplate,
   createMarketingTemplate,
+  downloadMarketingTemplateImage,
   listMarketingTemplates,
-  updateMarketingTemplate
+  marketingTemplateImageUrl,
+  updateMarketingTemplate,
+  uploadMarketingTemplateImage
 } from "./marketing-template";
 
 describe("marketing template API", () => {
@@ -83,7 +87,7 @@ describe("marketing template API", () => {
       bodyText: "正文",
       buttons: [
         { type: "link" as const, label: "访问", value: "https://a.example" },
-        { type: "phone" as const, label: "联系", value: "+8613800138000" },
+        { type: "copy" as const, label: "复制", value: "VIP88" },
         { type: "quick" as const, label: "我要参加", value: "" }
       ],
       promotionLink: "https://promo.example/vip",
@@ -107,7 +111,7 @@ describe("marketing template API", () => {
             bodyText: "正文",
             buttons: [
               { type: "LINK_JUMP", text: "访问", param: "https://a.example" },
-              { type: "LINK_JUMP", text: "联系", param: "+8613800138000" },
+              { type: "COPY_CONTENT", text: "复制", param: "VIP88" },
               { type: "QUICK_REPLY", text: "我要参加", param: null }
             ],
             promotionLink: "https://promo.example/vip",
@@ -128,13 +132,97 @@ describe("marketing template API", () => {
             bodyText: "正文",
             buttons: [
               { type: "LINK_JUMP", text: "访问", param: "https://a.example" },
-              { type: "LINK_JUMP", text: "联系", param: "+8613800138000" },
+              { type: "COPY_CONTENT", text: "复制", param: "VIP88" },
               { type: "QUICK_REPLY", text: "我要参加", param: null }
             ],
             promotionLink: "https://promo.example/vip",
             remark: "备注"
           }
         }
+      }
+    ]);
+  });
+
+  it("creates image text templates without backend buttons", async () => {
+    resetArmadaMock({
+      id: 10,
+      templateName: "图文模板",
+      linkMode: 3,
+      content: "标题",
+      bodyText: "正文",
+      buttons: []
+    });
+
+    await createMarketingTemplate({
+      templateName: "图文模板",
+      linkMode: 3,
+      textType: "PROMO",
+      imageFileId: null,
+      content: "标题",
+      bodyText: "正文",
+      buttons: [{ type: "quick", label: "不应发送", value: "" }],
+      promotionLink: "https://promo.example/vip",
+      remark: null
+    });
+
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/marketing-templates",
+        opts: {
+          data: {
+            templateName: "图文模板",
+            linkMode: 3,
+            textType: "PROMO",
+            imageFileId: null,
+            content: "标题",
+            bodyText: "正文",
+            buttons: [],
+            promotionLink: "https://promo.example/vip",
+            remark: null
+          }
+        }
+      }
+    ]);
+  });
+
+  it("uploads marketing template images as multipart form data", async () => {
+    resetArmadaMock({
+      id: 99,
+      originalFilename: "promo.png",
+      contentType: "image/png",
+      sizeBytes: 3,
+      url: "/api/marketing-template-files/99/content"
+    });
+
+    const file = new File(["png"], "promo.png", { type: "image/png" });
+    const result = await uploadMarketingTemplateImage(file);
+
+    assert.equal(result.id, 99);
+    assert.equal(
+      marketingTemplateImageUrl(99),
+      "/api/marketing-template-files/99/content"
+    );
+    const [call] = armadaCalls();
+    assert.equal(call.method, "post");
+    assert.equal(call.url, "/api/marketing-template-files");
+    assert.ok(
+      (call.opts as { data: FormData }).data.get("file") instanceof File
+    );
+  });
+
+  it("downloads marketing template images through the authorized http client", async () => {
+    const blob = new Blob(["png"], { type: "image/png" });
+    resetHttpMock(blob);
+
+    const result = await downloadMarketingTemplateImage(88);
+
+    assert.equal(result, blob);
+    assert.deepEqual(httpCalls(), [
+      {
+        method: "get",
+        url: "/api/marketing-template-files/88/content",
+        opts: { responseType: "blob" }
       }
     ]);
   });

@@ -23,7 +23,7 @@ expectIncludes(
     'path: "/task/group-marketing"',
     'component: "task/group-marketing/index"',
     'name: "TaskGroupMarketing"',
-    'title: "群组营销任务"',
+    'title: "营销任务"',
     'module_key: "marketing_task"',
     'perm_key: "tenant:marketing_task:view"'
   ],
@@ -77,8 +77,8 @@ expectIncludes(
     "GroupMarketingCreateDrawer",
     "GroupMarketingDetailDrawer",
     "GroupMarketingMaterialDrawer",
-    "群组营销任务",
-    "新增群组营销任务",
+    "营销任务",
+    "新增营销任务",
     "批量删除",
     "最后发送时间"
   ],

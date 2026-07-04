@@ -157,7 +157,7 @@ function validateMaterialForm(form: MarketingTemplateWrite): string {
   if (!form.content.trim()) return "内容不能为空";
   if (!form.bodyText.trim()) return "正文不能为空";
   if (form.linkMode === 2 && form.buttons.length === 0) {
-    return "按钮超链模式至少配置 1 个按钮";
+    return "按钮超链消息类型至少配置 1 个按钮";
   }
   const invalidButton = form.buttons.find(
     button =>
@@ -237,7 +237,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     } catch (error) {
       rows.value = [];
       total.value = 0;
-      ElMessage.error(apiErrorMessage(error, "群组营销任务加载失败"));
+      ElMessage.error(apiErrorMessage(error, "营销任务加载失败"));
     } finally {
       loading.value = false;
     }
@@ -356,11 +356,11 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
         remark: form.remark.trim() || null,
         selections: payload.selections
       });
-      ElMessage.success("群组营销任务已创建");
+      ElMessage.success("营销任务已创建");
       closeCreateDrawer();
       await refreshTasks();
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "群组营销任务创建失败"));
+      ElMessage.error(apiErrorMessage(error, "营销任务创建失败"));
     }
   }
 
@@ -371,7 +371,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       detailTask.value = await getMarketingTaskDetail(row.id);
     } catch (error) {
       detailTask.value = null;
-      ElMessage.error(apiErrorMessage(error, "群组营销任务明细加载失败"));
+      ElMessage.error(apiErrorMessage(error, "营销任务明细加载失败"));
     } finally {
       detailLoading.value = false;
     }
@@ -388,9 +388,9 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       rows.value = rows.value.map(item =>
         item.id === row.id ? updated : item
       );
-      ElMessage.success("群组营销任务已启动");
+      ElMessage.success("营销任务已启动");
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "启动群组营销任务失败"));
+      ElMessage.error(apiErrorMessage(error, "启动营销任务失败"));
     }
   }
 
@@ -400,9 +400,9 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       rows.value = rows.value.map(item =>
         item.id === row.id ? updated : item
       );
-      ElMessage.success("群组营销任务已停止");
+      ElMessage.success("营销任务已停止");
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "停止群组营销任务失败"));
+      ElMessage.error(apiErrorMessage(error, "停止营销任务失败"));
     }
   }
 
@@ -414,8 +414,8 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     }
     try {
       await ElMessageBox.confirm(
-        `确认删除选中的 ${selectedRows.value.length} 条群组营销任务？`,
-        "删除群组营销任务",
+        `确认删除选中的 ${selectedRows.value.length} 条营销任务？`,
+        "删除营销任务",
         {
           type: "warning",
           confirmButtonText: "删除",
@@ -427,10 +427,10 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     }
     try {
       await batchDeleteMarketingTasks(selectedRows.value.map(row => row.id));
-      ElMessage.success("群组营销任务已删除");
+      ElMessage.success("营销任务已删除");
       await refreshTasks();
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "批量删除群组营销任务失败"));
+      ElMessage.error(apiErrorMessage(error, "批量删除营销任务失败"));
     }
   }
 

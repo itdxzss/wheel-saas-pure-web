@@ -136,7 +136,7 @@ function submit(): void {
     v-model="visible"
     size="720px"
     destroy-on-close
-    title="新增群组营销任务"
+    title="新增营销任务"
   >
     <el-form :model="form" label-width="120px" class="create-form">
       <el-form-item label="任务名称" required>
@@ -282,4 +282,5 @@ function submit(): void {
   margin-left: 8px;
   color: var(--el-text-color-secondary);
 }
+
 </style>

@@ -20,21 +20,18 @@ const buttonDefaults: Record<
   { label: string; value: string }
 > = {
   link: { label: "立即抢购", value: "https://shop.example.com/promo" },
-  phone: { label: "立即咨询", value: "+8613800138000" },
   copy: { label: "复制优惠码", value: "VIP88" },
   quick: { label: "我要参加", value: "" }
 };
 
 function buttonActionText(type: MarketingButtonType) {
   if (type === "link") return "点击后在浏览器打开 URL";
-  if (type === "phone") return "点击后呼出指定号码";
   if (type === "copy") return "点击后复制到剪贴板";
   return "点击后自动回复给发送方";
 }
 
 function valueLabel(type: MarketingButtonType) {
   if (type === "link") return "跳转链接";
-  if (type === "phone") return "电话号码";
   if (type === "copy") return "复制内容";
   return "说明";
 }
@@ -111,7 +108,6 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
                 @change="onButtonTypeChange(button)"
               >
                 <el-option label="链接跳转" value="link" />
-                <el-option label="拨打电话" value="phone" />
                 <el-option label="复制内容" value="copy" />
                 <el-option label="快捷回复" value="quick" />
               </el-select>
@@ -141,7 +137,7 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
             v-model="button.value"
             clearable
             :disabled="disabled"
-            placeholder="跳转链接、电话号码或复制内容"
+            :placeholder="button.type === 'link' ? 'https://shop.example.com/promo' : '请输入复制内容'"
           />
           <el-alert
             v-else

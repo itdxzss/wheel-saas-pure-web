@@ -4,16 +4,18 @@ import {
   batchDeleteMarketingTemplates,
   cloneMarketingTemplate,
   createMarketingTemplate,
+  downloadMarketingTemplateImage,
   listMarketingTemplates,
+  uploadMarketingTemplateImage,
   updateMarketingTemplate,
   type MarketingTemplateRow as ApiMarketingTemplateRow,
   type MarketingTemplateWrite
 } from "@/api/marketing-template";
 import { apiErrorMessage } from "@/utils/api-error";
 
-export type MarketingLinkMode = "NORMAL" | "BUTTON";
+export type MarketingLinkMode = "NORMAL" | "BUTTON" | "IMAGE_TEXT";
 export type MarketingDrawerMode = "create" | "edit" | "preview";
-export type MarketingButtonType = "link" | "phone" | "copy" | "quick";
+export type MarketingButtonType = "link" | "copy" | "quick";
 
 export interface MarketingTemplateRow {
   id: number;
@@ -49,6 +51,7 @@ export interface MarketingTemplateForm {
   imageFileId: number | null;
   imageName: string;
   imageUrl: string;
+  imageFile: File | null;
   content: string;
   text: string;
   promotionLink: string;
@@ -57,6 +60,8 @@ export interface MarketingTemplateForm {
 }
 
 let nextButtonId = 1;
+let imagePreviewRequestId = 0;
+let persistedImageObjectUrl = "";
 
 function createButton(
   type: MarketingButtonType,
@@ -75,7 +80,7 @@ function createButton(
 
 function defaultButtons(): MarketingTemplateButton[] {
   return [
-    createButton("phone", "立即咨询", "+8613800138000"),
+    createButton("link", "立即抢购", "https://shop.example.com/promo"),
     createButton("copy", "复制优惠码", "VIP88"),
     createButton("quick", "我要参加")
   ];
@@ -88,6 +93,7 @@ const emptyForm = (): MarketingTemplateForm => ({
   imageFileId: null,
   imageName: "",
   imageUrl: "",
+  imageFile: null,
   content: "",
   text: "",
   promotionLink: "",
@@ -96,11 +102,15 @@ const emptyForm = (): MarketingTemplateForm => ({
 });
 
 function fromApiLinkMode(linkMode: ApiMarketingTemplateRow["linkMode"]) {
-  return linkMode === 2 ? "BUTTON" : "NORMAL";
+  if (linkMode === 2) return "BUTTON";
+  if (linkMode === 3) return "IMAGE_TEXT";
+  return "NORMAL";
 }
 
 function toApiLinkMode(linkMode: MarketingLinkMode) {
-  return linkMode === "BUTTON" ? 2 : 1;
+  if (linkMode === "BUTTON") return 2;
+  if (linkMode === "IMAGE_TEXT") return 3;
+  return 1;
 }
 
 function parseSearchId(value: string): number | undefined {
@@ -138,6 +148,9 @@ function toForm(row: MarketingTemplateRow): MarketingTemplateForm {
     linkMode: row.linkMode,
     textType: row.textType ?? "PROMO",
     imageFileId: row.imageFileId ?? null,
+    imageName: row.imageFileId ? "已上传图片" : "",
+    imageUrl: "",
+    imageFile: null,
     content: row.content,
     text: row.text,
     promotionLink: row.promotionLink,
@@ -172,16 +185,76 @@ function toWritePayload(form: MarketingTemplateForm): MarketingTemplateWrite {
   };
 }
 
+function isHttpUrl(value: string): boolean {
+  if (!value.trim()) return false;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function validateForm(form: MarketingTemplateForm): string {
   if (!form.templateName.trim()) return "请填写模版名称";
   if (!form.content.trim()) return "请填写内容";
   if (!form.text.trim()) return "请填写文本";
+  if (form.promotionLink.trim() && !isHttpUrl(form.promotionLink)) {
+    return "推广链接格式不正确，请输入以 http(s):// 开头的有效链接";
+  }
   if (form.linkMode === "BUTTON") {
-    if (form.buttons.length === 0) return "按钮超链至少需要一个按钮";
+    if (form.buttons.length === 0) return "按钮超链消息类型至少需要一个按钮";
     const invalidButton = form.buttons.find(button => !button.label.trim());
     if (invalidButton) return "请填写按钮文字";
+    const emptyParamButton = form.buttons.find(
+      button => button.type !== "quick" && !button.value.trim()
+    );
+    if (emptyParamButton) return "请填写按钮参数";
+    const invalidLinkButton = form.buttons.find(
+      button => button.type === "link" && !isHttpUrl(button.value)
+    );
+    if (invalidLinkButton) {
+      return "跳转链接格式不正确，请输入以 http(s):// 开头的有效链接";
+    }
   }
   return "";
+}
+
+async function uploadPendingImage(form: MarketingTemplateForm): Promise<void> {
+  if (!form.imageFile) return;
+  const uploaded = await uploadMarketingTemplateImage(form.imageFile);
+  form.imageFileId = uploaded.id;
+  form.imageName = uploaded.originalFilename;
+  form.imageFile = null;
+}
+
+function revokePersistedImageObjectUrl(): void {
+  if (!persistedImageObjectUrl) return;
+  URL.revokeObjectURL(persistedImageObjectUrl);
+  persistedImageObjectUrl = "";
+}
+
+async function loadPersistedImagePreview(
+  form: MarketingTemplateForm
+): Promise<void> {
+  const imageFileId = form.imageFileId;
+  if (!imageFileId) {
+    revokePersistedImageObjectUrl();
+    return;
+  }
+  const requestId = ++imagePreviewRequestId;
+  try {
+    const image = await downloadMarketingTemplateImage(imageFileId);
+    if (requestId !== imagePreviewRequestId) return;
+    revokePersistedImageObjectUrl();
+    persistedImageObjectUrl = URL.createObjectURL(image);
+    form.imageUrl = persistedImageObjectUrl;
+  } catch {
+    if (requestId === imagePreviewRequestId) {
+      form.imageUrl = "";
+      showMessage("error", "营销模版图片加载失败");
+    }
+  }
 }
 
 function showMessage(
@@ -234,7 +307,7 @@ export function useMarketingTemplatePage() {
   const columns: TableColumnList = [
     { label: "ID", prop: "id", width: 90 },
     { label: "模板名称", prop: "templateName", minWidth: 180 },
-    { label: "文本类型", prop: "linkMode", width: 130 },
+    { label: "消息类型", prop: "linkMode", width: 130 },
     { label: "推广链接", prop: "promotionLink", minWidth: 220 }
   ];
 
@@ -298,28 +371,35 @@ export function useMarketingTemplatePage() {
   }
 
   function openCreateDrawer() {
+    imagePreviewRequestId += 1;
+    revokePersistedImageObjectUrl();
     templateForm.value = emptyForm();
     editingId.value = null;
     drawerMode.value = "create";
     drawerVisible.value = true;
   }
 
-  function openEditDrawer(row: MarketingTemplateRow) {
-    templateForm.value = toForm(row);
+  async function openEditDrawer(row: MarketingTemplateRow): Promise<void> {
+    imagePreviewRequestId += 1;
+    revokePersistedImageObjectUrl();
+    const form = toForm(row);
+    templateForm.value = form;
     editingId.value = row.id;
     drawerMode.value = "edit";
     drawerVisible.value = true;
+    await loadPersistedImagePreview(form);
   }
 
-  function openPreviewDrawer(row: MarketingTemplateRow) {
-    openEditDrawer(row);
+  async function openPreviewDrawer(row: MarketingTemplateRow): Promise<void> {
+    const loadingImage = openEditDrawer(row);
     drawerMode.value = "preview";
+    await loadingImage;
   }
 
   function previewSelected() {
     const [row] = selectedRows.value;
     if (!row || selectedRows.value.length !== 1) return;
-    openPreviewDrawer(row);
+    void openPreviewDrawer(row);
   }
 
   async function saveTemplate(): Promise<void> {
@@ -331,6 +411,7 @@ export function useMarketingTemplatePage() {
     }
     saving.value = true;
     try {
+      await uploadPendingImage(templateForm.value);
       const payload = toWritePayload(templateForm.value);
       if (editingId.value) {
         await updateMarketingTemplate(editingId.value, payload);

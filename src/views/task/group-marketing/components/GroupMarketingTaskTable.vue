@@ -44,11 +44,12 @@ const currentPageSize = computed({
 function asMarketingTaskRow(row: unknown): MarketingTaskRow {
   return row as MarketingTaskRow;
 }
+
 </script>
 
 <template>
   <PureTableBar
-    title="群组营销任务"
+    title="营销任务"
     :columns="columns"
     @refresh="emit('refresh')"
   >
@@ -58,7 +59,7 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
         :icon="useRenderIcon(Plus)"
         @click="emit('create')"
       >
-        新增群组营销任务
+        新增营销任务
       </el-button>
       <el-button
         type="danger"
@@ -97,7 +98,8 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
             <div class="task-name-cell">
               <strong>{{ row.taskName }}</strong>
               <small>
-                {{ row.accountGroupName }} · {{ row.marketingTemplateName }}
+                {{ row.accountGroupName }} ·
+                营销模板 · {{ row.marketingTemplateName || "-" }}
               </small>
             </div>
           </template>
@@ -199,7 +201,7 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
           </template>
         </el-table-column>
         <template #empty>
-          <el-empty description="暂无符合条件的群组营销任务" />
+          <el-empty description="暂无符合条件的营销任务" />
         </template>
       </el-table>
 

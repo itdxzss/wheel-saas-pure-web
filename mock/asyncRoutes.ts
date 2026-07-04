@@ -165,7 +165,7 @@ const taskRouter = {
       component: "task/group-marketing/index",
       name: "TaskGroupMarketing",
       meta: {
-        title: "群组营销任务",
+        title: "营销任务",
         roles: ["admin", "common"],
         showParent: true,
         module_key: "marketing_task",

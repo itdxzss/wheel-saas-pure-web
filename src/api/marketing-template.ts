@@ -1,8 +1,9 @@
 import { armadaRequest } from "@/api/armada";
+import { http } from "@/utils/http";
 import type { PageResponse } from "@/api/account";
 
-export type MarketingTemplateLinkMode = 1 | 2;
-export type MarketingTemplateButtonType = "link" | "phone" | "copy" | "quick";
+export type MarketingTemplateLinkMode = 1 | 2 | 3;
+export type MarketingTemplateButtonType = "link" | "copy" | "quick";
 
 type BackendButtonType = "LINK_JUMP" | "COPY_CONTENT" | "QUICK_REPLY";
 
@@ -81,6 +82,14 @@ export interface MarketingTemplateWrite {
   remark?: string | null;
 }
 
+export interface MarketingTemplateImageUploadResult {
+  id: number;
+  originalFilename: string;
+  contentType: string;
+  sizeBytes: number;
+  url: string;
+}
+
 function fromBackendButtonType(
   type: BackendButtonType
 ): MarketingTemplateButtonType {
@@ -92,7 +101,7 @@ function fromBackendButtonType(
 function toBackendButtonType(
   type: MarketingTemplateButtonType
 ): BackendButtonType {
-  if (type === "link" || type === "phone") return "LINK_JUMP";
+  if (type === "link") return "LINK_JUMP";
   if (type === "copy") return "COPY_CONTENT";
   return "QUICK_REPLY";
 }
@@ -190,6 +199,28 @@ export function cloneMarketingTemplate(
 export function batchDeleteMarketingTemplates(ids: number[]): Promise<void> {
   return armadaRequest<void>("post", "/api/marketing-templates/batch-delete", {
     data: { ids }
+  });
+}
+
+export function marketingTemplateImageUrl(id: number): string {
+  return `/api/marketing-template-files/${id}/content`;
+}
+
+export function uploadMarketingTemplateImage(
+  file: File
+): Promise<MarketingTemplateImageUploadResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return armadaRequest<MarketingTemplateImageUploadResult>(
+    "post",
+    "/api/marketing-template-files",
+    { data: formData }
+  );
+}
+
+export function downloadMarketingTemplateImage(id: number): Promise<Blob> {
+  return http.request<Blob>("get", marketingTemplateImageUrl(id), {
+    responseType: "blob"
   });
 }
 

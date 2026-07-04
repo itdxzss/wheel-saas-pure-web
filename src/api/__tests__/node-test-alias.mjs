@@ -23,6 +23,10 @@ const messageDouble = resolve(
   import.meta.dirname,
   "message-test-double.ts"
 );
+const elementPlusDouble = resolve(
+  import.meta.dirname,
+  "element-plus-test-double.ts"
+);
 
 require("node:module")._resolveFilename = function resolveTestAlias(
   request,
@@ -30,6 +34,15 @@ require("node:module")._resolveFilename = function resolveTestAlias(
   isMain,
   options
 ) {
+  if (request === "element-plus") {
+    return originalResolveFilename.call(
+      this,
+      elementPlusDouble,
+      parent,
+      isMain,
+      options
+    );
+  }
   if (request === "@/api/armada") {
     return originalResolveFilename.call(
       this,

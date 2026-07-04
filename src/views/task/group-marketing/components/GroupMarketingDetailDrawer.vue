@@ -23,7 +23,7 @@ const visible = defineModel<boolean>({ required: true });
     v-model="visible"
     size="72%"
     destroy-on-close
-    title="群组营销任务明细"
+    title="营销任务明细"
   >
     <div v-loading="loading" class="detail-drawer">
       <el-descriptions v-if="detail" :column="3" border>

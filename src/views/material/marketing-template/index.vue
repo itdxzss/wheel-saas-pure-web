@@ -51,7 +51,15 @@ const {
 } = useMarketingTemplatePage();
 
 function linkModeLabel(mode: MarketingTemplateRow["linkMode"]) {
-  return mode === "BUTTON" ? "按钮超链" : "普通超链";
+  if (mode === "BUTTON") return "按钮超链";
+  if (mode === "IMAGE_TEXT") return "图文内容";
+  return "普通超链";
+}
+
+function linkModeTagType(mode: MarketingTemplateRow["linkMode"]) {
+  if (mode === "BUTTON") return "success";
+  if (mode === "IMAGE_TEXT") return "warning";
+  return "primary";
 }
 
 function promotionHref(value: string) {
@@ -89,7 +97,7 @@ onMounted(() => {
             @keyup.enter="searchTemplates"
           />
         </el-form-item>
-        <el-form-item label="文本类型">
+        <el-form-item label="消息类型">
           <el-select
             v-model="searchForm.linkMode"
             clearable
@@ -98,6 +106,7 @@ onMounted(() => {
           >
             <el-option label="普通超链" value="NORMAL" />
             <el-option label="按钮超链" value="BUTTON" />
+            <el-option label="图文内容" value="IMAGE_TEXT" />
           </el-select>
         </el-form-item>
         <el-form-item v-show="advancedOpen" label="推广链接">
@@ -202,12 +211,12 @@ onMounted(() => {
           <el-table-column
             v-if="!dynamicColumns[2].hide"
             prop="linkMode"
-            label="文本类型"
+            label="消息类型"
             width="130"
           >
             <template #default="{ row }">
               <el-tag
-                :type="row.linkMode === 'BUTTON' ? 'success' : 'primary'"
+                :type="linkModeTagType(row.linkMode)"
                 effect="plain"
               >
                 {{ linkModeLabel(row.linkMode) }}

@@ -4,6 +4,10 @@ import {
   armadaCalls,
   resetArmadaMock
 } from "@/api/__tests__/armada-test-double";
+import {
+  httpCalls,
+  resetHttpMock
+} from "@/api/__tests__/http-test-double";
 import { useMarketingTemplatePage } from "./useMarketingTemplatePage";
 
 describe("marketing template page state", () => {
@@ -55,6 +59,47 @@ describe("marketing template page state", () => {
     ]);
   });
 
+  it("maps image text link mode between backend and page state", async () => {
+    resetArmadaMock({
+      list: [
+        {
+          id: 12,
+          templateName: "图文模板",
+          linkMode: 3,
+          content: "标题",
+          bodyText: "正文",
+          buttons: [],
+          promotionLink: "https://promo.example/vip"
+        }
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.searchForm.value.linkMode = "IMAGE_TEXT";
+
+    await pageState.refreshTemplates();
+
+    assert.equal(pageState.rows.value[0].linkMode, "IMAGE_TEXT");
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "get",
+        url: "/api/marketing-templates",
+        opts: {
+          params: {
+            page: 1,
+            pageSize: 10,
+            id: undefined,
+            keyword: undefined,
+            textType: undefined,
+            linkMode: 3
+          }
+        }
+      }
+    ]);
+  });
+
   it("saves a new marketing template through the backend API", async () => {
     resetArmadaMock({
       list: [],
@@ -80,6 +125,141 @@ describe("marketing template page state", () => {
         ["get", "/api/marketing-templates"]
       ]
     );
+  });
+
+  it("uploads selected image before saving template", async () => {
+    resetArmadaMock({
+      id: 99,
+      url: "/api/marketing-template-files/99/content",
+      originalFilename: "promo.png",
+      contentType: "image/png",
+      sizeBytes: 3
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "新模板";
+    pageState.templateForm.value.linkMode = "NORMAL";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.text = "正文";
+    pageState.templateForm.value.promotionLink = "https://promo.example/vip";
+    pageState.templateForm.value.imageFile = new File(["png"], "promo.png", {
+      type: "image/png"
+    });
+
+    await pageState.saveTemplate();
+
+    const calls = armadaCalls();
+    assert.equal(calls[0].method, "post");
+    assert.equal(calls[0].url, "/api/marketing-template-files");
+    assert.equal(calls[1].method, "post");
+    assert.equal(calls[1].url, "/api/marketing-templates");
+    assert.equal(
+      (calls[1].opts as { data: { imageFileId: number } }).data.imageFileId,
+      99
+    );
+  });
+
+  it("loads persisted preview image through authorized blob request", async () => {
+    resetArmadaMock({
+      list: [
+        {
+          id: 7,
+          templateName: "带图模板",
+          linkMode: 1,
+          imageFileId: 88,
+          content: "标题",
+          bodyText: "正文",
+          buttons: [],
+          promotionLink: "https://promo.example/vip"
+        }
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10
+    });
+    resetHttpMock(new Blob(["png"], { type: "image/png" }));
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: () => "blob:marketing-template-88"
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: () => undefined
+    });
+    const pageState = useMarketingTemplatePage();
+
+    try {
+      await pageState.refreshTemplates();
+      await pageState.openPreviewDrawer(pageState.rows.value[0]);
+
+      assert.equal(
+        pageState.templateForm.value.imageUrl,
+        "blob:marketing-template-88"
+      );
+      assert.deepEqual(httpCalls(), [
+        {
+          method: "get",
+          url: "/api/marketing-template-files/88/content",
+          opts: { responseType: "blob" }
+        }
+      ]);
+    } finally {
+      Object.defineProperty(URL, "createObjectURL", {
+        configurable: true,
+        value: originalCreateObjectURL
+      });
+      Object.defineProperty(URL, "revokeObjectURL", {
+        configurable: true,
+        value: originalRevokeObjectURL
+      });
+    }
+  });
+
+  it("rejects invalid promotion URL before saving", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "新模板";
+    pageState.templateForm.value.linkMode = "NORMAL";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.text = "正文";
+    pageState.templateForm.value.promotionLink = "not-a-url";
+
+    await pageState.saveTemplate();
+
+    assert.deepEqual(armadaCalls(), []);
+    assert.equal(pageState.drawerVisible.value, true);
+  });
+
+  it("rejects invalid link button URL before saving", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "新模板";
+    pageState.templateForm.value.linkMode = "BUTTON";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.text = "正文";
+    pageState.templateForm.value.promotionLink = "https://promo.example/vip";
+    pageState.templateForm.value.buttons = [
+      { id: 1, type: "link", label: "访问", value: "abc" }
+    ];
+
+    await pageState.saveTemplate();
+
+    assert.deepEqual(armadaCalls(), []);
+    assert.equal(pageState.drawerVisible.value, true);
   });
 
   it("clones and batch deletes selected marketing templates", async () => {

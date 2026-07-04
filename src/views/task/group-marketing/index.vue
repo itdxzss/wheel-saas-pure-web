@@ -74,8 +74,8 @@ function onTaskAction(row: MarketingTaskRow, action: string): void {
 <template>
   <div
     class="group-marketing-page"
-    aria-label="群组营销任务"
-    data-primary-action="新增群组营销任务"
+    aria-label="营销任务"
+    data-primary-action="新增营销任务"
     data-batch-action="批量删除"
   >
     <div class="group-marketing-search bg-bg_color">

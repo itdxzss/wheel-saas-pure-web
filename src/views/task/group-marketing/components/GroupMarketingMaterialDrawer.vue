@@ -30,7 +30,7 @@ function removeButton(index: number): void {
 }
 
 function onModeChange(): void {
-  if (form.value.linkMode === 1) {
+  if (form.value.linkMode !== 2) {
     form.value.buttons = [];
     return;
   }
@@ -63,7 +63,7 @@ function buttonValuePlaceholder(button: MarketingTemplateButton): string {
       <el-form-item label="模板名称" required>
         <el-input v-model="form.templateName" clearable />
       </el-form-item>
-      <el-form-item label="超链模式">
+      <el-form-item label="消息类型">
         <el-select
           v-model="form.linkMode"
           class="form-control"
@@ -71,6 +71,7 @@ function buttonValuePlaceholder(button: MarketingTemplateButton): string {
         >
           <el-option label="普通超链" :value="1" />
           <el-option label="按钮超链" :value="2" />
+          <el-option label="图文内容" :value="3" />
         </el-select>
       </el-form-item>
       <el-form-item label="内容" required>

@@ -6,15 +6,13 @@ const props = defineProps<{
   form: MarketingTemplateForm;
 }>();
 
-const previewType = computed(() =>
-  props.form.linkMode === "BUTTON" ? "按钮超链" : "普通超链"
-);
+const previewType = computed(() => {
+  if (props.form.linkMode === "BUTTON") return "按钮超链";
+  if (props.form.linkMode === "IMAGE_TEXT") return "图文内容";
+  return "普通超链";
+});
 
-const bottomText = computed(() =>
-  props.form.linkMode === "BUTTON"
-    ? "营销模板消息 · 按钮超链"
-    : "营销模板消息 · 普通链接"
-);
+const bottomText = computed(() => `营销模板消息 · ${previewType.value}`);
 
 const linkDomain = computed(() => {
   if (!props.form.promotionLink) return "";

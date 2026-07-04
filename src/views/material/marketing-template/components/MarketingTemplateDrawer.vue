@@ -46,11 +46,15 @@ function onImageChange(file: UploadFile) {
   revokeCurrentObjectUrl();
   currentObjectUrl = URL.createObjectURL(file.raw);
   form.value.imageUrl = currentObjectUrl;
+  form.value.imageFile = file.raw;
+  form.value.imageFileId = null;
 }
 
 function clearImage() {
   revokeCurrentObjectUrl();
   imageFileList.value = [];
+  form.value.imageFileId = null;
+  form.value.imageFile = null;
   form.value.imageName = "";
   form.value.imageUrl = "";
 }
@@ -67,8 +71,7 @@ watch(visible, opened => {
 <template>
   <el-drawer v-model="visible" :title="title" size="1180px" destroy-on-close>
     <div class="drawer-subtitle">
-      左侧按照 WhatsApp 聊天页收到的营销模版消息实时预览，右侧支持最多 3
-      个按钮。
+      左侧按照 WhatsApp 聊天页收到的营销模版消息实时预览；按钮超链支持最多 3 个按钮。
     </div>
 
     <div class="marketing-template-drawer">
@@ -80,7 +83,7 @@ watch(visible, opened => {
           type="info"
           show-icon
           :closable="false"
-          title="营销模版支持普通超链和按钮超链；按钮超链最多 3 个。"
+          title="营销模版支持普通超链、按钮超链和图文内容；按钮超链最多 3 个。"
         />
 
         <el-card shadow="never" class="form-card">
@@ -104,7 +107,7 @@ watch(visible, opened => {
             />
           </el-form-item>
 
-          <el-form-item label="超链模式" required>
+          <el-form-item label="消息类型" required>
             <el-select
               v-model="form.linkMode"
               class="drawer-select"
@@ -112,6 +115,7 @@ watch(visible, opened => {
             >
               <el-option label="普通超链" value="NORMAL" />
               <el-option label="按钮超链" value="BUTTON" />
+              <el-option label="图文内容" value="IMAGE_TEXT" />
             </el-select>
           </el-form-item>
         </el-card>
