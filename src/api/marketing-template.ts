@@ -214,7 +214,12 @@ export function uploadMarketingTemplateImage(
   return armadaRequest<MarketingTemplateImageUploadResult>(
     "post",
     "/api/marketing-template-files",
-    { data: formData }
+    { data: formData },
+    {
+      beforeRequestCallback: config => {
+        delete config.headers["Content-Type"];
+      }
+    }
   );
 }
 

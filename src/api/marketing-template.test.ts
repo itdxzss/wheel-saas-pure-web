@@ -209,6 +209,14 @@ describe("marketing template API", () => {
     assert.ok(
       (call.opts as { data: FormData }).data.get("file") instanceof File
     );
+
+    const headers = { "Content-Type": "application/json" };
+    (
+      call.config as {
+        beforeRequestCallback: (config: { headers: typeof headers }) => void;
+      }
+    ).beforeRequestCallback({ headers });
+    assert.deepEqual(headers, {});
   });
 
   it("downloads marketing template images through the authorized http client", async () => {
