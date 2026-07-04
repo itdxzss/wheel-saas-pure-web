@@ -14,6 +14,8 @@ const {
   accountGroups,
   accountStatusOptions,
   accountTypeOptions,
+  batchOnlineDisabled,
+  batchOnlineTip,
   batchMoveForm,
   batchMoveModeOptions,
   groupLoading,
@@ -247,6 +249,8 @@ const {
       v-model:page="page"
       v-model:page-size="pageSize"
       :columns="accountListColumns"
+      :batch-online-disabled="batchOnlineDisabled"
+      :batch-online-tip="batchOnlineTip"
       :loading="loading"
       :online-action-disabled="isOnlineActionDisabled"
       :online-action-label="onlineActionLabel"

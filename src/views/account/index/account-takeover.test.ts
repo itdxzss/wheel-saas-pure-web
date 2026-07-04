@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   isTakeoverCandidate,
+  onlineBlockedTip,
   takeoverBatchDisabledTip,
+  TAKING_OVER_ONLINE_MESSAGE,
   TAKEOVER_SELECTION_MESSAGE
 } from "./account-takeover";
 
@@ -29,6 +31,14 @@ describe("account takeover helpers", () => {
         { account_state: 6, mute_status: null }
       ]),
       ""
+    );
+  });
+
+  it("blocks online actions for taking-over accounts", () => {
+    assert.equal(onlineBlockedTip([{ account_state: 2 }]), "");
+    assert.equal(
+      onlineBlockedTip([{ account_state: 2 }, { account_state: 7 }]),
+      TAKING_OVER_ONLINE_MESSAGE
     );
   });
 });

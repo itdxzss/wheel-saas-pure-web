@@ -44,6 +44,8 @@ import {
 } from "../account-move";
 import {
   isTakeoverCandidate,
+  isTakingOverAccount,
+  onlineBlockedTip,
   takeoverBatchDisabledTip,
   TAKEOVER_SELECTION_MESSAGE
 } from "../account-takeover";
@@ -104,6 +106,8 @@ function routeNumber(value: unknown): "" | number {
 export interface AccountListPageState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   accountStatusOptions: string[];
+  batchOnlineDisabled: ComputedRef<boolean>;
+  batchOnlineTip: ComputedRef<string>;
   accountTypeOptions: Array<{ label: string; value: AccountType }>;
   batchMoveForm: BatchMoveForm;
   batchMoveModeOptions: Array<{ label: string; value: BatchMoveMode }>;
@@ -217,6 +221,8 @@ export function useAccountListPage(): AccountListPageState {
     takeoverBatchDisabledTip(selectedRows.value)
   );
   const takeoverBatchDisabled = computed(() => takeoverBatchTip.value !== "");
+  const batchOnlineTip = computed(() => onlineBlockedTip(selectedRows.value));
+  const batchOnlineDisabled = computed(() => batchOnlineTip.value !== "");
 
   function accountId(row: TenantAccount): number | null {
     return typeof row.id === "number" && Number.isSafeInteger(row.id)
@@ -290,6 +296,7 @@ export function useAccountListPage(): AccountListPageState {
   function isOnlineActionDisabled(row: TenantAccount): boolean {
     const id = accountId(row);
     if (!id || row.login_state === 1) return false;
+    if (isTakingOverAccount(row)) return true;
     return (
       onlineSubmittingIds.value.has(id) || onlineCooldownRemaining(row) > 0
     );
@@ -451,6 +458,11 @@ export function useAccountListPage(): AccountListPageState {
       ElMessage.warning("账号 ID 为空，无法上线");
       return;
     }
+    const blockedTip = onlineBlockedTip([row]);
+    if (blockedTip) {
+      ElMessage.warning(blockedTip);
+      return;
+    }
     if (isOnlineActionDisabled(row)) return;
 
     // 点击后立即开始冷却，不等接口返回，避免慢请求窗口里被重复点击。
@@ -481,6 +493,11 @@ export function useAccountListPage(): AccountListPageState {
   async function submitBatchOnline(ids: number[]): Promise<void> {
     if (ids.length === 0) {
       ElMessage.warning("请先选择账号");
+      return;
+    }
+    const blockedTip = onlineBlockedTip(selectedRows.value);
+    if (blockedTip) {
+      ElMessage.warning(blockedTip);
       return;
     }
     ids.forEach(id => {
@@ -635,6 +652,8 @@ export function useAccountListPage(): AccountListPageState {
     accountGroups,
     accountStatusOptions,
     accountTypeOptions,
+    batchOnlineDisabled,
+    batchOnlineTip,
     batchMoveForm,
     batchMoveModeOptions,
     groupLoading,

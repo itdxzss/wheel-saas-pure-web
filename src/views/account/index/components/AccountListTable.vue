@@ -22,6 +22,8 @@ defineOptions({
 
 const props = defineProps<{
   columns: TableColumnList;
+  batchOnlineDisabled: boolean;
+  batchOnlineTip: string;
   loading: boolean;
   onlineActionDisabled: (row: TenantAccount) => boolean;
   onlineActionLabel: (row: TenantAccount) => string;
@@ -73,7 +75,13 @@ function avatarText(row: TenantAccount) {
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="move-group">迁移到分组</el-dropdown-item>
-            <el-dropdown-item command="online">登录</el-dropdown-item>
+            <el-dropdown-item
+              command="online"
+              :disabled="batchOnlineDisabled"
+              :title="batchOnlineTip || undefined"
+            >
+              登录
+            </el-dropdown-item>
             <el-dropdown-item command="offline">离线</el-dropdown-item>
             <el-dropdown-item
               command="takeover"
