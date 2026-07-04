@@ -196,7 +196,7 @@ async function confirmDelete(count: number): Promise<boolean> {
   if (typeof document === "undefined") return true;
   try {
     await ElMessageBox.confirm(
-      `确认删除选中的 ${count} 个营销模版？`,
+      `确认删除选中的 ${count} 个营销模版？关联的待启动或发送中营销任务会同步停止。`,
       "删除营销模版",
       {
         type: "warning",
