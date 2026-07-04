@@ -8,7 +8,7 @@ export const accountListColumns: TableColumnList = [
   { label: "IP地址", prop: "truth_ip", minWidth: 160 },
   { label: "渠道/来源", prop: "channel_name", minWidth: 150 },
   { label: "分组", prop: "group_name", minWidth: 140 },
-  { label: "状态", prop: "account_state", width: 110 },
+  { label: "账号状态", prop: "account_state", width: 120 },
   { label: "登录", prop: "login_state", width: 100 },
   { label: "风控", prop: "risk_status", width: 120 },
   { label: "好友 / 群", prop: "friends_num", width: 120 },

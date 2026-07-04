@@ -6,6 +6,7 @@ import {
   batchMigrateTenantAccountsToGroup,
   batchOfflineTenantAccounts,
   batchOnlineTenantAccounts,
+  batchTakeoverTenantAccounts,
   listTenantAccounts
 } from "./account";
 
@@ -58,6 +59,32 @@ describe("account operation API", () => {
         method: "post",
         url: "/api/accounts/batch-offline",
         opts: { data: { ids: [100] } }
+      }
+    ]);
+  });
+
+  it("posts batch takeover requests to armada", async () => {
+    resetArmadaMock({
+      requested: 2,
+      submitted: 2,
+      accepted: 2,
+      timeout: 0,
+      proxyRequired: 0,
+      error: 0,
+      remote: 0,
+      elapsedMs: 0,
+      results: [],
+      remoteRoutes: []
+    });
+
+    const result = await batchTakeoverTenantAccounts([100, 101]);
+
+    assert.equal(result.accepted, 2);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/accounts/batch-takeover",
+        opts: { data: { ids: [100, 101] } }
       }
     ]);
   });
