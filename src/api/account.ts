@@ -2,7 +2,7 @@ import { armadaRequest } from "@/api/armada";
 import { formatEpochMillis } from "@/utils/time";
 import { toTenantAccountListParams } from "./account-mapping";
 
-export type AccountState = 1 | 2 | 3 | 4 | 5;
+export type AccountState = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type LoginState = 1 | 2 | 3;
 export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;
@@ -266,6 +266,16 @@ export function batchOfflineTenantAccounts(
   return armadaRequest<TenantAccountBatchCommandResult>(
     "post",
     "/api/accounts/batch-offline",
+    { data: { ids } }
+  );
+}
+
+export function batchTakeoverTenantAccounts(
+  ids: number[]
+): Promise<TenantAccountBatchCommandResult> {
+  return armadaRequest<TenantAccountBatchCommandResult>(
+    "post",
+    "/api/accounts/batch-takeover",
     { data: { ids } }
   );
 }

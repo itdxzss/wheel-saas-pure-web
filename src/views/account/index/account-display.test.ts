@@ -30,11 +30,18 @@ describe("account list display helpers", () => {
     );
   });
 
+  it("maps login replaced takeover account status labels", () => {
+    assert.equal(accountStatusLabel({ account_state: 6 }), "被抢登");
+    assert.equal(accountStatusLabel({ account_state: 7 }), "抢登中");
+  });
+
   it("maps account status labels to tag types", () => {
     assert.equal(accountStatusTagType({ account_state: 2 }), "success");
     assert.equal(accountStatusTagType({ account_state: 4 }), "success");
     assert.equal(accountStatusTagType({ account_state: 3 }), "danger");
     assert.equal(accountStatusTagType({ account_state: 5 }), "danger");
+    assert.equal(accountStatusTagType({ account_state: 6 }), "warning");
+    assert.equal(accountStatusTagType({ account_state: 7 }), "warning");
     assert.equal(
       accountStatusTagType({ account_state: 2, mute_status: "6h" }),
       "danger"

@@ -14,6 +14,7 @@ import {
   batchMigrateTenantAccountsToGroup,
   batchOfflineTenantAccounts,
   batchOnlineTenantAccounts,
+  batchTakeoverTenantAccounts,
   getTenantAccountSummary,
   listTenantAccounts,
   onlineTenantAccount,
@@ -41,6 +42,11 @@ import {
   type BatchMoveForm,
   type BatchMoveMode
 } from "../account-move";
+import {
+  isTakeoverCandidate,
+  takeoverBatchDisabledTip,
+  TAKEOVER_SELECTION_MESSAGE
+} from "../account-takeover";
 
 export interface AccountSearchForm {
   keyword: string;
@@ -59,7 +65,9 @@ export interface AccountSearchForm {
     | "导出"
     | "禁言6小时"
     | "禁言24小时"
-    | "解绑";
+    | "解绑"
+    | "被抢登"
+    | "抢登中";
   ipGroupName: string;
   groupId: "" | number;
   country: string;
@@ -121,6 +129,8 @@ export interface AccountListPageState {
   showBatchMoveDrawer: Ref<boolean>;
   statCards: ComputedRef<AccountStatCard[]>;
   submitBatchMove: () => void;
+  takeoverBatchDisabled: ComputedRef<boolean>;
+  takeoverBatchTip: ComputedRef<string>;
   total: Ref<number>;
 }
 
@@ -150,6 +160,8 @@ export function useAccountListPage(): AccountListPageState {
   ];
   const accountStatusOptions = [
     "正常",
+    "被抢登",
+    "抢登中",
     "封禁",
     "导出",
     "禁言6小时",
@@ -201,6 +213,10 @@ export function useAccountListPage(): AccountListPageState {
 
   const statCards = computed(() => buildAccountStatCards(summary.value));
   const selectedCount = computed(() => selectedRows.value.length);
+  const takeoverBatchTip = computed(() =>
+    takeoverBatchDisabledTip(selectedRows.value)
+  );
+  const takeoverBatchDisabled = computed(() => takeoverBatchTip.value !== "");
 
   function accountId(row: TenantAccount): number | null {
     return typeof row.id === "number" && Number.isSafeInteger(row.id)
@@ -310,7 +326,9 @@ export function useAccountListPage(): AccountListPageState {
         正常: 2,
         封禁: 3,
         导出: 4,
-        解绑: 5
+        解绑: 5,
+        被抢登: 6,
+        抢登中: 7
       };
       const accountState = accountStateMap[searchForm.accountStatus];
       if (accountState) query.accountState = accountState;
@@ -497,6 +515,30 @@ export function useAccountListPage(): AccountListPageState {
     }
   }
 
+  async function submitBatchTakeover(ids: number[]): Promise<void> {
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择账号");
+      return;
+    }
+    if (!selectedRows.value.every(isTakeoverCandidate)) {
+      ElMessage.warning(TAKEOVER_SELECTION_MESSAGE);
+      return;
+    }
+    ids.forEach(id => {
+      writeOnlineCooldown(id);
+      setOnlineSubmitting(id, true);
+    });
+    try {
+      const result = await batchTakeoverTenantAccounts(ids);
+      ElMessage.success(batchResultMessage("一键抢登请求已提交", result));
+      await refreshAccountList();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "一键抢登失败"));
+    } finally {
+      ids.forEach(id => setOnlineSubmitting(id, false));
+    }
+  }
+
   async function submitBatchDelete(ids: number[]): Promise<void> {
     if (ids.length === 0) {
       ElMessage.warning("请先选择账号");
@@ -537,6 +579,10 @@ export function useAccountListPage(): AccountListPageState {
     }
     if (command === "offline") {
       void submitBatchOffline(ids);
+      return;
+    }
+    if (command === "takeover") {
+      void submitBatchTakeover(ids);
       return;
     }
     if (command === "delete") {
@@ -613,6 +659,8 @@ export function useAccountListPage(): AccountListPageState {
     showBatchMoveDrawer,
     statCards,
     submitBatchMove,
+    takeoverBatchDisabled,
+    takeoverBatchTip,
     total
   };
 }

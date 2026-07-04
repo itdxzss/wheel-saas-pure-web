@@ -29,6 +29,8 @@ const props = defineProps<{
   pageSize: number;
   rows: TenantAccount[];
   selectedCount: number;
+  takeoverBatchDisabled: boolean;
+  takeoverBatchTip: string;
   total: number;
 }>();
 
@@ -73,6 +75,13 @@ function avatarText(row: TenantAccount) {
             <el-dropdown-item command="move-group">迁移到分组</el-dropdown-item>
             <el-dropdown-item command="online">登录</el-dropdown-item>
             <el-dropdown-item command="offline">离线</el-dropdown-item>
+            <el-dropdown-item
+              command="takeover"
+              :disabled="takeoverBatchDisabled"
+              :title="takeoverBatchTip || undefined"
+            >
+              一键抢登
+            </el-dropdown-item>
             <el-dropdown-item command="delete" divided
               >批量删除</el-dropdown-item
             >
@@ -159,8 +168,8 @@ function avatarText(row: TenantAccount) {
         />
         <el-table-column
           v-if="!dynamicColumns[9].hide"
-          label="状态"
-          width="110"
+          label="账号状态"
+          width="120"
         >
           <template #default="{ row }">
             <el-tag size="small" :type="accountStatusTagType(row)">

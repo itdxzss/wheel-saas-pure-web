@@ -38,6 +38,8 @@ const {
   showBatchMoveDrawer,
   statCards,
   submitBatchMove,
+  takeoverBatchDisabled,
+  takeoverBatchTip,
   total
 } = useAccountListPage();
 </script>
@@ -250,6 +252,8 @@ const {
       :online-action-label="onlineActionLabel"
       :rows="rows"
       :selected-count="selectedCount"
+      :takeover-batch-disabled="takeoverBatchDisabled"
+      :takeover-batch-tip="takeoverBatchTip"
       :total="total"
       @batch-command="handleBatchAction"
       @refresh="refreshAccountList"
