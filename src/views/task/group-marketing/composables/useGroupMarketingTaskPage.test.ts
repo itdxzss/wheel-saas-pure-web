@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   armadaCalls,
-  resetArmadaMock
+  resetArmadaMock,
+  resetArmadaMockQueue
 } from "@/api/__tests__/armada-test-double";
 import {
   elementPlusCalls,
@@ -110,5 +111,81 @@ describe("group marketing task page state", () => {
     assert.deepEqual(elementPlusCalls(), [
       { type: "warning", text: "请选择营销模板" }
     ]);
+  });
+
+  it("loads account tree for the first account group when opening create drawer", async () => {
+    resetArmadaMockQueue([
+      {
+        list: [
+          {
+            id: 8,
+            name: "北美账号",
+            totalAccounts: 1,
+            onlineAccounts: 1,
+            abnormalAccounts: 0,
+            bannedAccounts: 0,
+            updatedAt: null,
+            systemBuiltin: false
+          }
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 500
+      },
+      {
+        list: [
+          {
+            id: 18,
+            templateName: "活动模板",
+            linkMode: 1,
+            textType: "PROMO",
+            content: "标题",
+            bodyText: "正文",
+            buttons: []
+          }
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 500
+      },
+      {
+        accounts: [
+          {
+            accountId: 3,
+            wsPhone: "923300000003",
+            status: "ONLINE",
+            groupsError: false,
+            groups: []
+          }
+        ]
+      }
+    ]);
+    const pageState = useGroupMarketingTaskPage();
+
+    await pageState.openCreateDrawer();
+
+    const calls = armadaCalls();
+    assert.equal(calls[0].url, "/api/account-groups");
+    assert.equal(calls[1].url, "/api/marketing-templates");
+    assert.equal(calls[2].url, "/api/marketing-tasks/account-tree");
+    assert.deepEqual((calls[2].opts as { params: unknown }).params, {
+      groupId: 8
+    });
+    assert.equal(pageState.createForm.accountGroupId, 8);
+    assert.equal(pageState.treeAccounts.value[0].accountId, 3);
+  });
+
+  it("reloads account tree when selected account group changes", async () => {
+    resetArmadaMock({ accounts: [] });
+    const pageState = useGroupMarketingTaskPage();
+
+    await pageState.loadAccountTree(9);
+
+    const calls = armadaCalls();
+    assert.equal(calls[0].method, "get");
+    assert.equal(calls[0].url, "/api/marketing-tasks/account-tree");
+    assert.deepEqual((calls[0].opts as { params: unknown }).params, {
+      groupId: 9
+    });
   });
 });

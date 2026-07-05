@@ -6,10 +6,18 @@ interface ArmadaCall {
 }
 
 let response: unknown;
+let queuedResponses: unknown[] = [];
 let calls: ArmadaCall[] = [];
 
 export function resetArmadaMock(nextResponse: unknown): void {
   response = nextResponse;
+  queuedResponses = [];
+  calls = [];
+}
+
+export function resetArmadaMockQueue(nextResponses: unknown[]): void {
+  response = undefined;
+  queuedResponses = [...nextResponses];
   calls = [];
 }
 
@@ -28,5 +36,8 @@ export async function armadaRequest<T>(
     call.config = config;
   }
   calls.push(call);
+  if (queuedResponses.length > 0) {
+    return queuedResponses.shift() as T;
+  }
   return response as T;
 }

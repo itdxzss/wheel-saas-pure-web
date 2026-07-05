@@ -20,4 +20,15 @@ describe("group marketing create drawer", () => {
     assert.doesNotMatch(source, /targetScope/);
     assert.doesNotMatch(source, /目标范围/);
   });
+
+  it("disables tree nodes when realtime group loading failed for the account", () => {
+    assert.match(
+      source,
+      /account\.status !== "ONLINE" \|\| account\.groupsError === true/
+    );
+    assert.match(
+      source,
+      /disabled: account\.status !== "ONLINE" \|\| account\.groupsError === true/
+    );
+  });
 });

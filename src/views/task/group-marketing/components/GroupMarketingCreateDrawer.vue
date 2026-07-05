@@ -61,13 +61,13 @@ const treeData = computed<TreeNode[]>(() =>
   props.treeAccounts.map(account => ({
     id: accountTreeKey(account.accountId),
     label: `${account.wsPhone} · ${account.status}`,
-    disabled: account.status !== "ONLINE",
+    disabled: account.status !== "ONLINE" || account.groupsError === true,
     children: account.groups.map(group => ({
       id: groupTreeKey(account.accountId, group.groupLinkId),
       label: `${group.groupName || group.groupJid} · ${
         group.isAdmin ? "管理员" : "成员"
       }`,
-      disabled: account.status !== "ONLINE"
+      disabled: account.status !== "ONLINE" || account.groupsError === true
     }))
   }))
 );

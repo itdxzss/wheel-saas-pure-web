@@ -42,7 +42,9 @@ export function defaultDynamicAccountIds(
 ): Set<number> {
   return new Set(
     accounts
-      .filter(account => account.status === "ONLINE")
+      .filter(
+        account => account.status === "ONLINE" && account.groupsError !== true
+      )
       .map(account => account.accountId)
   );
 }

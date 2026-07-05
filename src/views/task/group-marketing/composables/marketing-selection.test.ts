@@ -75,6 +75,20 @@ describe("marketing selection builder", () => {
     ]);
   });
 
+  it("does not default-select accounts whose realtime group query failed", () => {
+    const dynamicAccountIds = defaultDynamicAccountIds([
+      {
+        accountId: 103,
+        wsPhone: "923000000103",
+        status: "ONLINE",
+        groupsError: true,
+        groups: []
+      }
+    ]);
+
+    assert.deepEqual(Array.from(dynamicAccountIds), []);
+  });
+
   it("treats group checkbox changes as fixed group targets", () => {
     const dynamicAccountIds = new Set<number>();
 
