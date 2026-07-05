@@ -48,7 +48,9 @@ describe("group marketing task page state", () => {
 
     await pageState.createTask({
       form: { ...pageState.createForm },
-      selections: [{ accountId: 3, groupLinkIds: [11] }]
+      selections: [
+        { accountId: 3, targetScope: "GROUP_FIXED", groupLinkIds: [11] }
+      ]
     });
 
     const calls = armadaCalls();
@@ -67,7 +69,9 @@ describe("group marketing task page state", () => {
       abnormalGroupSkipped: true,
       autoRetryEnabled: false,
       remark: null,
-      selections: [{ accountId: 3, groupLinkIds: [11] }]
+      selections: [
+        { accountId: 3, targetScope: "GROUP_FIXED", groupLinkIds: [11] }
+      ]
     });
   });
 
@@ -97,7 +101,9 @@ describe("group marketing task page state", () => {
 
     await pageState.createTask({
       form: { ...pageState.createForm },
-      selections: [{ accountId: 3, groupLinkIds: [11] }]
+      selections: [
+        { accountId: 3, targetScope: "GROUP_FIXED", groupLinkIds: [11] }
+      ]
     });
 
     assert.deepEqual(armadaCalls(), []);

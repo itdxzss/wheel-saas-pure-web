@@ -11,6 +11,7 @@ import {
 export type MarketingTaskStatus = 1 | 2 | 3 | 4 | 5 | 6;
 export type MarketingTaskTargetStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type MarketingTaskStartMode = "PENDING" | "IMMEDIATE";
+export type MarketingTargetScope = "GROUP_FIXED" | "ACCOUNT_DYNAMIC";
 
 export interface MarketingTaskRow {
   id: number;
@@ -43,9 +44,10 @@ export interface MarketingTaskTargetRow {
   id: number;
   accountId: number;
   accountPhone: string;
-  groupLinkId: number;
-  groupJid: string;
-  groupLinkUrl: string;
+  targetScope?: MarketingTargetScope | null;
+  groupLinkId?: number | null;
+  groupJid?: string | null;
+  groupLinkUrl?: string | null;
   groupName?: string | null;
   status: MarketingTaskTargetStatus;
   sentMessageCount: number;
@@ -92,6 +94,7 @@ export interface MarketingAccountTree {
 
 export interface MarketingSelection {
   accountId: number;
+  targetScope: MarketingTargetScope;
   groupLinkIds: number[];
 }
 

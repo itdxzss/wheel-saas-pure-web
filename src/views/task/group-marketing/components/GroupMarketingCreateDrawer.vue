@@ -6,6 +6,13 @@ import type {
 } from "@/api/marketing-task";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { MarketingTemplateRow } from "@/api/marketing-template";
+import {
+  accountTreeKey,
+  buildMarketingSelections,
+  defaultDynamicAccountIds,
+  groupTreeKey,
+  parseMarketingTreeKey
+} from "../composables/marketing-selection";
 import type {
   GroupMarketingCreateForm,
   GroupMarketingCreatePayload
@@ -42,6 +49,7 @@ const emit = defineEmits<{
 const visible = defineModel<boolean>({ required: true });
 const form = defineModel<GroupMarketingCreateForm>("form", { required: true });
 const treeRef = ref<TreeRef>();
+const dynamicAccountIds = ref<Set<number>>(new Set());
 
 const treeProps = {
   children: "children",
@@ -51,11 +59,11 @@ const treeProps = {
 
 const treeData = computed<TreeNode[]>(() =>
   props.treeAccounts.map(account => ({
-    id: `account:${account.accountId}`,
+    id: accountTreeKey(account.accountId),
     label: `${account.wsPhone} · ${account.status}`,
     disabled: account.status !== "ONLINE",
     children: account.groups.map(group => ({
-      id: `group:${account.accountId}:${group.groupLinkId}`,
+      id: groupTreeKey(account.accountId, group.groupLinkId),
       label: `${group.groupName || group.groupJid} · ${
         group.isAdmin ? "管理员" : "成员"
       }`,
@@ -76,16 +84,13 @@ const totalGroupCount = computed(() =>
 );
 
 function defaultCheckedKeys(): string[] {
-  return props.treeAccounts.flatMap(account =>
-    account.status === "ONLINE"
-      ? account.groups.map(
-          group => `group:${account.accountId}:${group.groupLinkId}`
-        )
-      : []
+  return Array.from(defaultDynamicAccountIds(props.treeAccounts)).map(
+    accountTreeKey
   );
 }
 
 function resetCheckedKeys(): void {
+  dynamicAccountIds.value = defaultDynamicAccountIds(props.treeAccounts);
   void nextTick(() => {
     treeRef.value?.setCheckedKeys(defaultCheckedKeys());
   });
@@ -100,27 +105,34 @@ watch(
 );
 
 function onAccountGroupChange(value: number | ""): void {
+  dynamicAccountIds.value = new Set();
   emit("account-group-change", value);
+}
+
+function onTreeCheck(node: TreeNode): void {
+  const parsed = parseMarketingTreeKey(node.id);
+  if (!parsed) return;
+  const nextDynamicAccountIds = new Set(dynamicAccountIds.value);
+  if (parsed.type === "group") {
+    // 用户明确点了群组,该账号改为固定群组维度;即使最终全选群组也不按账号动态处理。
+    nextDynamicAccountIds.delete(parsed.accountId);
+    dynamicAccountIds.value = nextDynamicAccountIds;
+    return;
+  }
+  const checkedKeys = new Set(
+    (treeRef.value?.getCheckedKeys(false) ?? []).map(key => String(key))
+  );
+  if (checkedKeys.has(accountTreeKey(parsed.accountId))) {
+    nextDynamicAccountIds.add(parsed.accountId);
+  } else {
+    nextDynamicAccountIds.delete(parsed.accountId);
+  }
+  dynamicAccountIds.value = nextDynamicAccountIds;
 }
 
 function buildSelections(): MarketingSelection[] {
   const checked = treeRef.value?.getCheckedKeys(true) ?? [];
-  const grouped = new Map<number, number[]>();
-  for (const key of checked) {
-    const value = String(key);
-    if (!value.startsWith("group:")) continue;
-    const [, accountIdRaw, groupLinkIdRaw] = value.split(":");
-    const accountId = Number(accountIdRaw);
-    const groupLinkId = Number(groupLinkIdRaw);
-    if (!Number.isFinite(accountId) || !Number.isFinite(groupLinkId)) continue;
-    const groupIds = grouped.get(accountId) ?? [];
-    groupIds.push(groupLinkId);
-    grouped.set(accountId, groupIds);
-  }
-  return Array.from(grouped.entries()).map(([accountId, groupLinkIds]) => ({
-    accountId,
-    groupLinkIds
-  }));
+  return buildMarketingSelections(checked, dynamicAccountIds.value);
 }
 
 function submit(): void {
@@ -182,6 +194,7 @@ function submit(): void {
             :data="treeData"
             :props="treeProps"
             empty-text="该分组下暂无可营销账号"
+            @check="onTreeCheck"
           />
         </div>
       </el-form-item>

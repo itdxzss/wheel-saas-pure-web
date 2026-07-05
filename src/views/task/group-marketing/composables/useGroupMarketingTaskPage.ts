@@ -337,7 +337,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       return;
     }
     if (payload.selections.length === 0) {
-      ElMessage.warning("请至少选择一个账号和群组");
+      ElMessage.warning("请至少选择一个发送账号");
       return;
     }
     try {

@@ -76,13 +76,29 @@ const visible = defineModel<boolean>({ required: true });
           label="群组链接"
           min-width="240"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">
+            {{
+              row.targetScope === "ACCOUNT_DYNAMIC"
+                ? "发送前动态获取"
+                : row.groupLinkUrl || "-"
+            }}
+          </template>
+        </el-table-column>
         <el-table-column
           prop="groupName"
           label="群组名称"
           min-width="170"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">
+            {{
+              row.targetScope === "ACCOUNT_DYNAMIC"
+                ? "账号动态群组"
+                : row.groupName || "-"
+            }}
+          </template>
+        </el-table-column>
         <el-table-column
           prop="lastReason"
           label="最近原因"
