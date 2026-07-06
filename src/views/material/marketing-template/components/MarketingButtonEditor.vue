@@ -49,6 +49,7 @@ function addButton() {
 }
 
 function removeButton(id: number) {
+  if (buttons.value.length <= 1) return;
   buttons.value = buttons.value.filter(button => button.id !== id);
 }
 
@@ -79,6 +80,15 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
       </div>
     </template>
 
+    <el-alert
+      v-if="buttons.length === 0"
+      class="button-empty-alert"
+      type="warning"
+      show-icon
+      :closable="false"
+      title="按钮超链至少需要 1 个按钮，请添加按钮后再保存。"
+    />
+
     <div class="button-list">
       <el-card
         v-for="button in buttons"
@@ -91,7 +101,7 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
           <el-button
             link
             type="danger"
-            :disabled="disabled"
+            :disabled="disabled || buttons.length <= 1"
             :icon="useRenderIcon(Delete)"
             @click="removeButton(button.id)"
           >
@@ -177,6 +187,10 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
 .button-list {
   display: grid;
   gap: 12px;
+}
+
+.button-empty-alert {
+  margin-bottom: 12px;
 }
 
 .button-item {

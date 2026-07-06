@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import type { UploadFile, UploadUserFile } from "element-plus";
 import type {
@@ -26,6 +26,9 @@ const imageFileList = ref<UploadUserFile[]>([]);
 let currentObjectUrl = "";
 
 const isPreview = () => props.mode === "preview";
+const saveDisabled = computed(
+  () => form.value.linkMode === "BUTTON" && form.value.buttons.length === 0
+);
 
 function revokeCurrentObjectUrl() {
   if (!currentObjectUrl) return;
@@ -217,6 +220,7 @@ watch(visible, opened => {
         v-if="!isPreview()"
         type="primary"
         :loading="props.loading"
+        :disabled="saveDisabled"
         @click="emit('save')"
       >
         保存

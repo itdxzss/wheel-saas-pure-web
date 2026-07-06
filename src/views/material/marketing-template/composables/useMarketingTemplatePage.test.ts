@@ -262,6 +262,28 @@ describe("marketing template page state", () => {
     assert.equal(pageState.drawerVisible.value, true);
   });
 
+  it("rejects button template without buttons before saving", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "新模板";
+    pageState.templateForm.value.linkMode = "BUTTON";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.text = "正文";
+    pageState.templateForm.value.promotionLink = "https://promo.example/vip";
+    pageState.templateForm.value.buttons = [];
+
+    await pageState.saveTemplate();
+
+    assert.deepEqual(armadaCalls(), []);
+    assert.equal(pageState.drawerVisible.value, true);
+  });
+
   it("clones and batch deletes selected marketing templates", async () => {
     resetArmadaMock({
       list: [],
