@@ -58,8 +58,33 @@ export interface MarketingTaskTargetRow {
   lastReason?: string | null;
 }
 
+export interface MarketingTaskGroupStatRow {
+  groupLinkId?: number | null;
+  groupJid?: string | null;
+  groupLinkUrl?: string | null;
+  groupName?: string | null;
+  sentMessageCount: number;
+  failedMessageCount: number;
+  lastAttemptAt?: number | null;
+  lastSentAt?: number | null;
+  lastReason?: string | null;
+}
+
+export interface MarketingTaskAccountTargetRow {
+  accountId: number;
+  accountPhone: string;
+  status: MarketingTaskTargetStatus;
+  sentMessageCount: number;
+  failedMessageCount: number;
+  lastAttemptAt?: number | null;
+  lastSentAt?: number | null;
+  lastReason?: string | null;
+  groups: MarketingTaskGroupStatRow[];
+}
+
 export interface MarketingTaskDetail extends MarketingTaskRow {
   targets: MarketingTaskTargetRow[];
+  accountTargets?: MarketingTaskAccountTargetRow[];
 }
 
 export interface MarketingTaskQuery {

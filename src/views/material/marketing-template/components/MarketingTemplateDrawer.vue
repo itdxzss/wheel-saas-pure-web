@@ -127,7 +127,7 @@ watch(visible, opened => {
           <template #header>
             <div>
               <div class="form-card-title">内容设置</div>
-              <div class="form-card-sub">标题、正文、图片和推广链接</div>
+              <div class="form-card-sub">标题、补充文本、图片和推广链接</div>
             </div>
           </template>
 
@@ -186,13 +186,13 @@ watch(visible, opened => {
             />
           </el-form-item>
 
-          <el-form-item label="文本" required>
+          <el-form-item label="文本">
             <el-input
               v-model="form.text"
               type="textarea"
               :rows="4"
               :disabled="isPreview()"
-              placeholder="请输入文本"
+              placeholder="可选，作为底部补充说明展示"
             />
           </el-form-item>
 

@@ -22,4 +22,10 @@ describe("marketing template drawer", () => {
     );
     assert.match(source, /:disabled="saveDisabled"/);
   });
+
+  it("treats text as optional copy", () => {
+    assert.match(source, /<el-form-item label="文本">/);
+    assert.doesNotMatch(source, /<el-form-item label="文本" required>/);
+    assert.match(source, /placeholder="可选，作为底部补充说明展示"/);
+  });
 });

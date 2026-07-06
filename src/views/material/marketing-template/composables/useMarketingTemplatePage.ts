@@ -198,7 +198,6 @@ function isHttpUrl(value: string): boolean {
 function validateForm(form: MarketingTemplateForm): string {
   if (!form.templateName.trim()) return "请填写模版名称";
   if (!form.content.trim()) return "请填写内容";
-  if (!form.text.trim()) return "请填写文本";
   if (form.promotionLink.trim() && !isHttpUrl(form.promotionLink)) {
     return "推广链接格式不正确，请输入以 http(s):// 开头的有效链接";
   }

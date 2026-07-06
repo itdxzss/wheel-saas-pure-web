@@ -127,6 +127,33 @@ describe("marketing template page state", () => {
     );
   });
 
+  it("saves a marketing template without optional text", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "无文本模板";
+    pageState.templateForm.value.linkMode = "NORMAL";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.text = "";
+    pageState.templateForm.value.promotionLink = "https://promo.example/vip";
+
+    await pageState.saveTemplate();
+
+    const calls = armadaCalls();
+    assert.equal(calls[0].method, "post");
+    assert.equal(calls[0].url, "/api/marketing-templates");
+    assert.equal(
+      (calls[0].opts as { data: { bodyText: string } }).data.bodyText,
+      ""
+    );
+    assert.equal(pageState.drawerVisible.value, false);
+  });
+
   it("uploads selected image before saving template", async () => {
     resetArmadaMock({
       id: 99,

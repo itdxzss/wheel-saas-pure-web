@@ -74,13 +74,14 @@ const linkDomain = computed(() => {
             <div class="wa-content">
               {{ form.content || "请输入内容" }}
             </div>
-            <div class="wa-text">
-              {{ form.text || "请输入文本" }}
-            </div>
 
             <div v-if="form.promotionLink" class="wa-link-preview">
               <div class="wa-link-title">{{ linkDomain }}</div>
               <div class="wa-link-url">{{ form.promotionLink }}</div>
+            </div>
+
+            <div v-if="form.text" class="wa-footer-note">
+              {{ form.text }}
             </div>
 
             <div class="wa-message-footer">
@@ -272,13 +273,6 @@ const linkDomain = computed(() => {
   white-space: pre-wrap;
 }
 
-.wa-text {
-  color: #475569;
-  font-size: 12px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-}
-
 .wa-link-preview {
   display: grid;
   gap: 3px;
@@ -299,6 +293,13 @@ const linkDomain = computed(() => {
   color: #64748b;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.wa-footer-note {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
 }
 
 .wa-message-footer {
