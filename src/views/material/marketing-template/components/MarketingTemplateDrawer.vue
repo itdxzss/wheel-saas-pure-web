@@ -196,7 +196,11 @@ watch(visible, opened => {
             />
           </el-form-item>
 
-          <el-form-item label="推广链接" required>
+          <el-form-item
+            v-if="form.linkMode !== 'BUTTON'"
+            label="推广链接"
+            required
+          >
             <el-input
               v-model="form.promotionLink"
               clearable

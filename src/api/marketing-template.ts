@@ -137,7 +137,7 @@ function toWritePayload(
             param: button.type === "quick" ? null : button.value
           }))
         : [],
-    promotionLink: data.promotionLink || null,
+    promotionLink: data.linkMode === 2 ? null : data.promotionLink || null,
     remark: data.remark || null
   };
 }

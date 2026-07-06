@@ -14,4 +14,11 @@ describe("marketing template preview", () => {
     assert.match(source, /\.wa-footer-note/);
     assert.doesNotMatch(source, /form\.text \|\| "请输入文本"/);
   });
+
+  it("renders promotion link preview only outside button mode", () => {
+    assert.match(
+      source,
+      /v-if="form\.linkMode !== 'BUTTON' && form\.promotionLink"/
+    );
+  });
 });

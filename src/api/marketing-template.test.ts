@@ -67,7 +67,7 @@ describe("marketing template API", () => {
     ]);
   });
 
-  it("creates and updates marketing templates with backend button payloads", async () => {
+  it("creates and updates button templates without promotion link payloads", async () => {
     resetArmadaMock({
       id: 8,
       templateName: "新模板",
@@ -114,7 +114,7 @@ describe("marketing template API", () => {
               { type: "COPY_CONTENT", text: "复制", param: "VIP88" },
               { type: "QUICK_REPLY", text: "我要参加", param: null }
             ],
-            promotionLink: "https://promo.example/vip",
+            promotionLink: null,
             remark: "备注"
           }
         }
@@ -135,7 +135,7 @@ describe("marketing template API", () => {
               { type: "COPY_CONTENT", text: "复制", param: "VIP88" },
               { type: "QUICK_REPLY", text: "我要参加", param: null }
             ],
-            promotionLink: "https://promo.example/vip",
+            promotionLink: null,
             remark: "备注"
           }
         }

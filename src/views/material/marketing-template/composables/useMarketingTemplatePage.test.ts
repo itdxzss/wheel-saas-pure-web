@@ -154,6 +154,96 @@ describe("marketing template page state", () => {
     assert.equal(pageState.drawerVisible.value, false);
   });
 
+  it("drops promotion link from button template payload", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "按钮模板";
+    pageState.templateForm.value.linkMode = "BUTTON";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.promotionLink = "https://promo.example/unused";
+    pageState.templateForm.value.buttons = [
+      {
+        id: 1,
+        type: "link",
+        label: "访问",
+        value: "https://button.example/open"
+      }
+    ];
+
+    await pageState.saveTemplate();
+
+    const calls = armadaCalls();
+    assert.equal(
+      (calls[0].opts as { data: { promotionLink: string | null } }).data
+        .promotionLink,
+      null
+    );
+  });
+
+  it("keeps promotion link in image text template payload", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "图文模板";
+    pageState.templateForm.value.linkMode = "IMAGE_TEXT";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.promotionLink = "https://promo.example/image";
+
+    await pageState.saveTemplate();
+
+    const calls = armadaCalls();
+    assert.equal(
+      (calls[0].opts as { data: { promotionLink: string | null } }).data
+        .promotionLink,
+      "https://promo.example/image"
+    );
+  });
+
+  it("ignores hidden invalid promotion URL in button mode", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "按钮模板";
+    pageState.templateForm.value.linkMode = "BUTTON";
+    pageState.templateForm.value.content = "标题";
+    pageState.templateForm.value.promotionLink = "not-a-url";
+    pageState.templateForm.value.buttons = [
+      {
+        id: 1,
+        type: "link",
+        label: "访问",
+        value: "https://button.example/open"
+      }
+    ];
+
+    await pageState.saveTemplate();
+
+    const calls = armadaCalls();
+    assert.equal(calls[0].method, "post");
+    assert.equal(
+      (calls[0].opts as { data: { promotionLink: string | null } }).data
+        .promotionLink,
+      null
+    );
+    assert.equal(pageState.drawerVisible.value, false);
+  });
+
   it("uploads selected image before saving template", async () => {
     resetArmadaMock({
       id: 99,

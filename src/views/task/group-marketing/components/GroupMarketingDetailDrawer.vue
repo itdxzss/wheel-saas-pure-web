@@ -15,7 +15,6 @@ import {
   firstGroupDisplayName,
   firstGroupSummary,
   groupCountLabel,
-  groupDisplayName,
   hasGroupRows
 } from "./detail-rollup";
 
@@ -38,18 +37,17 @@ function asAccountRow(row: unknown): MarketingTaskAccountTargetRow {
   return row as MarketingTaskAccountTargetRow;
 }
 
-function asGroupRow(row: unknown): MarketingTaskGroupStatRow {
-  return row as MarketingTaskGroupStatRow;
+function groupRowKey(group: MarketingTaskGroupStatRow): string {
+  return [
+    group.groupLinkId ?? "no-link-id",
+    group.groupJid ?? group.groupLinkUrl ?? group.groupName ?? "unknown",
+    group.lastAttemptAt ?? group.lastSentAt ?? "no-time"
+  ].join(":");
 }
 </script>
 
 <template>
-  <el-drawer
-    v-model="visible"
-    size="72%"
-    destroy-on-close
-    title="营销任务明细"
-  >
+  <el-drawer v-model="visible" size="72%" destroy-on-close title="营销任务明细">
     <div v-loading="loading" class="detail-drawer">
       <el-descriptions v-if="detail" :column="3" border>
         <el-descriptions-item label="任务名称">
@@ -100,101 +98,94 @@ function asGroupRow(row: unknown): MarketingTaskGroupStatRow {
         <el-table-column type="expand" width="48">
           <template #default="{ row }">
             <div class="group-rollup-expand">
-              <el-table
+              <div
                 v-if="hasGroupRows(asAccountRow(row))"
-                :data="asAccountRow(row).groups"
-                size="small"
-                border
+                class="group-rollup-detail-list"
               >
-                <el-table-column
-                  prop="sentMessageCount"
-                  label="单群发送条数"
-                  width="120"
-                />
-                <el-table-column
-                  prop="groupLinkUrl"
-                  label="群组链接"
-                  min-width="240"
-                  show-overflow-tooltip
+                <div
+                  v-for="group in asAccountRow(row).groups"
+                  :key="groupRowKey(group)"
+                  class="group-rollup-detail-row"
                 >
-                  <template #default="{ row: group }">
+                  <span>{{ group.sentMessageCount }}</span>
+                  <span
+                    class="group-rollup-text"
+                    :title="group.groupLinkUrl || '-'"
+                  >
                     {{ group.groupLinkUrl || "-" }}
-                  </template>
-                </el-table-column>
-                <el-table-column
-                  prop="groupName"
-                  label="群组名称"
-                  min-width="160"
-                  show-overflow-tooltip
-                >
-                  <template #default="{ row: group }">
-                    {{ groupDisplayName(asGroupRow(group)) }}
-                  </template>
-                </el-table-column>
-                <el-table-column
-                  prop="lastReason"
-                  label="最近原因"
-                  min-width="180"
-                  show-overflow-tooltip
-                >
-                  <template #default="{ row: group }">
+                  </span>
+                  <span
+                    class="group-rollup-text"
+                    :title="group.groupName || group.groupJid || '未命名群组'"
+                  >
+                    {{ group.groupName || group.groupJid || "未命名群组" }}
+                  </span>
+                  <span
+                    class="group-rollup-text"
+                    :title="group.lastReason || '-'"
+                  >
                     {{ group.lastReason || "-" }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="最后发送时间" width="170">
-                  <template #default="{ row: group }">
-                    {{ formatEpoch(asGroupRow(group).lastSentAt) }}
-                  </template>
-                </el-table-column>
-              </el-table>
-              <el-empty
-                v-else
-                description="暂无发送记录"
-                :image-size="64"
-              />
+                  </span>
+                  <span>{{ formatEpoch(group.lastSentAt) }}</span>
+                </div>
+              </div>
+              <div v-else class="group-rollup-empty group-rollup-expand-empty">
+                暂无发送记录
+              </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="群组情况" min-width="520">
+        <el-table-column min-width="760">
+          <template #header>
+            <div class="group-rollup-header">
+              <span>单群发送条数</span>
+              <span>群组链接</span>
+              <span>群组名称</span>
+              <span>最近原因</span>
+              <span>最后发送时间</span>
+            </div>
+          </template>
           <template #default="{ row }">
             <div class="group-rollup-summary">
               <template v-if="firstGroup(asAccountRow(row))">
-                <div class="group-rollup-title">
-                  <span>{{ firstGroupSummary(asAccountRow(row)) }}</span>
-                  <el-tag
-                    v-if="groupCountLabel(asAccountRow(row))"
-                    size="small"
-                    effect="plain"
-                  >
-                    {{ groupCountLabel(asAccountRow(row)) }}
-                  </el-tag>
-                </div>
-                <div class="group-rollup-fields">
-                  <span>
-                    <small>单群发送条数</small>
+                <div
+                  class="group-rollup-first-row"
+                  :title="firstGroupSummary(asAccountRow(row))"
+                >
+                  <span class="group-rollup-number">
                     {{ firstGroup(asAccountRow(row))?.sentMessageCount ?? 0 }}
                   </span>
-                  <span>
-                    <small>群组链接</small>
+                  <span
+                    class="group-rollup-text"
+                    :title="firstGroup(asAccountRow(row))?.groupLinkUrl || '-'"
+                  >
                     {{ firstGroup(asAccountRow(row))?.groupLinkUrl || "-" }}
                   </span>
-                  <span>
-                    <small>群组名称</small>
-                    {{ firstGroupDisplayName(asAccountRow(row)) }}
+                  <span
+                    class="group-rollup-name"
+                    :title="firstGroupDisplayName(asAccountRow(row))"
+                  >
+                    <span>{{ firstGroupDisplayName(asAccountRow(row)) }}</span>
+                    <el-tag
+                      v-if="groupCountLabel(asAccountRow(row))"
+                      size="small"
+                      effect="plain"
+                    >
+                      {{ groupCountLabel(asAccountRow(row)) }}
+                    </el-tag>
                   </span>
-                  <span>
-                    <small>最近原因</small>
+                  <span
+                    class="group-rollup-text"
+                    :title="firstGroup(asAccountRow(row))?.lastReason || '-'"
+                  >
                     {{ firstGroup(asAccountRow(row))?.lastReason || "-" }}
                   </span>
-                  <span>
-                    <small>最后发送时间</small>
+                  <span class="group-rollup-time">
                     {{ formatEpoch(firstGroup(asAccountRow(row))?.lastSentAt) }}
                   </span>
                 </div>
               </template>
-              <span v-else class="group-rollup-empty">
-                暂无发送记录
-              </span>
+              <span v-else class="group-rollup-empty"> 暂无发送记录 </span>
             </div>
           </template>
         </el-table-column>
@@ -216,58 +207,94 @@ function asGroupRow(row: unknown): MarketingTaskGroupStatRow {
 }
 
 .group-rollup-expand {
-  padding: 8px 48px;
+  padding: 10px 24px 10px 72px;
   background: var(--el-fill-color-lighter);
 }
 
 .group-rollup-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   min-width: 0;
 }
 
-.group-rollup-title {
+.group-rollup-header,
+.group-rollup-first-row,
+.group-rollup-detail-row {
+  display: grid;
+  grid-template-columns:
+    112px minmax(190px, 1.35fr) minmax(150px, 1fr)
+    minmax(130px, 0.9fr) 170px;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.group-rollup-header {
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+.group-rollup-first-row {
+  color: var(--el-text-color-regular);
+}
+
+.group-rollup-detail-list {
+  overflow: hidden;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+
+.group-rollup-detail-row {
+  min-height: 38px;
+  padding: 0 16px;
+  color: var(--el-text-color-regular);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.group-rollup-detail-row:last-child {
+  border-bottom: 0;
+}
+
+.group-rollup-text,
+.group-rollup-name span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-rollup-name {
   display: flex;
   gap: 8px;
   align-items: center;
   min-width: 0;
-  font-weight: 600;
 }
 
-.group-rollup-title span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.group-rollup-number {
+  font-variant-numeric: tabular-nums;
 }
 
-.group-rollup-fields {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(96px, 1fr));
-  gap: 6px 12px;
-  min-width: 0;
+.group-rollup-time {
   color: var(--el-text-color-regular);
-}
-
-.group-rollup-fields span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.group-rollup-fields small {
-  display: block;
-  margin-bottom: 2px;
-  color: var(--el-text-color-secondary);
 }
 
 .group-rollup-empty {
   color: var(--el-text-color-secondary);
 }
 
-@media (max-width: 960px) {
-  .group-rollup-fields {
+.group-rollup-expand-empty {
+  padding: 16px;
+  text-align: center;
+  background: var(--el-bg-color);
+  border: 1px dashed var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+
+@media (width <= 960px) {
+  .group-rollup-header,
+  .group-rollup-first-row,
+  .group-rollup-detail-row {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
   }
 }

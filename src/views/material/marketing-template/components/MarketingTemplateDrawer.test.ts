@@ -28,4 +28,11 @@ describe("marketing template drawer", () => {
     assert.doesNotMatch(source, /<el-form-item label="文本" required>/);
     assert.match(source, /placeholder="可选，作为底部补充说明展示"/);
   });
+
+  it("shows promotion link only outside button mode", () => {
+    assert.match(
+      source,
+      /<el-form-item\s+v-if="form\.linkMode !== 'BUTTON'"\s+label="推广链接"/
+    );
+  });
 });

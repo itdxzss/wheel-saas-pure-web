@@ -75,7 +75,10 @@ const linkDomain = computed(() => {
               {{ form.content || "请输入内容" }}
             </div>
 
-            <div v-if="form.promotionLink" class="wa-link-preview">
+            <div
+              v-if="form.linkMode !== 'BUTTON' && form.promotionLink"
+              class="wa-link-preview"
+            >
               <div class="wa-link-title">{{ linkDomain }}</div>
               <div class="wa-link-url">{{ form.promotionLink }}</div>
             </div>

@@ -8,13 +8,27 @@ const source = readFileSync(
 );
 
 describe("group marketing detail drawer", () => {
-  it("uses account rollup rows and group expansion", () => {
+  it("uses account rollup rows and lightweight group dropdown", () => {
     assert.match(source, /accountTargets/);
     assert.match(source, /label="号发送总条数"/);
     assert.match(source, /type="expand"/);
-    assert.match(source, /label="群组情况"/);
-    assert.match(source, /label="单群发送条数"/);
+    assert.match(source, /class="group-rollup-header"/);
+    assert.match(source, /class="group-rollup-first-row"/);
+    assert.match(source, /class="group-rollup-detail-list"/);
+    assert.doesNotMatch(source, /:data="asAccountRow\(row\)\.groups"/);
     assert.match(source, /firstGroupSummary/);
+  });
+
+  it("shows the same five group fields in header and expanded rows", () => {
+    for (const label of [
+      "单群发送条数",
+      "群组链接",
+      "群组名称",
+      "最近原因",
+      "最后发送时间"
+    ]) {
+      assert.match(source, new RegExp(label));
+    }
   });
 
   it("renames summary sent count and removes summary last sent time", () => {
