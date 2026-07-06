@@ -183,6 +183,15 @@ export function fetchMarketingAccountTree(
   );
 }
 
+export function fetchMarketingAccountGroups(
+  accountId: number
+): Promise<MarketingTreeAccount> {
+  return armadaRequest<MarketingTreeAccount>(
+    "get",
+    `/api/marketing-tasks/account-tree/accounts/${accountId}/groups`
+  );
+}
+
 export function updateTaskMarketingTemplate(
   id: number,
   data: MarketingTemplateWrite

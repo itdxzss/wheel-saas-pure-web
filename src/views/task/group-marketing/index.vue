@@ -26,6 +26,7 @@ const {
   detailLoading,
   detailTask,
   loadAccountTree,
+  loadAccountGroups,
   loading,
   materialDrawerOpen,
   materialForm,
@@ -173,6 +174,7 @@ function onTaskAction(row: MarketingTaskRow, action: string): void {
       :marketing-templates="marketingTemplates"
       :tree-accounts="treeAccounts"
       :tree-loading="treeLoading"
+      :load-account-groups="loadAccountGroups"
       @account-group-change="loadAccountTree"
       @submit="createTask"
     />

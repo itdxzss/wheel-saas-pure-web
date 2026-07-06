@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
+import type { LoadFunction } from "element-plus";
 import type {
   MarketingSelection,
   MarketingTreeAccount
@@ -26,6 +27,7 @@ interface TreeNode {
   id: string;
   label: string;
   disabled?: boolean;
+  isLeaf?: boolean;
   children?: TreeNode[];
 }
 
@@ -39,6 +41,7 @@ const props = defineProps<{
   marketingTemplates: MarketingTemplateRow[];
   treeAccounts: MarketingTreeAccount[];
   treeLoading: boolean;
+  loadAccountGroups: (accountId: number) => Promise<MarketingTreeAccount | null>;
 }>();
 
 const emit = defineEmits<{
@@ -50,11 +53,13 @@ const visible = defineModel<boolean>({ required: true });
 const form = defineModel<GroupMarketingCreateForm>("form", { required: true });
 const treeRef = ref<TreeRef>();
 const dynamicAccountIds = ref<Set<number>>(new Set());
+const loadedAccountsById = ref<Map<number, MarketingTreeAccount>>(new Map());
 
 const treeProps = {
   children: "children",
   label: "label",
-  disabled: "disabled"
+  disabled: "disabled",
+  isLeaf: "isLeaf"
 };
 
 const treeData = computed<TreeNode[]>(() =>
@@ -62,13 +67,7 @@ const treeData = computed<TreeNode[]>(() =>
     id: accountTreeKey(account.accountId),
     label: `${account.wsPhone} · ${account.status}`,
     disabled: account.status !== "ONLINE" || account.groupsError === true,
-    children: account.groups.map(group => ({
-      id: groupTreeKey(account.accountId, group.groupLinkId),
-      label: `${group.groupName || group.groupJid} · ${
-        group.isAdmin ? "管理员" : "成员"
-      }`,
-      disabled: account.status !== "ONLINE" || account.groupsError === true
-    }))
+    isLeaf: account.status !== "ONLINE" || account.groupsError === true
   }))
 );
 
@@ -76,8 +75,14 @@ const onlineAccountCount = computed(
   () => props.treeAccounts.filter(account => account.status === "ONLINE").length
 );
 
+const accountListSignature = computed(() =>
+  props.treeAccounts
+    .map(account => `${account.accountId}:${account.status}:${account.groupsError}`)
+    .join("|")
+);
+
 const totalGroupCount = computed(() =>
-  props.treeAccounts.reduce(
+  Array.from(loadedAccountsById.value.values()).reduce(
     (total, account) => total + account.groups.length,
     0
   )
@@ -97,14 +102,17 @@ function resetCheckedKeys(): void {
 }
 
 watch(
-  () => [props.treeAccounts, visible.value],
+  () => [accountListSignature.value, visible.value],
   () => {
-    if (visible.value) resetCheckedKeys();
-  },
-  { deep: true }
+    if (!visible.value) return;
+    // 只在账号根节点集合变化时重置默认勾选。单账号懒加载群变化不能打断用户已做的勾选。
+    loadedAccountsById.value = new Map();
+    resetCheckedKeys();
+  }
 );
 
 function onAccountGroupChange(value: number | ""): void {
+  loadedAccountsById.value = new Map();
   dynamicAccountIds.value = new Set();
   emit("account-group-change", value);
 }
@@ -129,6 +137,62 @@ function onTreeCheck(node: TreeNode): void {
   }
   dynamicAccountIds.value = nextDynamicAccountIds;
 }
+
+function isTreeNode(value: unknown): value is TreeNode {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof (value as { id: unknown }).id === "string"
+  );
+}
+
+function toGroupTreeNodes(account: MarketingTreeAccount): TreeNode[] {
+  return account.groups.map(group => ({
+    id: groupTreeKey(account.accountId, group.groupLinkId),
+    label: `${group.groupName || group.groupJid} · ${
+      group.isAdmin ? "管理员" : "成员"
+    }`,
+    disabled: account.status !== "ONLINE" || account.groupsError === true,
+    isLeaf: true
+  }));
+}
+
+const loadTreeNode: LoadFunction = (node, resolve) => {
+  if (node.level === 0) {
+    resolve(treeData.value);
+    return;
+  }
+  const parsed = isTreeNode(node.data)
+    ? parseMarketingTreeKey(node.data.id)
+    : null;
+  if (!parsed || parsed.type !== "account") {
+    resolve([]);
+    return;
+  }
+  const account = props.treeAccounts.find(
+    item => item.accountId === parsed.accountId
+  );
+  if (!account || account.status !== "ONLINE" || account.groupsError === true) {
+    resolve([]);
+    return;
+  }
+  const cached = loadedAccountsById.value.get(parsed.accountId);
+  if (cached) {
+    resolve(toGroupTreeNodes(cached));
+    return;
+  }
+  void props.loadAccountGroups(parsed.accountId).then(loaded => {
+    if (!loaded || loaded.groupsError === true) {
+      resolve([]);
+      return;
+    }
+    const nextLoadedAccounts = new Map(loadedAccountsById.value);
+    nextLoadedAccounts.set(parsed.accountId, loaded);
+    loadedAccountsById.value = nextLoadedAccounts;
+    resolve(toGroupTreeNodes(loaded));
+  });
+};
 
 function buildSelections(): MarketingSelection[] {
   const checked = treeRef.value?.getCheckedKeys(true) ?? [];
@@ -178,7 +242,7 @@ function submit(): void {
         <div class="tree-box">
           <div class="tree-toolbar">
             <span>
-              在线账号 {{ onlineAccountCount }} 个 · 可选群组
+              在线账号 {{ onlineAccountCount }} 个 · 已加载群组
               {{ totalGroupCount }} 个
             </span>
             <el-button size="small" @click="resetCheckedKeys"
@@ -189,7 +253,9 @@ function submit(): void {
             ref="treeRef"
             v-loading="treeLoading"
             show-checkbox
-            default-expand-all
+            lazy
+            :load="loadTreeNode"
+            :expand-on-click-node="true"
             node-key="id"
             :data="treeData"
             :props="treeProps"

@@ -10,6 +10,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import {
   batchDeleteMarketingTasks,
   createMarketingTask,
+  fetchMarketingAccountGroups,
   fetchMarketingAccountTree,
   getMarketingTaskDetail,
   listMarketingTasks,
@@ -79,6 +80,7 @@ export interface GroupMarketingTaskPageState {
   detailTask: Ref<MarketingTaskDetail | null>;
   loadTasks: () => Promise<void>;
   loadAccountTree: (groupId: number | "") => Promise<void>;
+  loadAccountGroups: (accountId: number) => Promise<MarketingTreeAccount | null>;
   loading: Ref<boolean>;
   materialDrawerOpen: Ref<boolean>;
   materialForm: Ref<MarketingTemplateWrite>;
@@ -198,6 +200,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
   const accountGroups = ref<AccountGroupApiRow[]>([]);
   const marketingTemplates = ref<MarketingTemplateRow[]>([]);
   const treeAccounts = ref<MarketingTreeAccount[]>([]);
+  const loadedGroupAccounts = ref<Map<number, MarketingTreeAccount>>(new Map());
   const detailTask = ref<MarketingTaskDetail | null>(null);
   const activeTask = ref<MarketingTaskRow | null>(null);
   const materialForm = ref<MarketingTemplateWrite>(emptyMaterialForm());
@@ -260,6 +263,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
 
   async function loadAccountTree(groupId: number | ""): Promise<void> {
     treeAccounts.value = [];
+    loadedGroupAccounts.value = new Map();
     if (!groupId) return;
     treeLoading.value = true;
     try {
@@ -270,6 +274,31 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       ElMessage.error(apiErrorMessage(error, "账号群树加载失败"));
     } finally {
       treeLoading.value = false;
+    }
+  }
+
+  async function loadAccountGroups(
+    accountId: number
+  ): Promise<MarketingTreeAccount | null> {
+    const current = treeAccounts.value.find(
+      account => account.accountId === accountId
+    );
+    if (!current) return null;
+    const cached = loadedGroupAccounts.value.get(accountId);
+    if (cached) {
+      return cached;
+    }
+    try {
+      const loaded = await fetchMarketingAccountGroups(accountId);
+      const nextLoadedGroupAccounts = new Map(loadedGroupAccounts.value);
+      nextLoadedGroupAccounts.set(accountId, loaded);
+      // 单账号群只能进懒加载缓存,不能写回 treeAccounts。
+      // ElTree lazy 模式会监听根 data 变化,写回会重建节点并丢掉正在 resolve 的 children。
+      loadedGroupAccounts.value = nextLoadedGroupAccounts;
+      return loaded;
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "账号群组加载失败"));
+      return null;
     }
   }
 
@@ -312,6 +341,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
   function closeCreateDrawer(): void {
     createDrawerOpen.value = false;
     treeAccounts.value = [];
+    loadedGroupAccounts.value = new Map();
   }
 
   async function createTask(
@@ -505,6 +535,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     detailTask,
     loadTasks,
     loadAccountTree,
+    loadAccountGroups,
     loading,
     materialDrawerOpen,
     materialForm,

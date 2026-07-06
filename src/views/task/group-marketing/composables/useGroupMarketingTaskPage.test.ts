@@ -113,7 +113,7 @@ describe("group marketing task page state", () => {
     ]);
   });
 
-  it("loads account tree for the first account group when opening create drawer", async () => {
+  it("loads account list for the first account group without loading account groups", async () => {
     resetArmadaMockQueue([
       {
         list: [
@@ -171,8 +171,10 @@ describe("group marketing task page state", () => {
     assert.deepEqual((calls[2].opts as { params: unknown }).params, {
       groupId: 8
     });
+    assert.equal(calls.length, 3);
     assert.equal(pageState.createForm.accountGroupId, 8);
     assert.equal(pageState.treeAccounts.value[0].accountId, 3);
+    assert.deepEqual(pageState.treeAccounts.value[0].groups, []);
   });
 
   it("reloads account tree when selected account group changes", async () => {
@@ -187,5 +189,52 @@ describe("group marketing task page state", () => {
     assert.deepEqual((calls[0].opts as { params: unknown }).params, {
       groupId: 9
     });
+  });
+
+  it("loads groups only for the expanded account", async () => {
+    resetArmadaMockQueue([
+      {
+        accounts: [
+          {
+            accountId: 3,
+            wsPhone: "923300000003",
+            status: "ONLINE",
+            groupsError: false,
+            groups: []
+          }
+        ]
+      },
+      {
+        accountId: 3,
+        wsPhone: "923300000003",
+        status: "ONLINE",
+        groupsError: false,
+        groups: [
+          {
+            groupLinkId: 31,
+            groupJid: "120363031@g.us",
+            groupName: "新群31",
+            linkUrl: "https://chat.whatsapp.com/31",
+            isAdmin: true
+          }
+        ]
+      }
+    ]);
+    const pageState = useGroupMarketingTaskPage();
+
+    await pageState.loadAccountTree(8);
+    const loaded = await pageState.loadAccountGroups(3);
+
+    const calls = armadaCalls();
+    assert.equal(calls[0].url, "/api/marketing-tasks/account-tree");
+    assert.equal(
+      calls[1].url,
+      "/api/marketing-tasks/account-tree/accounts/3/groups"
+    );
+    assert.equal(loaded?.groups[0].groupLinkId, 31);
+    assert.deepEqual(pageState.treeAccounts.value[0].groups, []);
+    const cached = await pageState.loadAccountGroups(3);
+    assert.equal(cached?.groups[0].groupLinkId, 31);
+    assert.equal(calls.length, 2);
   });
 });

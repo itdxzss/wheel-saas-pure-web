@@ -6,6 +6,10 @@ const source = readFileSync(
   new URL("./GroupMarketingCreateDrawer.vue", import.meta.url),
   "utf8"
 );
+const pageSource = readFileSync(
+  new URL("../composables/useGroupMarketingTaskPage.ts", import.meta.url),
+  "utf8"
+);
 
 describe("group marketing create drawer", () => {
   it("keeps marketing template required without task-level text content", () => {
@@ -30,5 +34,27 @@ describe("group marketing create drawer", () => {
       source,
       /disabled: account\.status !== "ONLINE" \|\| account\.groupsError === true/
     );
+  });
+
+  it("loads account groups lazily when an account node is expanded", () => {
+    assert.match(source, /lazy/);
+    assert.match(source, /:load="loadTreeNode"/);
+    assert.match(source, /loadAccountGroups\(parsed\.accountId\)/);
+    assert.doesNotMatch(source, /default-expand-all/);
+  });
+
+  it("keeps lazy loaded groups out of the root account tree data", () => {
+    const match = pageSource.match(
+      /async function loadAccountGroups[\s\S]*?\n  }\n\n  function searchTasks/
+    );
+    assert.ok(match, "loadAccountGroups should stay easy to review");
+    assert.match(match[0], /loadedGroupAccounts/);
+    assert.doesNotMatch(match[0], /treeAccounts\.value = treeAccounts\.value\.map/);
+  });
+
+  it("does not reset checked accounts when only lazy group data changes", () => {
+    assert.match(source, /accountListSignature/);
+    assert.match(source, /loadedAccountsById/);
+    assert.doesNotMatch(source, /\{\s*deep:\s*true\s*\}/);
   });
 });
