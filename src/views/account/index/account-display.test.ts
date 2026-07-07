@@ -35,6 +35,11 @@ describe("account list display helpers", () => {
     assert.equal(accountStatusLabel({ account_state: 7 }), "抢登中");
   });
 
+  it("maps restricted account status label and warning tag", () => {
+    assert.equal(accountStatusLabel({ account_state: 8 }), "账号受限");
+    assert.equal(accountStatusTagType({ account_state: 8 }), "warning");
+  });
+
   it("maps account status labels to tag types", () => {
     assert.equal(accountStatusTagType({ account_state: 2 }), "success");
     assert.equal(accountStatusTagType({ account_state: 4 }), "success");
@@ -90,7 +95,8 @@ describe("account list display helpers", () => {
       unbound: 2,
       muted: 3,
       exported: 4,
-      restrictedTotal: 10,
+      restricted: 5,
+      restrictedTotal: 15,
       online: 3,
       offline: 2,
       pendingOnline: 1,
@@ -103,7 +109,7 @@ describe("account list display helpers", () => {
       cards.map(card => [card.key, card.label, card.value]),
       [
         ["total", "总账号数", 10],
-        ["restricted", "异常账号", 10],
+        ["restricted", "异常账号", 15],
         ["online", "在线账号", 3],
         ["offline", "离线账号", 2],
         ["pendingOnline", "待上线账号", 1],
@@ -116,7 +122,8 @@ describe("account list display helpers", () => {
       { label: "封禁", value: 1 },
       { label: "解绑", value: 2 },
       { label: "禁言", value: 3 },
-      { label: "导出", value: 4 }
+      { label: "导出", value: 4 },
+      { label: "受限", value: 5 }
     ]);
   });
 

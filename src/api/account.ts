@@ -2,7 +2,7 @@ import { armadaRequest } from "@/api/armada";
 import { formatEpochMillis } from "@/utils/time";
 import { toTenantAccountListParams } from "./account-mapping";
 
-export type AccountState = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type AccountState = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type LoginState = 1 | 2 | 3;
 export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;
@@ -81,6 +81,7 @@ export interface TenantAccountSummary {
   unbound: number;
   muted: number;
   exported: number;
+  restricted: number;
   restrictedTotal: number;
   online: number;
   offline: number;

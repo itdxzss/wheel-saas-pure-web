@@ -26,7 +26,8 @@ export function accountStatusLabel(
     4: "导出",
     5: "解绑",
     6: "被抢登",
-    7: "抢登中"
+    7: "抢登中",
+    8: "账号受限"
   };
   return row.account_state ? (map[row.account_state] ?? "-") : "—";
 }
@@ -39,7 +40,12 @@ export function accountStatusTagType(
   }
   if (row.account_state === 2 || row.account_state === 4) return "success";
   if (row.account_state === 3 || row.account_state === 5) return "danger";
-  if (row.account_state === 6 || row.account_state === 7) return "warning";
+  if (
+    row.account_state === 6 ||
+    row.account_state === 7 ||
+    row.account_state === 8
+  )
+    return "warning";
   return "info";
 }
 
@@ -91,7 +97,8 @@ export function buildAccountStatCards(
         { label: "封禁", value: summary.banned },
         { label: "解绑", value: summary.unbound },
         { label: "禁言", value: summary.muted },
-        { label: "导出", value: summary.exported }
+        { label: "导出", value: summary.exported },
+        { label: "受限", value: summary.restricted }
       ]
     },
     { key: "online", label: "在线账号", value: summary.online },

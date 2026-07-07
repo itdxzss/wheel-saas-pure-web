@@ -18,7 +18,6 @@ import {
   getTenantAccountSummary,
   listTenantAccounts,
   onlineTenantAccount,
-  type AccountState,
   type AccountType,
   type LoginState,
   type NumberSource,
@@ -38,6 +37,11 @@ import {
   canDeleteAccount,
   type AccountStatCard
 } from "../account-display";
+import {
+  accountStatusOptions,
+  accountStatusToQuery,
+  type AccountStatusFilter
+} from "../account-status-filter";
 import {
   buildBatchMoveInput,
   type BatchMoveForm,
@@ -61,16 +65,7 @@ export interface AccountSearchForm {
   truthIp: string;
   loginState: "" | "1" | "2" | "3";
   riskStatus: "" | "1" | "2" | "3";
-  accountStatus:
-    | ""
-    | "正常"
-    | "封禁"
-    | "导出"
-    | "禁言6小时"
-    | "禁言24小时"
-    | "解绑"
-    | "被抢登"
-    | "抢登中";
+  accountStatus: AccountStatusFilter;
   ipGroupName: string;
   groupId: "" | number;
   country: string;
@@ -83,6 +78,7 @@ const ZERO_SUMMARY: TenantAccountSummary = {
   unbound: 0,
   muted: 0,
   exported: 0,
+  restricted: 0,
   restrictedTotal: 0,
   online: 0,
   offline: 0,
@@ -164,16 +160,6 @@ export function useAccountListPage(): AccountListPageState {
     { label: "买量", value: 1 },
     { label: "裂变", value: 2 },
     { label: "自购", value: 3 }
-  ];
-  const accountStatusOptions = [
-    "正常",
-    "被抢登",
-    "抢登中",
-    "封禁",
-    "导出",
-    "禁言6小时",
-    "禁言24小时",
-    "解绑"
   ];
   const batchMoveModeOptions: Array<{ label: string; value: BatchMoveMode }> = [
     { label: "已有分组", value: "existing" },
@@ -333,18 +319,7 @@ export function useAccountListPage(): AccountListPageState {
       query.riskStatus = Number(searchForm.riskStatus) as RiskStatus;
     }
     if (searchForm.accountStatus) {
-      const accountStateMap: Record<string, AccountState | undefined> = {
-        正常: 2,
-        封禁: 3,
-        导出: 4,
-        解绑: 5,
-        被抢登: 6,
-        抢登中: 7
-      };
-      const accountState = accountStateMap[searchForm.accountStatus];
-      if (accountState) query.accountState = accountState;
-      if (searchForm.accountStatus === "禁言6小时") query.muteStatus = 1;
-      if (searchForm.accountStatus === "禁言24小时") query.muteStatus = 2;
+      Object.assign(query, accountStatusToQuery(searchForm.accountStatus));
     }
     if (searchForm.groupId) query.accountGroupId = Number(searchForm.groupId);
     if (searchForm.country.trim()) query.country = searchForm.country.trim();
