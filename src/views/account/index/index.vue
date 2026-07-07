@@ -29,7 +29,9 @@ const {
   onSelectionChange,
   page,
   pageSize,
+  protocolRestarting,
   refreshAccountList,
+  restartProtocol,
   resetSearchForm,
   riskStatusOptions,
   rows,
@@ -254,6 +256,7 @@ const {
       :loading="loading"
       :online-action-disabled="isOnlineActionDisabled"
       :online-action-label="onlineActionLabel"
+      :protocol-restarting="protocolRestarting"
       :rows="rows"
       :selected-count="selectedCount"
       :takeover-batch-disabled="takeoverBatchDisabled"
@@ -261,6 +264,7 @@ const {
       :total="total"
       @batch-command="handleBatchAction"
       @refresh="refreshAccountList"
+      @restart-protocol="restartProtocol"
       @row-action="handleRowAction"
       @selection-change="onSelectionChange"
     />

@@ -5,6 +5,7 @@ import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { TenantAccount } from "@/api/account";
 import MoreFilled from "~icons/ep/more-filled";
+import RefreshRight from "~icons/ep/refresh-right";
 import {
   accountStatusLabel,
   accountStatusTagType,
@@ -29,6 +30,7 @@ const props = defineProps<{
   onlineActionLabel: (row: TenantAccount) => string;
   page: number;
   pageSize: number;
+  protocolRestarting: boolean;
   rows: TenantAccount[];
   selectedCount: number;
   takeoverBatchDisabled: boolean;
@@ -39,6 +41,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: "batch-command", command: string): void;
   (event: "refresh"): void;
+  (event: "restart-protocol"): void;
   (event: "row-action", row: TenantAccount, action: string): void;
   (event: "selection-change", rows: TenantAccount[]): void;
   (event: "update:page", value: number): void;
@@ -67,6 +70,15 @@ function avatarText(row: TenantAccount) {
 <template>
   <PureTableBar title="账号列表" :columns="columns" @refresh="emit('refresh')">
     <template #buttons>
+      <el-button
+        type="warning"
+        plain
+        :loading="protocolRestarting"
+        :icon="useRenderIcon(RefreshRight)"
+        @click="emit('restart-protocol')"
+      >
+        重启协议
+      </el-button>
       <el-dropdown trigger="click" @command="emit('batch-command', $event)">
         <el-button :icon="useRenderIcon(MoreFilled)">
           批量操作

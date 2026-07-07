@@ -8,7 +8,7 @@ import {
   type Ref
 } from "vue";
 import { useRoute } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   batchDeleteTenantAccounts,
   batchMigrateTenantAccountsToGroup,
@@ -31,6 +31,7 @@ import {
   listAccountGroups,
   type AccountGroupApiRow
 } from "@/api/account-group";
+import { restartProtocolProcesses } from "@/api/protocol";
 import { apiErrorMessage } from "@/utils/api-error";
 import {
   buildAccountStatCards,
@@ -119,7 +120,9 @@ export interface AccountListPageState {
   onSelectionChange: (selection: TenantAccount[]) => void;
   page: Ref<number>;
   pageSize: Ref<number>;
+  protocolRestarting: Ref<boolean>;
   refreshAccountList: () => Promise<void>;
+  restartProtocol: () => Promise<void>;
   resetSearchForm: () => void;
   riskStatusOptions: Array<{ label: string; value: string }>;
   handleRowAction: (row: TenantAccount, action: string) => void;
@@ -204,6 +207,7 @@ export function useAccountListPage(): AccountListPageState {
   const selectedRows = ref<TenantAccount[]>([]);
   const loading = ref(false);
   const groupLoading = ref(false);
+  const protocolRestarting = ref(false);
   const showAdvancedSearch = ref(initialGroupId !== "");
   const showBatchMoveDrawer = ref(false);
   const page = ref(1);
@@ -452,6 +456,37 @@ export function useAccountListPage(): AccountListPageState {
     }
   }
 
+  async function restartProtocol(): Promise<void> {
+    if (protocolRestarting.value) return;
+    try {
+      await ElMessageBox.confirm(
+        "会重启协议 master 和 4 个 worker，当前在线连接会断开；账号下线/上线请继续使用现有批量操作。",
+        "确认重启协议",
+        {
+          confirmButtonText: "重启协议",
+          cancelButtonText: "取消",
+          type: "warning"
+        }
+      );
+    } catch {
+      return;
+    }
+
+    protocolRestarting.value = true;
+    try {
+      const result = await restartProtocolProcesses();
+      if (result.success) {
+        ElMessage.success(result.message || "协议已重启");
+      } else {
+        ElMessage.error(result.message || "协议重启失败");
+      }
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "协议重启失败"));
+    } finally {
+      protocolRestarting.value = false;
+    }
+  }
+
   async function submitOnline(row: TenantAccount): Promise<void> {
     const id = accountId(row);
     if (!id) {
@@ -664,7 +699,9 @@ export function useAccountListPage(): AccountListPageState {
     onSelectionChange,
     page,
     pageSize,
+    protocolRestarting,
     refreshAccountList,
+    restartProtocol,
     resetSearchForm,
     riskStatusOptions,
     handleRowAction,
