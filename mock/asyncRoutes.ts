@@ -171,6 +171,18 @@ const taskRouter = {
         module_key: "marketing_task",
         perm_key: "tenant:marketing_task:view"
       }
+    },
+    {
+      path: "/task/group-creation-marketing",
+      component: "task/group-creation-marketing/index",
+      name: "TaskGroupCreationMarketing",
+      meta: {
+        title: "建群营销",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "group_creation_marketing",
+        perm_key: "tenant:group_creation_marketing:view"
+      }
     }
   ]
 };
