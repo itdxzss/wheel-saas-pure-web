@@ -48,9 +48,10 @@ import {
   type BatchMoveMode
 } from "../account-move";
 import {
+  filterOnlineSubmittableAccounts,
   isTakeoverCandidate,
-  isTakingOverAccount,
   onlineBlockedTip,
+  singleOnlineBlockedTip,
   takeoverBatchDisabledTip,
   TAKEOVER_SELECTION_MESSAGE
 } from "../account-takeover";
@@ -286,7 +287,7 @@ export function useAccountListPage(): AccountListPageState {
   function isOnlineActionDisabled(row: TenantAccount): boolean {
     const id = accountId(row);
     if (!id || row.login_state === 1) return false;
-    if (isTakingOverAccount(row)) return true;
+    if (singleOnlineBlockedTip(row)) return true;
     return (
       onlineSubmittingIds.value.has(id) || onlineCooldownRemaining(row) > 0
     );
@@ -468,7 +469,7 @@ export function useAccountListPage(): AccountListPageState {
       ElMessage.warning("账号 ID 为空，无法上线");
       return;
     }
-    const blockedTip = onlineBlockedTip([row]);
+    const blockedTip = singleOnlineBlockedTip(row);
     if (blockedTip) {
       ElMessage.warning(blockedTip);
       return;
@@ -510,18 +511,27 @@ export function useAccountListPage(): AccountListPageState {
       ElMessage.warning(blockedTip);
       return;
     }
-    ids.forEach(id => {
+    const { submittableIds, skippedCount } =
+      filterOnlineSubmittableAccounts(selectedRows.value);
+    if (submittableIds.length === 0) {
+      ElMessage.warning("所选账号均不可上线");
+      return;
+    }
+    if (skippedCount > 0) {
+      ElMessage.warning(`已跳过 ${skippedCount} 个不可上线账号`);
+    }
+    submittableIds.forEach(id => {
       writeOnlineCooldown(id);
       setOnlineSubmitting(id, true);
     });
     try {
-      const result = await batchOnlineTenantAccounts(ids);
+      const result = await batchOnlineTenantAccounts(submittableIds);
       ElMessage.success(batchResultMessage("登录请求已提交", result));
       await refreshAccountList();
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "登录请求失败"));
     } finally {
-      ids.forEach(id => setOnlineSubmitting(id, false));
+      submittableIds.forEach(id => setOnlineSubmitting(id, false));
     }
   }
 

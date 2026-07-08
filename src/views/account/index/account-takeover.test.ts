@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  filterOnlineSubmittableAccounts,
   isTakeoverCandidate,
+  isTerminalOnlineBlockedAccount,
   onlineBlockedTip,
+  singleOnlineBlockedTip,
   takeoverBatchDisabledTip,
+  TERMINAL_ONLINE_BLOCKED_MESSAGE,
   TAKING_OVER_ONLINE_MESSAGE,
   TAKEOVER_SELECTION_MESSAGE
 } from "./account-takeover";
@@ -40,5 +44,29 @@ describe("account takeover helpers", () => {
       onlineBlockedTip([{ account_state: 2 }, { account_state: 7 }]),
       TAKING_OVER_ONLINE_MESSAGE
     );
+  });
+
+  it("blocks online actions for terminal account states", () => {
+    assert.equal(isTerminalOnlineBlockedAccount({ account_state: 3 }), true);
+    assert.equal(isTerminalOnlineBlockedAccount({ account_state: 5 }), true);
+    assert.equal(isTerminalOnlineBlockedAccount({ account_state: 4 }), false);
+    assert.equal(isTerminalOnlineBlockedAccount({ account_state: 2 }), false);
+    assert.equal(
+      singleOnlineBlockedTip({ account_state: 3 }),
+      TERMINAL_ONLINE_BLOCKED_MESSAGE
+    );
+    assert.equal(onlineBlockedTip([{ account_state: 2 }, { account_state: 3 }]), "");
+  });
+
+  it("filters terminal account states from batch online submission", () => {
+    const result = filterOnlineSubmittableAccounts([
+      { id: 100, account_state: 2 },
+      { id: 101, account_state: 3 },
+      { id: 102, account_state: 5 },
+      { id: 103, account_state: 4 }
+    ]);
+
+    assert.deepEqual(result.submittableIds, [100, 103]);
+    assert.equal(result.skippedCount, 2);
   });
 });

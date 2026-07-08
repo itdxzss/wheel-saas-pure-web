@@ -24,6 +24,8 @@ const {
   detailDrawerOpen,
   detailLoading,
   detailTask,
+  exporting,
+  exportSelectedTasks,
   loadAccounts,
   loading,
   marketingTemplates,
@@ -31,6 +33,7 @@ const {
   materialFiles,
   openCreateDrawer,
   openDetailDrawer,
+  onSelectionChange,
   page,
   pageSize,
   removeMaterialFile,
@@ -38,6 +41,7 @@ const {
   rows,
   searchForm,
   searchTasks,
+  selectedCount,
   stopTask,
   submitCreate,
   total,
@@ -113,12 +117,16 @@ onMounted(() => {
       v-model:page="page"
       v-model:page-size="pageSize"
       :columns="taskColumns"
+      :exporting="exporting"
       :loading="loading"
       :rows="rows"
+      :selected-count="selectedCount"
       :total="total"
       @create="openCreateDrawer"
       @detail="openDetailDrawer"
+      @export-selected="exportSelectedTasks"
       @refresh="loadTasks"
+      @selection-change="onSelectionChange"
       @stop="stopTask"
     />
 

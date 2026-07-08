@@ -4,6 +4,12 @@ import {
   armadaCalls,
   resetArmadaMockQueue
 } from "@/api/__tests__/armada-test-double";
+import { httpCalls, resetHttpMock } from "@/api/__tests__/http-test-double";
+import {
+  elementPlusCalls,
+  resetElementPlusMock
+} from "@/api/__tests__/element-plus-test-double";
+import type { GroupCreationMarketingTaskRow } from "@/api/group-creation-marketing";
 import { useGroupCreationMarketingPage } from "./useGroupCreationMarketingPage";
 
 describe("group creation marketing page state", () => {
@@ -155,5 +161,102 @@ describe("group creation marketing page state", () => {
         "/api/group-creation-marketing-tasks/account-candidates"
       ]
     );
+  });
+
+  it("exports selected task rows and resets exporting state", async () => {
+    resetElementPlusMock();
+    resetHttpMock(
+      new Blob(["xlsx"], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      }),
+      {
+        "content-disposition":
+          "attachment; filename*=UTF-8''group-creation-marketing.xlsx"
+      }
+    );
+    const downloads: Array<{ href: string; filename: string }> = [];
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const originalDocument = globalThis.document;
+    const link = {
+      href: "",
+      download: "",
+      click: () => {
+        downloads.push({ href: link.href, filename: link.download });
+      },
+      remove: () => undefined
+    };
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: () => "blob:group-creation-export"
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: () => undefined
+    });
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: {
+        createElement: () => link,
+        body: {
+          appendChild: () => undefined
+        }
+      }
+    });
+    const page = useGroupCreationMarketingPage();
+
+    try {
+      page.onSelectionChange([
+        { id: 9 } as GroupCreationMarketingTaskRow,
+        { id: 8 } as GroupCreationMarketingTaskRow
+      ]);
+
+      await page.exportSelectedTasks();
+
+      assert.equal(page.exporting.value, false);
+      assert.deepEqual(downloads, [
+        {
+          href: "blob:group-creation-export",
+          filename: "group-creation-marketing.xlsx"
+        }
+      ]);
+      assert.deepEqual(httpCalls(), [
+        {
+          method: "post",
+          url: "/api/group-creation-marketing-tasks/export",
+          opts: { data: { ids: [9, 8] }, responseType: "blob" },
+          configKeys: ["beforeResponseCallback"]
+        }
+      ]);
+      assert.deepEqual(elementPlusCalls(), [
+        { type: "success", text: "导出文件已生成" }
+      ]);
+    } finally {
+      Object.defineProperty(URL, "createObjectURL", {
+        configurable: true,
+        value: originalCreateObjectURL
+      });
+      Object.defineProperty(URL, "revokeObjectURL", {
+        configurable: true,
+        value: originalRevokeObjectURL
+      });
+      Object.defineProperty(globalThis, "document", {
+        configurable: true,
+        value: originalDocument
+      });
+    }
+  });
+
+  it("rejects export without selected tasks", async () => {
+    resetElementPlusMock();
+    resetHttpMock(new Blob([]));
+    const page = useGroupCreationMarketingPage();
+
+    await page.exportSelectedTasks();
+
+    assert.deepEqual(httpCalls(), []);
+    assert.deepEqual(elementPlusCalls(), [
+      { type: "warning", text: "请先选择要导出的建群营销任务" }
+    ]);
   });
 });

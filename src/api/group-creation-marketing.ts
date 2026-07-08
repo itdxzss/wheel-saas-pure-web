@@ -1,5 +1,7 @@
 import { armadaRequest } from "@/api/armada";
+import { http } from "@/utils/http";
 import type { PageResponse } from "@/api/account";
+import type { PureHttpResponse } from "@/utils/http/types.d";
 
 export type GroupCreationMarketingTaskStatus = 1 | 2 | 3 | 4 | 5 | 6;
 export type GroupCreationMarketingItemStatus = 1 | 2 | 3 | 4 | 5 | 6;
@@ -82,6 +84,11 @@ export interface GroupCreationMarketingTaskDetail
   items: GroupCreationMarketingItemRow[];
 }
 
+export interface GroupCreationMarketingTaskExport {
+  filename: string;
+  blob: Blob;
+}
+
 export interface GroupCreationMarketingTaskQuery {
   page?: number;
   pageSize?: number;
@@ -98,6 +105,39 @@ function toListParams(query: GroupCreationMarketingTaskQuery) {
     keyword: query.keyword,
     status: query.status || undefined
   };
+}
+
+function headerValue(
+  headers: PureHttpResponse["headers"],
+  name: string
+): string | undefined {
+  const getter = headers as { get?: (key: string) => unknown };
+  const viaGetter = getter.get?.(name);
+  if (typeof viaGetter === "string") return viaGetter;
+
+  const record = headers as Record<string, unknown>;
+  const direct = record[name] ?? record[name.toLowerCase()];
+  return typeof direct === "string" ? direct : undefined;
+}
+
+function decodeFilename(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function filenameFromContentDisposition(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  const encoded = /filename\*=(?:UTF-8'')?("?)([^";]+)\1/i.exec(value);
+  if (encoded?.[2]) {
+    return decodeFilename(encoded[2]);
+  }
+
+  const plain = /filename=("?)([^";]+)\1/i.exec(value);
+  return plain?.[2];
 }
 
 export function listGroupCreationMarketingTasks(
@@ -144,4 +184,30 @@ export function getGroupCreationMarketingTaskDetail(
     "get",
     `/api/group-creation-marketing-tasks/${id}`
   );
+}
+
+export function exportGroupCreationMarketingTasks(
+  ids: number[]
+): Promise<GroupCreationMarketingTaskExport> {
+  let filename: string | undefined;
+  return http
+    .request<Blob>(
+      "post",
+      "/api/group-creation-marketing-tasks/export",
+      {
+        data: { ids },
+        responseType: "blob"
+      },
+      {
+        beforeResponseCallback: response => {
+          filename = filenameFromContentDisposition(
+            headerValue(response.headers, "Content-Disposition")
+          );
+        }
+      }
+    )
+    .then(blob => ({
+      filename: filename || "建群营销统计导出.xlsx",
+      blob
+    }));
 }

@@ -9,6 +9,7 @@ import {
   taskStatusLabel,
   taskStatusTagType
 } from "../constants";
+import Download from "~icons/ep/download";
 import Plus from "~icons/ep/plus";
 
 defineOptions({
@@ -21,13 +22,17 @@ const props = defineProps<{
   page: number;
   pageSize: number;
   rows: GroupCreationMarketingTaskRow[];
+  selectedCount: number;
   total: number;
+  exporting: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: "create"): void;
   (event: "detail", row: GroupCreationMarketingTaskRow): void;
+  (event: "export-selected"): void;
   (event: "refresh"): void;
+  (event: "selection-change", rows: GroupCreationMarketingTaskRow[]): void;
   (event: "stop", row: GroupCreationMarketingTaskRow): void;
   (event: "update:page", value: number): void;
   (event: "update:pageSize", value: number): void;
@@ -65,10 +70,27 @@ function canStop(row: GroupCreationMarketingTaskRow): boolean {
       >
         新增建群营销
       </el-button>
+      <el-button
+        plain
+        :disabled="selectedCount === 0"
+        :loading="exporting"
+        :icon="useRenderIcon(Download)"
+        @click="emit('export-selected')"
+      >
+        导出
+        <span v-if="selectedCount">({{ selectedCount }})</span>
+      </el-button>
     </template>
 
     <template #default="{ dynamicColumns }">
-      <el-table v-loading="loading" :data="rows" row-key="id" border>
+      <el-table
+        v-loading="loading"
+        :data="rows"
+        row-key="id"
+        border
+        @selection-change="emit('selection-change', $event)"
+      >
+        <el-table-column type="selection" width="48" />
         <el-table-column
           v-if="!dynamicColumns[0].hide"
           prop="id"

@@ -6,6 +6,7 @@ import {
 } from "@/api/account-group";
 import {
   createGroupCreationMarketingTask,
+  exportGroupCreationMarketingTasks,
   getGroupCreationMarketingTaskDetail,
   listGroupCreationMarketingAccountCandidates,
   listGroupCreationMarketingTasks,
@@ -21,6 +22,7 @@ import {
   type MarketingTemplateRow
 } from "@/api/marketing-template";
 import { apiErrorMessage } from "@/utils/api-error";
+import { downloadBlobFile } from "@/utils/download";
 
 export interface GroupCreationMarketingAccount {
   accountId: number;
@@ -69,6 +71,8 @@ export interface GroupCreationMarketingPageState {
   detailDrawerOpen: Ref<boolean>;
   detailLoading: Ref<boolean>;
   detailTask: Ref<GroupCreationMarketingTaskDetail | null>;
+  exporting: Ref<boolean>;
+  exportSelectedTasks: () => Promise<void>;
   loadAccounts: (groupId: number | "") => Promise<void>;
   loadOptions: () => Promise<void>;
   loadTasks: () => Promise<void>;
@@ -78,6 +82,7 @@ export interface GroupCreationMarketingPageState {
   materialFiles: Ref<GroupCreationMarketingUploadedMaterial[]>;
   openCreateDrawer: () => Promise<void>;
   openDetailDrawer: (row: GroupCreationMarketingTaskRow) => Promise<void>;
+  onSelectionChange: (selection: GroupCreationMarketingTaskRow[]) => void;
   page: Ref<number>;
   pageSize: Ref<number>;
   removeMaterialFile: (index: number) => void;
@@ -85,6 +90,8 @@ export interface GroupCreationMarketingPageState {
   rows: Ref<GroupCreationMarketingTaskRow[]>;
   searchForm: GroupCreationMarketingSearchForm;
   searchTasks: () => void;
+  selectedCount: ComputedRef<number>;
+  selectedRows: Ref<GroupCreationMarketingTaskRow[]>;
   stopTask: (row: GroupCreationMarketingTaskRow) => Promise<void>;
   submitCreate: () => Promise<void>;
   total: Ref<number>;
@@ -160,8 +167,10 @@ export function useGroupCreationMarketingPage(): GroupCreationMarketingPageState
   const accounts = ref<GroupCreationMarketingAccount[]>([]);
   const materialFiles = ref<GroupCreationMarketingUploadedMaterial[]>([]);
   const detailTask = ref<GroupCreationMarketingTaskDetail | null>(null);
+  const selectedRows = ref<GroupCreationMarketingTaskRow[]>([]);
   const loading = ref(false);
   const detailLoading = ref(false);
+  const exporting = ref(false);
   const createDrawerOpen = ref(false);
   const detailDrawerOpen = ref(false);
   const page = ref(1);
@@ -183,6 +192,7 @@ export function useGroupCreationMarketingPage(): GroupCreationMarketingPageState
   const unmatchedFiles = computed<GroupCreationMarketingUploadedMaterial[]>(
     () => materialFiles.value.slice(accounts.value.length)
   );
+  const selectedCount = computed(() => selectedRows.value.length);
 
   const createBlockReason = computed(() => {
     if (!createForm.taskName.trim()) return "请先填写任务名称";
@@ -221,6 +231,7 @@ export function useGroupCreationMarketingPage(): GroupCreationMarketingPageState
       const result = await listGroupCreationMarketingTasks(buildQuery());
       rows.value = result.list ?? [];
       total.value = result.total ?? 0;
+      selectedRows.value = [];
     } catch (error) {
       rows.value = [];
       total.value = 0;
@@ -316,6 +327,28 @@ export function useGroupCreationMarketingPage(): GroupCreationMarketingPageState
     searchForm.status = "";
     page.value = 1;
     void loadTasks();
+  }
+
+  function onSelectionChange(selection: GroupCreationMarketingTaskRow[]): void {
+    selectedRows.value = selection;
+  }
+
+  async function exportSelectedTasks(): Promise<void> {
+    const ids = selectedRows.value.map(row => row.id);
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择要导出的建群营销任务");
+      return;
+    }
+    exporting.value = true;
+    try {
+      const result = await exportGroupCreationMarketingTasks(ids);
+      downloadBlobFile(result.filename, result.blob);
+      ElMessage.success("导出文件已生成");
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "导出失败"));
+    } finally {
+      exporting.value = false;
+    }
   }
 
   async function openCreateDrawer(): Promise<void> {
@@ -434,6 +467,8 @@ export function useGroupCreationMarketingPage(): GroupCreationMarketingPageState
     detailDrawerOpen,
     detailLoading,
     detailTask,
+    exporting,
+    exportSelectedTasks,
     loadAccounts,
     loadOptions,
     loadTasks,
@@ -443,6 +478,7 @@ export function useGroupCreationMarketingPage(): GroupCreationMarketingPageState
     materialFiles,
     openCreateDrawer,
     openDetailDrawer,
+    onSelectionChange,
     page,
     pageSize,
     removeMaterialFile,
@@ -450,6 +486,8 @@ export function useGroupCreationMarketingPage(): GroupCreationMarketingPageState
     rows,
     searchForm,
     searchTasks,
+    selectedCount,
+    selectedRows,
     stopTask,
     submitCreate,
     total,

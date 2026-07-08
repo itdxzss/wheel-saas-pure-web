@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
+import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   createGroupCreationMarketingTask,
+  exportGroupCreationMarketingTasks,
   listGroupCreationMarketingAccountCandidates
 } from "./group-creation-marketing";
 
@@ -66,7 +68,9 @@ describe("group creation marketing API", () => {
   it("stops a group creation marketing task", async () => {
     resetArmadaMock(1);
 
-    const { stopGroupCreationMarketingTask } = await import("./group-creation-marketing");
+    const { stopGroupCreationMarketingTask } = await import(
+      "./group-creation-marketing"
+    );
     await stopGroupCreationMarketingTask(7);
 
     assert.deepEqual(armadaCalls(), [
@@ -74,6 +78,29 @@ describe("group creation marketing API", () => {
         method: "post",
         url: "/api/group-creation-marketing-tasks/7/stop",
         opts: undefined
+      }
+    ]);
+  });
+
+  it("exports selected tasks as an xlsx blob", async () => {
+    const blob = new Blob(["xlsx"], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    resetHttpMock(blob, {
+      "content-disposition":
+        "attachment; filename*=UTF-8''group-creation-marketing.xlsx"
+    });
+
+    const result = await exportGroupCreationMarketingTasks([9, 8]);
+
+    assert.equal(result.filename, "group-creation-marketing.xlsx");
+    assert.equal(result.blob, blob);
+    assert.deepEqual(httpCalls(), [
+      {
+        method: "post",
+        url: "/api/group-creation-marketing-tasks/export",
+        opts: { data: { ids: [9, 8] }, responseType: "blob" },
+        configKeys: ["beforeResponseCallback"]
       }
     ]);
   });
