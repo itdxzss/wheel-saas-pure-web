@@ -47,8 +47,7 @@ export const importKindOptions: Array<{
     label: "六段号",
     value: "six",
     desc: "支持粘贴或上传 TXT，一行一个六段号。",
-    accept: ".txt",
-    disabled: true
+    accept: ".txt"
   },
   {
     label: "JSON号",

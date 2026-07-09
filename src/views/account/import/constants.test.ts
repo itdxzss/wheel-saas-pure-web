@@ -21,12 +21,12 @@ describe("account import constants", () => {
     assert.equal(exportValues.includes("ABNORMAL"), false);
   });
 
-  it("disables unsupported account import kinds", () => {
+  it("only disables account import kinds that are still unsupported", () => {
     const disabledKinds = importKindOptions
       .filter(option => option.disabled)
       .map(option => option.value);
 
-    assert.deepEqual(disabledKinds, ["six", "fullparam"]);
+    assert.deepEqual(disabledKinds, ["fullparam"]);
   });
 
   it("uses smart and mixed IP allocation modes for account import", () => {
