@@ -161,6 +161,8 @@ describe("account operation API", () => {
           accountType: 1,
           deviceOs: 1,
           numberSource: 1,
+          friendsNum: 0,
+          groupsNum: 2,
           dispatchedAt: 1782705600000
         }
       ],
@@ -172,6 +174,8 @@ describe("account operation API", () => {
     assert.equal(result.list?.[0]?.account_type, "个人号");
     assert.equal(result.list?.[0]?.device_os, "安卓");
     assert.equal(result.list?.[0]?.number_source, "买量");
+    assert.equal(result.list?.[0]?.friends_num, 0);
+    assert.equal(result.list?.[0]?.groups_num, 2);
     assert.equal(result.list?.[0]?.dispatched_at, "2026-06-29 12:00:00");
   });
 });
