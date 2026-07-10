@@ -83,7 +83,9 @@ export interface GroupMarketingTaskPageState {
   detailTask: Ref<MarketingTaskDetail | null>;
   loadTasks: () => Promise<void>;
   loadAccountTree: (groupId: number | "") => Promise<void>;
-  loadAccountGroups: (accountId: number) => Promise<MarketingTreeAccount | null>;
+  loadAccountGroups: (
+    accountId: number
+  ) => Promise<MarketingTreeAccount | null>;
   loading: Ref<boolean>;
   materialDrawerOpen: Ref<boolean>;
   materialForm: Ref<MarketingTemplateWrite>;
@@ -483,7 +485,11 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       rows.value = rows.value.map(item =>
         item.id === row.id ? updated : item
       );
-      ElMessage.success("营销任务已启动");
+      ElMessage.success(
+        updated.status === 1
+          ? "营销任务已进入等待，将在计划开始时间自动执行"
+          : "营销任务已启动"
+      );
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "启动营销任务失败"));
     }

@@ -9,6 +9,7 @@ import {
   elementPlusCalls,
   resetElementPlusMock
 } from "@/api/__tests__/element-plus-test-double";
+import type { MarketingTaskRow } from "@/api/marketing-task";
 import { useGroupMarketingTaskPage } from "./useGroupMarketingTaskPage";
 
 describe("group marketing task page state", () => {
@@ -297,5 +298,22 @@ describe("group marketing task page state", () => {
     const cached = await pageState.loadAccountGroups(3);
     assert.equal(cached?.groups[0].groupLinkId, 31);
     assert.equal(calls.length, 2);
+  });
+
+  it("reports waiting when a future task is activated before its start time", async () => {
+    const row = { id: 42, status: 5 } as MarketingTaskRow;
+    resetArmadaMock({ ...row, status: 1 });
+    resetElementPlusMock();
+    const pageState = useGroupMarketingTaskPage();
+
+    await pageState.startTask(row);
+
+    assert.equal(armadaCalls()[0].url, "/api/marketing-tasks/42/start");
+    assert.deepEqual(elementPlusCalls(), [
+      {
+        type: "success",
+        text: "营销任务已进入等待，将在计划开始时间自动执行"
+      }
+    ]);
   });
 });

@@ -37,7 +37,7 @@
 - [ ] HIGH：营销明细群链接未脱敏。当前详情直接展示 `groupLinkUrl`，违反一期需求“营销明细群链接脱敏 `chat.whatsapp.com/****xxx`”和全局固定点“所有展示群链接处一律脱敏”。
   - 新代码：`src/views/task/group-marketing/components/GroupMarketingDetailDrawer.vue`
   - 需求：`wheel/docs/审计-0618/一期需求文档.md`
-- [ ] HIGH：启动按钮门禁不符合需求。前端只禁用发送中，导致发送成功/发送失败/部分失败任务也能点启动；需求和 Armada 后端只允许待启动/已停止启动。
+- [x] HIGH：启动按钮门禁不符合需求。已于 2026-07-10 修复：普通启动只对待启动/已停止显示，已结束改走重新启动，发送成功/失败/部分失败不再显示启动入口。
   - 新代码：`src/views/task/group-marketing/components/GroupMarketingTaskTable.vue`
   - 后端门禁：`armada/armada-api/src/main/java/com/armada/marketing/service/impl/MarketingTaskServiceImpl.java`
 - [ ] MEDIUM：营销明细缺“发言号码是否在线”。一期要求发言号码旁展示在线/离线；wheel 老 API 有 `speaker_online`，Armada 当前 `MarketingTaskTargetVO` 没有该字段，前端只能显示号码。
@@ -58,3 +58,17 @@
 - [ ] LOW：素材按钮编辑器 `v-for` 使用 `:key="index"`，违反 harness 编码规范“v-for 必须稳定 key，禁止 index key”。
   - 新代码：`src/views/task/group-marketing/components/GroupMarketingMaterialDrawer.vue`
   - 规范：`.harness/rules/编码规范.md`
+
+## 2026-07-10 任务时间窗口与重新启动
+
+- 普通“启动”仅对等待中、已停止任务显示;已结束任务改为单独的“重新启动”,发送成功/失败/部分失败不再显示启动入口。上方“启动按钮门禁不符合需求”已在本次修复。
+- 普通启动接口返回等待状态时,提示“将在计划开始时间自动执行”,不再误报已经开始发送。
+- 新增 `GroupMarketingRestartDialog.vue` 和独立 `useMarketingTaskRestart.ts`,避免把重启表单、校验、提交状态继续堆入主页面 composable。
+- 重启默认开始时间为当前时间;默认结束时间按原任务持续时长顺延,原时间窗口无效时回退 24 小时。提交前校验结束时间晚于当前时间和开始时间。
+- 调用 `POST /api/marketing-tasks/{id}/restart`,成功后关闭弹窗并刷新列表。
+- 验证:
+  - 群组营销目录 8 个 `node:test` 文件全部通过。
+  - `tsc --noEmit`、`vue-tsc --noEmit --skipLibCheck` 通过。
+  - 本次触及文件定向 ESLint 和 Vue 文件 Stylelint 通过。
+  - `npm run build` 通过。
+- 未提交,未部署。

@@ -44,15 +44,10 @@ const currentPageSize = computed({
 function asMarketingTaskRow(row: unknown): MarketingTaskRow {
   return row as MarketingTaskRow;
 }
-
 </script>
 
 <template>
-  <PureTableBar
-    title="营销任务"
-    :columns="columns"
-    @refresh="emit('refresh')"
-  >
+  <PureTableBar title="营销任务" :columns="columns" @refresh="emit('refresh')">
     <template #buttons>
       <el-button
         type="primary"
@@ -98,8 +93,8 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
             <div class="task-name-cell">
               <strong>{{ row.taskName }}</strong>
               <small>
-                {{ row.accountGroupName }} ·
-                营销模板 · {{ row.marketingTemplateName || "-" }}
+                {{ row.accountGroupName }} · 营销模板 ·
+                {{ row.marketingTemplateName || "-" }}
               </small>
             </div>
           </template>
@@ -166,7 +161,7 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
             {{ formatEpoch(row.lastSentAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="250">
+        <el-table-column label="操作" fixed="right" width="290">
           <template #default="{ row }">
             <el-button
               link
@@ -176,20 +171,28 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
               明细
             </el-button>
             <el-button
+              v-if="row.status === 2"
               link
               type="warning"
-              :disabled="row.status !== 2"
               @click="emit('row-action', asMarketingTaskRow(row), 'stop')"
             >
               停止
             </el-button>
             <el-button
+              v-if="[1, 5].includes(row.status)"
               link
               type="success"
-              :disabled="row.status === 2"
               @click="emit('row-action', asMarketingTaskRow(row), 'start')"
             >
               启动
+            </el-button>
+            <el-button
+              v-if="row.status === 7"
+              link
+              type="success"
+              @click="emit('row-action', asMarketingTaskRow(row), 'restart')"
+            >
+              重新启动
             </el-button>
             <el-button
               link

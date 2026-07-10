@@ -5,9 +5,11 @@ import RefreshRight from "~icons/ep/refresh-right";
 import GroupMarketingCreateDrawer from "./components/GroupMarketingCreateDrawer.vue";
 import GroupMarketingDetailDrawer from "./components/GroupMarketingDetailDrawer.vue";
 import GroupMarketingMaterialDrawer from "./components/GroupMarketingMaterialDrawer.vue";
+import GroupMarketingRestartDialog from "./components/GroupMarketingRestartDialog.vue";
 import GroupMarketingTaskTable from "./components/GroupMarketingTaskTable.vue";
 import { taskColumns, taskStatusOptions } from "./constants";
 import { useGroupMarketingTaskPage } from "./composables/useGroupMarketingTaskPage";
+import { useMarketingTaskRestart } from "./composables/useMarketingTaskRestart";
 import type { MarketingTaskRow } from "@/api/marketing-task";
 
 defineOptions({
@@ -53,6 +55,16 @@ const {
   treeLoading
 } = useGroupMarketingTaskPage();
 
+const {
+  activeRestartTask,
+  closeRestartDialog,
+  openRestartDialog,
+  restartDialogOpen,
+  restartForm,
+  restartSubmitting,
+  submitRestart
+} = useMarketingTaskRestart(refreshTasks);
+
 function onTaskAction(row: MarketingTaskRow, action: string): void {
   if (action === "detail") {
     void openDetailDrawer(row);
@@ -64,6 +76,10 @@ function onTaskAction(row: MarketingTaskRow, action: string): void {
   }
   if (action === "start") {
     void startTask(row);
+    return;
+  }
+  if (action === "restart") {
+    openRestartDialog(row);
     return;
   }
   if (action === "material") {
@@ -183,6 +199,15 @@ function onTaskAction(row: MarketingTaskRow, action: string): void {
       v-model="detailDrawerOpen"
       :detail="detailTask"
       :loading="detailLoading"
+    />
+
+    <GroupMarketingRestartDialog
+      v-model="restartDialogOpen"
+      v-model:form="restartForm"
+      :submitting="restartSubmitting"
+      :task="activeRestartTask"
+      @closed="closeRestartDialog"
+      @submit="submitRestart"
     />
 
     <GroupMarketingMaterialDrawer

@@ -156,6 +156,11 @@ export interface CreateMarketingTaskRequest {
   selections: MarketingSelection[];
 }
 
+export interface RestartMarketingTaskRequest {
+  taskStartAt: number;
+  taskEndAt: number;
+}
+
 function toListParams(query: MarketingTaskQuery) {
   return {
     page: query.page,
@@ -199,6 +204,17 @@ export function startMarketingTask(id: number): Promise<MarketingTaskRow> {
   return armadaRequest<MarketingTaskRow>(
     "post",
     `/api/marketing-tasks/${id}/start`
+  );
+}
+
+export function restartMarketingTask(
+  id: number,
+  data: RestartMarketingTaskRequest
+): Promise<MarketingTaskRow> {
+  return armadaRequest<MarketingTaskRow>(
+    "post",
+    `/api/marketing-tasks/${id}/restart`,
+    { data }
   );
 }
 
