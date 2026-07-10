@@ -14,6 +14,7 @@ import {
   groupTreeKey,
   parseMarketingTreeKey
 } from "../composables/marketing-selection";
+import { disableAccountGroupSendDate } from "../composables/useGroupMarketingTaskPage";
 import type {
   GroupMarketingCreateForm,
   GroupMarketingCreatePayload
@@ -41,7 +42,9 @@ const props = defineProps<{
   marketingTemplates: MarketingTemplateRow[];
   treeAccounts: MarketingTreeAccount[];
   treeLoading: boolean;
-  loadAccountGroups: (accountId: number) => Promise<MarketingTreeAccount | null>;
+  loadAccountGroups: (
+    accountId: number
+  ) => Promise<MarketingTreeAccount | null>;
 }>();
 
 const emit = defineEmits<{
@@ -62,28 +65,81 @@ const treeProps = {
   isLeaf: "isLeaf"
 };
 
+function accountStatusText(account: MarketingTreeAccount): string {
+  const text = account.statusText?.trim();
+  if (text) {
+    return statusTextFromCode(text) ?? text;
+  }
+  return statusTextFromCode(account.status) ?? "离线";
+}
+
+function statusTextFromCode(status: string | null | undefined): string | null {
+  switch (status?.trim().toUpperCase()) {
+    case "ONLINE":
+      return "在线";
+    case "RISK":
+      return "风控";
+    case "BANNED":
+      return "封禁";
+    case "MUTED":
+      return "禁言";
+    case "UNAVAILABLE":
+      return "不可用";
+    case "OFFLINE":
+      return "离线";
+    default:
+      return null;
+  }
+}
+
+function accountGroupCount(account: MarketingTreeAccount): number {
+  if (
+    typeof account.groupCount === "number" &&
+    Number.isFinite(account.groupCount)
+  ) {
+    return Math.max(0, Math.trunc(account.groupCount));
+  }
+  return account.groups.length;
+}
+
+function accountSelectable(account: MarketingTreeAccount): boolean {
+  return (
+    (account.selectable ?? account.status === "ONLINE") &&
+    account.groupsError !== true
+  );
+}
+
 const treeData = computed<TreeNode[]>(() =>
   props.treeAccounts.map(account => ({
     id: accountTreeKey(account.accountId),
-    label: `${account.wsPhone} · ${account.status}`,
-    disabled: account.status !== "ONLINE" || account.groupsError === true,
-    isLeaf: account.status !== "ONLINE" || account.groupsError === true
+    label: `${account.wsPhone} · ${accountStatusText(account)} · ${accountGroupCount(account)}个群`,
+    disabled: !accountSelectable(account),
+    isLeaf: !accountSelectable(account)
   }))
 );
 
 const onlineAccountCount = computed(
-  () => props.treeAccounts.filter(account => account.status === "ONLINE").length
+  () =>
+    props.treeAccounts.filter(account => accountStatusText(account) === "在线")
+      .length
 );
 
 const accountListSignature = computed(() =>
   props.treeAccounts
-    .map(account => `${account.accountId}:${account.status}:${account.groupsError}`)
+    .map(
+      account =>
+        `${account.accountId}:${account.status}:${account.statusText ?? ""}:${
+          account.groupCount ?? ""
+        }:${account.selectable ?? ""}:${account.disabledReason ?? ""}:${
+          account.groupsError
+        }`
+    )
     .join("|")
 );
 
 const totalGroupCount = computed(() =>
-  Array.from(loadedAccountsById.value.values()).reduce(
-    (total, account) => total + account.groups.length,
+  props.treeAccounts.reduce(
+    (total, account) => total + accountGroupCount(account),
     0
   )
 );
@@ -153,7 +209,7 @@ function toGroupTreeNodes(account: MarketingTreeAccount): TreeNode[] {
     label: `${group.groupName || group.groupJid} · ${
       group.isAdmin ? "管理员" : "成员"
     }`,
-    disabled: account.status !== "ONLINE" || account.groupsError === true,
+    disabled: !accountSelectable(account),
     isLeaf: true
   }));
 }
@@ -173,7 +229,7 @@ const loadTreeNode: LoadFunction = (node, resolve) => {
   const account = props.treeAccounts.find(
     item => item.accountId === parsed.accountId
   );
-  if (!account || account.status !== "ONLINE" || account.groupsError === true) {
+  if (!account || !accountSelectable(account)) {
     resolve([]);
     return;
   }
@@ -242,7 +298,7 @@ function submit(): void {
         <div class="tree-box">
           <div class="tree-toolbar">
             <span>
-              在线账号 {{ onlineAccountCount }} 个 · 已加载群组
+              在线账号 {{ onlineAccountCount }} 个 · 当前群组
               {{ totalGroupCount }} 个
             </span>
             <el-button size="small" @click="resetCheckedKeys"
@@ -279,11 +335,34 @@ function submit(): void {
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="发送状态">
-        <el-select v-model="form.startMode" class="form-control">
-          <el-option label="待启动" value="PENDING" />
-          <el-option label="立即启动" value="IMMEDIATE" />
-        </el-select>
+      <el-form-item label="账号群组发送时间">
+        <el-date-picker
+          v-model="form.accountGroupSendAt"
+          type="datetime"
+          value-format="x"
+          class="form-control"
+          clearable
+          placeholder="默认开始前72小时"
+          :disabled-date="disableAccountGroupSendDate"
+        />
+      </el-form-item>
+      <el-form-item label="任务开始时间" required>
+        <el-date-picker
+          v-model="form.taskStartAt"
+          type="datetime"
+          value-format="x"
+          class="form-control"
+          placeholder="请选择任务开始时间"
+        />
+      </el-form-item>
+      <el-form-item label="任务结束时间" required>
+        <el-date-picker
+          v-model="form.taskEndAt"
+          type="datetime"
+          value-format="x"
+          class="form-control"
+          placeholder="请选择任务结束时间"
+        />
       </el-form-item>
       <el-form-item label="单轮发送数量">
         <el-input-number v-model="form.sendPerRound" :min="1" :step="1" />
@@ -361,5 +440,4 @@ function submit(): void {
   margin-left: 8px;
   color: var(--el-text-color-secondary);
 }
-
 </style>

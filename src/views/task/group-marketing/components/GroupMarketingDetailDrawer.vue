@@ -65,6 +65,15 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
         <el-descriptions-item label="失败条数">
           {{ detail.failedMessageCount }}
         </el-descriptions-item>
+        <el-descriptions-item label="账号群组发送时间">
+          {{ formatEpoch(detail.accountGroupSendAt) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="任务开始时间">
+          {{ formatEpoch(detail.taskStartAt) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="任务结束时间">
+          {{ formatEpoch(detail.taskEndAt) }}
+        </el-descriptions-item>
       </el-descriptions>
 
       <el-table

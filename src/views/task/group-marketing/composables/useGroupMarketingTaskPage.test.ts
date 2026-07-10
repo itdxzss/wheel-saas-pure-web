@@ -46,6 +46,9 @@ describe("group marketing task page state", () => {
       }
     ];
     pageState.createForm.marketingTemplateId = 18;
+    pageState.createForm.accountGroupSendAt = "4102358400000";
+    pageState.createForm.taskStartAt = "4102444800000";
+    pageState.createForm.taskEndAt = "4102531200000";
 
     await pageState.createTask({
       form: { ...pageState.createForm },
@@ -64,6 +67,9 @@ describe("group marketing task page state", () => {
       marketingTemplateId: 18,
       marketingTemplateName: "活动模板",
       startMode: "PENDING",
+      accountGroupSendAt: 4102358400000,
+      taskStartAt: 4102444800000,
+      taskEndAt: 4102531200000,
       sendPerRound: 1,
       sendIntervalSeconds: 30,
       onlineCheckEnabled: true,
@@ -110,6 +116,61 @@ describe("group marketing task page state", () => {
     assert.deepEqual(armadaCalls(), []);
     assert.deepEqual(elementPlusCalls(), [
       { type: "warning", text: "请选择营销模板" }
+    ]);
+  });
+
+  it("rejects account group send time older than seventy two hours", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    resetElementPlusMock();
+    const now = Date.now();
+    const pageState = useGroupMarketingTaskPage();
+    pageState.accountGroups.value = [
+      {
+        id: 8,
+        name: "北美账号",
+        totalAccounts: 1,
+        onlineAccounts: 1,
+        abnormalAccounts: 0,
+        bannedAccounts: 0,
+        updatedAt: "2026-07-04 15:00:00",
+        systemBuiltin: false
+      }
+    ];
+    pageState.marketingTemplates.value = [
+      {
+        id: 18,
+        templateName: "活动模板",
+        linkMode: 1,
+        textType: "PROMO",
+        content: "标题",
+        bodyText: "正文",
+        buttons: []
+      }
+    ];
+    pageState.createForm.taskName = "过期发送时间";
+    pageState.createForm.accountGroupId = 8;
+    pageState.createForm.marketingTemplateId = 18;
+    pageState.createForm.accountGroupSendAt = String(
+      now - 72 * 60 * 60 * 1000 - 1000
+    );
+    pageState.createForm.taskStartAt = String(now + 60 * 1000);
+    pageState.createForm.taskEndAt = String(now + 60 * 60 * 1000);
+
+    await pageState.createTask({
+      form: { ...pageState.createForm },
+      selections: [
+        { accountId: 3, targetScope: "ACCOUNT_DYNAMIC", groupLinkIds: [] }
+      ]
+    });
+
+    assert.deepEqual(armadaCalls(), []);
+    assert.deepEqual(elementPlusCalls(), [
+      { type: "warning", text: "账号群组发送时间最多支持追溯72小时" }
     ]);
   });
 

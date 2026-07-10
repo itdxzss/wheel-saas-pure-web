@@ -14,10 +14,8 @@ export interface MarketingTreeKeyParts {
 export const accountTreeKey = (accountId: number): string =>
   `account:${accountId}`;
 
-export const groupTreeKey = (
-  accountId: number,
-  groupLinkId: number
-): string => `group:${accountId}:${groupLinkId}`;
+export const groupTreeKey = (accountId: number, groupLinkId: number): string =>
+  `group:${accountId}:${groupLinkId}`;
 
 export function parseMarketingTreeKey(
   key: string | number
@@ -43,7 +41,9 @@ export function defaultDynamicAccountIds(
   return new Set(
     accounts
       .filter(
-        account => account.status === "ONLINE" && account.groupsError !== true
+        account =>
+          (account.selectable ?? account.status === "ONLINE") &&
+          account.groupsError !== true
       )
       .map(account => account.accountId)
   );

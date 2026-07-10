@@ -89,6 +89,24 @@ describe("marketing selection builder", () => {
     assert.deepEqual(Array.from(dynamicAccountIds), []);
   });
 
+  it("does not default-select accounts marked unselectable by backend", () => {
+    const dynamicAccountIds = defaultDynamicAccountIds([
+      {
+        accountId: 104,
+        wsPhone: "923000000104",
+        status: "ONLINE",
+        statusText: "在线",
+        groupCount: 3,
+        selectable: false,
+        disabledReason: "风控",
+        groupsError: false,
+        groups: []
+      }
+    ]);
+
+    assert.deepEqual(Array.from(dynamicAccountIds), []);
+  });
+
   it("treats group checkbox changes as fixed group targets", () => {
     const dynamicAccountIds = new Set<number>();
 
@@ -105,5 +123,4 @@ describe("marketing selection builder", () => {
       }
     ]);
   });
-}
-);
+});

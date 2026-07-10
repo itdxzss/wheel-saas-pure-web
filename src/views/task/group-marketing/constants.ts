@@ -13,7 +13,8 @@ export const taskStatusOptions: Array<{
   { label: "发送成功", value: 3 },
   { label: "发送失败", value: 4 },
   { label: "已停止", value: 5 },
-  { label: "部分失败", value: 6 }
+  { label: "部分失败", value: 6 },
+  { label: "已结束", value: 7 }
 ];
 
 export const taskColumns: TableColumnList = [
@@ -39,6 +40,7 @@ export function taskStatusTagType(status?: MarketingTaskStatus | null) {
   if (status === 4) return "danger";
   if (status === 5) return "warning";
   if (status === 6) return "warning";
+  if (status === 7) return "info";
   return "info";
 }
 

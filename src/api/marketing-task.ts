@@ -8,7 +8,7 @@ import {
   type MarketingTemplateWrite
 } from "@/api/marketing-template";
 
-export type MarketingTaskStatus = 1 | 2 | 3 | 4 | 5 | 6;
+export type MarketingTaskStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type MarketingTaskTargetStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type MarketingTaskStartMode = "PENDING" | "IMMEDIATE";
 export type MarketingTargetScope = "GROUP_FIXED" | "ACCOUNT_DYNAMIC";
@@ -33,6 +33,9 @@ export interface MarketingTaskRow {
   autoRetryEnabled: boolean;
   retryLimit?: number | null;
   remark?: string | null;
+  accountGroupSendAt?: number | null;
+  taskStartAt?: number | null;
+  taskEndAt?: number | null;
   startedAt?: number | null;
   lastSentAt?: number | null;
   finishedAt?: number | null;
@@ -108,7 +111,18 @@ export interface MarketingTreeGroup {
 export interface MarketingTreeAccount {
   accountId: number;
   wsPhone: string;
-  status: "ONLINE" | "OFFLINE" | "RISK" | "BANNED" | "MUTED" | string;
+  status:
+    | "ONLINE"
+    | "OFFLINE"
+    | "RISK"
+    | "BANNED"
+    | "MUTED"
+    | "UNAVAILABLE"
+    | string;
+  statusText?: string | null;
+  groupCount?: number | null;
+  selectable?: boolean | null;
+  disabledReason?: string | null;
   groupsError: boolean;
   groups: MarketingTreeGroup[];
 }
@@ -130,6 +144,9 @@ export interface CreateMarketingTaskRequest {
   marketingTemplateId: number;
   marketingTemplateName: string;
   startMode: MarketingTaskStartMode;
+  accountGroupSendAt?: number | null;
+  taskStartAt?: number | null;
+  taskEndAt?: number | null;
   sendPerRound: number;
   sendIntervalSeconds: number;
   onlineCheckEnabled: boolean;

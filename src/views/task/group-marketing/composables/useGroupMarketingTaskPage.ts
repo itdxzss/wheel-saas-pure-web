@@ -51,6 +51,9 @@ export interface GroupMarketingCreateForm {
   accountGroupId: number | "";
   marketingTemplateId: number | "";
   startMode: MarketingTaskStartMode;
+  accountGroupSendAt: string;
+  taskStartAt: string;
+  taskEndAt: string;
   sendPerRound: number;
   sendIntervalSeconds: number;
   onlineCheckEnabled: boolean;
@@ -107,12 +110,23 @@ export interface GroupMarketingTaskPageState {
   treeLoading: Ref<boolean>;
 }
 
+const ACCOUNT_GROUP_SEND_LOOKBACK_MS = 72 * 60 * 60 * 1000;
+const DEFAULT_TASK_DURATION_MS = 24 * 60 * 60 * 1000;
+
+function epochString(value: number): string {
+  return String(value);
+}
+
 function emptyCreateForm(): GroupMarketingCreateForm {
+  const now = Date.now();
   return {
     taskName: "",
     accountGroupId: "",
     marketingTemplateId: "",
     startMode: "PENDING",
+    accountGroupSendAt: "",
+    taskStartAt: epochString(now),
+    taskEndAt: epochString(now + DEFAULT_TASK_DURATION_MS),
     sendPerRound: 1,
     sendIntervalSeconds: 30,
     onlineCheckEnabled: true,
@@ -172,6 +186,50 @@ function timestamp(value: string): number | undefined {
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+export function disableAccountGroupSendDate(date: Date): boolean {
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+  return endOfDay.getTime() < Date.now() - ACCOUNT_GROUP_SEND_LOOKBACK_MS;
+}
+
+function createStartMode(taskStartAt: number): MarketingTaskStartMode {
+  return taskStartAt > Date.now() ? "PENDING" : "IMMEDIATE";
+}
+
+function validateLifecycleTimes(form: GroupMarketingCreateForm): {
+  accountGroupSendAt?: number;
+  taskStartAt: number;
+  taskEndAt: number;
+} | null {
+  const accountGroupSendAt = timestamp(form.accountGroupSendAt);
+  const taskStartAt = timestamp(form.taskStartAt);
+  const taskEndAt = timestamp(form.taskEndAt);
+  if (!taskStartAt) {
+    ElMessage.warning("请选择任务开始时间");
+    return null;
+  }
+  if (!taskEndAt) {
+    ElMessage.warning("请选择任务结束时间");
+    return null;
+  }
+  if (taskEndAt <= Date.now()) {
+    ElMessage.warning("任务结束时间必须晚于当前时间");
+    return null;
+  }
+  if (taskEndAt <= taskStartAt) {
+    ElMessage.warning("任务结束时间必须晚于任务开始时间");
+    return null;
+  }
+  if (
+    accountGroupSendAt != null &&
+    accountGroupSendAt < Date.now() - ACCOUNT_GROUP_SEND_LOOKBACK_MS
+  ) {
+    ElMessage.warning("账号群组发送时间最多支持追溯72小时");
+    return null;
+  }
+  return { accountGroupSendAt, taskStartAt, taskEndAt };
 }
 
 function buildButtonsForMode(
@@ -370,6 +428,10 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       ElMessage.warning("请至少选择一个发送账号");
       return;
     }
+    const lifecycleTimes = validateLifecycleTimes(form);
+    if (!lifecycleTimes) {
+      return;
+    }
     try {
       await createMarketingTask({
         taskName: form.taskName.trim(),
@@ -377,7 +439,10 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
         accountGroupName: group.name,
         marketingTemplateId: template.id,
         marketingTemplateName: template.templateName,
-        startMode: form.startMode,
+        startMode: createStartMode(lifecycleTimes.taskStartAt),
+        accountGroupSendAt: lifecycleTimes.accountGroupSendAt ?? null,
+        taskStartAt: lifecycleTimes.taskStartAt,
+        taskEndAt: lifecycleTimes.taskEndAt,
         sendPerRound: form.sendPerRound,
         sendIntervalSeconds: form.sendIntervalSeconds,
         onlineCheckEnabled: form.onlineCheckEnabled,
