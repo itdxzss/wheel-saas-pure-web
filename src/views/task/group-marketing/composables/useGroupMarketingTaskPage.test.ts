@@ -301,7 +301,7 @@ describe("group marketing task page state", () => {
   });
 
   it("reports waiting when a future task is activated before its start time", async () => {
-    const row = { id: 42, status: 5 } as MarketingTaskRow;
+    const row = { id: 42, status: 1 } as MarketingTaskRow;
     resetArmadaMock({ ...row, status: 1 });
     resetElementPlusMock();
     const pageState = useGroupMarketingTaskPage();
@@ -314,6 +314,45 @@ describe("group marketing task page state", () => {
         type: "success",
         text: "营销任务已进入等待，将在计划开始时间自动执行"
       }
+    ]);
+  });
+
+  it("calls pause resume and close lifecycle endpoints", async () => {
+    resetElementPlusMock();
+    const pageState = useGroupMarketingTaskPage();
+
+    resetArmadaMock({ id: 42, status: 5 });
+    await pageState.pauseTask({ id: 42, status: 2 } as MarketingTaskRow);
+    assert.equal(armadaCalls()[0].url, "/api/marketing-tasks/42/pause");
+
+    resetArmadaMock({ id: 42, status: 2 });
+    await pageState.resumeTask({ id: 42, status: 5 } as MarketingTaskRow);
+    assert.equal(armadaCalls()[0].url, "/api/marketing-tasks/42/resume");
+
+    resetArmadaMock({ id: 42, status: 8 });
+    await pageState.closeTask({ id: 42, status: 2 } as MarketingTaskRow);
+    assert.equal(armadaCalls()[0].url, "/api/marketing-tasks/42/close");
+  });
+
+  it("rejects marketing material editing for completed and closed tasks", async () => {
+    resetArmadaMock({});
+    resetElementPlusMock();
+    const pageState = useGroupMarketingTaskPage();
+
+    await pageState.openMaterialDrawer({
+      id: 42,
+      status: 7
+    } as MarketingTaskRow);
+    await pageState.openMaterialDrawer({
+      id: 43,
+      status: 8
+    } as MarketingTaskRow);
+
+    assert.deepEqual(armadaCalls(), []);
+    assert.equal(pageState.materialDrawerOpen.value, false);
+    assert.deepEqual(elementPlusCalls(), [
+      { type: "warning", text: "已完成或已关闭的任务不可修改营销素材" },
+      { type: "warning", text: "已完成或已关闭的任务不可修改营销素材" }
     ]);
   });
 });

@@ -9,13 +9,15 @@ import {
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   batchDeleteMarketingTasks,
+  closeMarketingTask,
   createMarketingTask,
   fetchMarketingAccountGroups,
   fetchMarketingAccountTree,
   getMarketingTaskDetail,
   listMarketingTasks,
+  pauseMarketingTask,
+  resumeMarketingTask,
   startMarketingTask,
-  stopMarketingTask,
   updateTaskMarketingTemplate,
   type MarketingAccountTree,
   type MarketingSelection,
@@ -37,6 +39,7 @@ import {
   type AccountGroupApiRow
 } from "@/api/account-group";
 import { apiErrorMessage } from "@/utils/api-error";
+import { canModifyTaskMaterial } from "../constants";
 
 export interface GroupMarketingSearchForm {
   id: string;
@@ -72,6 +75,7 @@ export interface GroupMarketingTaskPageState {
   activeTask: Ref<MarketingTaskRow | null>;
   advancedOpen: Ref<boolean>;
   closeCreateDrawer: () => void;
+  closeTask: (row: MarketingTaskRow) => Promise<void>;
   closeDetailDrawer: () => void;
   closeMaterialDrawer: () => void;
   createDrawerOpen: Ref<boolean>;
@@ -97,14 +101,15 @@ export interface GroupMarketingTaskPageState {
   openMaterialDrawer: (row: MarketingTaskRow) => Promise<void>;
   page: Ref<number>;
   pageSize: Ref<number>;
+  pauseTask: (row: MarketingTaskRow) => Promise<void>;
   refreshTasks: () => Promise<void>;
   resetSearchForm: () => void;
+  resumeTask: (row: MarketingTaskRow) => Promise<void>;
   rows: Ref<MarketingTaskRow[]>;
   searchForm: GroupMarketingSearchForm;
   searchTasks: () => void;
   selectedCount: ComputedRef<number>;
   startTask: (row: MarketingTaskRow) => Promise<void>;
-  stopTask: (row: MarketingTaskRow) => Promise<void>;
   submitMaterialUpdate: () => Promise<void>;
   toggleAdvanced: () => void;
   total: Ref<number>;
@@ -495,22 +500,56 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     }
   }
 
-  async function stopTask(row: MarketingTaskRow): Promise<void> {
+  function replaceTaskRow(updated: MarketingTaskRow): void {
+    rows.value = rows.value.map(item =>
+      item.id === updated.id ? updated : item
+    );
+  }
+
+  async function pauseTask(row: MarketingTaskRow): Promise<void> {
     try {
-      const updated = await stopMarketingTask(row.id);
-      rows.value = rows.value.map(item =>
-        item.id === row.id ? updated : item
-      );
-      ElMessage.success("营销任务已停止");
+      replaceTaskRow(await pauseMarketingTask(row.id));
+      ElMessage.success("营销任务已暂停，账号仍保持锁定");
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "停止营销任务失败"));
+      ElMessage.error(apiErrorMessage(error, "暂停营销任务失败"));
+    }
+  }
+
+  async function resumeTask(row: MarketingTaskRow): Promise<void> {
+    try {
+      replaceTaskRow(await resumeMarketingTask(row.id));
+      ElMessage.success("营销任务已继续");
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "继续营销任务失败"));
+    }
+  }
+
+  async function closeTask(row: MarketingTaskRow): Promise<void> {
+    try {
+      await ElMessageBox.confirm(
+        `确认手动关闭任务【${row.taskName ?? row.id}】？关闭后不可再次启动，任务账号将被释放。`,
+        "手动关闭营销任务",
+        {
+          type: "warning",
+          confirmButtonText: "确认关闭",
+          cancelButtonText: "取消"
+        }
+      );
+    } catch {
+      return;
+    }
+    try {
+      replaceTaskRow(await closeMarketingTask(row.id));
+      ElMessage.success("营销任务已关闭，账号已释放");
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "手动关闭营销任务失败"));
     }
   }
 
   async function deleteSelected(): Promise<void> {
     if (selectedRows.value.length === 0) return;
-    if (selectedRows.value.some(row => row.status === 2)) {
-      ElMessage.warning("发送中的任务不可删除，请先停止任务");
+    if (selectedRows.value.some(row => ![7, 8].includes(row.status))) {
+      ElMessage.warning("未结束的任务不可删除，请先手动关闭任务");
       return;
     }
     try {
@@ -536,6 +575,11 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
   }
 
   async function openMaterialDrawer(row: MarketingTaskRow): Promise<void> {
+    // 列表入口已隐藏终态按钮；这里再次校验，避免其他调用路径绕过 UI 门禁。
+    if (!canModifyTaskMaterial(row.status)) {
+      ElMessage.warning("已完成或已关闭的任务不可修改营销素材");
+      return;
+    }
     if (marketingTemplates.value.length === 0) {
       await loadOptions();
     }
@@ -595,6 +639,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     activeTask,
     advancedOpen,
     closeCreateDrawer,
+    closeTask,
     closeDetailDrawer,
     closeMaterialDrawer,
     createDrawerOpen,
@@ -618,14 +663,15 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     openMaterialDrawer,
     page,
     pageSize,
+    pauseTask,
     refreshTasks,
     resetSearchForm,
+    resumeTask,
     rows,
     searchForm,
     searchTasks,
     selectedCount,
     startTask,
-    stopTask,
     submitMaterialUpdate,
     toggleAdvanced,
     total,

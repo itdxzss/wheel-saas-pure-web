@@ -47,6 +47,13 @@ describe("group marketing create drawer", () => {
     assert.match(source, /disabled: !accountSelectable\(account\)/);
   });
 
+  it("shows the backend lock owner message on disabled account nodes", () => {
+    assert.match(source, /disabledReason: accountDisabledReason\(account\)/);
+    assert.match(source, /<el-tooltip/);
+    assert.match(source, /:content="data\.disabledReason"/);
+    assert.match(source, /\{\{ data\.disabledReason \}\}/);
+  });
+
   it("loads account groups lazily when an account node is expanded", () => {
     assert.match(source, /lazy/);
     assert.match(source, /:load="loadTreeNode"/);

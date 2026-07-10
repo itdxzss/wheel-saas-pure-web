@@ -7,37 +7,34 @@ function source(relativePath: string): string {
 }
 
 describe("group marketing task lifecycle ui", () => {
-  it("shows ordinary start only for waiting and stopped tasks, and restart only for ended tasks", () => {
+  it("uses one lifecycle button for start pause and resume, plus manual close for active tasks", () => {
     const table = source("./GroupMarketingTaskTable.vue");
 
-    assert.match(table, /v-if="\[1, 5\]\.includes\(row\.status\)"/);
-    assert.match(table, />\s*启动\s*<\/el-button>/);
-    assert.match(table, /v-if="row\.status === 7"/);
-    assert.match(table, /'restart'/);
-    assert.match(table, />\s*重新启动\s*<\/el-button>/);
-    assert.doesNotMatch(table, /:disabled="row\.status === 2"/);
+    assert.match(table, /v-if="\[1, 2, 5\]\.includes\(row\.status\)"/);
+    assert.match(table, /taskLifecycleAction\(row\.status\)/);
+    assert.match(table, /taskLifecycleLabel\(row\.status\)/);
+    assert.match(table, /return "start"/);
+    assert.match(table, /return "pause"/);
+    assert.match(table, /return "resume"/);
+    assert.match(table, /'close'/);
+    assert.match(table, />\s*手动关闭\s*<\/el-button>/);
+    assert.doesNotMatch(table, /重新启动/);
   });
 
-  it("provides required start and end datetime fields in the restart dialog", () => {
-    const dialog = source("./GroupMarketingRestartDialog.vue");
-
-    assert.match(dialog, /title="重新启动营销任务"/);
-    assert.match(dialog, /label="任务开始时间" required/);
-    assert.match(dialog, /v-model="form\.taskStartAt"/);
-    assert.match(dialog, /label="任务结束时间" required/);
-    assert.match(dialog, /v-model="form\.taskEndAt"/);
-    assert.equal((dialog.match(/value-format="x"/g) ?? []).length, 2);
-    assert.match(dialog, /:loading="submitting"/);
-    assert.match(dialog, /:show-close="!submitting"/);
-    assert.match(dialog, /:close-on-press-escape="!submitting"/);
-  });
-
-  it("wires restart action and dialog through the page", () => {
+  it("removes restart API and dialog wiring from ordinary marketing", () => {
     const page = source("../index.vue");
+    const api = source("../../../../api/marketing-task.ts");
 
-    assert.match(page, /useMarketingTaskRestart/);
-    assert.match(page, /action === "restart"/);
-    assert.match(page, /<GroupMarketingRestartDialog/);
-    assert.match(page, /@submit="submitRestart"/);
+    assert.doesNotMatch(page, /useMarketingTaskRestart/);
+    assert.doesNotMatch(page, /GroupMarketingRestartDialog/);
+    assert.doesNotMatch(page, /action === "restart"/);
+    assert.doesNotMatch(api, /restartMarketingTask/);
+    assert.doesNotMatch(api, /\/restart/);
+  });
+
+  it("only exposes marketing material editing for non-terminal tasks", () => {
+    const table = source("./GroupMarketingTaskTable.vue");
+
+    assert.match(table, /v-if="canModifyTaskMaterial\(row\.status\)"/);
   });
 });

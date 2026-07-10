@@ -4,7 +4,12 @@ import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import type { MarketingTaskRow } from "@/api/marketing-task";
-import { formatEpoch, taskStatusLabel, taskStatusTagType } from "../constants";
+import {
+  canModifyTaskMaterial,
+  formatEpoch,
+  taskStatusLabel,
+  taskStatusTagType
+} from "../constants";
 import Delete from "~icons/ep/delete";
 import Plus from "~icons/ep/plus";
 
@@ -43,6 +48,27 @@ const currentPageSize = computed({
 
 function asMarketingTaskRow(row: unknown): MarketingTaskRow {
   return row as MarketingTaskRow;
+}
+
+function taskLifecycleAction(status: MarketingTaskRow["status"]): string {
+  if (status === 1) return "start";
+  if (status === 2) return "pause";
+  if (status === 5) return "resume";
+  return "";
+}
+
+function taskLifecycleLabel(status: MarketingTaskRow["status"]): string {
+  if (status === 1) return "启动";
+  if (status === 2) return "暂停";
+  if (status === 5) return "继续";
+  return "";
+}
+
+function taskLifecycleType(
+  status: MarketingTaskRow["status"]
+): "primary" | "success" | "warning" {
+  if (status === 2) return "warning";
+  return status === 5 ? "success" : "primary";
 }
 </script>
 
@@ -161,7 +187,7 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
             {{ formatEpoch(row.lastSentAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="290">
+        <el-table-column label="操作" fixed="right" width="330">
           <template #default="{ row }">
             <el-button
               link
@@ -171,30 +197,29 @@ function asMarketingTaskRow(row: unknown): MarketingTaskRow {
               明细
             </el-button>
             <el-button
-              v-if="row.status === 2"
+              v-if="[1, 2, 5].includes(row.status)"
               link
-              type="warning"
-              @click="emit('row-action', asMarketingTaskRow(row), 'stop')"
+              :type="taskLifecycleType(row.status)"
+              @click="
+                emit(
+                  'row-action',
+                  asMarketingTaskRow(row),
+                  taskLifecycleAction(row.status)
+                )
+              "
             >
-              停止
+              {{ taskLifecycleLabel(row.status) }}
             </el-button>
             <el-button
-              v-if="[1, 5].includes(row.status)"
+              v-if="[1, 2, 5].includes(row.status)"
               link
-              type="success"
-              @click="emit('row-action', asMarketingTaskRow(row), 'start')"
+              type="danger"
+              @click="emit('row-action', asMarketingTaskRow(row), 'close')"
             >
-              启动
+              手动关闭
             </el-button>
             <el-button
-              v-if="row.status === 7"
-              link
-              type="success"
-              @click="emit('row-action', asMarketingTaskRow(row), 'restart')"
-            >
-              重新启动
-            </el-button>
-            <el-button
+              v-if="canModifyTaskMaterial(row.status)"
               link
               type="primary"
               @click="emit('row-action', asMarketingTaskRow(row), 'material')"

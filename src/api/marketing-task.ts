@@ -8,7 +8,7 @@ import {
   type MarketingTemplateWrite
 } from "@/api/marketing-template";
 
-export type MarketingTaskStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type MarketingTaskStatus = 1 | 2 | 5 | 7 | 8;
 export type MarketingTaskTargetStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type MarketingTaskStartMode = "PENDING" | "IMMEDIATE";
 export type MarketingTargetScope = "GROUP_FIXED" | "ACCOUNT_DYNAMIC";
@@ -156,11 +156,6 @@ export interface CreateMarketingTaskRequest {
   selections: MarketingSelection[];
 }
 
-export interface RestartMarketingTaskRequest {
-  taskStartAt: number;
-  taskEndAt: number;
-}
-
 function toListParams(query: MarketingTaskQuery) {
   return {
     page: query.page,
@@ -207,21 +202,24 @@ export function startMarketingTask(id: number): Promise<MarketingTaskRow> {
   );
 }
 
-export function restartMarketingTask(
-  id: number,
-  data: RestartMarketingTaskRequest
-): Promise<MarketingTaskRow> {
+export function pauseMarketingTask(id: number): Promise<MarketingTaskRow> {
   return armadaRequest<MarketingTaskRow>(
     "post",
-    `/api/marketing-tasks/${id}/restart`,
-    { data }
+    `/api/marketing-tasks/${id}/pause`
   );
 }
 
-export function stopMarketingTask(id: number): Promise<MarketingTaskRow> {
+export function resumeMarketingTask(id: number): Promise<MarketingTaskRow> {
   return armadaRequest<MarketingTaskRow>(
     "post",
-    `/api/marketing-tasks/${id}/stop`
+    `/api/marketing-tasks/${id}/resume`
+  );
+}
+
+export function closeMarketingTask(id: number): Promise<MarketingTaskRow> {
+  return armadaRequest<MarketingTaskRow>(
+    "post",
+    `/api/marketing-tasks/${id}/close`
   );
 }
 

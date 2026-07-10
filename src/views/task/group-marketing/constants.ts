@@ -8,13 +8,11 @@ export const taskStatusOptions: Array<{
   label: string;
   value: MarketingTaskStatus;
 }> = [
-  { label: "待启动", value: 1 },
-  { label: "发送中", value: 2 },
-  { label: "发送成功", value: 3 },
-  { label: "发送失败", value: 4 },
-  { label: "已停止", value: 5 },
-  { label: "部分失败", value: 6 },
-  { label: "已结束", value: 7 }
+  { label: "未启动", value: 1 },
+  { label: "执行中", value: 2 },
+  { label: "已暂停", value: 5 },
+  { label: "已完成", value: 7 },
+  { label: "已关闭", value: 8 }
 ];
 
 export const taskColumns: TableColumnList = [
@@ -36,12 +34,17 @@ export function taskStatusLabel(status?: MarketingTaskStatus | null): string {
 
 export function taskStatusTagType(status?: MarketingTaskStatus | null) {
   if (status === 2) return "primary";
-  if (status === 3) return "success";
-  if (status === 4) return "danger";
   if (status === 5) return "warning";
-  if (status === 6) return "warning";
-  if (status === 7) return "info";
+  if (status === 7) return "success";
+  if (status === 8) return "info";
   return "info";
+}
+
+/** 终态任务不可再修改共享营销素材；仅保留未启动、执行中和暂停态入口。 */
+export function canModifyTaskMaterial(
+  status?: MarketingTaskStatus | null
+): boolean {
+  return status === 1 || status === 2 || status === 5;
 }
 
 export function targetStatusLabel(

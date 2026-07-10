@@ -28,6 +28,7 @@ interface TreeNode {
   id: string;
   label: string;
   disabled?: boolean;
+  disabledReason?: string;
   isLeaf?: boolean;
   children?: TreeNode[];
 }
@@ -109,11 +110,17 @@ function accountSelectable(account: MarketingTreeAccount): boolean {
   );
 }
 
+function accountDisabledReason(account: MarketingTreeAccount): string {
+  if (accountSelectable(account)) return "";
+  return account.disabledReason?.trim() || "该账号当前不可选择";
+}
+
 const treeData = computed<TreeNode[]>(() =>
   props.treeAccounts.map(account => ({
     id: accountTreeKey(account.accountId),
     label: `${account.wsPhone} · ${accountStatusText(account)} · ${accountGroupCount(account)}个群`,
     disabled: !accountSelectable(account),
+    disabledReason: accountDisabledReason(account),
     isLeaf: !accountSelectable(account)
   }))
 );
@@ -317,7 +324,22 @@ function submit(): void {
             :props="treeProps"
             empty-text="该分组下暂无可营销账号"
             @check="onTreeCheck"
-          />
+          >
+            <template #default="{ data }">
+              <el-tooltip
+                :content="data.disabledReason"
+                placement="top-start"
+                :disabled="!data.disabledReason"
+              >
+                <span class="tree-node-content">
+                  <span>{{ data.label }}</span>
+                  <small v-if="data.disabledReason">
+                    {{ data.disabledReason }}
+                  </small>
+                </span>
+              </el-tooltip>
+            </template>
+          </el-tree>
         </div>
       </el-form-item>
       <el-form-item label="营销模板" required>
@@ -429,6 +451,20 @@ function submit(): void {
   justify-content: space-between;
   margin-bottom: 8px;
   color: var(--el-text-color-secondary);
+}
+
+.tree-node-content {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  max-width: 600px;
+}
+
+.tree-node-content small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--el-color-danger);
+  white-space: nowrap;
 }
 
 .switch-list {
