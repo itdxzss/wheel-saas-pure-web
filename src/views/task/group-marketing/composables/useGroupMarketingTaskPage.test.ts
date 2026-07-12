@@ -355,4 +355,48 @@ describe("group marketing task page state", () => {
       { type: "warning", text: "已完成或已关闭的任务不可修改营销素材" }
     ]);
   });
+
+  it("updates marketing material without optional body text", async () => {
+    resetArmadaMock({
+      id: 18,
+      templateName: "活动模板",
+      linkMode: 1,
+      textType: "PROMO",
+      content: "标题",
+      bodyText: "",
+      buttons: []
+    });
+    resetElementPlusMock();
+    const pageState = useGroupMarketingTaskPage();
+    pageState.marketingTemplates.value = [
+      {
+        id: 18,
+        templateName: "活动模板",
+        linkMode: 1,
+        textType: "PROMO",
+        content: "标题",
+        bodyText: "原正文",
+        buttons: []
+      }
+    ];
+
+    await pageState.openMaterialDrawer({
+      id: 42,
+      taskName: "夏季活动",
+      marketingTemplateId: 18,
+      status: 1
+    } as MarketingTaskRow);
+    pageState.materialForm.value.bodyText = "";
+    await pageState.submitMaterialUpdate();
+
+    const calls = armadaCalls();
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].method, "put");
+    assert.equal(calls[0].url, "/api/marketing-tasks/42/marketing-template");
+    assert.equal(
+      (calls[0].opts as { data: { bodyText: string } }).data.bodyText,
+      ""
+    );
+    assert.equal(pageState.materialDrawerOpen.value, false);
+  });
 });

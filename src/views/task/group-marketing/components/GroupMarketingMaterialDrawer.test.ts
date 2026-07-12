@@ -14,4 +14,9 @@ describe("group marketing material drawer", () => {
     assert.match(source, /form\.value\.linkMode !== 2/);
     assert.doesNotMatch(source, /label="超链模式"/);
   });
+
+  it("marks body text as optional", () => {
+    assert.doesNotMatch(source, /<el-form-item label="正文" required>/);
+    assert.match(source, /placeholder="选填，作为补充说明展示"/);
+  });
 });

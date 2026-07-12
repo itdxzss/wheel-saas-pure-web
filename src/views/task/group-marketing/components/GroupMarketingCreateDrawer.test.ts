@@ -36,6 +36,13 @@ describe("group marketing create drawer", () => {
     );
   });
 
+  it("shows the account-group online count in option labels", () => {
+    assert.match(
+      source,
+      /:label="`\$\{group\.name\}（\$\{group\.onlineAccounts\}）`"/
+    );
+  });
+
   it("normalizes backend status codes before rendering status text", () => {
     assert.match(source, /function statusTextFromCode/);
     assert.match(source, /case "ONLINE":\s*return "在线";/);

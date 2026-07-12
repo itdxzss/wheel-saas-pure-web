@@ -178,7 +178,6 @@ function copyMaterialForm(
 function validateMaterialForm(form: MarketingTemplateWrite): string {
   if (!form.templateName.trim()) return "模板名称不能为空";
   if (!form.content.trim()) return "内容不能为空";
-  if (!form.bodyText.trim()) return "正文不能为空";
   if (form.linkMode === 2 && form.buttons.length === 0) {
     return "按钮超链消息类型至少配置 1 个按钮";
   }
