@@ -118,22 +118,16 @@ export interface GroupMarketingTaskPageState {
 }
 
 const ACCOUNT_GROUP_SEND_LOOKBACK_MS = 72 * 60 * 60 * 1000;
-const DEFAULT_TASK_DURATION_MS = 24 * 60 * 60 * 1000;
-
-function epochString(value: number): string {
-  return String(value);
-}
 
 function emptyCreateForm(): GroupMarketingCreateForm {
-  const now = Date.now();
   return {
     taskName: "",
     accountGroupId: "",
     marketingTemplateId: "",
     startMode: "PENDING",
     accountGroupSendAt: "",
-    taskStartAt: epochString(now),
-    taskEndAt: epochString(now + DEFAULT_TASK_DURATION_MS),
+    taskStartAt: "",
+    taskEndAt: "",
     sendPerRound: 1,
     sendIntervalSeconds: 30,
     onlineCheckEnabled: true,

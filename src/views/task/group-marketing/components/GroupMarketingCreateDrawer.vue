@@ -262,6 +262,10 @@ function buildSelections(): MarketingSelection[] {
   return buildMarketingSelections(checked, dynamicAccountIds.value);
 }
 
+function setCurrentTime(field: "taskStartAt" | "taskEndAt"): void {
+  form.value[field] = String(Date.now());
+}
+
 function submit(): void {
   emit("submit", {
     form: { ...form.value },
@@ -369,22 +373,28 @@ function submit(): void {
         />
       </el-form-item>
       <el-form-item label="任务开始时间" required>
-        <el-date-picker
-          v-model="form.taskStartAt"
-          type="datetime"
-          value-format="x"
-          class="form-control"
-          placeholder="请选择任务开始时间"
-        />
+        <div class="datetime-control">
+          <el-date-picker
+            v-model="form.taskStartAt"
+            type="datetime"
+            value-format="x"
+            class="datetime-picker"
+            placeholder="请选择任务开始时间"
+          />
+          <el-button @click="setCurrentTime('taskStartAt')">此刻</el-button>
+        </div>
       </el-form-item>
       <el-form-item label="任务结束时间" required>
-        <el-date-picker
-          v-model="form.taskEndAt"
-          type="datetime"
-          value-format="x"
-          class="form-control"
-          placeholder="请选择任务结束时间"
-        />
+        <div class="datetime-control">
+          <el-date-picker
+            v-model="form.taskEndAt"
+            type="datetime"
+            value-format="x"
+            class="datetime-picker"
+            placeholder="请选择任务结束时间"
+          />
+          <el-button @click="setCurrentTime('taskEndAt')">此刻</el-button>
+        </div>
       </el-form-item>
       <el-form-item label="单轮发送数量">
         <el-input-number v-model="form.sendPerRound" :min="1" :step="1" />
@@ -436,8 +446,18 @@ function submit(): void {
 }
 
 .form-control,
-.tree-box {
+.tree-box,
+.datetime-control {
   width: 100%;
+}
+
+.datetime-control {
+  display: flex;
+  gap: 8px;
+}
+
+.datetime-picker {
+  flex: 1;
 }
 
 .tree-box {
