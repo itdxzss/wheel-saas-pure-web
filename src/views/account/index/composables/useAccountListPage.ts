@@ -13,19 +13,25 @@ import {
   batchDeleteTenantAccounts,
   batchMigrateTenantAccountsToGroup,
   batchOfflineTenantAccounts,
+  batchOfflineTenantAccountsByQuery,
   batchOnlineTenantAccounts,
+  batchOnlineTenantAccountsByQuery,
   batchTakeoverTenantAccounts,
   getTenantAccountSummary,
   listTenantAccounts,
   onlineTenantAccount,
+  previewTenantAccountBatch,
   type AccountType,
   type LoginState,
   type NumberSource,
   type RiskStatus,
   type TenantAccount,
+  type TenantAccountBatchOperation,
+  type TenantAccountBatchQuery,
   type TenantAccountListQuery,
   type TenantAccountSummary
 } from "@/api/account";
+import { toTenantAccountBatchQuery } from "@/api/account-mapping";
 import {
   listAccountGroups,
   type AccountGroupApiRow
@@ -48,13 +54,20 @@ import {
   type BatchMoveMode
 } from "../account-move";
 import {
-  filterOnlineSubmittableAccounts,
   isTakeoverCandidate,
-  onlineBlockedTip,
   singleOnlineBlockedTip,
   takeoverBatchDisabledTip,
   TAKEOVER_SELECTION_MESSAGE
 } from "../account-takeover";
+import {
+  batchCommandResultMessage,
+  batchConfirmMessage,
+  buildBatchPreviewRequest
+} from "../account-batch-operation";
+import {
+  createAccountQueryState,
+  type AccountQueryRequest
+} from "../account-query-state";
 
 export interface AccountSearchForm {
   keyword: string;
@@ -104,8 +117,7 @@ function routeNumber(value: unknown): "" | number {
 export interface AccountListPageState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   accountStatusOptions: string[];
-  batchOnlineDisabled: ComputedRef<boolean>;
-  batchOnlineTip: ComputedRef<string>;
+  batchSubmitting: Ref<boolean>;
   accountTypeOptions: Array<{ label: string; value: AccountType }>;
   batchMoveForm: BatchMoveForm;
   batchMoveModeOptions: Array<{ label: string; value: BatchMoveMode }>;
@@ -193,6 +205,7 @@ export function useAccountListPage(): AccountListPageState {
   const accountGroups = ref<AccountGroupApiRow[]>([]);
   const selectedRows = ref<TenantAccount[]>([]);
   const loading = ref(false);
+  const batchSubmitting = ref(false);
   const groupLoading = ref(false);
   const protocolRestarting = ref(false);
   const showAdvancedSearch = ref(initialGroupId !== "");
@@ -200,6 +213,7 @@ export function useAccountListPage(): AccountListPageState {
   const page = ref(1);
   const pageSize = ref(10);
   const total = ref(0);
+  const queryState = createAccountQueryState();
   const now = ref(Date.now());
   // Set 记录正在提交的账号，Map 负责当前页面内的倒计时响应。
   const onlineSubmittingIds = ref<Set<number>>(new Set());
@@ -212,8 +226,6 @@ export function useAccountListPage(): AccountListPageState {
     takeoverBatchDisabledTip(selectedRows.value)
   );
   const takeoverBatchDisabled = computed(() => takeoverBatchTip.value !== "");
-  const batchOnlineTip = computed(() => onlineBlockedTip(selectedRows.value));
-  const batchOnlineDisabled = computed(() => batchOnlineTip.value !== "");
 
   function accountId(row: TenantAccount): number | null {
     return typeof row.id === "number" && Number.isSafeInteger(row.id)
@@ -299,11 +311,8 @@ export function useAccountListPage(): AccountListPageState {
     return remaining > 0 ? `上线(${remaining}s)` : "上线";
   }
 
-  function buildQuery(): TenantAccountListQuery {
-    const query: TenantAccountListQuery = {
-      page: page.value,
-      pageSize: pageSize.value
-    };
+  function buildEditingFilters(): TenantAccountBatchQuery {
+    const query: TenantAccountListQuery = {};
     if (searchForm.keyword.trim()) query.keyword = searchForm.keyword.trim();
     if (searchForm.phone.trim()) query.phone = searchForm.phone.trim();
     if (searchForm.accountType) query.accountType = searchForm.accountType;
@@ -324,7 +333,7 @@ export function useAccountListPage(): AccountListPageState {
     }
     if (searchForm.groupId) query.accountGroupId = Number(searchForm.groupId);
     if (searchForm.country.trim()) query.country = searchForm.country.trim();
-    return query;
+    return toTenantAccountBatchQuery(query);
   }
 
   async function loadSummary() {
@@ -348,29 +357,50 @@ export function useAccountListPage(): AccountListPageState {
     }
   }
 
-  async function refreshAccountList() {
+  async function loadAccountList(
+    request: AccountQueryRequest,
+    requestedPage: number,
+    applyFiltersOnSuccess: boolean
+  ): Promise<boolean> {
     loading.value = true;
     void loadSummary();
     try {
-      const response = await listTenantAccounts(buildQuery());
+      const response = await listTenantAccounts({
+        ...request.filters,
+        page: requestedPage,
+        pageSize: pageSize.value
+      });
+      if (!queryState.isLatest(request)) return false;
       rows.value = response.list ?? [];
       total.value = response.total ?? 0;
-      selectedRows.value = selectedRows.value.filter(row =>
-        rows.value.some(item => item.id === row.id)
-      );
-    } catch (error) {
-      rows.value = [];
-      total.value = 0;
+      page.value = requestedPage;
       selectedRows.value = [];
-      ElMessage.error(apiErrorMessage(error, "账号列表加载失败"));
+      if (applyFiltersOnSuccess) queryState.commit(request);
+      return true;
+    } catch (error) {
+      if (queryState.isLatest(request)) {
+        ElMessage.error(apiErrorMessage(error, "账号列表加载失败"));
+      }
+      return false;
     } finally {
-      loading.value = false;
+      if (queryState.isLatest(request)) loading.value = false;
     }
   }
 
+  async function refreshAccountList(): Promise<void> {
+    const appliedFilters = queryState.applied();
+    if (appliedFilters === null) {
+      const initialRequest = queryState.begin(buildEditingFilters());
+      await loadAccountList(initialRequest, 1, true);
+      return;
+    }
+    const request = queryState.begin(appliedFilters);
+    await loadAccountList(request, page.value, false);
+  }
+
   function searchAccounts() {
-    page.value = 1;
-    void refreshAccountList();
+    const request = queryState.begin(buildEditingFilters());
+    void loadAccountList(request, 1, true);
   }
 
   function resetSearchForm() {
@@ -501,54 +531,82 @@ export function useAccountListPage(): AccountListPageState {
     return `${prefix}，已受理 ${result.accepted}/${result.requested}`;
   }
 
-  async function submitBatchOnline(ids: number[]): Promise<void> {
-    if (ids.length === 0) {
-      ElMessage.warning("请先选择账号");
+  async function submitLifecycleBatch(
+    operation: TenantAccountBatchOperation
+  ): Promise<void> {
+    if (batchSubmitting.value) return;
+    const ids = selectedAccountIds();
+    const appliedFilters = queryState.applied();
+    if (!queryState.hasApplied() || appliedFilters === null) {
+      ElMessage.warning("账号列表尚未加载成功，请先查询后再执行批量操作");
       return;
     }
-    const blockedTip = onlineBlockedTip(selectedRows.value);
-    if (blockedTip) {
-      ElMessage.warning(blockedTip);
-      return;
-    }
-    const { submittableIds, skippedCount } =
-      filterOnlineSubmittableAccounts(selectedRows.value);
-    if (submittableIds.length === 0) {
-      ElMessage.warning("所选账号均不可上线");
-      return;
-    }
-    if (skippedCount > 0) {
-      ElMessage.warning(`已跳过 ${skippedCount} 个不可上线账号`);
-    }
-    submittableIds.forEach(id => {
-      writeOnlineCooldown(id);
-      setOnlineSubmitting(id, true);
-    });
+    const appliedRevision = queryState.appliedRevision();
+    const previewRequest = buildBatchPreviewRequest(
+      operation,
+      ids,
+      appliedFilters
+    );
+    batchSubmitting.value = true;
     try {
-      const result = await batchOnlineTenantAccounts(submittableIds);
-      ElMessage.success(batchResultMessage("登录请求已提交", result));
+      const preview = await previewTenantAccountBatch(previewRequest);
+      if (preview.executable === 0) {
+        ElMessage.warning("当前范围内没有可执行账号");
+        return;
+      }
+      if (queryState.appliedRevision() !== appliedRevision) {
+        ElMessage.warning("账号列表筛选条件已更新，请重新发起批量操作");
+        return;
+      }
+      await ElMessageBox.confirm(
+        batchConfirmMessage(
+          operation,
+          ids.length,
+          Object.keys(appliedFilters).length > 0,
+          preview
+        ),
+        operation === "ONLINE" ? "确认批量登录" : "确认批量离线",
+        {
+          confirmButtonText: "继续执行",
+          cancelButtonText: "取消",
+          type: "warning"
+        }
+      );
+      if (queryState.appliedRevision() !== appliedRevision) {
+        ElMessage.warning("账号列表筛选条件已更新，请重新发起批量操作");
+        return;
+      }
+      const result =
+        ids.length > 0
+          ? operation === "ONLINE"
+            ? await batchOnlineTenantAccounts(ids)
+            : await batchOfflineTenantAccounts(ids)
+          : operation === "ONLINE"
+            ? await batchOnlineTenantAccountsByQuery(appliedFilters)
+            : await batchOfflineTenantAccountsByQuery(appliedFilters);
+      ElMessage.success(batchCommandResultMessage(operation, result));
+      selectedRows.value = [];
       await refreshAccountList();
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "登录请求失败"));
+      if (error === "cancel" || error === "close") return;
+      ElMessage.error(
+        apiErrorMessage(
+          error,
+          operation === "ONLINE" ? "批量登录失败" : "批量离线失败"
+        )
+      );
     } finally {
-      submittableIds.forEach(id => setOnlineSubmitting(id, false));
+      batchSubmitting.value = false;
     }
   }
 
-  async function submitBatchOffline(
-    ids: number[],
-    successPrefix = "离线请求已提交"
-  ): Promise<void> {
-    if (ids.length === 0) {
-      ElMessage.warning("请先选择账号");
-      return;
-    }
+  async function submitSingleOffline(id: number): Promise<void> {
     try {
-      const result = await batchOfflineTenantAccounts(ids);
-      ElMessage.success(batchResultMessage(successPrefix, result));
+      const result = await batchOfflineTenantAccounts([id]);
+      ElMessage.success(batchResultMessage("下线请求已提交", result));
       await refreshAccountList();
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "离线请求失败"));
+      ElMessage.error(apiErrorMessage(error, "下线请求失败"));
     }
   }
 
@@ -605,17 +663,17 @@ export function useAccountListPage(): AccountListPageState {
       openBatchMoveDrawer();
       return;
     }
-    const ids = selectedAccountIds();
-    if (ids.length === 0) {
-      ElMessage.warning("请先选择账号");
-      return;
-    }
     if (command === "online") {
-      void submitBatchOnline(ids);
+      void submitLifecycleBatch("ONLINE");
       return;
     }
     if (command === "offline") {
-      void submitBatchOffline(ids);
+      void submitLifecycleBatch("OFFLINE");
+      return;
+    }
+    const ids = selectedAccountIds();
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择账号");
       return;
     }
     if (command === "takeover") {
@@ -640,7 +698,7 @@ export function useAccountListPage(): AccountListPageState {
       return;
     }
     if (action === "下线") {
-      void submitBatchOffline([id], "下线请求已提交");
+      void submitSingleOffline(id);
       return;
     }
     if (action === "删除") {
@@ -672,8 +730,7 @@ export function useAccountListPage(): AccountListPageState {
     accountGroups,
     accountStatusOptions,
     accountTypeOptions,
-    batchOnlineDisabled,
-    batchOnlineTip,
+    batchSubmitting,
     batchMoveForm,
     batchMoveModeOptions,
     groupLoading,

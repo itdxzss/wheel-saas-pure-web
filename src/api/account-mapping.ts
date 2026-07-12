@@ -73,3 +73,19 @@ export function toTenantAccountListParams(
     truthIp: trimToUndefined(query.truthIp ?? query.truth_ip)
   });
 }
+
+/**
+ * 将账号列表条件转换为批量操作筛选条件。
+ *
+ * 批量目标由后端扫描全部匹配账号，禁止携带当前页码和每页条数。
+ */
+export function toTenantAccountBatchQuery(
+  query: TenantAccountListQuery
+): Omit<BackendTenantAccountListParams, "page" | "pageSize"> {
+  const {
+    page: _page,
+    pageSize: _pageSize,
+    ...filters
+  } = toTenantAccountListParams(query);
+  return filters;
+}

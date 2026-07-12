@@ -5,9 +5,12 @@ import {
   batchDeleteTenantAccounts,
   batchMigrateTenantAccountsToGroup,
   batchOfflineTenantAccounts,
+  batchOfflineTenantAccountsByQuery,
   batchOnlineTenantAccounts,
+  batchOnlineTenantAccountsByQuery,
   batchTakeoverTenantAccounts,
-  listTenantAccounts
+  listTenantAccounts,
+  previewTenantAccountBatch
 } from "./account";
 
 describe("account operation API", () => {
@@ -59,6 +62,83 @@ describe("account operation API", () => {
         method: "post",
         url: "/api/accounts/batch-offline",
         opts: { data: { ids: [100] } }
+      }
+    ]);
+  });
+
+  it("posts filtered online requests to the query endpoint", async () => {
+    resetArmadaMock({
+      requested: 2,
+      submitted: 2,
+      accepted: 2,
+      skipped: 0,
+      failed: 0,
+      skipReasons: {},
+      batchErrors: []
+    });
+
+    await batchOnlineTenantAccountsByQuery({
+      loginState: 2,
+      country: "美国"
+    });
+
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/accounts/batch-online-by-query",
+        opts: { data: { loginState: 2, country: "美国" } }
+      }
+    ]);
+  });
+
+  it("posts filtered offline requests to the query endpoint", async () => {
+    resetArmadaMock({
+      requested: 2,
+      submitted: 2,
+      accepted: 2,
+      skipped: 0,
+      failed: 0,
+      skipReasons: {},
+      batchErrors: []
+    });
+
+    await batchOfflineTenantAccountsByQuery({ loginState: 1 });
+
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/accounts/batch-offline-by-query",
+        opts: { data: { loginState: 1 } }
+      }
+    ]);
+  });
+
+  it("posts explicit query preview requests", async () => {
+    resetArmadaMock({
+      matched: 1256,
+      executable: 1200,
+      skipped: 56,
+      skipReasons: { BANNED: 56 }
+    });
+
+    const result = await previewTenantAccountBatch({
+      operation: "ONLINE",
+      scope: "QUERY",
+      query: { loginState: 2 }
+    });
+
+    assert.equal(result.executable, 1200);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/accounts/batch-operation-preview",
+        opts: {
+          data: {
+            operation: "ONLINE",
+            scope: "QUERY",
+            query: { loginState: 2 }
+          }
+        }
       }
     ]);
   });

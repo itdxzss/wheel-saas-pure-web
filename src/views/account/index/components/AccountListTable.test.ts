@@ -16,4 +16,11 @@ describe("AccountListTable protocol restart button", () => {
     assert.match(source, /:loading="protocolRestarting"/);
     assert.match(source, /emit\('restart-protocol'\)/);
   });
+
+  it("names and guards the two lifecycle batch actions", () => {
+    assert.match(source, />\s*批量登录\s*</);
+    assert.match(source, />\s*批量离线\s*</);
+    assert.match(source, /batchSubmitting: boolean/);
+    assert.match(source, /:loading="batchSubmitting"/);
+  });
 });

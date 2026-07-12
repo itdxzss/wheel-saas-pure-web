@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { toTenantAccountListParams } from "./account-mapping";
+import {
+  toTenantAccountBatchQuery,
+  toTenantAccountListParams
+} from "./account-mapping";
 
 describe("account list mapping", () => {
   it("maps enabled account filters to armada backend query params", () => {
@@ -47,6 +50,21 @@ describe("account list mapping", () => {
         ip_group_name: "IP分组A"
       }),
       {}
+    );
+  });
+
+  it("removes pagination when building a backend batch query", () => {
+    assert.deepEqual(
+      toTenantAccountBatchQuery({
+        page: 9,
+        pageSize: 500,
+        loginState: 2,
+        country: " 美国 "
+      }),
+      {
+        loginState: 2,
+        country: "美国"
+      }
     );
   });
 });

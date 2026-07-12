@@ -23,8 +23,7 @@ defineOptions({
 
 const props = defineProps<{
   columns: TableColumnList;
-  batchOnlineDisabled: boolean;
-  batchOnlineTip: string;
+  batchSubmitting: boolean;
   loading: boolean;
   onlineActionDisabled: (row: TenantAccount) => boolean;
   onlineActionLabel: (row: TenantAccount) => string;
@@ -80,21 +79,23 @@ function avatarText(row: TenantAccount) {
         重启协议
       </el-button>
       <el-dropdown trigger="click" @command="emit('batch-command', $event)">
-        <el-button :icon="useRenderIcon(MoreFilled)">
+        <el-button
+          :loading="batchSubmitting"
+          :disabled="batchSubmitting"
+          :icon="useRenderIcon(MoreFilled)"
+        >
           批量操作
           <span v-if="selectedCount">({{ selectedCount }})</span>
         </el-button>
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="move-group">迁移到分组</el-dropdown-item>
-            <el-dropdown-item
-              command="online"
-              :disabled="batchOnlineDisabled"
-              :title="batchOnlineTip || undefined"
-            >
-              登录
+            <el-dropdown-item command="online" :disabled="batchSubmitting">
+              批量登录
             </el-dropdown-item>
-            <el-dropdown-item command="offline">离线</el-dropdown-item>
+            <el-dropdown-item command="offline" :disabled="batchSubmitting">
+              批量离线
+            </el-dropdown-item>
             <el-dropdown-item
               command="takeover"
               :disabled="takeoverBatchDisabled"

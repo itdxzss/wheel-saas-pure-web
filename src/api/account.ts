@@ -1,6 +1,9 @@
 import { armadaRequest } from "@/api/armada";
 import { formatEpochMillis } from "@/utils/time";
-import { toTenantAccountListParams } from "./account-mapping";
+import {
+  toTenantAccountListParams,
+  type BackendTenantAccountListParams
+} from "./account-mapping";
 
 export type AccountState = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type LoginState = 1 | 2 | 3;
@@ -103,7 +106,7 @@ export interface TenantAccountOnlineResult {
   local: boolean;
 }
 
-export interface TenantAccountBatchCommandResult {
+export interface TenantAccountBatchBaseResult {
   requested: number;
   submitted: number;
   accepted: number;
@@ -114,6 +117,35 @@ export interface TenantAccountBatchCommandResult {
   elapsedMs: number;
   results: unknown[];
   remoteRoutes: unknown[];
+}
+
+export interface TenantAccountBatchCommandResult extends TenantAccountBatchBaseResult {
+  skipped: number;
+  failed: number;
+  skipReasons: Record<string, number>;
+  batchErrors: string[];
+}
+
+export type TenantAccountBatchQuery = Omit<
+  BackendTenantAccountListParams,
+  "page" | "pageSize"
+>;
+
+export type TenantAccountBatchOperation = "ONLINE" | "OFFLINE";
+export type TenantAccountBatchScope = "IDS" | "QUERY";
+
+export interface TenantAccountBatchPreview {
+  matched: number;
+  executable: number;
+  skipped: number;
+  skipReasons: Record<string, number>;
+}
+
+export interface TenantAccountBatchPreviewRequest {
+  operation: TenantAccountBatchOperation;
+  scope: TenantAccountBatchScope;
+  ids?: number[];
+  query?: TenantAccountBatchQuery;
 }
 
 export interface BatchMigrateTenantAccountsInput {
@@ -271,10 +303,43 @@ export function batchOfflineTenantAccounts(
   );
 }
 
-export function batchTakeoverTenantAccounts(
-  ids: number[]
+/** 按已生效筛选条件对全部匹配账号发起批量登录。 */
+export function batchOnlineTenantAccountsByQuery(
+  query: TenantAccountBatchQuery
 ): Promise<TenantAccountBatchCommandResult> {
   return armadaRequest<TenantAccountBatchCommandResult>(
+    "post",
+    "/api/accounts/batch-online-by-query",
+    { data: query }
+  );
+}
+
+/** 按已生效筛选条件对全部匹配账号发起批量离线。 */
+export function batchOfflineTenantAccountsByQuery(
+  query: TenantAccountBatchQuery
+): Promise<TenantAccountBatchCommandResult> {
+  return armadaRequest<TenantAccountBatchCommandResult>(
+    "post",
+    "/api/accounts/batch-offline-by-query",
+    { data: query }
+  );
+}
+
+/** 查询后端事实口径下的匹配、预计执行和跳过数量。 */
+export function previewTenantAccountBatch(
+  data: TenantAccountBatchPreviewRequest
+): Promise<TenantAccountBatchPreview> {
+  return armadaRequest<TenantAccountBatchPreview>(
+    "post",
+    "/api/accounts/batch-operation-preview",
+    { data }
+  );
+}
+
+export function batchTakeoverTenantAccounts(
+  ids: number[]
+): Promise<TenantAccountBatchBaseResult> {
+  return armadaRequest<TenantAccountBatchBaseResult>(
     "post",
     "/api/accounts/batch-takeover",
     { data: { ids } }
