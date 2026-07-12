@@ -82,12 +82,12 @@ function buttonValuePlaceholder(button: MarketingTemplateButton): string {
           placeholder="请输入标题 / 核心卖点"
         />
       </el-form-item>
-      <el-form-item label="正文" required>
+      <el-form-item label="正文">
         <el-input
           v-model="form.bodyText"
           type="textarea"
           :rows="4"
-          placeholder="请输入正文"
+          placeholder="选填，作为补充说明展示"
         />
       </el-form-item>
       <el-form-item label="推广链接">
