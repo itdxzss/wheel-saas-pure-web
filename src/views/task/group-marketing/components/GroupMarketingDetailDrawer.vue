@@ -17,6 +17,7 @@ import {
   groupCountLabel,
   hasGroupRows
 } from "./detail-rollup";
+import { groupSendStatusMeta } from "./group-send-status";
 
 defineOptions({
   name: "GroupMarketingDetailDrawer"
@@ -116,6 +117,14 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                   :key="groupRowKey(group)"
                   class="group-rollup-detail-row"
                 >
+                  <el-tag
+                    size="small"
+                    effect="plain"
+                    :type="groupSendStatusMeta(group.groupStatus).tagType"
+                    :class="groupSendStatusMeta(group.groupStatus).className"
+                  >
+                    {{ groupSendStatusMeta(group.groupStatus).label }}
+                  </el-tag>
                   <span>{{ group.sentMessageCount }}</span>
                   <span
                     class="group-rollup-text"
@@ -144,9 +153,10 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
             </div>
           </template>
         </el-table-column>
-        <el-table-column min-width="760">
+        <el-table-column min-width="880">
           <template #header>
             <div class="group-rollup-header">
+              <span>状态</span>
               <span>单群发送条数</span>
               <span>群组链接</span>
               <span>群组名称</span>
@@ -161,6 +171,26 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                   class="group-rollup-first-row"
                   :title="firstGroupSummary(asAccountRow(row))"
                 >
+                  <el-tag
+                    size="small"
+                    effect="plain"
+                    :type="
+                      groupSendStatusMeta(
+                        firstGroup(asAccountRow(row))?.groupStatus
+                      ).tagType
+                    "
+                    :class="
+                      groupSendStatusMeta(
+                        firstGroup(asAccountRow(row))?.groupStatus
+                      ).className
+                    "
+                  >
+                    {{
+                      groupSendStatusMeta(
+                        firstGroup(asAccountRow(row))?.groupStatus
+                      ).label
+                    }}
+                  </el-tag>
                   <span class="group-rollup-number">
                     {{ firstGroup(asAccountRow(row))?.sentMessageCount ?? 0 }}
                   </span>
@@ -229,7 +259,7 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 .group-rollup-detail-row {
   display: grid;
   grid-template-columns:
-    112px minmax(190px, 1.35fr) minmax(150px, 1fr)
+    104px 112px minmax(190px, 1.35fr) minmax(150px, 1fr)
     minmax(130px, 0.9fr) 170px;
   gap: 16px;
   align-items: center;
@@ -244,6 +274,12 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 
 .group-rollup-first-row {
   color: var(--el-text-color-regular);
+}
+
+.group-status--no-permission {
+  --el-tag-bg-color: rgb(147 51 234 / 10%);
+  --el-tag-border-color: rgb(147 51 234 / 45%);
+  --el-tag-text-color: #9333ea;
 }
 
 .group-rollup-detail-list {

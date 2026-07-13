@@ -8,8 +8,14 @@ const source = readFileSync(
 );
 
 describe("marketing template preview", () => {
-  it("renders optional text as bottom small copy", () => {
-    assert.match(source, /v-if="form\.text"/);
+  it("renders button content as body without a text header", () => {
+    assert.match(source, /class="wa-button-body"/);
+    assert.match(source, /\[props\.form\.content, props\.form\.text\]/);
+    assert.match(source, /\.wa-button-body/);
+  });
+
+  it("renders optional text as bottom small copy outside button mode", () => {
+    assert.match(source, /v-if="form\.linkMode !== 'BUTTON' && form\.text"/);
     assert.match(source, /class="wa-footer-note"/);
     assert.match(source, /\.wa-footer-note/);
     assert.doesNotMatch(source, /form\.text \|\| "请输入文本"/);

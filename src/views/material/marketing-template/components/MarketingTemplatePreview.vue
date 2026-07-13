@@ -14,6 +14,10 @@ const previewType = computed(() => {
 
 const bottomText = computed(() => `营销模板消息 · ${previewType.value}`);
 
+const buttonBodyText = computed(() =>
+  [props.form.content, props.form.text].filter(value => value.trim()).join("\n")
+);
+
 const linkDomain = computed(() => {
   if (!props.form.promotionLink) return "";
   try {
@@ -71,7 +75,10 @@ const linkDomain = computed(() => {
             <div class="wa-template-name">
               模板：{{ form.templateName || "未命名模板" }}
             </div>
-            <div class="wa-content">
+            <div v-if="form.linkMode === 'BUTTON'" class="wa-button-body">
+              {{ buttonBodyText || "请输入内容" }}
+            </div>
+            <div v-else class="wa-content">
               {{ form.content || "请输入内容" }}
             </div>
 
@@ -83,7 +90,10 @@ const linkDomain = computed(() => {
               <div class="wa-link-url">{{ form.promotionLink }}</div>
             </div>
 
-            <div v-if="form.text" class="wa-footer-note">
+            <div
+              v-if="form.linkMode !== 'BUTTON' && form.text"
+              class="wa-footer-note"
+            >
               {{ form.text }}
             </div>
 
@@ -273,6 +283,13 @@ const linkDomain = computed(() => {
   font-size: 13px;
   font-weight: 800;
   line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.wa-button-body {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #111827;
   white-space: pre-wrap;
 }
 

@@ -66,12 +66,19 @@ export interface MarketingTaskGroupStatRow {
   groupJid?: string | null;
   groupLinkUrl?: string | null;
   groupName?: string | null;
+  groupStatus?: MarketingGroupSendStatus | null;
   sentMessageCount: number;
   failedMessageCount: number;
   lastAttemptAt?: number | null;
   lastSentAt?: number | null;
   lastReason?: string | null;
 }
+
+export type MarketingGroupSendStatus =
+  | "NORMAL"
+  | "BANNED"
+  | "NO_PERMISSION"
+  | "UNCONFIRMED";
 
 export interface MarketingTaskAccountTargetRow {
   accountId: number;
