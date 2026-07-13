@@ -133,7 +133,7 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
         <el-form-item label="按钮文字">
           <el-input
             v-model="button.label"
-            maxlength="20"
+            maxlength="100"
             show-word-limit
             clearable
             :disabled="disabled"

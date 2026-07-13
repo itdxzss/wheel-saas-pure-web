@@ -10,9 +10,25 @@ import {
   resetElementPlusMock
 } from "@/api/__tests__/element-plus-test-double";
 import type { MarketingTaskRow } from "@/api/marketing-task";
-import { useGroupMarketingTaskPage } from "./useGroupMarketingTaskPage";
+import {
+  endOfDayTimestamp,
+  useGroupMarketingTaskPage
+} from "./useGroupMarketingTaskPage";
 
 describe("group marketing task page state", () => {
+  it("normalizes a selected end date to 23:59:59 without milliseconds", () => {
+    const timestamp = endOfDayTimestamp(new Date(2026, 6, 13, 8, 30, 45, 678));
+    const result = new Date(timestamp);
+
+    assert.equal(result.getFullYear(), 2026);
+    assert.equal(result.getMonth(), 6);
+    assert.equal(result.getDate(), 13);
+    assert.equal(result.getHours(), 23);
+    assert.equal(result.getMinutes(), 59);
+    assert.equal(result.getSeconds(), 59);
+    assert.equal(result.getMilliseconds(), 0);
+  });
+
   it("creates a marketing task with required template payload", async () => {
     resetArmadaMock({
       list: [],
