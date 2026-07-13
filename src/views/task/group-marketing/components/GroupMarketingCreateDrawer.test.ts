@@ -76,6 +76,22 @@ describe("group marketing create drawer", () => {
     assert.doesNotMatch(source, /label="发送状态"/);
   });
 
+  it("sets the current lifecycle time as a numeric millisecond timestamp rounded to seconds", () => {
+    assert.match(
+      source,
+      /form\.value\[field\] = Math\.floor\(Date\.now\(\) \/ 1_000\) \* 1_000/
+    );
+    assert.doesNotMatch(source, /String\(Date\.now\(\)\)/);
+  });
+
+  it("implements the confirmed lifecycle time controls", () => {
+    assert.match(source, /setCurrentTime\('accountGroupSendAt'\)/);
+    assert.match(source, /setCurrentTime\('taskStartAt'\)/);
+    assert.doesNotMatch(source, /setCurrentTime\('taskEndAt'\)/);
+    assert.match(source, /:default-time="END_OF_DAY_TIME"/);
+    assert.match(pageSource, /taskEndAt: endOfDayTimestamp\(\)/);
+  });
+
   it("keeps lazy loaded groups out of the root account tree data", () => {
     const match = pageSource.match(
       /async function loadAccountGroups[\s\S]*?\n  }\n\n  function searchTasks/
