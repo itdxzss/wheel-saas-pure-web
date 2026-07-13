@@ -65,6 +65,7 @@ const treeProps = {
   disabled: "disabled",
   isLeaf: "isLeaf"
 };
+const END_OF_DAY_TIME = new Date(2000, 0, 1, 23, 59, 59);
 
 function accountStatusText(account: MarketingTreeAccount): string {
   const text = account.statusText?.trim();
@@ -262,8 +263,8 @@ function buildSelections(): MarketingSelection[] {
   return buildMarketingSelections(checked, dynamicAccountIds.value);
 }
 
-function setCurrentTime(field: "taskStartAt" | "taskEndAt"): void {
-  form.value[field] = String(Date.now());
+function setCurrentTime(field: "accountGroupSendAt" | "taskStartAt"): void {
+  form.value[field] = Math.floor(Date.now() / 1_000) * 1_000;
 }
 
 function submit(): void {
@@ -362,15 +363,20 @@ function submit(): void {
         </el-select>
       </el-form-item>
       <el-form-item label="账号群组发送时间">
-        <el-date-picker
-          v-model="form.accountGroupSendAt"
-          type="datetime"
-          value-format="x"
-          class="form-control"
-          clearable
-          placeholder="默认开始前72小时"
-          :disabled-date="disableAccountGroupSendDate"
-        />
+        <div class="datetime-control">
+          <el-date-picker
+            v-model="form.accountGroupSendAt"
+            type="datetime"
+            value-format="x"
+            class="datetime-picker"
+            clearable
+            placeholder="默认开始前72小时"
+            :disabled-date="disableAccountGroupSendDate"
+          />
+          <el-button @click="setCurrentTime('accountGroupSendAt')">
+            此刻
+          </el-button>
+        </div>
       </el-form-item>
       <el-form-item label="任务开始时间" required>
         <div class="datetime-control">
@@ -385,16 +391,14 @@ function submit(): void {
         </div>
       </el-form-item>
       <el-form-item label="任务结束时间" required>
-        <div class="datetime-control">
-          <el-date-picker
-            v-model="form.taskEndAt"
-            type="datetime"
-            value-format="x"
-            class="datetime-picker"
-            placeholder="请选择任务结束时间"
-          />
-          <el-button @click="setCurrentTime('taskEndAt')">此刻</el-button>
-        </div>
+        <el-date-picker
+          v-model="form.taskEndAt"
+          type="datetime"
+          value-format="x"
+          class="form-control"
+          placeholder="请选择任务结束时间"
+          :default-time="END_OF_DAY_TIME"
+        />
       </el-form-item>
       <el-form-item label="单轮发送数量">
         <el-input-number v-model="form.sendPerRound" :min="1" :step="1" />

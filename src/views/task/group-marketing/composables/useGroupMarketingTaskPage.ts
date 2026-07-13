@@ -54,9 +54,9 @@ export interface GroupMarketingCreateForm {
   accountGroupId: number | "";
   marketingTemplateId: number | "";
   startMode: MarketingTaskStartMode;
-  accountGroupSendAt: string;
-  taskStartAt: string;
-  taskEndAt: string;
+  accountGroupSendAt: string | number;
+  taskStartAt: string | number;
+  taskEndAt: string | number;
   sendPerRound: number;
   sendIntervalSeconds: number;
   onlineCheckEnabled: boolean;
@@ -119,6 +119,12 @@ export interface GroupMarketingTaskPageState {
 
 const ACCOUNT_GROUP_SEND_LOOKBACK_MS = 72 * 60 * 60 * 1000;
 
+export function endOfDayTimestamp(date = new Date()): number {
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 0);
+  return endOfDay.getTime();
+}
+
 function emptyCreateForm(): GroupMarketingCreateForm {
   return {
     taskName: "",
@@ -127,7 +133,7 @@ function emptyCreateForm(): GroupMarketingCreateForm {
     startMode: "PENDING",
     accountGroupSendAt: "",
     taskStartAt: "",
-    taskEndAt: "",
+    taskEndAt: endOfDayTimestamp(),
     sendPerRound: 1,
     sendIntervalSeconds: 30,
     onlineCheckEnabled: true,
@@ -182,7 +188,7 @@ function validateMaterialForm(form: MarketingTemplateWrite): string {
   return invalidButton ? "按钮文字和参数不能为空" : "";
 }
 
-function timestamp(value: string): number | undefined {
+function timestamp(value: string | number): number | undefined {
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
