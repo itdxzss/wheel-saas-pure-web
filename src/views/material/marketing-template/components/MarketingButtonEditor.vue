@@ -156,6 +156,7 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
         <el-form-item
           v-if="button.type === 'link'"
           label="跳转链接"
+          required
           :prop="`buttons.${index}.value`"
           :rules="linkValueRules"
         >
