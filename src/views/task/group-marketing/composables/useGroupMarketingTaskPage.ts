@@ -398,9 +398,6 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       createForm.accountGroupId = accountGroups.value[0].id;
       await loadAccountTree(createForm.accountGroupId);
     }
-    if (marketingTemplates.value[0]?.id) {
-      createForm.marketingTemplateId = marketingTemplates.value[0].id;
-    }
     createDrawerOpen.value = true;
   }
 

@@ -244,6 +244,8 @@ describe("group marketing task page state", () => {
 
     await pageState.openCreateDrawer();
 
+    assert.equal(pageState.createForm.marketingTemplateId, "");
+    assert.equal(pageState.marketingTemplates.value.length, 1);
     const calls = armadaCalls();
     assert.equal(calls[0].url, "/api/account-groups");
     assert.equal(calls[1].url, "/api/marketing-templates");
