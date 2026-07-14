@@ -205,8 +205,8 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
 
 .button-editor-sub {
   margin-top: 4px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .button-list {
