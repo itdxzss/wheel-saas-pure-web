@@ -81,11 +81,7 @@ function createButton(
 }
 
 function defaultButtons(): MarketingTemplateButton[] {
-  return [
-    createButton("link", "立即抢购", "https://shop.example.com/promo"),
-    createButton("copy", "复制优惠码", "VIP88"),
-    createButton("quick", "我要参加")
-  ];
+  return [createButton("link", "立即抢购")];
 }
 
 const emptyForm = (): MarketingTemplateForm => ({
@@ -192,6 +188,55 @@ function toWritePayload(form: MarketingTemplateForm): MarketingTemplateWrite {
   };
 }
 
+export type MarketingButtonLinkValidationMessage =
+  | ""
+  | "请输入跳转链接"
+  | "请输入标准的跳转链接";
+
+const HTTP_URL_PATTERN = /^https?:\/\//i;
+const EXPLICIT_SCHEME_PATTERN = /^[a-z][a-z\d+.-]*:\/\//i;
+const ILLEGAL_URL_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\uffff<>"{}|\\^`]/;
+const HOST_LABEL_PATTERN = /^[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?$/i;
+
+function hasStandardHostname(hostname: string): boolean {
+  const normalized = hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  if (normalized === "localhost" || normalized.includes(":")) return true;
+  const labels = normalized.split(".");
+  return (
+    labels.length >= 2 && labels.every(label => HOST_LABEL_PATTERN.test(label))
+  );
+}
+
+export function validateMarketingButtonLink(
+  value: string
+): MarketingButtonLinkValidationMessage {
+  const trimmed = value.trim();
+  if (!trimmed) return "请输入跳转链接";
+  if (
+    trimmed !== value ||
+    ILLEGAL_URL_CHARACTER_PATTERN.test(trimmed) ||
+    (EXPLICIT_SCHEME_PATTERN.test(trimmed) && !HTTP_URL_PATTERN.test(trimmed))
+  ) {
+    return "请输入标准的跳转链接";
+  }
+  try {
+    const url = new URL(
+      HTTP_URL_PATTERN.test(trimmed) ? trimmed : `https://${trimmed}`
+    );
+    if (
+      (url.protocol !== "http:" && url.protocol !== "https:") ||
+      url.username ||
+      url.password ||
+      !hasStandardHostname(url.hostname)
+    ) {
+      return "请输入标准的跳转链接";
+    }
+    return "";
+  } catch {
+    return "请输入标准的跳转链接";
+  }
+}
+
 function isHttpUrl(value: string): boolean {
   if (!value.trim()) return false;
   try {
@@ -216,15 +261,18 @@ function validateForm(form: MarketingTemplateForm): string {
     if (form.buttons.length === 0) return "按钮超链消息类型至少需要一个按钮";
     const invalidButton = form.buttons.find(button => !button.label.trim());
     if (invalidButton) return "请填写按钮文字";
-    const emptyParamButton = form.buttons.find(
-      button => button.type !== "quick" && !button.value.trim()
+    const emptyCopyButton = form.buttons.find(
+      button => button.type === "copy" && !button.value.trim()
     );
-    if (emptyParamButton) return "请填写按钮参数";
-    const invalidLinkButton = form.buttons.find(
-      button => button.type === "link" && !isHttpUrl(button.value)
-    );
+    if (emptyCopyButton) return "请填写按钮参数";
+    const invalidLinkButton = form.buttons.find(button => {
+      return (
+        button.type === "link" &&
+        validateMarketingButtonLink(button.value) !== ""
+      );
+    });
     if (invalidLinkButton) {
-      return "跳转链接格式不正确，请输入以 http(s):// 开头的有效链接";
+      return validateMarketingButtonLink(invalidLinkButton.value);
     }
   }
   return "";

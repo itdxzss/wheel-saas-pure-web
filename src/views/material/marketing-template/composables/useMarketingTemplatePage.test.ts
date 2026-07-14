@@ -6,9 +6,103 @@ import {
   resetArmadaMock
 } from "@/api/__tests__/armada-test-double";
 import { httpCalls, resetHttpMock } from "@/api/__tests__/http-test-double";
-import { useMarketingTemplatePage } from "./useMarketingTemplatePage";
+import * as marketingTemplatePage from "./useMarketingTemplatePage";
+
+const { useMarketingTemplatePage } = marketingTemplatePage;
+
+type LinkValidationMessage =
+  | ""
+  | "请输入跳转链接"
+  | "请输入标准的跳转链接"
+  | "validator-missing";
+
+function validateLink(value: string): LinkValidationMessage {
+  const moduleWithValidator =
+    marketingTemplatePage as typeof marketingTemplatePage & {
+      validateMarketingButtonLink?: (value: string) => LinkValidationMessage;
+    };
+  return (
+    moduleWithValidator.validateMarketingButtonLink?.(value) ??
+    "validator-missing"
+  );
+}
 
 describe("marketing template page state", () => {
+  it("starts a new template with one empty link button", () => {
+    const pageState = useMarketingTemplatePage();
+
+    pageState.openCreateDrawer();
+
+    assert.deepEqual(
+      pageState.templateForm.value.buttons.map(({ type, label, value }) => ({
+        type,
+        label,
+        value
+      })),
+      [{ type: "link", label: "立即抢购", value: "" }]
+    );
+  });
+
+  it("falls back to one empty link button when an old template has no buttons", async () => {
+    resetArmadaMock({
+      list: [
+        {
+          id: 7,
+          templateName: "旧按钮模板",
+          linkMode: 2,
+          content: "标题",
+          bodyText: "正文",
+          buttons: []
+        }
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+
+    await pageState.refreshTemplates();
+    await pageState.openEditDrawer(pageState.rows.value[0]);
+
+    assert.deepEqual(
+      pageState.templateForm.value.buttons.map(({ type, label, value }) => ({
+        type,
+        label,
+        value
+      })),
+      [{ type: "link", label: "立即抢购", value: "" }]
+    );
+  });
+
+  it("accepts standard marketing button links with or without a protocol", () => {
+    for (const value of [
+      "https://example.com/path?a=1&b=2#result",
+      "http://example.com:8080/path",
+      "www.example.com/path",
+      "example.com/path?coupon=VIP_88"
+    ]) {
+      assert.equal(validateLink(value), "", value);
+    }
+  });
+
+  it("returns the exact required message for an empty link", () => {
+    assert.equal(validateLink(""), "请输入跳转链接");
+    assert.equal(validateLink("   "), "请输入跳转链接");
+  });
+
+  it("returns the exact standard-link message for illegal input", () => {
+    for (const value of [
+      "not-a-url",
+      "https://example.com/中文",
+      "https://example.com/a b",
+      "javascript:alert(1)",
+      "ftp://example.com/file",
+      "https://example.com/<script>"
+    ]) {
+      assert.equal(validateLink(value), "请输入标准的跳转链接", value);
+    }
+  });
+
   it("loads marketing templates with search and pagination params", async () => {
     resetArmadaMock({
       list: [
