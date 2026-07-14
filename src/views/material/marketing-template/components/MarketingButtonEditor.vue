@@ -2,9 +2,11 @@
 import Plus from "~icons/ep/plus";
 import Delete from "~icons/ep/delete";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import type {
-  MarketingButtonType,
-  MarketingTemplateButton
+import { type FormItemRule } from "element-plus";
+import {
+  validateMarketingButtonLink,
+  type MarketingButtonType,
+  type MarketingTemplateButton
 } from "../composables/useMarketingTemplatePage";
 
 const buttons = defineModel<MarketingTemplateButton[]>({ required: true });
@@ -13,13 +15,25 @@ defineProps<{
   disabled: boolean;
 }>();
 
+const linkValueRules: FormItemRule[] = [
+  {
+    validator: (_rule, value: unknown, callback) => {
+      const message = validateMarketingButtonLink(
+        typeof value === "string" ? value : ""
+      );
+      callback(message ? new Error(message) : undefined);
+    },
+    trigger: ["blur", "change"]
+  }
+];
+
 let nextEditorButtonId = 10000;
 
 const buttonDefaults: Record<
   MarketingButtonType,
   { label: string; value: string }
 > = {
-  link: { label: "立即抢购", value: "https://shop.example.com/promo" },
+  link: { label: "立即抢购", value: "" },
   copy: { label: "复制优惠码", value: "VIP88" },
   quick: { label: "我要参加", value: "" }
 };
@@ -28,12 +42,6 @@ function buttonActionText(type: MarketingButtonType) {
   if (type === "link") return "点击后在浏览器打开 URL";
   if (type === "copy") return "点击后复制到剪贴板";
   return "点击后自动回复给发送方";
-}
-
-function valueLabel(type: MarketingButtonType) {
-  if (type === "link") return "跳转链接";
-  if (type === "copy") return "复制内容";
-  return "说明";
 }
 
 function addButton() {
@@ -56,7 +64,11 @@ function removeButton(id: number) {
 function onButtonTypeChange(button: MarketingTemplateButton) {
   const defaults = buttonDefaults[button.type];
   if (!button.label) button.label = defaults.label;
-  button.value = button.type === "quick" ? "" : button.value || defaults.value;
+  if (button.type === "link" || button.type === "quick") {
+    button.value = "";
+    return;
+  }
+  button.value = button.value || defaults.value;
 }
 </script>
 
@@ -91,7 +103,7 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
 
     <div class="button-list">
       <el-card
-        v-for="button in buttons"
+        v-for="(button, index) in buttons"
         :key="button.id"
         shadow="never"
         class="button-item"
@@ -141,16 +153,29 @@ function onButtonTypeChange(button: MarketingTemplateButton) {
           />
         </el-form-item>
 
-        <el-form-item :label="valueLabel(button.type)">
+        <el-form-item
+          v-if="button.type === 'link'"
+          label="跳转链接"
+          :prop="`buttons.${index}.value`"
+          :rules="linkValueRules"
+        >
           <el-input
-            v-if="button.type !== 'quick'"
             v-model="button.value"
             clearable
             :disabled="disabled"
-            :placeholder="button.type === 'link' ? 'https://shop.example.com/promo' : '请输入复制内容'"
+            placeholder="请输入跳转链接"
           />
+        </el-form-item>
+        <el-form-item v-else-if="button.type === 'copy'" label="复制内容">
+          <el-input
+            v-model="button.value"
+            clearable
+            :disabled="disabled"
+            placeholder="请输入复制内容"
+          />
+        </el-form-item>
+        <el-form-item v-else label="说明">
           <el-alert
-            v-else
             type="info"
             show-icon
             :closable="false"

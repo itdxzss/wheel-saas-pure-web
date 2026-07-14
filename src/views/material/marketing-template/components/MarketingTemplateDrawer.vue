@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { ElMessage } from "element-plus";
-import type { UploadFile, UploadUserFile } from "element-plus";
+import {
+  ElMessage,
+  type FormInstance,
+  type UploadFile,
+  type UploadUserFile
+} from "element-plus";
 import type {
   MarketingDrawerMode,
   MarketingTemplateForm
@@ -22,6 +26,7 @@ const emit = defineEmits<{
   (event: "save"): void;
 }>();
 
+const formRef = ref<FormInstance>();
 const imageFileList = ref<UploadUserFile[]>([]);
 let currentObjectUrl = "";
 
@@ -62,6 +67,16 @@ function clearImage() {
   form.value.imageUrl = "";
 }
 
+async function submitForm(): Promise<void> {
+  if (!formRef.value) return;
+  try {
+    await formRef.value.validate();
+  } catch {
+    return;
+  }
+  emit("save");
+}
+
 onBeforeUnmount(() => {
   revokeCurrentObjectUrl();
 });
@@ -81,7 +96,12 @@ watch(visible, opened => {
     <div class="marketing-template-drawer">
       <MarketingTemplatePreview :form="form" />
 
-      <el-form :model="form" label-position="top" class="drawer-form">
+      <el-form
+        ref="formRef"
+        :model="form"
+        label-position="top"
+        class="drawer-form"
+      >
         <el-alert
           class="drawer-alert"
           type="info"
@@ -235,7 +255,7 @@ watch(visible, opened => {
         type="primary"
         :loading="props.loading"
         :disabled="saveDisabled"
-        @click="emit('save')"
+        @click="submitForm"
       >
         保存
       </el-button>

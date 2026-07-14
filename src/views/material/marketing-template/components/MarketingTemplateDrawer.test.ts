@@ -41,4 +41,12 @@ describe("marketing template drawer", () => {
     assert.match(source, /label="@所有人"/);
     assert.match(source, /提醒群内所有成员/);
   });
+
+  it("validates visible fields before emitting save", () => {
+    assert.match(source, /type FormInstance/);
+    assert.match(source, /const formRef = ref<FormInstance>\(\)/);
+    assert.match(source, /ref="formRef"/);
+    assert.match(source, /await formRef\.value\.validate\(\)/);
+    assert.match(source, /@click="submitForm"/);
+  });
 });
