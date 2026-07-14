@@ -19,4 +19,10 @@ describe("group marketing material drawer", () => {
     assert.doesNotMatch(source, /<el-form-item label="正文" required>/);
     assert.match(source, /placeholder="选填，作为补充说明展示"/);
   });
+
+  it("allows the shared template to enable mention all", () => {
+    assert.match(source, /label="@所有人"/);
+    assert.match(source, /v-model="form\.mentionAll"/);
+    assert.match(source, /提醒群内所有成员/);
+  });
 });

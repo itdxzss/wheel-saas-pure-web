@@ -27,4 +27,10 @@ describe("marketing template preview", () => {
       /v-if="form\.linkMode !== 'BUTTON' && form\.promotionLink"/
     );
   });
+
+  it("previews the visible all-members mention", () => {
+    assert.match(source, /v-if="form\.mentionAll"/);
+    assert.match(source, />@all</);
+    assert.match(source, /class="wa-mention-all"/);
+  });
 });

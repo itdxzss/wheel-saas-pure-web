@@ -74,6 +74,12 @@ function buttonValuePlaceholder(button: MarketingTemplateButton): string {
           <el-option label="图文内容" :value="3" />
         </el-select>
       </el-form-item>
+      <el-form-item label="@所有人">
+        <div class="mention-all-setting">
+          <el-switch v-model="form.mentionAll" />
+          <span>开启后发送到群聊时会提醒群内所有成员</span>
+        </div>
+      </el-form-item>
       <el-form-item label="内容" required>
         <el-input
           v-model="form.content"
@@ -150,8 +156,16 @@ function buttonValuePlaceholder(button: MarketingTemplateButton): string {
 }
 
 .form-control,
-.button-editor {
+.button-editor,
+.mention-all-setting {
   width: 100%;
+}
+
+.mention-all-setting {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--el-text-color-secondary);
 }
 
 .button-editor {

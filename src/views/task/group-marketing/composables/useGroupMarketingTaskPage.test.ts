@@ -59,6 +59,7 @@ describe("group marketing task page state", () => {
         textType: "PROMO",
         content: "标题",
         bodyText: "正文",
+        mentionAll: false,
         buttons: []
       }
     ];
@@ -166,6 +167,7 @@ describe("group marketing task page state", () => {
         textType: "PROMO",
         content: "标题",
         bodyText: "正文",
+        mentionAll: false,
         buttons: []
       }
     ];
@@ -380,6 +382,7 @@ describe("group marketing task page state", () => {
       textType: "PROMO",
       content: "标题",
       bodyText: "",
+      mentionAll: true,
       buttons: []
     });
     resetElementPlusMock();
@@ -392,6 +395,7 @@ describe("group marketing task page state", () => {
         textType: "PROMO",
         content: "标题",
         bodyText: "原正文",
+        mentionAll: true,
         buttons: []
       }
     ];
@@ -403,6 +407,7 @@ describe("group marketing task page state", () => {
       status: 1
     } as MarketingTaskRow);
     pageState.materialForm.value.bodyText = "";
+    assert.equal(pageState.materialForm.value.mentionAll, true);
     await pageState.submitMaterialUpdate();
 
     const calls = armadaCalls();
@@ -412,6 +417,10 @@ describe("group marketing task page state", () => {
     assert.equal(
       (calls[0].opts as { data: { bodyText: string } }).data.bodyText,
       ""
+    );
+    assert.equal(
+      (calls[0].opts as { data: { mentionAll: boolean } }).data.mentionAll,
+      true
     );
     assert.equal(pageState.materialDrawerOpen.value, false);
   });

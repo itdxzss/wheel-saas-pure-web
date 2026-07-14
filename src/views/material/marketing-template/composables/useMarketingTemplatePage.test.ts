@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { effect, stop } from "vue";
 import {
   armadaCalls,
   resetArmadaMock
 } from "@/api/__tests__/armada-test-double";
-import {
-  httpCalls,
-  resetHttpMock
-} from "@/api/__tests__/http-test-double";
+import { httpCalls, resetHttpMock } from "@/api/__tests__/http-test-double";
 import { useMarketingTemplatePage } from "./useMarketingTemplatePage";
 
 describe("marketing template page state", () => {
@@ -114,6 +112,7 @@ describe("marketing template page state", () => {
     pageState.templateForm.value.content = "标题";
     pageState.templateForm.value.text = "正文";
     pageState.templateForm.value.promotionLink = "https://promo.example/vip";
+    pageState.templateForm.value.mentionAll = true;
 
     await pageState.saveTemplate();
 
@@ -124,6 +123,11 @@ describe("marketing template page state", () => {
         ["post", "/api/marketing-templates"],
         ["get", "/api/marketing-templates"]
       ]
+    );
+    assert.equal(
+      (armadaCalls()[0].opts as { data: { mentionAll: boolean } }).data
+        .mentionAll,
+      true
     );
   });
 
@@ -306,6 +310,10 @@ describe("marketing template page state", () => {
       value: () => undefined
     });
     const pageState = useMarketingTemplatePage();
+    const observedImageUrls: string[] = [];
+    const imageRenderEffect = effect(() => {
+      observedImageUrls.push(pageState.templateForm.value.imageUrl);
+    });
 
     try {
       await pageState.refreshTemplates();
@@ -313,6 +321,10 @@ describe("marketing template page state", () => {
 
       assert.equal(
         pageState.templateForm.value.imageUrl,
+        "blob:marketing-template-88"
+      );
+      assert.equal(
+        observedImageUrls[observedImageUrls.length - 1],
         "blob:marketing-template-88"
       );
       assert.deepEqual(httpCalls(), [
@@ -323,6 +335,7 @@ describe("marketing template page state", () => {
         }
       ]);
     } finally {
+      stop(imageRenderEffect);
       Object.defineProperty(URL, "createObjectURL", {
         configurable: true,
         value: originalCreateObjectURL
@@ -417,6 +430,7 @@ describe("marketing template page state", () => {
         promotionLink: "",
         content: "标题",
         text: "正文",
+        mentionAll: false,
         buttons: []
       }
     ]);
@@ -430,6 +444,7 @@ describe("marketing template page state", () => {
         promotionLink: "",
         content: "标题",
         text: "正文",
+        mentionAll: false,
         buttons: []
       }
     ]);

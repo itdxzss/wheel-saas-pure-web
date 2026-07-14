@@ -21,6 +21,7 @@ export interface BackendMarketingTemplate {
   imageFileId?: number | null;
   content: string;
   bodyText: string;
+  mentionAll?: boolean | null;
   buttons?: BackendMessageButton[] | null;
   promotionLink?: string | null;
   remark?: string | null;
@@ -35,6 +36,7 @@ interface BackendMarketingTemplateWrite {
   imageFileId?: number | null;
   content: string;
   bodyText: string;
+  mentionAll: boolean;
   buttons: BackendMessageButton[];
   promotionLink?: string | null;
   remark?: string | null;
@@ -54,6 +56,7 @@ export interface MarketingTemplateRow {
   imageFileId?: number | null;
   content: string;
   bodyText: string;
+  mentionAll: boolean;
   buttons: MarketingTemplateButton[];
   promotionLink?: string | null;
   remark?: string | null;
@@ -77,6 +80,7 @@ export interface MarketingTemplateWrite {
   imageFileId?: number | null;
   content: string;
   bodyText: string;
+  mentionAll?: boolean;
   buttons: MarketingTemplateButton[];
   promotionLink?: string | null;
   remark?: string | null;
@@ -111,6 +115,7 @@ export function normalizeMarketingTemplate(
 ): MarketingTemplateRow {
   return {
     ...row,
+    mentionAll: row.mentionAll ?? false,
     buttons: (row.buttons ?? []).map(button => ({
       type: fromBackendButtonType(button.type),
       label: button.text,
@@ -129,6 +134,7 @@ function toWritePayload(
     imageFileId: data.imageFileId ?? null,
     content: data.content,
     bodyText: data.bodyText,
+    mentionAll: data.mentionAll === true,
     buttons:
       data.linkMode === 2
         ? data.buttons.map(button => ({

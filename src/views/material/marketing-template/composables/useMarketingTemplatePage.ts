@@ -26,6 +26,7 @@ export interface MarketingTemplateRow {
   imageFileId?: number | null;
   content: string;
   text: string;
+  mentionAll: boolean;
   buttons: MarketingTemplateButton[];
   remark?: string | null;
 }
@@ -54,6 +55,7 @@ export interface MarketingTemplateForm {
   imageFile: File | null;
   content: string;
   text: string;
+  mentionAll: boolean;
   promotionLink: string;
   buttons: MarketingTemplateButton[];
   remark: string;
@@ -96,6 +98,7 @@ const emptyForm = (): MarketingTemplateForm => ({
   imageFile: null,
   content: "",
   text: "",
+  mentionAll: false,
   promotionLink: "",
   buttons: defaultButtons(),
   remark: ""
@@ -136,6 +139,7 @@ function toPageRow(row: ApiMarketingTemplateRow): MarketingTemplateRow {
     imageFileId: row.imageFileId ?? null,
     content: row.content ?? "",
     text: row.bodyText ?? "",
+    mentionAll: row.mentionAll,
     buttons: row.buttons.map(toPageButton),
     remark: row.remark ?? ""
   };
@@ -153,6 +157,7 @@ function toForm(row: MarketingTemplateRow): MarketingTemplateForm {
     imageFile: null,
     content: row.content,
     text: row.text,
+    mentionAll: row.mentionAll,
     promotionLink: row.promotionLink,
     buttons:
       row.buttons.length > 0
@@ -172,6 +177,7 @@ function toWritePayload(form: MarketingTemplateForm): MarketingTemplateWrite {
     imageFileId: form.imageFileId,
     content: form.content.trim(),
     bodyText: form.text.trim(),
+    mentionAll: form.mentionAll,
     buttons:
       form.linkMode === "BUTTON"
         ? form.buttons.map(button => ({
@@ -391,7 +397,7 @@ export function useMarketingTemplatePage() {
     editingId.value = row.id;
     drawerMode.value = "edit";
     drawerVisible.value = true;
-    await loadPersistedImagePreview(form);
+    await loadPersistedImagePreview(templateForm.value);
   }
 
   async function openPreviewDrawer(row: MarketingTemplateRow): Promise<void> {

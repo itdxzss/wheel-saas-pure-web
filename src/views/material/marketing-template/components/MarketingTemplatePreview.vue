@@ -75,6 +75,7 @@ const linkDomain = computed(() => {
             <div class="wa-template-name">
               模板：{{ form.templateName || "未命名模板" }}
             </div>
+            <div v-if="form.mentionAll" class="wa-mention-all">@all</div>
             <div v-if="form.linkMode === 'BUTTON'" class="wa-button-body">
               {{ buttonBodyText || "请输入内容" }}
             </div>
@@ -276,6 +277,12 @@ const linkDomain = computed(() => {
 .wa-template-name {
   color: #64748b;
   font-size: 11px;
+}
+
+.wa-mention-all {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f6f5c;
 }
 
 .wa-content {

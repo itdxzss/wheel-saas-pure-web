@@ -151,6 +151,7 @@ function emptyMaterialForm(): MarketingTemplateWrite {
     imageFileId: null,
     content: "",
     bodyText: "",
+    mentionAll: false,
     buttons: [],
     promotionLink: "",
     remark: ""
@@ -167,6 +168,7 @@ function copyMaterialForm(
     imageFileId: template.imageFileId ?? null,
     content: template.content,
     bodyText: template.bodyText,
+    mentionAll: template.mentionAll,
     buttons: template.buttons.map((button: MarketingTemplateButton) => ({
       ...button
     })),

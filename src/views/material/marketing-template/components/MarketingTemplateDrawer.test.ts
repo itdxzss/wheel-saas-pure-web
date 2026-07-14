@@ -35,4 +35,10 @@ describe("marketing template drawer", () => {
       /<el-form-item\s+v-if="form\.linkMode !== 'BUTTON'"\s+label="推广链接"/
     );
   });
+
+  it("offers a mention-all switch with a group notification warning", () => {
+    assert.match(source, /v-model="form\.mentionAll"/);
+    assert.match(source, /label="@所有人"/);
+    assert.match(source, /提醒群内所有成员/);
+  });
 });

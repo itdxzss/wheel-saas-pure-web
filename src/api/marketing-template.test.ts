@@ -48,6 +48,7 @@ describe("marketing template API", () => {
     });
 
     assert.equal(result.list?.[0].buttons[0].type, "copy");
+    assert.equal(result.list?.[0].mentionAll, false);
     assert.equal(result.total, 1);
     assert.deepEqual(armadaCalls(), [
       {
@@ -91,7 +92,8 @@ describe("marketing template API", () => {
         { type: "quick" as const, label: "我要参加", value: "" }
       ],
       promotionLink: "https://promo.example/vip",
-      remark: "备注"
+      remark: "备注",
+      mentionAll: true
     };
 
     await createMarketingTemplate(payload);
@@ -115,7 +117,8 @@ describe("marketing template API", () => {
               { type: "QUICK_REPLY", text: "我要参加", param: null }
             ],
             promotionLink: null,
-            remark: "备注"
+            remark: "备注",
+            mentionAll: true
           }
         }
       },
@@ -136,7 +139,8 @@ describe("marketing template API", () => {
               { type: "QUICK_REPLY", text: "我要参加", param: null }
             ],
             promotionLink: null,
-            remark: "备注"
+            remark: "备注",
+            mentionAll: true
           }
         }
       }
@@ -177,6 +181,7 @@ describe("marketing template API", () => {
             imageFileId: null,
             content: "标题",
             bodyText: "正文",
+            mentionAll: false,
             buttons: [],
             promotionLink: "https://promo.example/vip",
             remark: null

@@ -74,7 +74,8 @@ watch(visible, opened => {
 <template>
   <el-drawer v-model="visible" :title="title" size="1180px" destroy-on-close>
     <div class="drawer-subtitle">
-      左侧按照 WhatsApp 聊天页收到的营销模版消息实时预览；按钮超链支持最多 3 个按钮。
+      左侧按照 WhatsApp 聊天页收到的营销模版消息实时预览；按钮超链支持最多 3
+      个按钮。
     </div>
 
     <div class="marketing-template-drawer">
@@ -120,6 +121,15 @@ watch(visible, opened => {
               <el-option label="按钮超链" value="BUTTON" />
               <el-option label="图文内容" value="IMAGE_TEXT" />
             </el-select>
+          </el-form-item>
+
+          <el-form-item label="@所有人">
+            <div class="mention-all-setting">
+              <el-switch v-model="form.mentionAll" :disabled="isPreview()" />
+              <span>
+                开启后发送到群聊时会提醒群内所有成员，请确认发送账号具备相应群权限。
+              </span>
+            </div>
           </el-form-item>
         </el-card>
 
@@ -272,6 +282,14 @@ watch(visible, opened => {
 :deep(.el-upload),
 :deep(.el-upload-dragger) {
   width: 100%;
+}
+
+.mention-all-setting {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .upload-main {
