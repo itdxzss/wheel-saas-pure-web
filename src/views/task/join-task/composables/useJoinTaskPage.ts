@@ -32,6 +32,11 @@ import {
 import { listTenantAccounts, type TenantAccount } from "@/api/account";
 import { apiErrorMessage } from "@/utils/api-error";
 import type { JoinFailurePolicy } from "../constants";
+import {
+  canonicalizeStrictJoinLink,
+  countStrictValidJoinLinks,
+  validateModeTwoDistribution
+} from "../validation";
 
 export interface JoinTaskSearchForm {
   keyword: string;
@@ -143,9 +148,10 @@ function parseLinks(text: string): string[] {
   const links: string[] = [];
   for (const line of text.split(/\r?\n/)) {
     const value = line.trim();
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-    links.push(value);
+    const normalized = canonicalizeStrictJoinLink(value) ?? value;
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    links.push(normalized);
   }
   return links;
 }
@@ -423,14 +429,14 @@ export function useJoinTaskPage(): JoinTaskPageState {
     }
 
     if (editorForm.distributionMode === "FIXED_ACCOUNT_MULTI_LINK") {
-      if (
-        !positiveInt(editorForm.executorAccountCount) ||
-        !positiveInt(editorForm.linksPerAccount)
-      ) {
-        return "执行账号数量和每账号链接数必须为正整数";
-      }
-      if (editorForm.executorAccountCount > selectedAccounts.length) {
-        return "可用执行账号不足，请减少执行账号数量或补充账号";
+      const modeTwoError = validateModeTwoDistribution({
+        selectedAccountCount: selectedAccounts.length,
+        executorAccountCount: editorForm.executorAccountCount,
+        linksPerAccount: editorForm.linksPerAccount,
+        validLinkCount: countStrictValidJoinLinks(links)
+      });
+      if (modeTwoError) {
+        return modeTwoError;
       }
       if (
         !positiveInt(editorForm.multiIntervalMinSec) ||
