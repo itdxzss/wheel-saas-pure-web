@@ -2,13 +2,15 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import {
   ElMessage,
+  type FormItemRule,
   type FormInstance,
   type UploadFile,
   type UploadUserFile
 } from "element-plus";
-import type {
-  MarketingDrawerMode,
-  MarketingTemplateForm
+import {
+  validateMarketingPromotionLink,
+  type MarketingDrawerMode,
+  type MarketingTemplateForm
 } from "../composables/useMarketingTemplatePage";
 import MarketingButtonEditor from "./MarketingButtonEditor.vue";
 import MarketingTemplatePreview from "./MarketingTemplatePreview.vue";
@@ -29,6 +31,18 @@ const emit = defineEmits<{
 const formRef = ref<FormInstance>();
 const imageFileList = ref<UploadUserFile[]>([]);
 let currentObjectUrl = "";
+
+const promotionLinkRules: FormItemRule[] = [
+  {
+    validator: (_rule, value: unknown, callback) => {
+      const message = validateMarketingPromotionLink(
+        typeof value === "string" ? value : ""
+      );
+      callback(message ? new Error(message) : undefined);
+    },
+    trigger: ["blur", "change"]
+  }
+];
 
 const isPreview = () => props.mode === "preview";
 const saveDisabled = computed(
@@ -229,6 +243,8 @@ watch(visible, opened => {
           <el-form-item
             v-if="form.linkMode !== 'BUTTON'"
             label="推广链接"
+            prop="promotionLink"
+            :rules="promotionLinkRules"
             required
           >
             <el-input
