@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
+import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   batchDeleteTenantAccounts,
   batchMigrateTenantAccountsToGroup,
@@ -9,6 +10,7 @@ import {
   batchOnlineTenantAccounts,
   batchOnlineTenantAccountsByQuery,
   batchTakeoverTenantAccounts,
+  exportTenantAccountWsPhones,
   listTenantAccounts,
   previewTenantAccountBatch
 } from "./account";
@@ -257,5 +259,56 @@ describe("account operation API", () => {
     assert.equal(result.list?.[0]?.friends_num, 0);
     assert.equal(result.list?.[0]?.groups_num, 2);
     assert.equal(result.list?.[0]?.dispatched_at, "2026-06-29 12:00:00");
+  });
+
+  it("exports selected WS phones as a blob with backend filename and count", async () => {
+    const blob = new Blob(["60123456789\n6598765432"], {
+      type: "text/plain;charset=UTF-8"
+    });
+    resetHttpMock(blob, {
+      "Content-Type": "text/plain;charset=UTF-8",
+      "Content-Disposition":
+        "attachment; filename*=UTF-8''%E9%A9%AC%E6%9D%A5%E8%A5%BF%E4%BA%9A%E5%AE%A2%E6%88%B7%E7%BB%84_2026-07-15.txt",
+      "X-Export-Count": "2"
+    });
+
+    const result = await exportTenantAccountWsPhones({
+      ids: [101, 102],
+      groupName: "马来西亚客户组"
+    });
+
+    assert.equal(result.filename, "马来西亚客户组_2026-07-15.txt");
+    assert.equal(result.exportedCount, 2);
+    assert.equal(result.blob, blob);
+    assert.deepEqual(httpCalls(), [
+      {
+        method: "post",
+        url: "/api/accounts/export-ws-phones",
+        opts: {
+          data: { ids: [101, 102], groupName: "马来西亚客户组" },
+          responseType: "blob"
+        },
+        configKeys: ["beforeResponseCallback"]
+      }
+    ]);
+  });
+
+  it("surfaces the backend message from a JSON export response", async () => {
+    const blob = new Blob(
+      [
+        JSON.stringify({
+          code: 40001,
+          message: "当前所选账号中没有可导出的有效WS号码。",
+          data: null
+        })
+      ],
+      { type: "application/json" }
+    );
+    resetHttpMock(blob, { "Content-Type": "application/json" });
+
+    await assert.rejects(
+      exportTenantAccountWsPhones({ ids: [101] }),
+      /当前所选账号中没有可导出的有效WS号码。/
+    );
   });
 });
