@@ -682,7 +682,7 @@ export function useAccountListPage(): AccountListPageState {
         ? [
             h(
               "p",
-              `本次预计导出 ${analysis.normalCount + analysis.abnormalCount} 个WS号码,勾选的账号存在非正常状态的WS账号：`
+              `本次预计导出 ${analysis.normalCount + analysis.abnormalCount} 个WS号码。`
             ),
             h("p", `正常状态账号：${analysis.normalCount}个`),
             h("p", `非正常状态账号：${analysis.abnormalCount}个`),
