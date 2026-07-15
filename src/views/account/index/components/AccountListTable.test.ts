@@ -46,7 +46,7 @@ describe("AccountListTable protocol restart button", () => {
     );
     assert.match(pageSource, /:ws-exporting="wsExporting"/);
     assert.match(composableSource, /analyzeWsPhoneExportSelection/);
-    assert.match(composableSource, /勾选的账号存在非正常状态的WS账号，请审核/);
+    assert.match(composableSource, /勾选的账号存在非正常状态的WS账号：/);
     assert.match(composableSource, /ElMessageBox\.confirm/);
     assert.doesNotMatch(composableSource, /ElMessageBox\.alert/);
     assert.match(
@@ -56,6 +56,14 @@ describe("AccountListTable protocol restart button", () => {
     assert.match(
       composableSource,
       /非正常状态账号：\$\{analysis\.abnormalCount\}个/
+    );
+    assert.match(
+      composableSource,
+      /本次预计导出 \$\{analysis\.normalCount \+ analysis\.abnormalCount\} 个WS号码,勾选的账号存在非正常状态的WS账号：/
+    );
+    assert.match(
+      composableSource,
+      /本次预计导出 \$\{analysis\.normalCount\}个WS号码。/
     );
     assert.match(composableSource, /confirmButtonText: "确认导出"/);
     assert.match(composableSource, /cancelButtonText: "取消"/);

@@ -677,17 +677,21 @@ export function useAccountListPage(): AccountListPageState {
       ElMessage.error("勾选的账号数据异常，请刷新列表后重试");
       return;
     }
-    const confirmContent = [
-      ...(analysis.abnormalCount > 0
+    const confirmContent =
+      analysis.abnormalCount > 0
         ? [
-            h("p", "勾选的账号存在非正常状态的WS账号，请审核"),
+            h(
+              "p",
+              `本次预计导出 ${analysis.normalCount + analysis.abnormalCount} 个WS号码,勾选的账号存在非正常状态的WS账号：`
+            ),
             h("p", `正常状态账号：${analysis.normalCount}个`),
-            h("p", `非正常状态账号：${analysis.abnormalCount}个`)
+            h("p", `非正常状态账号：${analysis.abnormalCount}个`),
+            h("p", `导出文件名称：${analysis.previewFilename}`)
           ]
-        : []),
-      h("p", `本次预计导出 ${analysis.normalCount} 个WS号码。`),
-      h("p", `导出文件名称：${analysis.previewFilename}`)
-    ];
+        : [
+            h("p", `本次预计导出 ${analysis.normalCount}个WS号码。`),
+            h("p", `导出文件名称：${analysis.previewFilename}`)
+          ];
 
     try {
       await ElMessageBox.confirm(h("div", confirmContent), "确认导出WS号", {
