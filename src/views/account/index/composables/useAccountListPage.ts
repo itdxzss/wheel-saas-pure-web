@@ -1,5 +1,6 @@
 import {
   computed,
+  h,
   onMounted,
   onUnmounted,
   reactive,
@@ -17,6 +18,7 @@ import {
   batchOnlineTenantAccounts,
   batchOnlineTenantAccountsByQuery,
   batchTakeoverTenantAccounts,
+  exportTenantAccountWsPhones,
   getTenantAccountSummary,
   listTenantAccounts,
   onlineTenantAccount,
@@ -38,6 +40,7 @@ import {
 } from "@/api/account-group";
 import { restartProtocolProcesses } from "@/api/protocol";
 import { apiErrorMessage } from "@/utils/api-error";
+import { downloadBlobFile } from "@/utils/download";
 import {
   buildAccountStatCards,
   canDeleteAccount,
@@ -68,6 +71,7 @@ import {
   createAccountQueryState,
   type AccountQueryRequest
 } from "../account-query-state";
+import { analyzeWsPhoneExportSelection } from "../account-ws-phone-export";
 
 export interface AccountSearchForm {
   keyword: string;
@@ -148,6 +152,7 @@ export interface AccountListPageState {
   takeoverBatchDisabled: ComputedRef<boolean>;
   takeoverBatchTip: ComputedRef<string>;
   total: Ref<number>;
+  wsExporting: Ref<boolean>;
 }
 
 export function useAccountListPage(): AccountListPageState {
@@ -208,6 +213,7 @@ export function useAccountListPage(): AccountListPageState {
   const batchSubmitting = ref(false);
   const groupLoading = ref(false);
   const protocolRestarting = ref(false);
+  const wsExporting = ref(false);
   const showAdvancedSearch = ref(initialGroupId !== "");
   const showBatchMoveDrawer = ref(false);
   const page = ref(1);
@@ -658,6 +664,74 @@ export function useAccountListPage(): AccountListPageState {
     }
   }
 
+  async function submitWsPhoneExport(): Promise<void> {
+    if (wsExporting.value) return;
+    const selectedSnapshot = [...selectedRows.value];
+    if (selectedSnapshot.length === 0) {
+      ElMessage.warning("请先选择账号");
+      return;
+    }
+
+    const analysis = analyzeWsPhoneExportSelection(selectedSnapshot);
+    if (analysis.invalidIdCount > 0) {
+      ElMessage.error("勾选的账号数据异常，请刷新列表后重试");
+      return;
+    }
+    if (analysis.abnormalCount > 0) {
+      await ElMessageBox.alert(
+        h("div", [
+          h("p", "勾选的账号存在非正常状态的WS账号，请审核。"),
+          h("p", `正常状态账号：${analysis.normalCount}个`),
+          h("p", `非正常状态账号：${analysis.abnormalCount}个`),
+          h("p", "请重新勾选后再操作。")
+        ]),
+        "无法导出WS号",
+        {
+          confirmButtonText: "我知道了",
+          type: "warning",
+          showClose: false
+        }
+      );
+      return;
+    }
+
+    try {
+      await ElMessageBox.confirm(
+        h("div", [
+          h("p", `本次预计导出 ${analysis.normalCount} 个WS号码。`),
+          h("p", `导出文件名称：${analysis.previewFilename}`)
+        ]),
+        "确认导出WS号",
+        {
+          confirmButtonText: "确认导出",
+          cancelButtonText: "取消",
+          type: "warning"
+        }
+      );
+    } catch {
+      return;
+    }
+
+    wsExporting.value = true;
+    try {
+      const result = await exportTenantAccountWsPhones({
+        ids: analysis.ids,
+        ...(analysis.groupName ? { groupName: analysis.groupName } : {})
+      });
+      downloadBlobFile(result.filename, result.blob);
+      ElMessage.success(`导出成功，共导出${result.exportedCount}个WS号码。`);
+    } catch (error) {
+      const message = apiErrorMessage(error, "导出失败，请重新操作。");
+      if (message === "当前所选账号中没有可导出的有效WS号码。") {
+        ElMessage.warning(message);
+      } else {
+        ElMessage.error(message);
+      }
+    } finally {
+      wsExporting.value = false;
+    }
+  }
+
   function handleBatchAction(command: string) {
     if (command === "move-group") {
       openBatchMoveDrawer();
@@ -669,6 +743,10 @@ export function useAccountListPage(): AccountListPageState {
     }
     if (command === "offline") {
       void submitLifecycleBatch("OFFLINE");
+      return;
+    }
+    if (command === "export-ws-phones") {
+      void submitWsPhoneExport();
       return;
     }
     const ids = selectedAccountIds();
@@ -759,6 +837,7 @@ export function useAccountListPage(): AccountListPageState {
     submitBatchMove,
     takeoverBatchDisabled,
     takeoverBatchTip,
-    total
+    total,
+    wsExporting
   };
 }

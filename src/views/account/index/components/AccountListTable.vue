@@ -35,6 +35,7 @@ const props = defineProps<{
   takeoverBatchDisabled: boolean;
   takeoverBatchTip: string;
   total: number;
+  wsExporting: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -80,8 +81,8 @@ function avatarText(row: TenantAccount) {
       </el-button>
       <el-dropdown trigger="click" @command="emit('batch-command', $event)">
         <el-button
-          :loading="batchSubmitting"
-          :disabled="batchSubmitting"
+          :loading="batchSubmitting || wsExporting"
+          :disabled="batchSubmitting || wsExporting"
           :icon="useRenderIcon(MoreFilled)"
         >
           批量操作
@@ -102,6 +103,12 @@ function avatarText(row: TenantAccount) {
               :title="takeoverBatchTip || undefined"
             >
               一键抢登
+            </el-dropdown-item>
+            <el-dropdown-item
+              command="export-ws-phones"
+              :disabled="selectedCount === 0 || batchSubmitting || wsExporting"
+            >
+              导出WS号
             </el-dropdown-item>
             <el-dropdown-item command="delete" divided
               >批量删除</el-dropdown-item

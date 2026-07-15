@@ -1,4 +1,5 @@
 import { armadaRequest } from "@/api/armada";
+import { http } from "@/utils/http";
 import { formatEpochMillis } from "@/utils/time";
 import {
   toTenantAccountListParams,
@@ -119,7 +120,8 @@ export interface TenantAccountBatchBaseResult {
   remoteRoutes: unknown[];
 }
 
-export interface TenantAccountBatchCommandResult extends TenantAccountBatchBaseResult {
+export interface TenantAccountBatchCommandResult
+  extends TenantAccountBatchBaseResult {
   skipped: number;
   failed: number;
   skipReasons: Record<string, number>;
@@ -153,6 +155,17 @@ export interface BatchMigrateTenantAccountsInput {
   accountGroupId?: number | null;
   newGroupName?: string;
   newGroupRemark?: string;
+}
+
+export interface TenantAccountWsPhoneExportInput {
+  ids: number[];
+  groupName?: string;
+}
+
+export interface TenantAccountWsPhoneExportResult {
+  filename: string;
+  exportedCount: number;
+  blob: Blob;
 }
 
 export interface PageResponse<T> {
@@ -218,6 +231,45 @@ function muteStatusLabel(value?: number | null): string | null {
   if (value === 1) return "6h";
   if (value === 2) return "24h";
   return null;
+}
+
+function exportHeaderValue(headers: unknown, name: string): string | undefined {
+  const getter = headers as { get?: (key: string) => unknown };
+  const viaGetter = getter?.get?.(name);
+  if (typeof viaGetter === "string") return viaGetter;
+
+  const record = (headers ?? {}) as Record<string, unknown>;
+  const entry = Object.entries(record).find(
+    ([key]) => key.toLowerCase() === name.toLowerCase()
+  );
+  return typeof entry?.[1] === "string" ? entry[1] : undefined;
+}
+
+function exportFilename(contentDisposition?: string): string | undefined {
+  if (!contentDisposition) return undefined;
+  const encoded = /filename\*=(?:UTF-8'')?("?)([^";]+)\1/i.exec(
+    contentDisposition
+  );
+  const plain = /filename=("?)([^";]+)\1/i.exec(contentDisposition);
+  const value = encoded?.[2] ?? plain?.[2];
+  if (!value) return undefined;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+async function exportJsonError(blob: Blob): Promise<Error> {
+  try {
+    const payload = JSON.parse(await blob.text()) as { message?: unknown };
+    if (typeof payload.message === "string" && payload.message.trim()) {
+      return new Error(payload.message.trim());
+    }
+  } catch {
+    // 统一回退，不向用户暴露响应解析细节。
+  }
+  return new Error("导出失败，请重新操作。");
 }
 
 function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
@@ -364,4 +416,48 @@ export function batchDeleteTenantAccounts(ids: number[]): Promise<void> {
   return armadaRequest<void>("post", "/api/accounts/batch-delete", {
     data: { ids }
   });
+}
+
+export async function exportTenantAccountWsPhones(
+  input: TenantAccountWsPhoneExportInput
+): Promise<TenantAccountWsPhoneExportResult> {
+  let contentType = "";
+  let contentDisposition: string | undefined;
+  let exportCount: string | undefined;
+  const blob = await http.request<Blob>(
+    "post",
+    "/api/accounts/export-ws-phones",
+    {
+      data: input,
+      responseType: "blob"
+    },
+    {
+      beforeResponseCallback: response => {
+        contentType = exportHeaderValue(response.headers, "Content-Type") ?? "";
+        contentDisposition = exportHeaderValue(
+          response.headers,
+          "Content-Disposition"
+        );
+        exportCount = exportHeaderValue(response.headers, "X-Export-Count");
+      }
+    }
+  );
+
+  const normalizedContentType = (contentType || blob.type).toLowerCase();
+  if (normalizedContentType.includes("application/json")) {
+    throw await exportJsonError(blob);
+  }
+
+  const filename = exportFilename(contentDisposition);
+  const exportedCount = Number(exportCount);
+  if (
+    !normalizedContentType.includes("text/plain") ||
+    !filename ||
+    !Number.isSafeInteger(exportedCount) ||
+    exportedCount <= 0
+  ) {
+    throw new Error("导出失败，请重新操作。");
+  }
+
+  return { filename, exportedCount, blob };
 }

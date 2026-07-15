@@ -43,7 +43,8 @@ const {
   submitBatchMove,
   takeoverBatchDisabled,
   takeoverBatchTip,
-  total
+  total,
+  wsExporting
 } = useAccountListPage();
 </script>
 
@@ -260,6 +261,7 @@ const {
       :takeover-batch-disabled="takeoverBatchDisabled"
       :takeover-batch-tip="takeoverBatchTip"
       :total="total"
+      :ws-exporting="wsExporting"
       @batch-command="handleBatchAction"
       @refresh="refreshAccountList"
       @restart-protocol="restartProtocol"
@@ -390,13 +392,13 @@ const {
   margin-bottom: 16px;
 }
 
-@media (max-width: 1280px) {
+@media (width <= 1280px) {
   .account-list-stats {
     grid-template-columns: repeat(4, minmax(120px, 1fr));
   }
 }
 
-@media (max-width: 640px) {
+@media (width <= 640px) {
   .account-list-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
