@@ -237,25 +237,29 @@ export function validateMarketingButtonLink(
   }
 }
 
-function isHttpUrl(value: string): boolean {
-  if (!value.trim()) return false;
-  try {
-    const url = new URL(value.trim());
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+export type MarketingPromotionLinkValidationMessage =
+  | ""
+  | "请输入推广链接"
+  | "请输入标准的推广链接";
+
+export function validateMarketingPromotionLink(
+  value: string
+): MarketingPromotionLinkValidationMessage {
+  const message = validateMarketingButtonLink(value);
+  if (!message) return "";
+  return message === "请输入跳转链接"
+    ? "请输入推广链接"
+    : "请输入标准的推广链接";
 }
 
 function validateForm(form: MarketingTemplateForm): string {
   if (!form.templateName.trim()) return "请填写模版名称";
   if (!form.content.trim()) return "请填写内容";
-  if (
-    form.linkMode !== "BUTTON" &&
-    form.promotionLink.trim() &&
-    !isHttpUrl(form.promotionLink)
-  ) {
-    return "推广链接格式不正确，请输入以 http(s):// 开头的有效链接";
+  if (form.linkMode !== "BUTTON") {
+    const promotionLinkValidation = validateMarketingPromotionLink(
+      form.promotionLink
+    );
+    if (promotionLinkValidation) return promotionLinkValidation;
   }
   if (form.linkMode === "BUTTON") {
     if (form.buttons.length === 0) return "按钮超链消息类型至少需要一个按钮";
