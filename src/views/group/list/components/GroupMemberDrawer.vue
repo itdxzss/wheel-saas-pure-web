@@ -3,20 +3,22 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox, type UploadFile } from "element-plus";
 import {
   demoteGroupMembers,
-  getGroupMembers,
+  getGroupDetail,
   kickGroupMembers,
   promoteGroupMembers,
-  updateGroupProfile,
-  updateGroupSettings,
   uploadGroupAvatar,
   type GroupDetail,
   type GroupListRow,
-  type GroupMember,
-  type GroupMemberList
+  type GroupMember
 } from "@/api/group";
 import { apiErrorMessage } from "@/utils/api-error";
 import { timedMessageOptions } from "../constants";
-import { groupMemberFallbackReason } from "../group-member-availability";
+import { saveChangedGroupProfile } from "../composables/useGroupProfileSaving";
+import { useGroupTimedMessage } from "../composables/useGroupTimedMessage";
+import {
+  emptyGroupPermissions,
+  useGroupPermissions
+} from "../composables/useGroupPermissions";
 
 defineOptions({
   name: "GroupMemberDrawer"
@@ -42,19 +44,32 @@ const savingProfile = ref(false);
 const uploadingAvatar = ref(false);
 const memberSearch = ref("");
 const selectedJids = ref<string[]>([]);
-const timedMessageMode = ref("off");
 const avatarPreviewUrl = ref<string | null>(null);
 const objectUrl = ref<string | null>(null);
 const profileForm = reactive({
   groupName: "",
   remark: ""
 });
-const permissions = reactive({
-  editGroupSettings: true,
-  sendMessages: true,
-  addMembers: true,
-  inviteViaLink: true,
-  adminApproveNewMembers: false
+const profileBaseline = reactive({ ...profileForm });
+const {
+  changeMode: onTimedMessageChange,
+  mode: timedMessageMode,
+  reset: resetTimedMessage,
+  saving: savingTimedMessage,
+  setMode: setTimedMessageMode
+} = useGroupTimedMessage({
+  groupId: () => props.group?.id ?? null,
+  reload: loadDetail
+});
+const {
+  permissions,
+  reset: resetPermissions,
+  saving: savingPermission,
+  setPermissions,
+  toggle: togglePermission
+} = useGroupPermissions({
+  groupId: () => props.group?.id ?? null,
+  reload: loadDetail
 });
 
 const filteredMembers = computed<GroupMember[]>(() => {
@@ -71,7 +86,12 @@ const filteredMembers = computed<GroupMember[]>(() => {
     )
   );
 });
-const batchDisabled = computed(() => selectedJids.value.length === 0);
+const batchDisabled = computed(
+  () =>
+    loading.value ||
+    !detail.value?.membersAvailable ||
+    selectedJids.value.length === 0
+);
 
 function displayGroupName(group: GroupListRow | null): string {
   if (!group) return "";
@@ -80,44 +100,34 @@ function displayGroupName(group: GroupListRow | null): string {
 
 function fallbackDetail(group: GroupListRow, reason: string): GroupDetail {
   return {
-    id: group.id,
-    groupJid: group.groupJid,
+    groupLinkId: group.id,
+    groupJid: group.groupJid ?? null,
     groupName: displayGroupName(group),
-    url: group.url,
-    description: group.remark,
-    memberCount: group.memberCount,
+    remark: group.remark ?? null,
+    avatarUrl: group.avatarUrl ?? null,
+    liveStateAvailable: false,
+    liveStateUnavailableReason: reason,
+    timedMessageMode: null,
+    permissions: emptyGroupPermissions(),
+    capabilities: {
+      inviteViaLink: { supported: false, reason }
+    },
     membersAvailable: false,
     membersUnavailableReason: reason,
-    locked: null,
-    announcementOnly: null,
     members: []
   };
 }
 
-function memberListDetail(
-  group: GroupListRow,
-  memberList: GroupMemberList
-): GroupDetail {
-  return {
-    id: group.id,
-    groupJid: memberList.groupJid || group.groupJid,
-    groupName: displayGroupName(group),
-    url: group.url,
-    description: group.remark,
-    memberCount: memberList.total,
-    membersAvailable: true,
-    membersUnavailableReason: null,
-    locked: null,
-    announcementOnly: null,
-    members: memberList.members
-  };
+function resetRealtimeState(): void {
+  resetTimedMessage();
+  resetPermissions();
 }
 
 function resetState(): void {
   detail.value = null;
   memberSearch.value = "";
   selectedJids.value = [];
-  timedMessageMode.value = "off";
+  resetRealtimeState();
   if (objectUrl.value) URL.revokeObjectURL(objectUrl.value);
   objectUrl.value = null;
   avatarPreviewUrl.value = null;
@@ -126,6 +136,7 @@ function resetState(): void {
 function hydrateFromGroup(group: GroupListRow | null): void {
   profileForm.groupName = displayGroupName(group);
   profileForm.remark = group?.remark ?? "";
+  Object.assign(profileBaseline, profileForm);
   avatarPreviewUrl.value = group?.avatarUrl ?? null;
 }
 
@@ -134,23 +145,20 @@ async function loadDetail(): Promise<void> {
   if (!group) return;
   loading.value = true;
   selectedJids.value = [];
+  resetRealtimeState();
   try {
-    const fallbackReason = groupMemberFallbackReason(group);
-    if (fallbackReason) {
-      detail.value = fallbackDetail(group, fallbackReason);
-      return;
-    }
-    detail.value = memberListDetail(group, await getGroupMembers(group.id));
-    if (detail.value.locked != null) {
-      permissions.editGroupSettings = !detail.value.locked;
-    }
-    if (detail.value.announcementOnly != null) {
-      permissions.sendMessages = !detail.value.announcementOnly;
-    }
+    const loaded = await getGroupDetail(group.id);
+    detail.value = loaded;
+    profileForm.groupName = loaded.groupName ?? displayGroupName(group);
+    profileForm.remark = loaded.remark ?? group.remark ?? "";
+    Object.assign(profileBaseline, profileForm);
+    avatarPreviewUrl.value = loaded.avatarUrl ?? group.avatarUrl ?? null;
+    setTimedMessageMode(loaded.timedMessageMode);
+    setPermissions(loaded.permissions);
   } catch (error) {
     detail.value = fallbackDetail(
       group,
-      apiErrorMessage(error, "成员数据加载失败")
+      apiErrorMessage(error, "群详情加载失败")
     );
   } finally {
     loading.value = false;
@@ -160,18 +168,38 @@ async function loadDetail(): Promise<void> {
 async function saveProfile(): Promise<void> {
   const group = props.group;
   if (!group) return;
+  const values = {
+    groupName: profileForm.groupName.trim(),
+    remark: profileForm.remark.trim()
+  };
   savingProfile.value = true;
-  try {
-    await updateGroupProfile(group.id, {
-      groupName: profileForm.groupName.trim(),
-      remark: profileForm.remark.trim()
-    });
-    ElMessage.success("群资料已保存");
+  const results = await saveChangedGroupProfile(
+    group.id,
+    values,
+    profileBaseline
+  );
+  savingProfile.value = false;
+  if (results.length === 0) {
+    ElMessage.info("没有需要保存的修改");
+    return;
+  }
+  let changed = false;
+  results.forEach(operation => {
+    if (operation.settled.status === "fulfilled") {
+      profileBaseline[operation.field] = operation.value;
+      if (operation.field === "groupName" && detail.value) {
+        detail.value.groupName = operation.value;
+      }
+      ElMessage.success(`${operation.label}已保存`);
+      changed = true;
+    } else {
+      ElMessage.error(
+        apiErrorMessage(operation.settled.reason, `${operation.label}保存失败`)
+      );
+    }
+  });
+  if (changed) {
     emit("refresh");
-  } catch (error) {
-    ElMessage.error(apiErrorMessage(error, "群资料接口待接入或保存失败"));
-  } finally {
-    savingProfile.value = false;
   }
 }
 
@@ -184,43 +212,24 @@ async function handleAvatarChange(uploadFile: UploadFile): Promise<void> {
   avatarPreviewUrl.value = objectUrl.value;
   uploadingAvatar.value = true;
   try {
-    await uploadGroupAvatar(group.id, raw);
-    ElMessage.success("群头像已更新");
+    const result = await uploadGroupAvatar(group.id, raw);
+    if (!result.applied) {
+      ElMessage.warning("群头像未更新");
+      return;
+    }
+    avatarPreviewUrl.value = result.avatarUrl ?? avatarPreviewUrl.value;
+    if (detail.value) detail.value.avatarUrl = result.avatarUrl;
+    if (result.mirrorSynced) {
+      ElMessage.success("群头像已更新");
+    } else {
+      ElMessage.warning("头像已更新，本地列表待刷新");
+    }
     emit("refresh");
   } catch (error) {
-    avatarPreviewUrl.value = group.avatarUrl ?? null;
-    ElMessage.error(apiErrorMessage(error, "群头像接口待接入或上传失败"));
+    avatarPreviewUrl.value = detail.value?.avatarUrl ?? group.avatarUrl ?? null;
+    ElMessage.error(apiErrorMessage(error, "群头像上传失败"));
   } finally {
     uploadingAvatar.value = false;
-  }
-}
-
-function onTimedMessageChange(): void {
-  ElMessage.warning("限时消息接口待接入，当前仅完成前端入口");
-}
-
-async function togglePermission(key: keyof typeof permissions): Promise<void> {
-  const group = props.group;
-  if (!group) return;
-  if (key !== "editGroupSettings" && key !== "sendMessages") {
-    ElMessage.warning("该权限接口待接入，当前仅完成前端入口");
-    return;
-  }
-  const oldValue = permissions[key];
-  permissions[key] = !oldValue;
-  try {
-    const result = await updateGroupSettings(group.id, {
-      locked: key === "editGroupSettings" ? !permissions[key] : undefined,
-      announcementOnly: key === "sendMessages" ? !permissions[key] : undefined
-    });
-    if (result.applied) {
-      ElMessage.success("群组权限已更新");
-    } else {
-      ElMessage.warning(result.reason || "群组权限接口已降级");
-    }
-  } catch (error) {
-    permissions[key] = oldValue;
-    ElMessage.error(apiErrorMessage(error, "群组权限接口待接入或更新失败"));
   }
 }
 
@@ -258,12 +267,23 @@ async function runMemberAction(
     const result = await call(group.id, selectedJids.value);
     if (result.ok) {
       ElMessage.success(result.message || "成员操作已提交");
-      await loadDetail();
     } else {
       ElMessage.warning(result.message || "成员操作未完成");
     }
+    if (result.partial) {
+      const failures = (result.results ?? [])
+        .filter(item => item.status !== "OK")
+        .map(item => `${item.jid}：${item.reason || item.status}`)
+        .join("\n");
+      await ElMessageBox.alert(
+        failures || result.message || "部分成员操作未完成",
+        "成员操作结果",
+        { type: "warning", confirmButtonText: "知道了" }
+      );
+    }
+    await loadDetail();
   } catch (error) {
-    ElMessage.error(apiErrorMessage(error, "成员操作接口待接入或操作失败"));
+    ElMessage.error(apiErrorMessage(error, "成员操作失败"));
   }
 }
 
@@ -303,11 +323,15 @@ onBeforeUnmount(resetState);
     <div v-if="group" class="drawer-content">
       <section class="drawer-group-head">
         <el-avatar :size="56" :src="avatarPreviewUrl || undefined">
-          {{ displayGroupName(group).slice(0, 1) || "群" }}
+          {{
+            (detail?.groupName || displayGroupName(group)).slice(0, 1) || "群"
+          }}
         </el-avatar>
         <div class="drawer-group-meta">
-          <strong>{{ displayGroupName(group) }}</strong>
-          <span>{{ group.groupJid || "groupJid 待回填" }}</span>
+          <strong>{{ detail?.groupName || displayGroupName(group) }}</strong>
+          <span>{{
+            detail?.groupJid || group.groupJid || "groupJid 待回填"
+          }}</span>
         </div>
       </section>
 
@@ -345,6 +369,7 @@ onBeforeUnmount(resetState);
         <el-radio-group
           v-model="timedMessageMode"
           class="timed-message-group"
+          :disabled="loading || savingTimedMessage || timedMessageMode == null"
           @change="onTimedMessageChange"
         >
           <el-radio-button
@@ -363,35 +388,62 @@ onBeforeUnmount(resetState);
           <label class="permission-row">
             <span>编辑群组设置</span>
             <el-switch
-              :model-value="permissions.editGroupSettings"
+              :model-value="permissions.editGroupSettings ?? false"
+              :disabled="
+                loading ||
+                savingPermission ||
+                permissions.editGroupSettings == null
+              "
               @change="togglePermission('editGroupSettings')"
             />
           </label>
           <label class="permission-row">
             <span>发送新消息</span>
             <el-switch
-              :model-value="permissions.sendMessages"
+              :model-value="permissions.sendMessages ?? false"
+              :disabled="
+                loading || savingPermission || permissions.sendMessages == null
+              "
               @change="togglePermission('sendMessages')"
             />
           </label>
           <label class="permission-row">
             <span>添加其他成员</span>
             <el-switch
-              :model-value="permissions.addMembers"
+              :model-value="permissions.addMembers ?? false"
+              :disabled="
+                loading || savingPermission || permissions.addMembers == null
+              "
               @change="togglePermission('addMembers')"
             />
           </label>
           <label class="permission-row">
-            <span>通过链接邀请</span>
+            <span class="permission-label">
+              通过链接邀请
+              <small v-if="detail?.capabilities.inviteViaLink.reason">
+                {{ detail.capabilities.inviteViaLink.reason }}
+              </small>
+            </span>
             <el-switch
-              :model-value="permissions.inviteViaLink"
+              :model-value="permissions.inviteViaLink ?? false"
+              :disabled="
+                loading ||
+                savingPermission ||
+                permissions.inviteViaLink == null ||
+                !detail?.capabilities.inviteViaLink.supported
+              "
               @change="togglePermission('inviteViaLink')"
             />
           </label>
           <label class="permission-row">
             <span>管理员可以批准新成员</span>
             <el-switch
-              :model-value="permissions.adminApproveNewMembers"
+              :model-value="permissions.adminApproveNewMembers ?? false"
+              :disabled="
+                loading ||
+                savingPermission ||
+                permissions.adminApproveNewMembers == null
+              "
               @change="togglePermission('adminApproveNewMembers')"
             />
           </label>
@@ -415,7 +467,7 @@ onBeforeUnmount(resetState);
           </template>
         </el-input>
         <el-alert
-          v-if="!detail?.membersAvailable"
+          v-if="detail && !detail.membersAvailable"
           class="member-alert"
           type="warning"
           :closable="false"
@@ -434,7 +486,11 @@ onBeforeUnmount(resetState);
           border
           @selection-change="onMemberSelectionChange"
         >
-          <el-table-column type="selection" width="46" />
+          <el-table-column
+            type="selection"
+            width="46"
+            :selectable="row => !row.locked"
+          />
           <el-table-column prop="name" label="昵称" min-width="120" />
           <el-table-column prop="phone" label="WS号" min-width="150" />
           <el-table-column label="角色" width="110">
@@ -523,6 +579,16 @@ onBeforeUnmount(resetState);
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.permission-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.permission-label small {
+  color: var(--el-text-color-secondary);
 }
 
 .member-alert {
