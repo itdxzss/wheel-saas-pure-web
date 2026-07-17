@@ -102,6 +102,187 @@ const channels = [
   }
 ];
 
+interface MockChannelStatsDaily {
+  channelId: number;
+  countryCode: string;
+  date: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  serviceRate: number;
+  otherFee: number;
+  uv: number;
+  visitDurationSeconds: number;
+  loginRequestCount: number;
+  loginRequestUserCount: number;
+  loginSuccessCount: number;
+  loginSuccessUserCount: number;
+  unbindCount: number;
+  version: number;
+}
+
+const statsDates = [
+  "2026-07-11",
+  "2026-07-12",
+  "2026-07-13",
+  "2026-07-14",
+  "2026-07-15",
+  "2026-07-16",
+  "2026-07-17"
+];
+
+const channelStatsDaily: MockChannelStatsDaily[] = channels.flatMap(channel =>
+  channel.countries.flatMap((countryCode, countryIndex) =>
+    statsDates.map((date, dateIndex) => {
+      const base = channel.id * 10 + countryIndex * 3 + dateIndex + 1;
+      return {
+        channelId: channel.id,
+        countryCode,
+        date,
+        spend: base * 8,
+        impressions: base * 120,
+        clicks: base * 12,
+        serviceRate: 0.05,
+        otherFee: base,
+        uv: base * 30,
+        visitDurationSeconds: base * 18,
+        loginRequestCount: base * 16,
+        loginRequestUserCount: base * 12,
+        loginSuccessCount: base * 9,
+        loginSuccessUserCount: base * 7,
+        unbindCount: Math.floor(base / 3),
+        version: 1
+      };
+    })
+  )
+);
+
+function statsRatio(numerator: number, denominator: number) {
+  return denominator > 0 ? numerator / denominator : undefined;
+}
+
+function withStatsDerived<T extends MockChannelStatsDaily>(row: T) {
+  const serviceFee = row.spend * row.serviceRate;
+  return {
+    ...row,
+    clickRate: statsRatio(row.clicks, row.impressions),
+    serviceFee,
+    totalFee: row.spend + serviceFee + row.otherFee,
+    loginRequestRate: statsRatio(row.loginRequestUserCount, row.uv),
+    loginSuccessRate: statsRatio(
+      row.loginSuccessUserCount,
+      row.loginRequestUserCount
+    ),
+    visitorConversionRate: statsRatio(row.loginSuccessUserCount, row.uv),
+    unbindRate: statsRatio(row.unbindCount, row.loginSuccessUserCount),
+    accountCost: statsRatio(row.spend, row.loginSuccessCount)
+  };
+}
+
+function aggregateChannelStats(
+  channel: (typeof channels)[number],
+  countryCode: string,
+  startDate: string,
+  endDate: string
+) {
+  const details = channelStatsDaily.filter(
+    row =>
+      row.channelId === channel.id &&
+      row.countryCode === countryCode &&
+      row.date >= startDate &&
+      row.date <= endDate
+  );
+  const total = details.reduce(
+    (summary, row) => {
+      summary.spend += row.spend;
+      summary.impressions += row.impressions;
+      summary.clicks += row.clicks;
+      summary.otherFee += row.otherFee;
+      summary.uv += row.uv;
+      summary.visitDurationSeconds += row.visitDurationSeconds;
+      summary.loginRequestCount += row.loginRequestCount;
+      summary.loginRequestUserCount += row.loginRequestUserCount;
+      summary.loginSuccessCount += row.loginSuccessCount;
+      summary.loginSuccessUserCount += row.loginSuccessUserCount;
+      summary.unbindCount += row.unbindCount;
+      return summary;
+    },
+    {
+      channelId: channel.id,
+      countryCode,
+      date: endDate,
+      spend: 0,
+      impressions: 0,
+      clicks: 0,
+      serviceRate: details[0]?.serviceRate ?? 0,
+      otherFee: 0,
+      uv: 0,
+      visitDurationSeconds: 0,
+      loginRequestCount: 0,
+      loginRequestUserCount: 0,
+      loginSuccessCount: 0,
+      loginSuccessUserCount: 0,
+      unbindCount: 0,
+      version: 0
+    }
+  );
+  const country = channelOptions.countries.find(
+    item => item.code === countryCode
+  );
+  const template = templates.find(item => item.id === channel.templateId);
+  return {
+    ...withStatsDerived(total),
+    channelName: channel.name,
+    channelCode: channel.channelCode,
+    countryName: country?.name ?? countryCode,
+    templateId: channel.templateId,
+    templateName: template?.name ?? ""
+  };
+}
+
+function listChannelStats(query: Record<string, unknown>) {
+  const startDate = String(query.startDate || statsDates[0]);
+  const endDate = String(query.endDate || statsDates[statsDates.length - 1]);
+  const rows = channels.flatMap(channel =>
+    channel.countries.map(countryCode =>
+      aggregateChannelStats(channel, countryCode, startDate, endDate)
+    )
+  );
+  const filtered = rows.filter(row => {
+    const channel = channels.find(item => item.id === row.channelId);
+    return (
+      (!query.channelId || row.channelId === Number(query.channelId)) &&
+      (!query.channelName ||
+        row.channelName.includes(String(query.channelName).trim())) &&
+      (!query.templateId || row.templateId === Number(query.templateId)) &&
+      (!query.countryCode || row.countryCode === query.countryCode) &&
+      (!query.creatorId || channel?.creatorId === Number(query.creatorId)) &&
+      (!query.parentUserId ||
+        channel?.parentUserId === Number(query.parentUserId))
+    );
+  });
+  const allowlist = new Set([
+    "spend",
+    "impressions",
+    "clicks",
+    "totalFee",
+    "uv",
+    "loginSuccessUserCount",
+    "unbindRate",
+    "accountCost"
+  ]);
+  const sortBy = String(query.sortBy || "");
+  if (allowlist.has(sortBy)) {
+    const direction = query.sortOrder === "asc" ? 1 : -1;
+    filtered.sort((a, b) => {
+      const left = Number((a as Record<string, unknown>)[sortBy]) || 0;
+      const right = Number((b as Record<string, unknown>)[sortBy]) || 0;
+      return (left - right) * direction;
+    });
+  }
+  return filtered;
+}
+
 function normalizeDomain(input: unknown) {
   return String(input ?? "")
     .trim()
@@ -163,6 +344,104 @@ function success(data: unknown) {
 }
 
 export default defineFakeRoute([
+  {
+    url: "/api/buyer/channel-stats/options",
+    method: "get",
+    response: () =>
+      success({
+        channels: channels.map(({ id, name }) => ({ id, name })),
+        templates: channelOptions.templates,
+        countries: channelOptions.countries.map(({ code, name }) => ({
+          code,
+          name
+        })),
+        creators: channelOptions.creators,
+        parentUsers: channelOptions.parentUsers
+      })
+  },
+  {
+    url: "/api/buyer/channel-stats",
+    method: "get",
+    response: ({ query }) => success(listChannelStats(query))
+  },
+  {
+    url: "/api/buyer/channel-stats/:channelId/daily",
+    method: "get",
+    response: ({ params, query }) =>
+      success(
+        channelStatsDaily
+          .filter(
+            row =>
+              row.channelId === Number(params.channelId) &&
+              row.countryCode === query.countryCode &&
+              row.date >= String(query.startDate) &&
+              row.date <= String(query.endDate)
+          )
+          .map(withStatsDerived)
+      )
+  },
+  {
+    url: "/api/buyer/channel-stats/:channelId/daily/:date",
+    method: "put",
+    response: ({ params, body }) => {
+      const channelId = Number(params.channelId);
+      const row = channelStatsDaily.find(
+        item =>
+          item.channelId === channelId &&
+          item.countryCode === body.countryCode &&
+          item.date === params.date
+      );
+      if (!row) return { code: 404, message: "日明细不存在", data: null };
+      if (row.version !== Number(body.version)) {
+        return {
+          code: "VERSION_CONFLICT",
+          message: "数据已被其他人更新",
+          data: null
+        };
+      }
+      Object.assign(row, {
+        spend: Number(body.spend),
+        impressions: Number(body.impressions),
+        clicks: Number(body.clicks),
+        serviceRate: Number(body.serviceRate),
+        otherFee: Number(body.otherFee),
+        version: row.version + 1
+      });
+      const channel = channels.find(item => item.id === channelId);
+      return channel
+        ? success({
+            daily: withStatsDerived(row),
+            summary: aggregateChannelStats(
+              channel,
+              row.countryCode,
+              statsDates[0],
+              statsDates[statsDates.length - 1]
+            )
+          })
+        : { code: 404, message: "渠道不存在", data: null };
+    }
+  },
+  {
+    url: "/api/buyer/channel-stats/export",
+    method: "get",
+    response: ({ query }) => {
+      const rows = listChannelStats(query);
+      return [
+        "渠道,国家,模板,消耗,展示,点击,UV",
+        ...rows.map(row =>
+          [
+            row.channelName,
+            row.countryName,
+            row.templateName,
+            row.spend,
+            row.impressions,
+            row.clicks,
+            row.uv
+          ].join(",")
+        )
+      ].join("\n");
+    }
+  },
   {
     url: "/api/buyer/templates",
     method: "get",
