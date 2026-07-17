@@ -48,6 +48,8 @@ describe("buyer channel stats page contract", () => {
     assert.doesNotMatch(`${page}\n${table}`, /<el-pagination/);
     assert.ok(page.includes("tenant:buyer-channel-stats:export"));
     assert.ok(daily.includes("tenant:buyer-channel-stats:edit"));
+    assert.match(page, /:clearable="false"/);
+    assert.ok(page.includes("normalizeShanghaiDateRange"));
   });
 
   it("uses editable daily rows and keeps production fake server disabled", () => {
@@ -65,5 +67,12 @@ describe("buyer channel stats page contract", () => {
       "utf8"
     );
     assert.match(plugins, /enableProd:\s*false/);
+    const buyerMock = readFileSync(
+      new URL("../../../../mock/buyer.ts", import.meta.url),
+      "utf8"
+    );
+    assert.ok(buyerMock.includes("summarizeChannelStats"));
+    assert.ok(buyerMock.includes("body.startDate"));
+    assert.ok(buyerMock.includes("body.endDate"));
   });
 });

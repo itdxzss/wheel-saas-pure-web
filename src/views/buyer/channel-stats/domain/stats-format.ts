@@ -18,13 +18,29 @@ export function defaultShanghaiDateRange(now = new Date()): ShanghaiDateRange {
   return [startDate.toISOString().slice(0, 10), end];
 }
 
+export function normalizeShanghaiDateRange(
+  value: unknown,
+  now = new Date()
+): ShanghaiDateRange {
+  if (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    value.every(
+      item => typeof item === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item)
+    )
+  ) {
+    return [value[0], value[1]];
+  }
+  return defaultShanghaiDateRange(now);
+}
+
 function ratio(numerator: number, denominator: number): number | undefined {
   return denominator > 0 ? numerator / denominator : undefined;
 }
 
 export function deriveChannelStats(
   source: BuyerChannelStatsMetricSource
-): Required<BuyerChannelStatsDerivedMetrics> {
+): BuyerChannelStatsDerivedMetrics {
   return {
     clickRate: ratio(source.clicks, source.impressions),
     serviceFee: source.spend * source.serviceRate,
@@ -38,11 +54,55 @@ export function deriveChannelStats(
     visitorConversionRate: ratio(source.loginSuccessUserCount, source.uv),
     unbindRate: ratio(source.unbindCount, source.loginSuccessUserCount),
     accountCost: ratio(source.spend, source.loginSuccessCount)
-  } as Required<BuyerChannelStatsDerivedMetrics>;
+  };
+}
+
+export function summarizeChannelStats(
+  sources: BuyerChannelStatsMetricSource[]
+): BuyerChannelStatsMetricSource & BuyerChannelStatsDerivedMetrics {
+  let serviceFee = 0;
+  const summary = sources.reduce<BuyerChannelStatsMetricSource>(
+    (total, source) => {
+      total.spend += source.spend;
+      total.impressions += source.impressions;
+      total.clicks += source.clicks;
+      total.otherFee += source.otherFee;
+      total.uv += source.uv;
+      total.visitDurationSeconds += source.visitDurationSeconds;
+      total.loginRequestCount += source.loginRequestCount;
+      total.loginRequestUserCount += source.loginRequestUserCount;
+      total.loginSuccessCount += source.loginSuccessCount;
+      total.loginSuccessUserCount += source.loginSuccessUserCount;
+      total.unbindCount += source.unbindCount;
+      serviceFee += source.spend * source.serviceRate;
+      return total;
+    },
+    {
+      spend: 0,
+      impressions: 0,
+      clicks: 0,
+      serviceRate: 0,
+      otherFee: 0,
+      uv: 0,
+      visitDurationSeconds: 0,
+      loginRequestCount: 0,
+      loginRequestUserCount: 0,
+      loginSuccessCount: 0,
+      loginSuccessUserCount: 0,
+      unbindCount: 0
+    }
+  );
+  summary.serviceRate = summary.spend > 0 ? serviceFee / summary.spend : 0;
+  return {
+    ...summary,
+    ...deriveChannelStats(summary),
+    serviceFee,
+    totalFee: summary.spend + serviceFee + summary.otherFee
+  };
 }
 
 export function formatRatio(
-  numerator: number | undefined,
+  numerator: number | null | undefined,
   denominator?: number
 ): string {
   const value =
@@ -52,7 +112,10 @@ export function formatRatio(
     : `${(value * 100).toFixed(2)}%`;
 }
 
-export function formatNumber(value: number | undefined, digits = 2): string {
+export function formatNumber(
+  value: number | null | undefined,
+  digits = 2
+): string {
   return value === undefined || !Number.isFinite(value)
     ? "-"
     : value.toFixed(digits);

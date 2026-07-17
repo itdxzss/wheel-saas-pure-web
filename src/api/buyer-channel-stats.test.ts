@@ -34,6 +34,8 @@ describe("buyer channel stats API contract", () => {
     });
     await updateBuyerChannelStatsDaily(9, "2026-07-17", {
       countryCode: "US",
+      startDate: "2026-07-13",
+      endDate: "2026-07-15",
       spend: 20,
       impressions: 100,
       clicks: 10,
@@ -70,6 +72,8 @@ describe("buyer channel stats API contract", () => {
         opts: {
           data: {
             countryCode: "US",
+            startDate: "2026-07-13",
+            endDate: "2026-07-15",
             spend: 20,
             impressions: 100,
             clicks: 10,

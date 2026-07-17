@@ -87,6 +87,8 @@ export function useDailyStatsPanels(
     try {
       const result = await update(channelId, row.date, {
         countryCode,
+        startDate: range[0],
+        endDate: range[1],
         spend: row.spend,
         impressions: row.impressions,
         clicks: row.clicks,

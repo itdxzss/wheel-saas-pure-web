@@ -51,9 +51,11 @@ describe("daily channel stats panels", () => {
     let version = 1;
     let conflicts = 0;
     let summary: BuyerChannelStatsRow | undefined;
+    let observedRange: [string, string] | undefined;
     const state = useDailyStatsPanels({
       load: async () => [daily("US", version)],
       update: async (_channelId, _date, payload) => {
+        observedRange = [payload.startDate, payload.endDate];
         if (payload.version === 2) {
           version = 3;
           throw { code: "VERSION_CONFLICT" };
@@ -74,6 +76,7 @@ describe("daily channel stats panels", () => {
     const range: [string, string] = ["2026-07-11", "2026-07-17"];
     await state.loadPanel(1, "US", range);
     await state.saveRow(1, "US", daily("US", 1), range);
+    assert.deepEqual(observedRange, range);
     assert.equal(state.panelFor(1, "US").rows[0].version, 2);
     assert.equal(summary?.channelId, 1);
 

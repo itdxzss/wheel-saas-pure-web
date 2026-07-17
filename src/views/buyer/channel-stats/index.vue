@@ -19,6 +19,7 @@ import ChannelStatsTable from "./components/ChannelStatsTable.vue";
 import { useDailyStatsPanels } from "./composables/useDailyStatsPanels";
 import {
   defaultShanghaiDateRange,
+  normalizeShanghaiDateRange,
   type ShanghaiDateRange
 } from "./domain/stats-format";
 
@@ -32,7 +33,7 @@ const emptyOptions: BuyerChannelStatsOptions = {
   parentUsers: []
 };
 const filters = reactive<{
-  dateRange: ShanghaiDateRange;
+  dateRange: ShanghaiDateRange | null;
   channelId?: number;
   channelName: string;
   templateId?: number;
@@ -67,9 +68,11 @@ const tableColumns = [
 ];
 
 function queryParams(): BuyerChannelStatsQuery {
+  const dateRange = normalizeShanghaiDateRange(filters.dateRange);
+  filters.dateRange = dateRange;
   return {
-    startDate: filters.dateRange[0],
-    endDate: filters.dateRange[1],
+    startDate: dateRange[0],
+    endDate: dateRange[1],
     channelId: filters.channelId,
     channelName: filters.channelName.trim() || undefined,
     templateId: filters.templateId,
@@ -120,11 +123,9 @@ function sort(
 
 async function expand(row: BuyerChannelStatsRow): Promise<void> {
   try {
-    await daily.loadPanel(
-      row.channelId,
-      row.countryCode ?? "",
-      filters.dateRange
-    );
+    const dateRange = normalizeShanghaiDateRange(filters.dateRange);
+    filters.dateRange = dateRange;
+    await daily.loadPanel(row.channelId, row.countryCode, dateRange);
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "日明细加载失败"));
   }
@@ -135,11 +136,13 @@ async function saveDaily(
   row: Parameters<typeof daily.saveRow>[2]
 ): Promise<void> {
   try {
+    const dateRange = normalizeShanghaiDateRange(filters.dateRange);
+    filters.dateRange = dateRange;
     const result = await daily.saveRow(
       summary.channelId,
-      summary.countryCode ?? "",
+      summary.countryCode,
       row,
-      filters.dateRange
+      dateRange
     );
     if (result === "saved") ElMessage.success("日明细已保存");
   } catch (error) {
@@ -178,6 +181,7 @@ onMounted(async () => {
           <el-date-picker
             v-model="filters.dateRange"
             type="daterange"
+            :clearable="false"
             value-format="YYYY-MM-DD"
           />
         </el-form-item>

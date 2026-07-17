@@ -29,10 +29,6 @@ const emit = defineEmits<{
   ];
 }>();
 
-function countryCode(row: BuyerChannelStatsRow): string {
-  return row.countryCode ?? "";
-}
-
 function derived(row: BuyerChannelStatsRow) {
   return { ...deriveChannelStats(row), ...row };
 }
@@ -69,10 +65,10 @@ function onSortChange(input: {
     <el-table-column type="expand" fixed width="52">
       <template #default="{ row }">
         <DailyStatsRows
-          :rows="props.panelFor(row.channelId, countryCode(row)).rows"
-          :loading="props.panelFor(row.channelId, countryCode(row)).loading"
+          :rows="props.panelFor(row.channelId, row.countryCode).rows"
+          :loading="props.panelFor(row.channelId, row.countryCode).loading"
           :saving-date="
-            props.panelFor(row.channelId, countryCode(row)).savingDate
+            props.panelFor(row.channelId, row.countryCode).savingDate
           "
           @save="emit('save', row, $event)"
         />

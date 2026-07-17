@@ -53,26 +53,26 @@ export interface BuyerChannelStatsMetricSource {
 }
 
 export interface BuyerChannelStatsDerivedMetrics {
-  clickRate?: number;
-  serviceFee?: number;
-  totalFee?: number;
-  loginRequestRate?: number;
-  loginSuccessRate?: number;
-  visitorConversionRate?: number;
-  unbindRate?: number;
-  accountCost?: number;
+  clickRate?: number | null;
+  serviceFee?: number | null;
+  totalFee?: number | null;
+  loginRequestRate?: number | null;
+  loginSuccessRate?: number | null;
+  visitorConversionRate?: number | null;
+  unbindRate?: number | null;
+  accountCost?: number | null;
 }
 
 export interface BuyerChannelStatsRow
   extends BuyerChannelStatsMetricSource,
     BuyerChannelStatsDerivedMetrics {
   channelId: number;
-  channelName?: string;
-  channelCode?: string;
-  countryCode?: string;
-  countryName?: string;
-  templateId?: number;
-  templateName?: string;
+  channelName: string;
+  channelCode: string;
+  countryCode: string;
+  countryName: string;
+  templateId: number;
+  templateName: string;
 }
 
 export interface BuyerChannelStatsDailyRow
@@ -91,6 +91,8 @@ export interface BuyerChannelStatsDailyQuery {
 
 export interface BuyerChannelStatsDailyInput {
   countryCode: string;
+  startDate: string;
+  endDate: string;
   spend: number;
   impressions: number;
   clicks: number;

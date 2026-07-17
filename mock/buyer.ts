@@ -1,5 +1,6 @@
 import { defineFakeRoute } from "vite-plugin-fake-server/client";
 import { resolveMockBuyerRuntime } from "./buyer-runtime";
+import { summarizeChannelStats } from "../src/views/buyer/channel-stats/domain/stats-format";
 
 const templates = [
   {
@@ -192,46 +193,15 @@ function aggregateChannelStats(
       row.date >= startDate &&
       row.date <= endDate
   );
-  const total = details.reduce(
-    (summary, row) => {
-      summary.spend += row.spend;
-      summary.impressions += row.impressions;
-      summary.clicks += row.clicks;
-      summary.otherFee += row.otherFee;
-      summary.uv += row.uv;
-      summary.visitDurationSeconds += row.visitDurationSeconds;
-      summary.loginRequestCount += row.loginRequestCount;
-      summary.loginRequestUserCount += row.loginRequestUserCount;
-      summary.loginSuccessCount += row.loginSuccessCount;
-      summary.loginSuccessUserCount += row.loginSuccessUserCount;
-      summary.unbindCount += row.unbindCount;
-      return summary;
-    },
-    {
-      channelId: channel.id,
-      countryCode,
-      date: endDate,
-      spend: 0,
-      impressions: 0,
-      clicks: 0,
-      serviceRate: details[0]?.serviceRate ?? 0,
-      otherFee: 0,
-      uv: 0,
-      visitDurationSeconds: 0,
-      loginRequestCount: 0,
-      loginRequestUserCount: 0,
-      loginSuccessCount: 0,
-      loginSuccessUserCount: 0,
-      unbindCount: 0,
-      version: 0
-    }
-  );
+  const total = summarizeChannelStats(details);
   const country = channelOptions.countries.find(
     item => item.code === countryCode
   );
   const template = templates.find(item => item.id === channel.templateId);
   return {
-    ...withStatsDerived(total),
+    ...total,
+    channelId: channel.id,
+    countryCode,
     channelName: channel.name,
     channelCode: channel.channelCode,
     countryName: country?.name ?? countryCode,
@@ -414,8 +384,8 @@ export default defineFakeRoute([
             summary: aggregateChannelStats(
               channel,
               row.countryCode,
-              statsDates[0],
-              statsDates[statsDates.length - 1]
+              String(body.startDate),
+              String(body.endDate)
             )
           })
         : { code: 404, message: "渠道不存在", data: null };
