@@ -26,7 +26,10 @@ export const membershipStateOptions: Array<{
   { label: "自建拥有", value: 3 }
 ];
 
-export const timedMessageOptions = [
+export const timedMessageOptions: Array<{
+  label: string;
+  value: TimedMessageMode;
+}> = [
   { label: "24小时", value: "24h" },
   { label: "7天", value: "7d" },
   { label: "90天", value: "90d" },
@@ -44,3 +47,4 @@ export const groupListColumns: TableColumnList = [
   { label: "时间", prop: "createdAt", width: 180 },
   { label: "操作", prop: "operation", fixed: "right", width: 220 }
 ];
+import type { TimedMessageMode } from "@/api/group";

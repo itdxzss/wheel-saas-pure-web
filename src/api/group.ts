@@ -68,41 +68,56 @@ export interface GroupMemberList {
   members: GroupMember[];
 }
 
+export type TimedMessageMode = "off" | "24h" | "7d" | "90d";
+
+export interface GroupPermissionState {
+  editGroupSettings: boolean | null;
+  sendMessages: boolean | null;
+  addMembers: boolean | null;
+  inviteViaLink: boolean | null;
+  adminApproveNewMembers: boolean | null;
+}
+
 export interface GroupDetail {
-  id: number;
-  groupJid?: string | null;
-  groupName?: string | null;
-  url?: string | null;
-  description?: string | null;
-  memberCount?: number | null;
+  groupLinkId: number;
+  groupJid: string | null;
+  groupName: string | null;
+  remark: string | null;
+  avatarUrl: string | null;
+  liveStateAvailable: boolean;
+  liveStateUnavailableReason: string | null;
+  timedMessageMode: TimedMessageMode | null;
+  permissions: GroupPermissionState;
+  capabilities: {
+    inviteViaLink: { supported: boolean; reason: string | null };
+  };
   membersAvailable: boolean;
-  membersUnavailableReason?: string | null;
-  locked?: boolean | null;
-  announcementOnly?: boolean | null;
+  membersUnavailableReason: string | null;
   members: GroupMember[];
 }
 
-export interface GroupProfileUpdate {
-  groupName?: string;
-  remark?: string;
-  avatarUrl?: string;
+interface BackendGroupDetail extends Omit<GroupDetail, "members"> {
+  members: BackendGroupMember[];
 }
 
-export interface GroupSettingsUpdate {
-  locked?: boolean;
-  announcementOnly?: boolean;
-}
-
-export interface GroupSettingsResult {
+export interface GroupAvatarUpdate {
   applied: boolean;
-  reason?: string | null;
+  mirrorSynced: boolean;
+  avatarUrl: string | null;
 }
+
+export type GroupPermissionKey =
+  | "EDIT_GROUP_SETTINGS"
+  | "SEND_MESSAGES"
+  | "ADD_MEMBERS"
+  | "INVITE_VIA_LINK"
+  | "ADMIN_APPROVE_NEW_MEMBERS";
 
 export interface GroupMemberOpResult {
   ok: boolean;
   partial: boolean;
   message?: string | null;
-  results?: Array<{ jid: string; status: string }>;
+  results?: Array<{ jid: string; status: string; reason: string | null }>;
 }
 
 function toListParams(query: GroupListQuery) {
@@ -168,24 +183,46 @@ export async function getGroupMembers(id: number): Promise<GroupMemberList> {
   return toGroupMemberList(data);
 }
 
-export function updateGroupProfile(
-  id: number,
-  data: GroupProfileUpdate
-): Promise<GroupListRow> {
-  return armadaRequest<GroupListRow>("patch", `/api/group-links/${id}`, {
-    data
+export async function getGroupDetail(id: number): Promise<GroupDetail> {
+  const data = await armadaRequest<BackendGroupDetail>(
+    "get",
+    `/api/group-links/${id}/detail`
+  );
+  return {
+    ...data,
+    members: (data.members ?? []).map(toGroupMember)
+  };
+}
+
+export function updateGroupSubject(id: number, subject: string): Promise<void> {
+  return armadaRequest<void>("post", `/api/group-links/${id}/subject`, {
+    data: { subject }
   });
 }
 
-export function updateGroupSettings(
+export function updateGroupRemark(id: number, remark: string): Promise<void> {
+  return armadaRequest<void>("patch", `/api/group-links/${id}`, {
+    data: { remark }
+  });
+}
+
+export function updateTimedMessage(
   id: number,
-  data: GroupSettingsUpdate
-): Promise<GroupSettingsResult> {
-  return armadaRequest<GroupSettingsResult>(
-    "post",
-    `/api/group-links/${id}/settings`,
-    { data }
-  );
+  mode: TimedMessageMode
+): Promise<void> {
+  return armadaRequest<void>("post", `/api/group-links/${id}/timed-message`, {
+    data: { mode }
+  });
+}
+
+export function updateGroupSetting(
+  id: number,
+  key: GroupPermissionKey,
+  enabled: boolean
+): Promise<void> {
+  return armadaRequest<void>("post", `/api/group-links/${id}/settings`, {
+    data: { key, enabled }
+  });
 }
 
 export function promoteGroupMembers(
@@ -224,10 +261,10 @@ export function kickGroupMembers(
 export function uploadGroupAvatar(
   id: number,
   file: File
-): Promise<GroupListRow> {
+): Promise<GroupAvatarUpdate> {
   const form = new FormData();
   form.append("file", file);
-  return armadaRequest<GroupListRow>(
+  return armadaRequest<GroupAvatarUpdate>(
     "post",
     `/api/group-links/${id}/avatar`,
     { data: form },
