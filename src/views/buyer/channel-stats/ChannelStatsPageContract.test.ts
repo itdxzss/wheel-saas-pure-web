@@ -102,7 +102,29 @@ describe("buyer channel stats page contract", () => {
     assert.match(page, /:columns="dynamicColumns"/);
     assert.match(table, /columns:.*Array/s);
     assert.match(table, /v-if="isColumnVisible\(/);
-    assert.match(page, /prop: "channelName"[\s\S]*?hide:\s*false/);
-    assert.match(page, /prop: "templateName"[\s\S]*?hide:\s*false/);
+    assert.match(page, /prop: "channelName"[\s\S]*?hideable:\s*false/);
+    assert.match(page, /prop: "templateName"[\s\S]*?hideable:\s*false/);
+    assert.match(page, /:column-draggable="false"/);
+  });
+
+  it("keeps non-hideable columns visible when toggling all columns", async () => {
+    const helperUrl = new URL(
+      "../../../components/RePureTableBar/src/column-visibility.ts",
+      import.meta.url
+    );
+    assert.ok(existsSync(helperUrl), "column visibility helper should exist");
+    const { updateAllColumnVisibility } = await import(helperUrl.href);
+    const columns = [
+      { label: "渠道/国家", hide: false, hideable: false },
+      { label: "消耗", hide: false }
+    ];
+
+    updateAllColumnVisibility(columns, false);
+    assert.equal(columns[0].hide, false);
+    assert.equal(columns[1].hide, true);
+
+    updateAllColumnVisibility(columns, true);
+    assert.equal(columns[0].hide, false);
+    assert.equal(columns[1].hide, false);
   });
 });

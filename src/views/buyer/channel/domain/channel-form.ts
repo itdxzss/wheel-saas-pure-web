@@ -161,8 +161,9 @@ export function channelFormFieldErrors(
   }
   const root = asRecord(error);
   const response = asRecord(root?.response);
-  if (response?.status !== 422) return {};
-  const data = asRecord(response.data);
+  const status = response?.status ?? root?.code;
+  if (Number(status) !== 422) return {};
+  const data = asRecord(response ? response.data : root?.data);
   const source = data?.fieldErrors ?? data?.errors ?? data?.fields;
   const allowed = new Set<keyof ChannelFormModel>([
     "name",

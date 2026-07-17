@@ -65,13 +65,13 @@ const tableColumns = [
     label: "渠道/国家",
     prop: "channelName",
     hide: false,
-    fixed: "left" as const
+    hideable: false
   },
   {
     label: "绑定模板",
     prop: "templateName",
     hide: false,
-    fixed: "left" as const
+    hideable: false
   },
   { label: "消耗", prop: "spend" },
   { label: "展示", prop: "impressions" },
@@ -290,6 +290,7 @@ onMounted(async () => {
     <PureTableBar
       title="渠道统计"
       column-title="自定义列"
+      :column-draggable="false"
       :columns="tableColumns"
       @refresh="loadRows"
     >

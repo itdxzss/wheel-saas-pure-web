@@ -8,6 +8,13 @@ const drawer = readFileSync(
   "utf8"
 );
 
+function drawerFormItem(label: string): string {
+  const labelIndex = drawer.indexOf(`label="${label}"`);
+  const start = drawer.lastIndexOf("<el-form-item", labelIndex);
+  const end = drawer.indexOf("</el-form-item>", labelIndex);
+  return start >= 0 && end >= 0 ? drawer.slice(start, end) : "";
+}
+
 describe("buyer channel page contract", () => {
   it("contains required filters, columns, actions, permissions and pagination sizes", () => {
     for (const text of [
@@ -71,6 +78,17 @@ describe("buyer channel page contract", () => {
     assert.ok(drawer.includes("options.platforms"));
     assert.ok(drawer.includes("options.eventOptions"));
     assert.ok(drawer.includes("countryMode"));
+  });
+
+  it("offers all countries on first open and locks SPECIFIC to its dial code", () => {
+    const countryField = drawerFormItem("目标国家");
+    const dialCodeField = drawerFormItem("默认区号");
+    assert.ok(countryField.includes('v-for="country in options.countries"'));
+    assert.ok(dialCodeField.includes('v-for="country in dialCodeOptions"'));
+    assert.ok(
+      dialCodeField.includes(":disabled=\"form.countryMode === 'SPECIFIC'\"")
+    );
+    assert.ok(drawer.includes("validateTargetCountry"));
   });
 
   it("renders field-level save errors and persistent channel-list retry state", () => {

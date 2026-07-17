@@ -68,12 +68,22 @@ const dialCodeOptions = computed(() =>
 );
 const detailLoader = createChannelDetailLoader(getBuyerChannel);
 
+function validateTargetCountry(
+  _rule: unknown,
+  value: unknown,
+  callback: (error?: string | Error) => void
+): void {
+  if (form.countryMode === "MIXED" || Boolean(value)) {
+    callback();
+    return;
+  }
+  callback(new Error("请选择目标国家"));
+}
+
 const rules: FormRules<ChannelFormModel> = {
   name: [{ required: true, message: "请输入渠道名称", trigger: "blur" }],
   ownerId: [{ required: true, message: "请选择所属人", trigger: "change" }],
-  targetCountry: [
-    { required: true, message: "请选择目标国家", trigger: "change" }
-  ],
+  targetCountry: [{ validator: validateTargetCountry, trigger: "change" }],
   templateId: [
     { required: true, message: "请选择绑定模板", trigger: "change" }
   ],
@@ -201,7 +211,7 @@ watch(
         >
           <el-option label="混合（不限国家）" value="__MIXED__" />
           <el-option
-            v-for="country in dialCodeOptions"
+            v-for="country in options.countries"
             :key="country.code"
             :label="country.name"
             :value="country.code"
@@ -237,11 +247,12 @@ watch(
       >
         <el-select
           v-model="form.defaultDialCode"
+          :disabled="form.countryMode === 'SPECIFIC'"
           filterable
           placeholder="请选择默认区号"
         >
           <el-option
-            v-for="country in options.countries"
+            v-for="country in dialCodeOptions"
             :key="`${country.code}-${country.dialCode}`"
             :label="`${country.name} ${country.dialCode}`"
             :value="country.dialCode"

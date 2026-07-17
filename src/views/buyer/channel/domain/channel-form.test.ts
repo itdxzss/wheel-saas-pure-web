@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildChannelPayload,
+  channelFormFieldErrors,
   createDefaultChannelForm,
   hydrateChannelForm,
   saveChannelForm
@@ -62,6 +63,40 @@ describe("shared channel form", () => {
     assert.throws(
       () => buildChannelPayload(form, true, [{ code: "US", dialCode: "+1" }]),
       /默认区号必须与目标国家一致/
+    );
+  });
+
+  it("allows MIXED submission without a concrete target country", () => {
+    const form = createDefaultChannelForm();
+    Object.assign(form, {
+      name: "Mixed",
+      countryMode: "MIXED",
+      targetCountry: "",
+      templateId: 1,
+      domain: "mixed.example.com",
+      defaultDialCode: "+44"
+    });
+    const payload = buildChannelPayload(form, false, [
+      { code: "US", dialCode: "+1" },
+      { code: "GB", dialCode: "+44" }
+    ]);
+    assert.equal(payload.countryMode, "MIXED");
+    assert.equal(payload.targetCountry, "");
+    assert.equal(payload.defaultDialCode, "+44");
+  });
+
+  it("maps Armada 422 field errors without requiring an Axios response", () => {
+    assert.deepEqual(
+      channelFormFieldErrors({
+        code: 422,
+        data: {
+          fieldErrors: {
+            domain: ["域名格式错误"],
+            templateId: "模板已下线"
+          }
+        }
+      }),
+      { domain: "域名格式错误", templateId: "模板已下线" }
     );
   });
 

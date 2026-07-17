@@ -24,6 +24,10 @@ import ExpandIcon from "@/assets/table-bar/expand.svg?component";
 import RefreshIcon from "@/assets/table-bar/refresh.svg?component";
 import SettingIcon from "@/assets/table-bar/settings.svg?component";
 import CollapseIcon from "@/assets/table-bar/collapse.svg?component";
+import {
+  isColumnHideable,
+  updateAllColumnVisibility
+} from "./column-visibility";
 
 const props = {
   /** 头部最左边的标题 */
@@ -43,6 +47,10 @@ const props = {
   columnTitle: {
     type: String,
     default: "列设置"
+  },
+  columnDraggable: {
+    type: Boolean,
+    default: true
   },
   isExpandAll: {
     type: Boolean,
@@ -135,24 +143,34 @@ export default defineComponent({
     }
 
     function handleCheckAllChange(val: boolean) {
-      checkedColumns.value = val ? checkColumnList : [];
+      const requiredLabels = dynamicColumns.value
+        .filter(column => !isColumnHideable(column))
+        .map(column => column.label);
+      checkedColumns.value = val ? checkColumnList : requiredLabels;
       isIndeterminate.value = false;
-      dynamicColumns.value.map(column =>
-        val ? (column.hide = false) : (column.hide = true)
-      );
+      updateAllColumnVisibility(dynamicColumns.value, val);
     }
 
     function handleCheckedColumnsChange(value: string[]) {
-      checkedColumns.value = value;
-      const checkedCount = value.length;
-      checkAll.value = checkedCount === checkColumnList.length;
+      const requiredLabels = dynamicColumns.value
+        .filter(column => !isColumnHideable(column))
+        .map(column => column.label);
+      const hideableLabels = dynamicColumns.value
+        .filter(isColumnHideable)
+        .map(column => column.label);
+      checkedColumns.value = [...new Set([...requiredLabels, ...value])];
+      const checkedCount = value.filter(label =>
+        hideableLabels.includes(label)
+      ).length;
+      checkAll.value = checkedCount === hideableLabels.length;
       isIndeterminate.value =
-        checkedCount > 0 && checkedCount < checkColumnList.length;
+        checkedCount > 0 && checkedCount < hideableLabels.length;
     }
 
     function handleCheckColumnListChange(val: boolean, label: string) {
-      if (isFixedColumn(label)) return;
-      dynamicColumns.value.filter(item => item.label === label)[0].hide = !val;
+      const column = dynamicColumns.value.find(item => item.label === label);
+      if (!column || !isColumnHideable(column)) return;
+      column.hide = !val;
     }
 
     async function onReset() {
@@ -192,6 +210,7 @@ export default defineComponent({
     /** 列展示拖拽排序 */
     const rowDrop = (event: { preventDefault: () => void }) => {
       event.preventDefault();
+      if (!props.columnDraggable) return;
       nextTick(() => {
         const wrapper: HTMLElement = (
           instance?.proxy?.$refs[`GroupRef${unref(props.tableKey)}`] as any
@@ -343,22 +362,30 @@ export default defineComponent({
                         {checkColumnList.map((item, index) => {
                           return (
                             <div class="flex items-center">
-                              <DragIcon
-                                class={[
-                                  "drag-btn w-[16px] mr-2",
-                                  isFixedColumn(item)
-                                    ? "cursor-no-drop!"
-                                    : "cursor-grab!"
-                                ]}
-                                onMouseenter={(event: {
-                                  preventDefault: () => void;
-                                }) => rowDrop(event)}
-                              />
+                              {props.columnDraggable ? (
+                                <DragIcon
+                                  class={[
+                                    "drag-btn w-[16px] mr-2",
+                                    isFixedColumn(item)
+                                      ? "cursor-no-drop!"
+                                      : "cursor-grab!"
+                                  ]}
+                                  onMouseenter={(event: {
+                                    preventDefault: () => void;
+                                  }) => rowDrop(event)}
+                                />
+                              ) : null}
                               <el-checkbox
                                 key={index}
                                 label={item}
                                 value={item}
-                                disabled={isFixedColumn(item)}
+                                disabled={
+                                  !isColumnHideable(
+                                    dynamicColumns.value.find(
+                                      column => column.label === item
+                                    ) ?? {}
+                                  )
+                                }
                                 onChange={value =>
                                   handleCheckColumnListChange(value, item)
                                 }
