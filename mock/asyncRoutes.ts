@@ -137,6 +137,18 @@ const taskRouter = {
       }
     },
     {
+      path: "/group/history",
+      component: "group/history/index",
+      name: "HistoricalGroupManagement",
+      meta: {
+        title: "历史群管理",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "historical_group",
+        perm_key: "tenant:historical_group:view"
+      }
+    },
+    {
       path: "/task/pull",
       component: "task/pull-task/index",
       name: "TaskPull",
