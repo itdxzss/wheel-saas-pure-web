@@ -23,6 +23,7 @@ export function useBuyerTemplatePage(
 ) {
   const rows = ref<BuyerTemplateRow[]>([]);
   const loading = ref(false);
+  const errorMessage = ref("");
   const previewVisible = ref(false);
   const previewRow = ref<BuyerTemplateRow | null>(null);
   const remarkVisible = ref(false);
@@ -46,6 +47,11 @@ export function useBuyerTemplatePage(
     loading.value = true;
     try {
       rows.value = await services.list();
+      errorMessage.value = "";
+    } catch (error) {
+      rows.value = [];
+      errorMessage.value = "模板列表加载失败";
+      throw error;
     } finally {
       loading.value = false;
     }
@@ -96,6 +102,7 @@ export function useBuyerTemplatePage(
   return {
     columns,
     editingRemarkRow,
+    errorMessage,
     loading,
     previewRow,
     previewVisible,

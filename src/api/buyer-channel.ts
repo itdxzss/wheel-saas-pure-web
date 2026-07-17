@@ -5,6 +5,9 @@ export type ChannelStatus = "ENABLED" | "DISABLED";
 export type CountryMode = "MIXED" | "SPECIFIC";
 
 export interface BuyerChannelOptions {
+  uploadFee: { label: string; value: number };
+  platforms: Array<{ label: string; value: ChannelPlatform }>;
+  eventOptions: Array<{ label: string; value: string }>;
   countries: Array<{ code: string; name: string; dialCode: string }>;
   templates: Array<{ id: number; name: string }>;
   owners: Array<{ id: number; name: string }>;
@@ -101,11 +104,33 @@ export interface ChannelDetectResult {
   checkedAt: string;
 }
 
-export interface ChannelRuntime {
+export interface BuyerChannelRuntimeConfig {
+  channelId: number;
   channelCode: string;
-  countries: string[];
-  initialDialCode: string;
-  template: { id: number; assetsUrl: string; runtimeVersion: string };
+  runtimeVersion: string;
+  templateId: number;
+  templateVersion: string;
+  templateAssets: Record<string, string>;
+  templateParams: Record<string, string | boolean>;
+  countryMode: CountryMode;
+  allowedCountries: Array<{ code: string; dialCode: string }>;
+  defaultDialCode: string;
+  themeColor: string;
+  platform: ChannelPlatform;
+  pixelId?: string;
+  eventMappings: {
+    lead: string;
+    loginRequest: string;
+    loginSuccess: string;
+  };
+  appOpenEnabled: boolean;
+  marketingEnabled: boolean;
+}
+
+export interface BuyerChannelMutationResult {
+  channel: BuyerChannelDetail;
+  runtimeVersion: string;
+  published: boolean;
 }
 
 export function getBuyerChannelOptions(): Promise<BuyerChannelOptions> {
@@ -119,7 +144,14 @@ export function listBuyerChannels(
   params: BuyerChannelQuery
 ): Promise<BuyerChannelPage> {
   return armadaRequest<BuyerChannelPage>("get", "/api/buyer/channels", {
-    params
+    params: {
+      countryCode: params.targetCountry,
+      templateId: params.templateId,
+      createdBy: params.creatorId,
+      parentUserId: params.parentUserId,
+      page: params.page,
+      pageSize: params.page_size
+    }
   });
 }
 
@@ -139,19 +171,23 @@ export function precheckBuyerChannelDomain(
 
 export function createBuyerChannel(
   payload: BuyerChannelPayload
-): Promise<BuyerChannelDetail> {
-  return armadaRequest<BuyerChannelDetail>("post", "/api/buyer/channels", {
-    data: payload
-  });
+): Promise<BuyerChannelMutationResult> {
+  return armadaRequest<BuyerChannelMutationResult>(
+    "post",
+    "/api/buyer/channels",
+    { data: payload }
+  );
 }
 
 export function updateBuyerChannel(
   id: number,
   payload: BuyerChannelPayload
-): Promise<BuyerChannelDetail> {
-  return armadaRequest<BuyerChannelDetail>("put", `/api/buyer/channels/${id}`, {
-    data: payload
-  });
+): Promise<BuyerChannelMutationResult> {
+  return armadaRequest<BuyerChannelMutationResult>(
+    "put",
+    `/api/buyer/channels/${id}`,
+    { data: payload }
+  );
 }
 
 export function deleteBuyerChannel(id: number): Promise<void> {
@@ -168,8 +204,8 @@ export function detectBuyerChannel(id: number): Promise<ChannelDetectResult> {
 export function getPublicBuyerChannelRuntime(
   host: string,
   channelCode: string
-): Promise<ChannelRuntime> {
-  return armadaRequest<ChannelRuntime>(
+): Promise<BuyerChannelRuntimeConfig> {
+  return armadaRequest<BuyerChannelRuntimeConfig>(
     "get",
     "/api/public/buyer/channel-runtime",
     {

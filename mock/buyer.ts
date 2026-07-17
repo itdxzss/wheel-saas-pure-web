@@ -13,7 +13,9 @@ const templates = [
     remark: "默认模板",
     createdAt: "2026-07-01 10:00:00",
     updatedAt: "2026-07-16 18:30:00",
-    runtimeVersion: "v1.4.0"
+    runtimeVersion: "v1.4.0",
+    assets: { entry: "/buyer/templates/buyer_landing_default/index.html" },
+    params: { locale: "zh-CN", inviteEnabled: true }
   },
   {
     id: 2,
@@ -25,11 +27,25 @@ const templates = [
     remark: "",
     createdAt: "2026-07-05 09:20:00",
     updatedAt: "2026-07-15 11:10:00",
-    runtimeVersion: "v1.2.1"
+    runtimeVersion: "v1.2.1",
+    assets: { entry: "/buyer/templates/buyer_landing_compact/index.html" },
+    params: { locale: "zh-CN", inviteEnabled: true }
   }
 ];
 
 const channelOptions = {
+  uploadFee: { label: "上号服务费（元/个）", value: 8 },
+  platforms: [
+    { label: "Facebook", value: "FACEBOOK" },
+    { label: "TikTok", value: "TIKTOK" },
+    { label: "快手", value: "KUAISHOU" },
+    { label: "MGSKY Ads", value: "MGSKY" }
+  ],
+  eventOptions: [
+    { label: "Lead", value: "Lead" },
+    { label: "InitiateCheckout", value: "InitiateCheckout" },
+    { label: "CompleteRegistration", value: "CompleteRegistration" }
+  ],
   countries: [
     { code: "US", name: "美国", dialCode: "+1" },
     { code: "GB", name: "英国", dialCode: "+44" },
@@ -49,6 +65,7 @@ const channels = [
     id: 1,
     name: "美国混合渠道",
     channelCode: "US001",
+    runtimeVersion: "channel-1-v1",
     ownerId: 1,
     targetCountry: "US",
     countryMode: "MIXED",
@@ -57,7 +74,7 @@ const channels = [
     themeColor: "#409EFF",
     domain: "go.example.com",
     defaultDialCode: "+1",
-    platform: "FACEBOOK",
+    platform: "FACEBOOK" as const,
     pixelId: "px-10001",
     accessTokenConfigured: true,
     eventLead: "Lead",
@@ -77,6 +94,7 @@ const channels = [
     id: 2,
     name: "英国定向渠道",
     channelCode: "GB002",
+    runtimeVersion: "channel-2-v1",
     ownerId: 2,
     targetCountry: "GB",
     countryMode: "SPECIFIC",
@@ -85,7 +103,7 @@ const channels = [
     themeColor: "#67C23A",
     domain: "uk.example.com",
     defaultDialCode: "+44",
-    platform: "TIKTOK",
+    platform: "TIKTOK" as const,
     pixelId: "tt-20002",
     accessTokenConfigured: false,
     eventLead: "Lead",
@@ -211,8 +229,8 @@ function aggregateChannelStats(
 }
 
 function listChannelStats(query: Record<string, unknown>) {
-  const startDate = String(query.startDate || statsDates[0]);
-  const endDate = String(query.endDate || statsDates[statsDates.length - 1]);
+  const startDate = String(query.dateStart || statsDates[0]);
+  const endDate = String(query.dateEnd || statsDates[statsDates.length - 1]);
   const rows = channels.flatMap(channel =>
     channel.countries.map(countryCode =>
       aggregateChannelStats(channel, countryCode, startDate, endDate)
@@ -226,7 +244,7 @@ function listChannelStats(query: Record<string, unknown>) {
         row.channelName.includes(String(query.channelName).trim())) &&
       (!query.templateId || row.templateId === Number(query.templateId)) &&
       (!query.countryCode || row.countryCode === query.countryCode) &&
-      (!query.creatorId || channel?.creatorId === Number(query.creatorId)) &&
+      (!query.createdBy || channel?.creatorId === Number(query.createdBy)) &&
       (!query.parentUserId ||
         channel?.parentUserId === Number(query.parentUserId))
     );
@@ -241,7 +259,7 @@ function listChannelStats(query: Record<string, unknown>) {
     "unbindRate",
     "accountCost"
   ]);
-  const sortBy = String(query.sortBy || "");
+  const sortBy = String(query.sortField || "");
   if (allowlist.has(sortBy)) {
     const direction = query.sortOrder === "asc" ? 1 : -1;
     filtered.sort((a, b) => {
@@ -344,8 +362,8 @@ export default defineFakeRoute([
             row =>
               row.channelId === Number(params.channelId) &&
               row.countryCode === query.countryCode &&
-              row.date >= String(query.startDate) &&
-              row.date <= String(query.endDate)
+              row.date >= String(query.dateStart) &&
+              row.date <= String(query.dateEnd)
           )
           .map(withStatsDerived)
       )
@@ -384,8 +402,8 @@ export default defineFakeRoute([
             summary: aggregateChannelStats(
               channel,
               row.countryCode,
-              String(body.startDate),
-              String(body.endDate)
+              String(body.dateStart),
+              String(body.dateEnd)
             )
           })
         : { code: 404, message: "渠道不存在", data: null };
@@ -463,15 +481,14 @@ export default defineFakeRoute([
     response: ({ query }) => {
       const filtered = channels.filter(
         item =>
-          (!query.targetCountry ||
-            item.targetCountry === query.targetCountry) &&
+          (!query.countryCode || item.targetCountry === query.countryCode) &&
           (!query.templateId || item.templateId === Number(query.templateId)) &&
-          (!query.creatorId || item.creatorId === Number(query.creatorId)) &&
+          (!query.createdBy || item.creatorId === Number(query.createdBy)) &&
           (!query.parentUserId ||
             item.parentUserId === Number(query.parentUserId))
       );
       const page = Math.max(1, Number(query.page) || 1);
-      const pageSize = Math.max(1, Number(query.page_size) || 30);
+      const pageSize = Math.max(1, Number(query.pageSize) || 30);
       return success({
         list: filtered
           .slice((page - 1) * pageSize, page * pageSize)
@@ -507,6 +524,7 @@ export default defineFakeRoute([
         domain,
         templateId,
         channelCode: `CH${String(id).padStart(4, "0")}`,
+        runtimeVersion: `channel-${id}-v1`,
         countries:
           body.countryMode === "MIXED"
             ? channelOptions.countries.map(item => item.code)
@@ -521,7 +539,11 @@ export default defineFakeRoute([
       };
       Reflect.deleteProperty(item, "accessToken");
       channels.push(item);
-      return success(channelDetail(item));
+      return success({
+        channel: channelDetail(item),
+        runtimeVersion: item.runtimeVersion,
+        published: true
+      });
     }
   },
   {
@@ -539,11 +561,16 @@ export default defineFakeRoute([
       Object.assign(item, body, {
         domain,
         templateId,
+        runtimeVersion: `channel-${item.id}-v${Date.now()}`,
         accessTokenConfigured: configured,
         domainStatus: "发布成功"
       });
       Reflect.deleteProperty(item, "accessToken");
-      return success(channelDetail(item));
+      return success({
+        channel: channelDetail(item),
+        runtimeVersion: item.runtimeVersion,
+        published: true
+      });
     }
   },
   {

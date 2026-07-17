@@ -51,10 +51,6 @@ describe("buyer channel page contract", () => {
       "主题色",
       "https://",
       "默认区号",
-      "Facebook",
-      "TikTok",
-      "快手",
-      "MGSKY Ads",
       "Pixel ID",
       "Access Token",
       "Lead",
@@ -65,5 +61,24 @@ describe("buyer channel page contract", () => {
       "状态"
     ])
       assert.ok(drawer.includes(text), text);
+  });
+
+  it("uses option-driven fee, platform and event facts with MIXED/SPECIFIC dial behavior", () => {
+    assert.ok(page.includes("options.uploadFee.label"));
+    assert.ok(page.includes("options.uploadFee.value"));
+    assert.ok(drawer.includes("混合（不限国家）"));
+    assert.ok(drawer.includes("dialCodeOptions"));
+    assert.ok(drawer.includes("options.platforms"));
+    assert.ok(drawer.includes("options.eventOptions"));
+    assert.ok(drawer.includes("countryMode"));
+  });
+
+  it("renders field-level save errors and persistent channel-list retry state", () => {
+    assert.ok(drawer.includes(':error="fieldErrors.domain"'));
+    assert.ok(drawer.includes("fieldErrors"));
+    assert.ok(page.includes("errorMessage"));
+    assert.match(page, /<el-alert[\s\S]*渠道列表加载失败/);
+    assert.match(page, /<el-button[\s\S]*重试/);
+    assert.match(page, /catch \(error\)[\s\S]*rows\.value = \[\]/);
   });
 });

@@ -61,10 +61,33 @@ const daily = useDailyStatsPanels({
   }
 });
 const tableColumns = [
-  { label: "渠道/国家", prop: "channelName" },
-  { label: "绑定模板", prop: "templateName" },
-  { label: "广告投放", prop: "spend" },
-  { label: "基础指标", prop: "uv" }
+  {
+    label: "渠道/国家",
+    prop: "channelName",
+    hide: false,
+    fixed: "left" as const
+  },
+  {
+    label: "绑定模板",
+    prop: "templateName",
+    hide: false,
+    fixed: "left" as const
+  },
+  { label: "消耗", prop: "spend" },
+  { label: "展示", prop: "impressions" },
+  { label: "点击/点击率", prop: "clicks" },
+  { label: "其他费用", prop: "otherFee" },
+  { label: "总费用/手续费", prop: "totalFee" },
+  { label: "UV", prop: "uv" },
+  { label: "访问时长", prop: "visitDurationSeconds" },
+  { label: "登录请求次数/去重人数", prop: "loginRequestCount" },
+  { label: "登录成功次数/去重人数", prop: "loginSuccessUserCount" },
+  { label: "解绑数量", prop: "unbindCount" },
+  { label: "解绑率", prop: "unbindRate" },
+  { label: "请求登录率", prop: "loginRequestRate" },
+  { label: "登录成功率", prop: "loginSuccessRate" },
+  { label: "访客上号率", prop: "visitorConversionRate" },
+  { label: "获号成本", prop: "accountCost" }
 ];
 
 function queryParams(): BuyerChannelStatsQuery {
@@ -264,12 +287,18 @@ onMounted(async () => {
         </el-form-item>
       </el-form>
     </el-card>
-    <PureTableBar title="渠道统计" :columns="tableColumns" @refresh="loadRows">
-      <template #default>
+    <PureTableBar
+      title="渠道统计"
+      column-title="自定义列"
+      :columns="tableColumns"
+      @refresh="loadRows"
+    >
+      <template #default="{ dynamicColumns }">
         <ChannelStatsTable
           :rows="rows"
           :loading="loading"
           :panel-for="daily.panelFor"
+          :columns="dynamicColumns"
           @expand="expand"
           @save="saveDaily"
           @sort="sort"

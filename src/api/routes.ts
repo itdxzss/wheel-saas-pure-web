@@ -19,4 +19,4 @@ export async function getAsyncRoutes(): Promise<Result> {
     success: true,
     data: mapWheelMenuNodes(menus)
   };
-};
+}

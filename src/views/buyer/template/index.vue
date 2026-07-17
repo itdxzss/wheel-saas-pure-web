@@ -11,6 +11,7 @@ defineOptions({ name: "BuyerTemplate" });
 
 const {
   columns,
+  errorMessage,
   loading,
   previewRow,
   previewVisible,
@@ -63,6 +64,15 @@ onMounted(() => void refreshRows());
 
 <template>
   <div class="buyer-template-page">
+    <el-alert
+      v-if="errorMessage"
+      :title="errorMessage"
+      type="error"
+      show-icon
+      :closable="false"
+    >
+      <el-button link type="primary" @click="refreshRows">重试</el-button>
+    </el-alert>
     <PureTableBar title="模板列表" :columns="columns" @refresh="refreshRows">
       <template #default="{ dynamicColumns }">
         <el-table v-loading="loading" :data="rows" row-key="id" border>
@@ -153,7 +163,11 @@ onMounted(() => void refreshRows());
           />
           <el-table-column label="操作" fixed="right" width="150">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openPreview(asTemplateRow(row))">
+              <el-button
+                link
+                type="primary"
+                @click="openPreview(asTemplateRow(row))"
+              >
                 预览
               </el-button>
               <el-button
@@ -173,10 +187,7 @@ onMounted(() => void refreshRows());
       </template>
     </PureTableBar>
 
-    <BuyerTemplatePreviewDialog
-      v-model="previewVisible"
-      :row="previewRow"
-    />
+    <BuyerTemplatePreviewDialog v-model="previewVisible" :row="previewRow" />
     <BuyerTemplateRemarkDialog
       v-model="remarkVisible"
       v-model:remark="remarkDraft"
@@ -189,6 +200,10 @@ onMounted(() => void refreshRows());
 <style scoped>
 .buyer-template-page {
   padding: 16px;
+}
+
+.buyer-template-page > .el-alert {
+  margin-bottom: 16px;
 }
 
 .thumbnail {

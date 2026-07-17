@@ -40,6 +40,10 @@ const props = {
     type: Array as PropType<TableColumnList>,
     default: () => []
   },
+  columnTitle: {
+    type: String,
+    default: "列设置"
+  },
   isExpandAll: {
     type: Boolean,
     default: true
@@ -147,6 +151,7 @@ export default defineComponent({
     }
 
     function handleCheckColumnListChange(val: boolean, label: string) {
+      if (isFixedColumn(label)) return;
       dynamicColumns.value.filter(item => item.label === label)[0].hide = !val;
     }
 
@@ -240,7 +245,7 @@ export default defineComponent({
       reference: () => (
         <SettingIcon
           class={["w-[16px]", iconClass.value]}
-          v-tippy={rendTippyProps("列设置")}
+          v-tippy={rendTippyProps(props.columnTitle)}
         />
       )
     };
@@ -313,7 +318,7 @@ export default defineComponent({
                 <div class={[topClass.value]}>
                   <el-checkbox
                     class="-mr-1!"
-                    label="列展示"
+                    label={props.columnTitle}
                     v-model={checkAll.value}
                     indeterminate={isIndeterminate.value}
                     onChange={value => handleCheckAllChange(value)}
@@ -353,6 +358,7 @@ export default defineComponent({
                                 key={index}
                                 label={item}
                                 value={item}
+                                disabled={isFixedColumn(item)}
                                 onChange={value =>
                                   handleCheckColumnListChange(value, item)
                                 }

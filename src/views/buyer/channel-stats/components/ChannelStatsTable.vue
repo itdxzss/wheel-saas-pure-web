@@ -18,6 +18,7 @@ const props = defineProps<{
   rows: BuyerChannelStatsRow[];
   loading: boolean;
   panelFor: (channelId: number, countryCode: string) => DailyStatsPanel;
+  columns: Array<{ prop?: string; hide?: boolean }>;
 }>();
 
 const emit = defineEmits<{
@@ -31,6 +32,15 @@ const emit = defineEmits<{
 
 function derived(row: BuyerChannelStatsRow) {
   return { ...deriveChannelStats(row), ...row };
+}
+
+function isColumnVisible(prop: string): boolean {
+  if (prop === "channelName" || prop === "templateName") return true;
+  return props.columns.find(column => column.prop === prop)?.hide !== true;
+}
+
+function hasVisible(propsToCheck: string[]): boolean {
+  return propsToCheck.some(isColumnVisible);
 }
 
 function onExpandChange(row: BuyerChannelStatsRow, expanded: boolean): void {
@@ -86,8 +96,14 @@ function onSortChange(input: {
       fixed
       min-width="150"
     />
-    <el-table-column label="广告投放">
+    <el-table-column
+      v-if="
+        hasVisible(['spend', 'impressions', 'clicks', 'otherFee', 'totalFee'])
+      "
+      label="广告投放"
+    >
       <el-table-column
+        v-if="isColumnVisible('spend')"
         label="消耗"
         prop="spend"
         sortable="custom"
@@ -96,12 +112,14 @@ function onSortChange(input: {
         <template #default="{ row }">{{ formatNumber(row.spend) }}</template>
       </el-table-column>
       <el-table-column
+        v-if="isColumnVisible('impressions')"
         label="展示"
         prop="impressions"
         sortable="custom"
         min-width="100"
       />
       <el-table-column
+        v-if="isColumnVisible('clicks')"
         label="点击/点击率"
         prop="clicks"
         sortable="custom"
@@ -111,10 +129,16 @@ function onSortChange(input: {
           {{ row.clicks }} / {{ formatRatio(derived(row).clickRate) }}
         </template>
       </el-table-column>
-      <el-table-column label="其他费用" prop="otherFee" min-width="105">
+      <el-table-column
+        v-if="isColumnVisible('otherFee')"
+        label="其他费用"
+        prop="otherFee"
+        min-width="105"
+      >
         <template #default="{ row }">{{ formatNumber(row.otherFee) }}</template>
       </el-table-column>
       <el-table-column
+        v-if="isColumnVisible('totalFee')"
         label="总费用/手续费"
         prop="totalFee"
         sortable="custom"
@@ -126,9 +150,32 @@ function onSortChange(input: {
         </template>
       </el-table-column>
     </el-table-column>
-    <el-table-column label="基础指标">
-      <el-table-column label="UV" prop="uv" sortable="custom" min-width="90" />
+    <el-table-column
+      v-if="
+        hasVisible([
+          'uv',
+          'visitDurationSeconds',
+          'loginRequestCount',
+          'loginSuccessUserCount',
+          'unbindCount',
+          'unbindRate',
+          'loginRequestRate',
+          'loginSuccessRate',
+          'visitorConversionRate',
+          'accountCost'
+        ])
+      "
+      label="基础指标"
+    >
       <el-table-column
+        v-if="isColumnVisible('uv')"
+        label="UV"
+        prop="uv"
+        sortable="custom"
+        min-width="90"
+      />
+      <el-table-column
+        v-if="isColumnVisible('visitDurationSeconds')"
         label="访问时长"
         prop="visitDurationSeconds"
         min-width="110"
@@ -137,13 +184,18 @@ function onSortChange(input: {
           formatDuration(row.visitDurationSeconds)
         }}</template>
       </el-table-column>
-      <el-table-column label="登录请求次数/去重人数" min-width="180">
+      <el-table-column
+        v-if="isColumnVisible('loginRequestCount')"
+        label="登录请求次数/去重人数"
+        min-width="180"
+      >
         <template #default="{ row }"
           >{{ row.loginRequestCount }} /
           {{ row.loginRequestUserCount }}</template
         >
       </el-table-column>
       <el-table-column
+        v-if="isColumnVisible('loginSuccessUserCount')"
         label="登录成功次数/去重人数"
         prop="loginSuccessUserCount"
         sortable="custom"
@@ -154,8 +206,14 @@ function onSortChange(input: {
           {{ row.loginSuccessUserCount }}</template
         >
       </el-table-column>
-      <el-table-column label="解绑数量" prop="unbindCount" min-width="100" />
       <el-table-column
+        v-if="isColumnVisible('unbindCount')"
+        label="解绑数量"
+        prop="unbindCount"
+        min-width="100"
+      />
+      <el-table-column
+        v-if="isColumnVisible('unbindRate')"
         label="解绑率"
         prop="unbindRate"
         sortable="custom"
@@ -165,22 +223,35 @@ function onSortChange(input: {
           formatRatio(derived(row).unbindRate)
         }}</template>
       </el-table-column>
-      <el-table-column label="请求登录率" min-width="110">
+      <el-table-column
+        v-if="isColumnVisible('loginRequestRate')"
+        label="请求登录率"
+        min-width="110"
+      >
         <template #default="{ row }">{{
           formatRatio(derived(row).loginRequestRate)
         }}</template>
       </el-table-column>
-      <el-table-column label="登录成功率" min-width="110">
+      <el-table-column
+        v-if="isColumnVisible('loginSuccessRate')"
+        label="登录成功率"
+        min-width="110"
+      >
         <template #default="{ row }">{{
           formatRatio(derived(row).loginSuccessRate)
         }}</template>
       </el-table-column>
-      <el-table-column label="访客上号率" min-width="110">
+      <el-table-column
+        v-if="isColumnVisible('visitorConversionRate')"
+        label="访客上号率"
+        min-width="110"
+      >
         <template #default="{ row }">{{
           formatRatio(derived(row).visitorConversionRate)
         }}</template>
       </el-table-column>
       <el-table-column
+        v-if="isColumnVisible('accountCost')"
         label="获号成本"
         prop="accountCost"
         sortable="custom"

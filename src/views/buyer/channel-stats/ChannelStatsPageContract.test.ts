@@ -72,7 +72,37 @@ describe("buyer channel stats page contract", () => {
       "utf8"
     );
     assert.ok(buyerMock.includes("summarizeChannelStats"));
-    assert.ok(buyerMock.includes("body.startDate"));
-    assert.ok(buyerMock.includes("body.endDate"));
+    assert.ok(buyerMock.includes("body.dateStart"));
+    assert.ok(buyerMock.includes("body.dateEnd"));
+  });
+
+  it("passes effective leaf visibility from 自定义列 while keeping required columns", () => {
+    const page = source("./index.vue");
+    const table = source("./components/ChannelStatsTable.vue");
+    for (const prop of [
+      "spend",
+      "impressions",
+      "clicks",
+      "otherFee",
+      "totalFee",
+      "uv",
+      "visitDurationSeconds",
+      "loginRequestCount",
+      "loginSuccessUserCount",
+      "unbindCount",
+      "unbindRate",
+      "loginRequestRate",
+      "loginSuccessRate",
+      "visitorConversionRate",
+      "accountCost"
+    ])
+      assert.match(page, new RegExp(`prop:\\s*["']${prop}["']`), prop);
+    assert.ok(page.includes("自定义列"));
+    assert.match(page, /#default="\{ dynamicColumns \}"/);
+    assert.match(page, /:columns="dynamicColumns"/);
+    assert.match(table, /columns:.*Array/s);
+    assert.match(table, /v-if="isColumnVisible\(/);
+    assert.match(page, /prop: "channelName"[\s\S]*?hide:\s*false/);
+    assert.match(page, /prop: "templateName"[\s\S]*?hide:\s*false/);
   });
 });

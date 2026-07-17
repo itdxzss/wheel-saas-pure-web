@@ -34,7 +34,14 @@ describe("buyer channel API contract", () => {
       status: "ENABLED"
     };
     await getBuyerChannelOptions();
-    await listBuyerChannels({ page: 2, page_size: 60, templateId: 2 });
+    await listBuyerChannels({
+      page: 2,
+      page_size: 60,
+      targetCountry: "US",
+      templateId: 2,
+      creatorId: 3,
+      parentUserId: 4
+    });
     await getBuyerChannel(7);
     await precheckBuyerChannelDomain({
       domain: "go.example.com",
@@ -52,7 +59,16 @@ describe("buyer channel API contract", () => {
       {
         method: "get",
         url: "/api/buyer/channels",
-        opts: { params: { page: 2, page_size: 60, templateId: 2 } }
+        opts: {
+          params: {
+            countryCode: "US",
+            templateId: 2,
+            createdBy: 3,
+            parentUserId: 4,
+            page: 2,
+            pageSize: 60
+          }
+        }
       },
       { method: "get", url: "/api/buyer/channels/7", opts: undefined },
       {

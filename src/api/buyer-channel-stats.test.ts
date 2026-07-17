@@ -53,7 +53,20 @@ describe("buyer channel stats API contract", () => {
       {
         method: "get",
         url: "/api/buyer/channel-stats",
-        opts: { params: query }
+        opts: {
+          params: {
+            dateStart: "2026-07-11",
+            dateEnd: "2026-07-17",
+            channelId: 9,
+            channelName: "北美",
+            templateId: 2,
+            countryCode: "US",
+            createdBy: 3,
+            parentUserId: 4,
+            sortField: "spend",
+            sortOrder: "desc"
+          }
+        }
       },
       {
         method: "get",
@@ -61,8 +74,8 @@ describe("buyer channel stats API contract", () => {
         opts: {
           params: {
             countryCode: "US",
-            startDate: "2026-07-11",
-            endDate: "2026-07-17"
+            dateStart: "2026-07-11",
+            dateEnd: "2026-07-17"
           }
         }
       },
@@ -72,8 +85,8 @@ describe("buyer channel stats API contract", () => {
         opts: {
           data: {
             countryCode: "US",
-            startDate: "2026-07-13",
-            endDate: "2026-07-15",
+            dateStart: "2026-07-13",
+            dateEnd: "2026-07-15",
             spend: 20,
             impressions: 100,
             clicks: 10,
@@ -102,7 +115,13 @@ describe("buyer channel stats API contract", () => {
       {
         method: "get",
         url: "/api/buyer/channel-stats/export",
-        opts: { params, responseType: "blob" },
+        opts: {
+          params: {
+            dateStart: "2026-07-11",
+            dateEnd: "2026-07-17"
+          },
+          responseType: "blob"
+        },
         configKeys: ["beforeResponseCallback"]
       }
     ]);

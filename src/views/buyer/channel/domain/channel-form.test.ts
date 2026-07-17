@@ -20,6 +20,7 @@ describe("shared channel form", () => {
       domain: "a.example.com",
       templateId: 1,
       targetCountry: "US",
+      countryMode: "MIXED",
       defaultDialCode: "+1",
       status: "ENABLED",
       accessTokenConfigured: true
@@ -38,9 +39,53 @@ describe("shared channel form", () => {
     assert.equal(recordA.name, "A");
     assert.equal(recordA.accessToken, "");
     assert.equal(recordA.accessTokenConfigured, true);
+    assert.equal(recordA.countryMode, "MIXED");
+    assert.equal(recordA.defaultDialCode, "+1");
     assert.equal(recordB.name, "B");
     assert.equal(recordB.pixelId, "");
     assert.equal(recordB.accessToken, "");
+  });
+
+  it("rejects a SPECIFIC country whose default dial code is inconsistent", () => {
+    const form = hydrateChannelForm({
+      id: 1,
+      name: "A",
+      platform: "FACEBOOK",
+      domain: "a.example.com",
+      templateId: 1,
+      targetCountry: "US",
+      countryMode: "SPECIFIC",
+      defaultDialCode: "+44",
+      status: "ENABLED",
+      accessTokenConfigured: false
+    });
+    assert.throws(
+      () => buildChannelPayload(form, true, [{ code: "US", dialCode: "+1" }]),
+      /默认区号必须与目标国家一致/
+    );
+  });
+
+  it("keeps the drawer open contract when publication does not complete", async () => {
+    const form = hydrateChannelForm({
+      id: 3,
+      name: "A",
+      platform: "FACEBOOK",
+      domain: "a.example.com",
+      templateId: 2,
+      targetCountry: "US",
+      countryMode: "SPECIFIC",
+      defaultDialCode: "+1",
+      status: "ENABLED",
+      accessTokenConfigured: false
+    });
+    await assert.rejects(
+      saveChannelForm(form, true, {
+        precheck: async () => ({ available: true }),
+        update: async () => ({ published: false }),
+        create: async () => ({ published: false })
+      }),
+      /渠道发布失败/
+    );
   });
 
   it("omits an empty edit token, overwrites a new token, and removes unsupported platform tokens", () => {
@@ -89,6 +134,7 @@ describe("shared channel form", () => {
         },
         create: async () => {
           calls.push("create");
+          return { published: true };
         }
       }),
       /该域名已经绑定其他模板/
@@ -119,7 +165,7 @@ describe("shared channel form", () => {
           update: async () => {
             throw { response: { status: 409, data } };
           },
-          create: async () => undefined
+          create: async () => ({ published: true })
         }),
         /该域名已经绑定其他模板/
       );

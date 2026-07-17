@@ -15,10 +15,14 @@ import ChannelDetectDialog from "./components/ChannelDetectDialog.vue";
 import ChannelFormDrawer from "./components/ChannelFormDrawer.vue";
 import FacebookEventGuideDialog from "./components/FacebookEventGuideDialog.vue";
 import { openSafeChannelLink } from "./domain/channel-domain";
+import { apiErrorMessage } from "@/utils/api-error";
 
 defineOptions({ name: "BuyerChannel" });
 
 const emptyOptions: BuyerChannelOptions = {
+  uploadFee: { label: "上号服务费", value: 0 },
+  platforms: [],
+  eventOptions: [],
   countries: [],
   templates: [],
   owners: [],
@@ -33,6 +37,7 @@ const filters = reactive<{
 }>({});
 const options = ref<BuyerChannelOptions>(emptyOptions);
 const rows = ref<BuyerChannelRow[]>([]);
+const errorMessage = ref("");
 const loading = ref(false);
 const page = ref(1);
 const pageSize = ref(30);
@@ -69,10 +74,12 @@ async function refresh(): Promise<void> {
     });
     rows.value = result.list;
     total.value = result.total;
+    errorMessage.value = "";
   } catch (error) {
-    ElMessage.error(
-      error instanceof Error ? error.message : "渠道列表加载失败"
-    );
+    rows.value = [];
+    total.value = 0;
+    errorMessage.value = apiErrorMessage(error, "渠道列表加载失败");
+    ElMessage.error(errorMessage.value);
   } finally {
     loading.value = false;
   }
@@ -140,7 +147,7 @@ onMounted(async () => {
       type="warning"
       show-icon
       :closable="false"
-      title="动态费率提示：实际费用以渠道结算时的实时费率为准。"
+      :title="`${options.uploadFee.label}：${options.uploadFee.value}`"
     />
     <el-card shadow="never" class="filter-card">
       <el-form :inline="true" :model="filters">
@@ -195,6 +202,16 @@ onMounted(async () => {
         >
       </el-form>
     </el-card>
+    <el-alert
+      v-if="errorMessage"
+      :title="errorMessage"
+      description="渠道列表加载失败"
+      type="error"
+      show-icon
+      :closable="false"
+    >
+      <el-button link type="primary" @click="refresh">重试</el-button>
+    </el-alert>
     <PureTableBar title="渠道管理" :columns="columns" @refresh="refresh">
       <template #buttons>
         <el-button link type="primary" @click="guideVisible = true"
@@ -290,7 +307,8 @@ onMounted(async () => {
 }
 
 .fee-banner,
-.filter-card {
+.filter-card,
+.channel-page > .el-alert {
   margin-bottom: 16px;
 }
 

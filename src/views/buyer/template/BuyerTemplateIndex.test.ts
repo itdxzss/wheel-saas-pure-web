@@ -28,7 +28,13 @@ describe("buyer template index", () => {
   });
 
   it("does not add out-of-scope controls", () => {
-    assert.doesNotMatch(source, />\s*(?:查询|搜索|新增|添加|删除|批量删除)\s*</);
-    assert.doesNotMatch(source, /WheelPagination|el-pagination|type=["']selection["']/);
+    assert.doesNotMatch(
+      source,
+      />\s*(?:查询|搜索|新增|添加|删除|批量删除)\s*</
+    );
+    assert.doesNotMatch(
+      source,
+      /WheelPagination|el-pagination|type=["']selection["']/
+    );
   });
 });

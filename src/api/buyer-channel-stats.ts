@@ -111,6 +111,23 @@ export interface BuyerChannelStatsExport {
   blob: Blob;
 }
 
+function statsParams(params: BuyerChannelStatsQuery) {
+  return Object.fromEntries(
+    Object.entries({
+      dateStart: params.startDate,
+      dateEnd: params.endDate,
+      channelId: params.channelId,
+      channelName: params.channelName,
+      templateId: params.templateId,
+      countryCode: params.countryCode,
+      createdBy: params.creatorId,
+      parentUserId: params.parentUserId,
+      sortField: params.sortBy,
+      sortOrder: params.sortOrder
+    }).filter(([, value]) => value !== undefined)
+  );
+}
+
 function headerValue(
   headers: Record<string, unknown>,
   expected: string
@@ -148,7 +165,7 @@ export function listBuyerChannelStats(
   return armadaRequest<BuyerChannelStatsRow[]>(
     "get",
     "/api/buyer/channel-stats",
-    { params }
+    { params: statsParams(params) }
   );
 }
 
@@ -159,7 +176,13 @@ export function getBuyerChannelStatsDaily(
   return armadaRequest<BuyerChannelStatsDailyRow[]>(
     "get",
     `/api/buyer/channel-stats/${channelId}/daily`,
-    { params }
+    {
+      params: {
+        countryCode: params.countryCode,
+        dateStart: params.startDate,
+        dateEnd: params.endDate
+      }
+    }
   );
 }
 
@@ -168,10 +191,11 @@ export function updateBuyerChannelStatsDaily(
   date: string,
   data: BuyerChannelStatsDailyInput
 ): Promise<BuyerChannelStatsDailyUpdateResult> {
+  const { startDate, endDate, ...metrics } = data;
   return armadaRequest<BuyerChannelStatsDailyUpdateResult>(
     "put",
     `/api/buyer/channel-stats/${channelId}/daily/${date}`,
-    { data }
+    { data: { ...metrics, dateStart: startDate, dateEnd: endDate } }
   );
 }
 
@@ -182,7 +206,7 @@ export async function exportBuyerChannelStats(
   const blob = await http.request<Blob>(
     "get",
     "/api/buyer/channel-stats/export",
-    { params, responseType: "blob" },
+    { params: statsParams(params), responseType: "blob" },
     {
       beforeResponseCallback: response => {
         filename = filenameFromContentDisposition(

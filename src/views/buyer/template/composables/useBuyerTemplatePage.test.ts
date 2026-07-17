@@ -37,6 +37,26 @@ describe("buyer template page state", () => {
     assert.equal(target.subaccountVisible, true);
   });
 
+  it("clears untrusted rows and keeps a persistent error when listing fails", async () => {
+    const target = row();
+    let fail = false;
+    const page = useBuyerTemplatePage({
+      list: async () => {
+        if (fail) throw new Error("forbidden");
+        return [target];
+      },
+      updateVisibility: async () => undefined,
+      updateRemark: async () => undefined
+    });
+
+    await page.refresh();
+    fail = true;
+    await assert.rejects(page.refresh(), /forbidden/);
+
+    assert.deepEqual(page.rows.value, []);
+    assert.equal(page.errorMessage.value, "模板列表加载失败");
+  });
+
   it("rehydrates remarks and trims both text and empty values", async () => {
     const first = row({ id: 1, remark: "第一条" });
     const second = row({ id: 2, remark: "第二条" });
