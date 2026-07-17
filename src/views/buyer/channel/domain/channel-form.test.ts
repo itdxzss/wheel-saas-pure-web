@@ -95,4 +95,34 @@ describe("shared channel form", () => {
     );
     assert.deepEqual(calls, ["precheck", "update"]);
   });
+
+  it("maps nested HTTP 409 conflict fields to the exact message", async () => {
+    const form = hydrateChannelForm({
+      id: 3,
+      name: "A",
+      platform: "FACEBOOK",
+      domain: "a.example.com",
+      templateId: 2,
+      targetCountry: "US",
+      defaultDialCode: "+1",
+      status: "ENABLED",
+      accessTokenConfigured: false
+    });
+    for (const data of [
+      { errorCode: "DOMAIN_TEMPLATE_CONFLICT" },
+      { code: "DOMAIN_TEMPLATE_CONFLICT" },
+      { message: "DOMAIN_TEMPLATE_CONFLICT" }
+    ]) {
+      await assert.rejects(
+        saveChannelForm(form, true, {
+          precheck: async () => ({ available: true }),
+          update: async () => {
+            throw { response: { status: 409, data } };
+          },
+          create: async () => undefined
+        }),
+        /该域名已经绑定其他模板/
+      );
+    }
+  });
 });

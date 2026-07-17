@@ -14,6 +14,7 @@ import {
   saveChannelForm,
   type ChannelFormModel
 } from "../domain/channel-form";
+import { createChannelDetailLoader } from "../domain/channel-detail-loader";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -34,6 +35,7 @@ const editing = computed(() => props.channelId !== undefined);
 const supportsToken = computed(
   () => form.platform === "FACEBOOK" || form.platform === "TIKTOK"
 );
+const detailLoader = createChannelDetailLoader(getBuyerChannel);
 
 const rules: FormRules<ChannelFormModel> = {
   name: [{ required: true, message: "请输入渠道名称", trigger: "blur" }],
@@ -60,20 +62,30 @@ function replaceForm(next: ChannelFormModel): void {
 }
 
 async function load(): Promise<void> {
-  if (!props.modelValue) return;
-  replaceForm(createDefaultChannelForm());
-  if (!props.channelId) return;
-  loading.value = true;
-  try {
-    replaceForm(hydrateChannelForm(await getBuyerChannel(props.channelId)));
-  } catch (error) {
-    ElMessage.error(
-      error instanceof Error ? error.message : "渠道详情加载失败"
-    );
-    emit("update:modelValue", false);
-  } finally {
+  if (!props.modelValue) {
+    detailLoader.invalidate();
     loading.value = false;
+    return;
   }
+  replaceForm(createDefaultChannelForm());
+  if (!props.channelId) {
+    detailLoader.invalidate();
+    loading.value = false;
+    return;
+  }
+  loading.value = true;
+  await detailLoader.load(props.channelId, {
+    resolved: detail => replaceForm(hydrateChannelForm(detail)),
+    rejected: error => {
+      ElMessage.error(
+        error instanceof Error ? error.message : "渠道详情加载失败"
+      );
+      emit("update:modelValue", false);
+    },
+    settled: () => {
+      loading.value = false;
+    }
+  });
 }
 
 async function save(): Promise<void> {

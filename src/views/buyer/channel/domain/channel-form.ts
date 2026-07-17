@@ -10,6 +10,7 @@ import {
   DOMAIN_TEMPLATE_CONFLICT_MESSAGE,
   normalizeChannelDomain
 } from "@/views/buyer/channel/domain/channel-domain";
+import { hasApiErrorCode } from "@/utils/api-error";
 
 export interface ChannelFormModel {
   id?: number;
@@ -121,12 +122,7 @@ export interface ChannelSaveServices {
 }
 
 function isConflict(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const candidate = error as { code?: unknown; message?: unknown };
-  return (
-    candidate.code === "DOMAIN_TEMPLATE_CONFLICT" ||
-    candidate.message === "DOMAIN_TEMPLATE_CONFLICT"
-  );
+  return hasApiErrorCode(error, "DOMAIN_TEMPLATE_CONFLICT");
 }
 
 export async function saveChannelForm(

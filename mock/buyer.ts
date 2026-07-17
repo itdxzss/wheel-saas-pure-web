@@ -1,4 +1,5 @@
 import { defineFakeRoute } from "vite-plugin-fake-server/client";
+import { resolveMockBuyerRuntime } from "./buyer-runtime";
 
 const templates = [
   {
@@ -330,31 +331,15 @@ export default defineFakeRoute([
     url: "/api/public/buyer/channel-runtime",
     method: "get",
     response: ({ query }) => {
-      const host = normalizeDomain(query.host);
-      const item = channels.find(
-        candidate =>
-          candidate.domain === host &&
-          candidate.channelCode === query.channelCode &&
-          candidate.status === "ENABLED"
+      const runtime = resolveMockBuyerRuntime(
+        channels,
+        templates,
+        String(query.host ?? ""),
+        String(query.channelCode ?? "")
       );
-      if (!item) return { code: 404, message: "渠道不可用", data: null };
-      const template = templates.find(
-        candidate => candidate.id === item.templateId
-      );
-      const countries =
-        item.countryMode === "SPECIFIC"
-          ? [item.targetCountry]
-          : [...item.countries];
-      return success({
-        channelCode: item.channelCode,
-        countries,
-        initialDialCode: item.defaultDialCode,
-        template: {
-          id: item.templateId,
-          assetsUrl: `/buyer/templates/${template?.code ?? "unknown"}`,
-          runtimeVersion: template?.runtimeVersion ?? ""
-        }
-      });
+      return runtime
+        ? success(runtime)
+        : { code: 404, message: "渠道不可用", data: null };
     }
   }
 ]);

@@ -7,27 +7,34 @@ export interface DomainBinding {
 const DNS_LABEL = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
 
 export function normalizeChannelDomain(input: string): string {
-  const value = input
+  const authority = input
     .trim()
     .replace(/^https?:\/\//i, "")
-    .replace(/\.$/, "")
-    .toLowerCase();
-  if (
-    !value ||
-    /[\/?#:@]/.test(value) ||
-    /^\d{1,3}(?:\.\d{1,3}){3}$/.test(value)
-  ) {
+    .replace(/\.$/, "");
+  if (!authority || /[\/?#@]/.test(authority)) {
     throw new Error("请输入有效域名，仅支持主机名");
   }
-  const labels = value.split(".");
+  let parsed: URL;
+  try {
+    parsed = new URL(`https://${authority}`);
+  } catch {
+    throw new Error("请输入有效域名，仅支持主机名");
+  }
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  const isIpLiteral =
+    hostname.includes(":") || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+  if (authority.includes(":") || parsed.port || isIpLiteral) {
+    throw new Error("请输入有效域名，仅支持主机名");
+  }
+  const labels = hostname.split(".");
   if (
     labels.length < 2 ||
-    value.length > 253 ||
+    hostname.length > 253 ||
     labels.some(label => !DNS_LABEL.test(label))
   ) {
     throw new Error("请输入有效域名，仅支持主机名");
   }
-  return value;
+  return hostname;
 }
 
 export function assertDomainBinding(

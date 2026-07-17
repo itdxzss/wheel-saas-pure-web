@@ -20,6 +20,12 @@ describe("channel domain rules", () => {
       "example.com:443",
       "user@example.com",
       "127.0.0.1",
+      "127.1",
+      "0177.0.0.1",
+      "0x7f.0.0.1",
+      "2130706433",
+      "[::1]",
+      "[::ffff:127.0.0.1]",
       "-bad.example.com"
     ]) {
       assert.throws(() => normalizeChannelDomain(invalid), /域名/);
