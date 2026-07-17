@@ -259,20 +259,112 @@ const operationRouter = {
   ]
 };
 
+const buyerRouter = {
+  path: "/buyer",
+  name: "BuyerRoot",
+  meta: {
+    title: "买号上量系统",
+    icon: "ep:promotion",
+    rank: 6
+  },
+  children: [
+    {
+      path: "/buyer/promotion",
+      name: "BuyerPromotion",
+      meta: { title: "推广管理" },
+      children: [
+        {
+          path: "/buyer/promotion/template",
+          component: "buyer/template/index",
+          name: "BuyerTemplate",
+          meta: {
+            title: "模板管理",
+            module_key: "buyer_template",
+            perm_key: "tenant:buyer-template:view"
+          }
+        },
+        {
+          path: "/buyer/promotion/channel",
+          component: "buyer/channel/index",
+          name: "BuyerChannel",
+          meta: {
+            title: "渠道管理",
+            module_key: "buyer_channel",
+            perm_key: "tenant:buyer-channel:view"
+          }
+        }
+      ]
+    },
+    {
+      path: "/buyer/data",
+      name: "BuyerData",
+      meta: { title: "数据中心" },
+      children: [
+        {
+          path: "/buyer/data/channel-stats",
+          component: "buyer/channel-stats/index",
+          name: "BuyerChannelStats",
+          meta: {
+            title: "渠道统计",
+            module_key: "buyer_channel_stats",
+            perm_key: "tenant:buyer-channel-stats:view"
+          }
+        }
+      ]
+    }
+  ]
+};
+
+interface MockRoute {
+  path: string;
+  name?: string;
+  component?: string;
+  meta: {
+    title: string;
+    icon?: string;
+    module_key?: string;
+    perm_key?: string;
+  };
+  children?: MockRoute[];
+}
+
+function fallbackMenuKey(path: string): string {
+  return path
+    .split("/")
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+}
+
+function toWheelMenuNode(route: MockRoute) {
+  return {
+    route_path: route.path,
+    menu_key: route.name ?? fallbackMenuKey(route.path),
+    name: route.meta.title,
+    icon: route.meta.icon ?? null,
+    module_key: route.meta.module_key ?? null,
+    perm_key: route.meta.perm_key ?? null,
+    view_path: route.component ?? null,
+    children: route.children?.map(toWheelMenuNode) ?? []
+  };
+}
+
 export default defineFakeRoute([
   {
-    url: "/get-async-routes",
+    url: "/api/tenant/me/menus",
     method: "get",
     response: () => {
       return {
-        success: true,
+        code: 0,
+        message: "success",
         data: [
           accountRouter,
           taskRouter,
           materialRouter,
           operationRouter,
-          permissionRouter
-        ]
+          permissionRouter,
+          buyerRouter
+        ].map(route => toWheelMenuNode(route as MockRoute))
       };
     }
   }
