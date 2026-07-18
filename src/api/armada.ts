@@ -7,21 +7,9 @@ import type {
 
 /** armada 统一响应信封。code=0 成功,非 0 业务错误(HTTP 仍 200)。 */
 export interface ArmadaResp<T> {
-  code: number | string;
+  code: number;
   message: string;
   data: T;
-}
-
-export class ArmadaBusinessError extends Error {
-  readonly code: number | string;
-  readonly data: unknown;
-
-  constructor(message: string, code: number | string, data: unknown) {
-    super(message);
-    this.name = "ArmadaBusinessError";
-    this.code = code;
-    this.data = data;
-  }
 }
 
 /**
@@ -36,12 +24,7 @@ export async function armadaRequest<T>(
 ): Promise<T> {
   const resp = await http.request<ArmadaResp<T>>(method, url, opts, config);
   if (!resp || resp.code !== 0) {
-    if (!resp) throw new Error("请求失败");
-    throw new ArmadaBusinessError(
-      resp.message || "请求失败",
-      resp.code,
-      resp.data
-    );
+    throw new Error(resp?.message ?? "请求失败");
   }
   return resp.data;
 }

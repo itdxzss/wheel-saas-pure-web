@@ -1,22 +1,10 @@
-import { armadaRequest } from "@/api/armada";
-import {
-  mapWheelMenuNodes,
-  type PureAdminAsyncRoute,
-  type WheelMenuNode
-} from "@/api/menu-mapping";
+import { http } from "@/utils/http";
 
 type Result = {
   success: boolean;
-  data: PureAdminAsyncRoute[];
+  data: Array<any>;
 };
 
-export async function getAsyncRoutes(): Promise<Result> {
-  const menus = await armadaRequest<WheelMenuNode[]>(
-    "get",
-    "/api/tenant/me/menus"
-  );
-  return {
-    success: true,
-    data: mapWheelMenuNodes(menus)
-  };
-}
+export const getAsyncRoutes = () => {
+  return http.request<Result>("get", "/get-async-routes");
+};

@@ -52,7 +52,7 @@ describe("buyer channel stats page contract", () => {
     assert.ok(page.includes("normalizeShanghaiDateRange"));
   });
 
-  it("uses editable daily rows and keeps production fake server disabled", () => {
+  it("uses editable daily rows without buyer fake data", () => {
     const daily = source("./components/DailyStatsRows.vue");
     for (const field of [
       "spend",
@@ -62,69 +62,19 @@ describe("buyer channel stats page contract", () => {
       "otherFee"
     ])
       assert.ok(daily.includes(field), field);
-    const plugins = readFileSync(
-      new URL("../../../../build/plugins.ts", import.meta.url),
-      "utf8"
+    assert.equal(
+      existsSync(new URL("../../../../mock/buyer.ts", import.meta.url)),
+      false
     );
-    assert.match(plugins, /enableProd:\s*false/);
-    const buyerMock = readFileSync(
-      new URL("../../../../mock/buyer.ts", import.meta.url),
-      "utf8"
-    );
-    assert.ok(buyerMock.includes("summarizeChannelStats"));
-    assert.ok(buyerMock.includes("body.dateStart"));
-    assert.ok(buyerMock.includes("body.dateEnd"));
   });
 
-  it("passes effective leaf visibility from 自定义列 while keeping required columns", () => {
+  it("passes dynamic columns through the stock table bar API", () => {
     const page = source("./index.vue");
     const table = source("./components/ChannelStatsTable.vue");
-    for (const prop of [
-      "spend",
-      "impressions",
-      "clicks",
-      "otherFee",
-      "totalFee",
-      "uv",
-      "visitDurationSeconds",
-      "loginRequestCount",
-      "loginSuccessUserCount",
-      "unbindCount",
-      "unbindRate",
-      "loginRequestRate",
-      "loginSuccessRate",
-      "visitorConversionRate",
-      "accountCost"
-    ])
-      assert.match(page, new RegExp(`prop:\\s*["']${prop}["']`), prop);
-    assert.ok(page.includes("自定义列"));
     assert.match(page, /#default="\{ dynamicColumns \}"/);
     assert.match(page, /:columns="dynamicColumns"/);
     assert.match(table, /columns:.*Array/s);
     assert.match(table, /v-if="isColumnVisible\(/);
-    assert.match(page, /prop: "channelName"[\s\S]*?hideable:\s*false/);
-    assert.match(page, /prop: "templateName"[\s\S]*?hideable:\s*false/);
-    assert.match(page, /:column-draggable="false"/);
-  });
-
-  it("keeps non-hideable columns visible when toggling all columns", async () => {
-    const helperUrl = new URL(
-      "../../../components/RePureTableBar/src/column-visibility.ts",
-      import.meta.url
-    );
-    assert.ok(existsSync(helperUrl), "column visibility helper should exist");
-    const { updateAllColumnVisibility } = await import(helperUrl.href);
-    const columns = [
-      { label: "渠道/国家", hide: false, hideable: false },
-      { label: "消耗", hide: false }
-    ];
-
-    updateAllColumnVisibility(columns, false);
-    assert.equal(columns[0].hide, false);
-    assert.equal(columns[1].hide, true);
-
-    updateAllColumnVisibility(columns, true);
-    assert.equal(columns[0].hide, false);
-    assert.equal(columns[1].hide, false);
+    assert.doesNotMatch(page, /column-title|column-draggable|hideable/);
   });
 });

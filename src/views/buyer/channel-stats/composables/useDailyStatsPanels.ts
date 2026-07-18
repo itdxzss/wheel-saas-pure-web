@@ -8,7 +8,7 @@ import {
   type BuyerChannelStatsDailyUpdateResult,
   type BuyerChannelStatsRow
 } from "@/api/buyer-channel-stats";
-import { hasApiErrorCode } from "@/utils/api-error";
+import { hasBuyerApiErrorCode } from "@/views/buyer/shared/api-error-code";
 import {
   validateDailyStatsInput,
   type ShanghaiDateRange
@@ -102,7 +102,7 @@ export function useDailyStatsPanels(
       dependencies.replaceSummary?.(result.summary);
       return "saved";
     } catch (error) {
-      if (!hasApiErrorCode(error, "VERSION_CONFLICT")) throw error;
+      if (!hasBuyerApiErrorCode(error, "VERSION_CONFLICT")) throw error;
       await loadPanel(channelId, countryCode, range, true);
       dependencies.onVersionConflict?.();
       return "conflict";

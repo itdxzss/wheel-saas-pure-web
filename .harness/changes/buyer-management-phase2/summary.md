@@ -55,3 +55,10 @@
 ## 明确不在本仓范围
 
 - 外部 H5 静态页没有在本仓实现；本仓仍只提供其管理端与运行配置契约。
+
+## 2026-07-18 静态预览修复
+
+- 后端菜单尚未提供期间，买号菜单改为独立业务静态路由模块，不依赖 `/api/tenant/me/menus`。
+- 删除买号 Fake Server 数据；业务接口失败时展示空/错误状态并结束 loading。
+- 恢复动态菜单、Armada、路由类型和 `RePureTableBar` 到功能开发前版本。
+- `src/router/index.ts`、`src/router/utils.ts`、权限 Store 和 layout 未修改。

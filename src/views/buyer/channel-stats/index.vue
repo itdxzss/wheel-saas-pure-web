@@ -61,18 +61,8 @@ const daily = useDailyStatsPanels({
   }
 });
 const tableColumns = [
-  {
-    label: "渠道/国家",
-    prop: "channelName",
-    hide: false,
-    hideable: false
-  },
-  {
-    label: "绑定模板",
-    prop: "templateName",
-    hide: false,
-    hideable: false
-  },
+  { label: "渠道/国家", prop: "channelName", hide: false },
+  { label: "绑定模板", prop: "templateName", hide: false },
   { label: "消耗", prop: "spend" },
   { label: "展示", prop: "impressions" },
   { label: "点击/点击率", prop: "clicks" },
@@ -287,13 +277,7 @@ onMounted(async () => {
         </el-form-item>
       </el-form>
     </el-card>
-    <PureTableBar
-      title="渠道统计"
-      column-title="自定义列"
-      :column-draggable="false"
-      :columns="tableColumns"
-      @refresh="loadRows"
-    >
+    <PureTableBar title="渠道统计" :columns="tableColumns" @refresh="loadRows">
       <template #default="{ dynamicColumns }">
         <ChannelStatsTable
           :rows="rows"

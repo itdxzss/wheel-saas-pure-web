@@ -26,10 +26,6 @@ declare global {
     roles?: Array<string>;
     /** 按钮级别权限设置 `可选` */
     auths?: Array<string>;
-    /** wheel 业务模块标识 `可选` */
-    module_key?: string;
-    /** wheel 权限标识 `可选` */
-    perm_key?: string;
     /** 路由组件缓存（开启 `true`、关闭 `false`）`可选` */
     keepAlive?: boolean;
     /** 内嵌的`iframe`链接 `可选` */
@@ -102,10 +98,6 @@ declare global {
       showLink?: boolean;
       /** 菜单升序排序，值越高排的越后（只针对顶级路由）`可选` */
       rank?: number;
-      /** wheel 业务模块标识 `可选` */
-      module_key?: string;
-      /** wheel 权限标识 `可选` */
-      perm_key?: string;
     };
     /** 子路由配置项 */
     children?: Array<RouteChildrenConfigsTable>;
