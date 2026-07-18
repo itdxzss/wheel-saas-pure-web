@@ -27,6 +27,7 @@ export interface MarketingTaskRow {
   sentMessageCount: number;
   failedMessageCount: number;
   sendPerRound: number;
+  accountGroupSendIntervalSeconds: number;
   sendIntervalSeconds: number;
   onlineCheckEnabled: boolean;
   abnormalGroupSkipped: boolean;
@@ -155,6 +156,7 @@ export interface CreateMarketingTaskRequest {
   taskStartAt?: number | null;
   taskEndAt?: number | null;
   sendPerRound: number;
+  accountGroupSendIntervalSeconds: number;
   sendIntervalSeconds: number;
   onlineCheckEnabled: boolean;
   abnormalGroupSkipped: boolean;

@@ -58,6 +58,7 @@ export interface GroupMarketingCreateForm {
   taskStartAt: string | number;
   taskEndAt: string | number;
   sendPerRound: number;
+  accountGroupSendIntervalSeconds: number;
   sendIntervalSeconds: number;
   onlineCheckEnabled: boolean;
   abnormalGroupSkipped: boolean;
@@ -135,6 +136,7 @@ function emptyCreateForm(): GroupMarketingCreateForm {
     taskStartAt: "",
     taskEndAt: endOfDayTimestamp(),
     sendPerRound: 1,
+    accountGroupSendIntervalSeconds: 0.5,
     sendIntervalSeconds: 30,
     onlineCheckEnabled: true,
     abnormalGroupSkipped: true,
@@ -204,6 +206,15 @@ export function disableAccountGroupSendDate(date: Date): boolean {
 
 function createStartMode(taskStartAt: number): MarketingTaskStartMode {
   return taskStartAt > Date.now() ? "PENDING" : "IMMEDIATE";
+}
+
+function isValidAccountGroupSendIntervalSeconds(value: number): boolean {
+  return (
+    Number.isFinite(value) &&
+    value >= 0.5 &&
+    value <= 3 &&
+    Number.isInteger(value * 10)
+  );
 }
 
 function validateLifecycleTimes(form: GroupMarketingCreateForm): {
@@ -433,6 +444,14 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       ElMessage.warning("请至少选择一个发送账号");
       return;
     }
+    if (
+      !isValidAccountGroupSendIntervalSeconds(
+        form.accountGroupSendIntervalSeconds
+      )
+    ) {
+      ElMessage.warning("单账号下群组发送间隔必须为0.5到3秒，最多一位小数");
+      return;
+    }
     const lifecycleTimes = validateLifecycleTimes(form);
     if (!lifecycleTimes) {
       return;
@@ -449,6 +468,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
         taskStartAt: lifecycleTimes.taskStartAt,
         taskEndAt: lifecycleTimes.taskEndAt,
         sendPerRound: form.sendPerRound,
+        accountGroupSendIntervalSeconds: form.accountGroupSendIntervalSeconds,
         sendIntervalSeconds: form.sendIntervalSeconds,
         onlineCheckEnabled: form.onlineCheckEnabled,
         abnormalGroupSkipped: form.abnormalGroupSkipped,

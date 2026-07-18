@@ -37,6 +37,7 @@ describe("group marketing task page state", () => {
       pageSize: 10
     });
     const pageState = useGroupMarketingTaskPage();
+    assert.equal(pageState.createForm.accountGroupSendIntervalSeconds, 0.5);
     pageState.accountGroups.value = [
       {
         id: 8,
@@ -89,6 +90,7 @@ describe("group marketing task page state", () => {
       taskStartAt: 4102444800000,
       taskEndAt: 4102531200000,
       sendPerRound: 1,
+      accountGroupSendIntervalSeconds: 0.5,
       sendIntervalSeconds: 30,
       onlineCheckEnabled: true,
       abnormalGroupSkipped: true,
@@ -98,6 +100,70 @@ describe("group marketing task page state", () => {
         { accountId: 3, targetScope: "GROUP_FIXED", groupLinkIds: [11] }
       ]
     });
+  });
+
+  it("rejects an invalid per-account group send interval", async () => {
+    for (const interval of [
+      0.4,
+      0.55,
+      3.1,
+      Number.NaN,
+      Number.POSITIVE_INFINITY
+    ]) {
+      resetArmadaMock({
+        list: [],
+        total: 0,
+        page: 1,
+        pageSize: 10
+      });
+      resetElementPlusMock();
+      const pageState = useGroupMarketingTaskPage();
+      pageState.accountGroups.value = [
+        {
+          id: 8,
+          name: "北美账号",
+          totalAccounts: 1,
+          onlineAccounts: 1,
+          abnormalAccounts: 0,
+          bannedAccounts: 0,
+          updatedAt: "2026-07-04 15:00:00",
+          systemBuiltin: false
+        }
+      ];
+      pageState.marketingTemplates.value = [
+        {
+          id: 18,
+          templateName: "活动模板",
+          linkMode: 1,
+          textType: "PROMO",
+          content: "标题",
+          bodyText: "正文",
+          mentionAll: false,
+          buttons: []
+        }
+      ];
+      pageState.createForm.taskName = "非法间隔任务";
+      pageState.createForm.accountGroupId = 8;
+      pageState.createForm.marketingTemplateId = 18;
+      pageState.createForm.accountGroupSendIntervalSeconds = interval;
+      pageState.createForm.taskStartAt = "4102444800000";
+      pageState.createForm.taskEndAt = "4102531200000";
+
+      await pageState.createTask({
+        form: { ...pageState.createForm },
+        selections: [
+          { accountId: 3, targetScope: "GROUP_FIXED", groupLinkIds: [11] }
+        ]
+      });
+
+      assert.deepEqual(armadaCalls(), []);
+      assert.deepEqual(elementPlusCalls(), [
+        {
+          type: "warning",
+          text: "单账号下群组发送间隔必须为0.5到3秒，最多一位小数"
+        }
+      ]);
+    }
   });
 
   it("rejects create when marketing template is missing", async () => {
@@ -241,10 +307,12 @@ describe("group marketing task page state", () => {
       }
     ]);
     const pageState = useGroupMarketingTaskPage();
+    pageState.createForm.accountGroupSendIntervalSeconds = 2.4;
 
     await pageState.openCreateDrawer();
 
     assert.equal(pageState.createForm.marketingTemplateId, "");
+    assert.equal(pageState.createForm.accountGroupSendIntervalSeconds, 0.5);
     assert.equal(pageState.marketingTemplates.value.length, 1);
     const calls = armadaCalls();
     assert.equal(calls[0].url, "/api/account-groups");

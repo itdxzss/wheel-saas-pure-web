@@ -403,6 +403,16 @@ function submit(): void {
       <el-form-item label="单轮发送数量">
         <el-input-number v-model="form.sendPerRound" :min="1" :step="1" />
       </el-form-item>
+      <el-form-item label="单账号下群组发送间隔">
+        <el-input-number
+          v-model="form.accountGroupSendIntervalSeconds"
+          :min="0.5"
+          :max="3"
+          :step="0.1"
+          :precision="1"
+        />
+        <span class="unit">秒</span>
+      </el-form-item>
       <el-form-item label="发送间隔">
         <el-input-number
           v-model="form.sendIntervalSeconds"
