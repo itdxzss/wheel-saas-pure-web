@@ -62,12 +62,15 @@ export interface MarketingTaskTargetRow {
   lastReason?: string | null;
 }
 
+export type MarketingGroupExecutionResult = "SUCCESS" | "FAILED";
+
 export interface MarketingTaskGroupStatRow {
   groupLinkId?: number | null;
   groupJid?: string | null;
   groupLinkUrl?: string | null;
   groupName?: string | null;
   groupStatus?: MarketingGroupSendStatus | null;
+  executionResult?: MarketingGroupExecutionResult | null;
   sentMessageCount: number;
   failedMessageCount: number;
   lastAttemptAt?: number | null;

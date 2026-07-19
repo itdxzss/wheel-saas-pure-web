@@ -1,8 +1,10 @@
 import {
   computed,
   onMounted,
+  onScopeDispose,
   reactive,
   ref,
+  watch,
   type ComputedRef,
   type Ref
 } from "vue";
@@ -119,6 +121,7 @@ export interface GroupMarketingTaskPageState {
 }
 
 const ACCOUNT_GROUP_SEND_LOOKBACK_MS = 72 * 60 * 60 * 1000;
+const DETAIL_POLL_INTERVAL_MS = 5000;
 
 export function endOfDayTimestamp(date = new Date()): number {
   const endOfDay = new Date(date);
@@ -293,6 +296,11 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
   const pageSize = ref(10);
   const total = ref(0);
   const selectedCount = computed(() => selectedRows.value.length);
+  let detailPollTimer: ReturnType<typeof setInterval> | null = null;
+  let detailPollInFlight = false;
+  let detailRequestVersion = 0;
+  let detailTaskId: number | null = null;
+  let detailRefreshFailureNotified = false;
 
   function buildQuery() {
     const id = Number(searchForm.id);
@@ -484,22 +492,101 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     }
   }
 
-  async function openDetailDrawer(row: MarketingTaskRow): Promise<void> {
-    detailDrawerOpen.value = true;
-    detailLoading.value = true;
-    try {
-      detailTask.value = await getMarketingTaskDetail(row.id);
-    } catch (error) {
-      detailTask.value = null;
-      ElMessage.error(apiErrorMessage(error, "营销任务明细加载失败"));
-    } finally {
-      detailLoading.value = false;
+  function clearDetailPollTimer(): void {
+    if (detailPollTimer == null) return;
+    clearInterval(detailPollTimer);
+    detailPollTimer = null;
+  }
+
+  function invalidateDetailRequests(): void {
+    detailRequestVersion += 1;
+    detailPollInFlight = false;
+    detailRefreshFailureNotified = false;
+    clearDetailPollTimer();
+  }
+
+  function isCurrentDetailRequest(taskId: number, version: number): boolean {
+    return (
+      detailDrawerOpen.value &&
+      detailTaskId === taskId &&
+      detailRequestVersion === version
+    );
+  }
+
+  function ensureDetailPolling(taskId: number): void {
+    if (
+      detailPollTimer != null ||
+      !detailDrawerOpen.value ||
+      detailTaskId !== taskId
+    ) {
+      return;
     }
+    detailPollTimer = setInterval(() => {
+      void refreshDetailTask(taskId, true);
+    }, DETAIL_POLL_INTERVAL_MS);
+  }
+
+  async function refreshDetailTask(
+    taskId: number,
+    background: boolean
+  ): Promise<void> {
+    if (background && detailPollInFlight) return;
+    const version = detailRequestVersion;
+    if (background) {
+      detailPollInFlight = true;
+    } else {
+      detailLoading.value = true;
+    }
+    try {
+      const nextDetail = await getMarketingTaskDetail(taskId);
+      if (!isCurrentDetailRequest(taskId, version)) return;
+      detailTask.value = nextDetail;
+      detailRefreshFailureNotified = false;
+      if (nextDetail.status === 2) {
+        ensureDetailPolling(taskId);
+      } else {
+        clearDetailPollTimer();
+      }
+    } catch (error) {
+      if (!isCurrentDetailRequest(taskId, version)) return;
+      if (background) {
+        if (!detailRefreshFailureNotified) {
+          ElMessage.error(apiErrorMessage(error, "营销任务明细刷新失败"));
+          detailRefreshFailureNotified = true;
+        }
+      } else {
+        detailTask.value = null;
+        ElMessage.error(apiErrorMessage(error, "营销任务明细加载失败"));
+      }
+    } finally {
+      if (isCurrentDetailRequest(taskId, version)) {
+        if (background) {
+          detailPollInFlight = false;
+        } else {
+          detailLoading.value = false;
+        }
+      }
+    }
+  }
+
+  async function openDetailDrawer(row: MarketingTaskRow): Promise<void> {
+    invalidateDetailRequests();
+    detailTaskId = row.id;
+    detailTask.value = null;
+    detailDrawerOpen.value = true;
+    await refreshDetailTask(row.id, false);
+  }
+
+  function resetDetailState(): void {
+    invalidateDetailRequests();
+    detailTaskId = null;
+    detailTask.value = null;
+    detailLoading.value = false;
   }
 
   function closeDetailDrawer(): void {
     detailDrawerOpen.value = false;
-    detailTask.value = null;
+    resetDetailState();
   }
 
   async function startTask(row: MarketingTaskRow): Promise<void> {
@@ -647,6 +734,14 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       materialSubmitting.value = false;
     }
   }
+
+  watch(detailDrawerOpen, visible => {
+    if (!visible && detailTaskId != null) {
+      resetDetailState();
+    }
+  });
+
+  onScopeDispose(resetDetailState, true);
 
   onMounted(() => {
     void Promise.all([loadOptions(), refreshTasks()]);

@@ -17,6 +17,7 @@ import {
   groupCountLabel,
   hasGroupRows
 } from "./detail-rollup";
+import { groupExecutionResultMeta } from "./group-execution-result";
 import { groupSendStatusMeta } from "./group-send-status";
 
 defineOptions({
@@ -125,6 +126,19 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                   >
                     {{ groupSendStatusMeta(group.groupStatus).label }}
                   </el-tag>
+                  <el-tag
+                    v-if="
+                      groupExecutionResultMeta(group.executionResult).tagged
+                    "
+                    size="small"
+                    effect="plain"
+                    :type="
+                      groupExecutionResultMeta(group.executionResult).tagType
+                    "
+                  >
+                    {{ groupExecutionResultMeta(group.executionResult).label }}
+                  </el-tag>
+                  <span v-else class="group-rollup-empty">-</span>
                   <span>{{ group.sentMessageCount }}</span>
                   <span
                     class="group-rollup-text"
@@ -153,10 +167,11 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
             </div>
           </template>
         </el-table-column>
-        <el-table-column min-width="880">
+        <el-table-column min-width="1000">
           <template #header>
             <div class="group-rollup-header">
               <span>状态</span>
+              <span>执行情况</span>
               <span>单群发送条数</span>
               <span>群组链接</span>
               <span>群组名称</span>
@@ -191,6 +206,27 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                       ).label
                     }}
                   </el-tag>
+                  <el-tag
+                    v-if="
+                      groupExecutionResultMeta(
+                        firstGroup(asAccountRow(row))?.executionResult
+                      ).tagged
+                    "
+                    size="small"
+                    effect="plain"
+                    :type="
+                      groupExecutionResultMeta(
+                        firstGroup(asAccountRow(row))?.executionResult
+                      ).tagType
+                    "
+                  >
+                    {{
+                      groupExecutionResultMeta(
+                        firstGroup(asAccountRow(row))?.executionResult
+                      ).label
+                    }}
+                  </el-tag>
+                  <span v-else class="group-rollup-empty">-</span>
                   <span class="group-rollup-number">
                     {{ firstGroup(asAccountRow(row))?.sentMessageCount ?? 0 }}
                   </span>
@@ -259,7 +295,7 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 .group-rollup-detail-row {
   display: grid;
   grid-template-columns:
-    104px 112px minmax(190px, 1.35fr) minmax(150px, 1fr)
+    104px 104px 112px minmax(190px, 1.35fr) minmax(150px, 1fr)
     minmax(130px, 0.9fr) 170px;
   gap: 16px;
   align-items: center;

@@ -19,9 +19,10 @@ describe("group marketing detail drawer", () => {
     assert.match(source, /firstGroupSummary/);
   });
 
-  it("shows status before the same group fields in header and expanded rows", () => {
+  it("shows status and execution result before the remaining group fields", () => {
     for (const label of [
       "状态",
+      "执行情况",
       "单群发送条数",
       "群组链接",
       "群组名称",
@@ -30,9 +31,18 @@ describe("group marketing detail drawer", () => {
     ]) {
       assert.match(source, new RegExp(label));
     }
-    assert.match(source, /<span>状态<\/span>\s*<span>单群发送条数<\/span>/);
+    assert.match(
+      source,
+      /<span>状态<\/span>\s*<span>执行情况<\/span>\s*<span>单群发送条数<\/span>/
+    );
     assert.match(source, /groupSendStatusMeta/);
+    assert.match(source, /groupExecutionResultMeta/);
     assert.match(source, /group-status--no-permission/);
+    assert.match(source, /group\.executionResult/);
+    assert.match(
+      source,
+      /firstGroup\(asAccountRow\(row\)\)\?\.executionResult/
+    );
   });
 
   it("renames summary sent count and removes summary last sent time", () => {
