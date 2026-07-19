@@ -83,7 +83,13 @@ function validateTargetCountry(
 const rules: FormRules<ChannelFormModel> = {
   name: [{ required: true, message: "请输入渠道名称", trigger: "blur" }],
   ownerId: [{ required: true, message: "请选择所属人", trigger: "change" }],
-  targetCountry: [{ validator: validateTargetCountry, trigger: "change" }],
+  targetCountry: [
+    {
+      required: true,
+      validator: validateTargetCountry,
+      trigger: "change"
+    }
+  ],
   templateId: [
     { required: true, message: "请选择绑定模板", trigger: "change" }
   ],
@@ -209,13 +215,24 @@ watch(
           filterable
           placeholder="请选择目标国家"
         >
-          <el-option label="混合（不限国家）" value="__MIXED__" />
+          <el-option label="🌐 混合（不限国家）" value="__MIXED__">
+            <div class="country-option">
+              <span class="country-flag">🌐</span>
+              <span class="country-name">混合（不限国家）</span>
+            </div>
+          </el-option>
           <el-option
             v-for="country in options.countries"
             :key="country.code"
-            :label="country.name"
+            :label="`${country.flag || '🏳️'} ${country.name} ${country.dialCode}`"
             :value="country.code"
-          />
+          >
+            <div class="country-option">
+              <span class="country-flag">{{ country.flag || "🏳️" }}</span>
+              <span class="country-name">{{ country.name }}</span>
+              <span class="country-dial-code">{{ country.dialCode }}</span>
+            </div>
+          </el-option>
         </el-select>
       </el-form-item>
       <el-form-item
@@ -365,5 +382,27 @@ watch(
 <style scoped>
 :deep(.el-select) {
   width: 100%;
+}
+
+.country-option {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.country-flag {
+  width: 24px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.country-name {
+  color: var(--el-text-color-primary);
+}
+
+.country-dial-code {
+  margin-left: auto;
+  color: var(--el-text-color-placeholder);
 }
 </style>

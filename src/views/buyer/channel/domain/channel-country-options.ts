@@ -9,6 +9,7 @@ export function toBuyerChannelCountries(
     .map(country => ({
       code: country.iso2 as string,
       name: country.nameZh,
-      dialCode: country.phonePrefix
+      dialCode: country.phonePrefix,
+      flag: country.flag
     }));
 }

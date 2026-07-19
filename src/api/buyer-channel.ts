@@ -8,7 +8,12 @@ export interface BuyerChannelOptions {
   uploadFee: { label: string; value: number };
   platforms: Array<{ label: string; value: ChannelPlatform }>;
   eventOptions: Array<{ label: string; value: string }>;
-  countries: Array<{ code: string; name: string; dialCode: string }>;
+  countries: Array<{
+    code: string;
+    name: string;
+    dialCode: string;
+    flag?: string;
+  }>;
   templates: Array<{ id: number; name: string }>;
   owners: Array<{ id: number; name: string }>;
   creators: Array<{ id: number; name: string }>;

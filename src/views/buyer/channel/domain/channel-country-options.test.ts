@@ -23,6 +23,8 @@ describe("buyer channel country options", () => {
       }
     ]);
 
-    assert.deepEqual(result, [{ code: "IN", name: "印度", dialCode: "+91" }]);
+    assert.deepEqual(result, [
+      { code: "IN", name: "印度", dialCode: "+91", flag: "🇮🇳" }
+    ]);
   });
 });

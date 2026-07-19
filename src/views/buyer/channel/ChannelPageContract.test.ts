@@ -89,6 +89,13 @@ describe("buyer channel page contract", () => {
     const countryField = drawerFormItem("目标国家");
     const dialCodeField = drawerFormItem("默认区号");
     assert.ok(countryField.includes('v-for="country in options.countries"'));
+    assert.ok(countryField.includes("country.flag"));
+    assert.ok(countryField.includes("country.dialCode"));
+    assert.ok(countryField.includes("country-option"));
+    assert.match(
+      drawer,
+      /targetCountry:\s*\[\s*\{[\s\S]*?required:\s*true[\s\S]*?validateTargetCountry/
+    );
     assert.ok(dialCodeField.includes('v-for="country in dialCodeOptions"'));
     assert.ok(
       dialCodeField.includes(":disabled=\"form.countryMode === 'SPECIFIC'\"")
