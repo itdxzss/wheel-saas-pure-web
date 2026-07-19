@@ -71,6 +71,7 @@ export interface MarketingTaskGroupStatRow {
   groupName?: string | null;
   groupStatus?: MarketingGroupSendStatus | null;
   executionResult?: MarketingGroupExecutionResult | null;
+  executionReason?: string | null;
   sentMessageCount: number;
   failedMessageCount: number;
   lastAttemptAt?: number | null;
@@ -80,13 +81,16 @@ export interface MarketingTaskGroupStatRow {
 
 export type MarketingGroupSendStatus =
   | "NORMAL"
-  | "BANNED"
+  | "ACCOUNT_BANNED"
+  | "GROUP_BANNED"
   | "NO_PERMISSION"
+  | "KICKED_OUT"
   | "UNCONFIRMED";
 
 export interface MarketingTaskAccountTargetRow {
   accountId: number;
   accountPhone: string;
+  loginState?: number | null;
   status: MarketingTaskTargetStatus;
   sentMessageCount: number;
   failedMessageCount: number;

@@ -16,8 +16,13 @@ const GROUP_SEND_STATUS_META: Record<string, GroupSendStatusMeta> = {
     tagType: "success",
     className: ""
   },
-  BANNED: {
-    label: "封禁",
+  ACCOUNT_BANNED: {
+    label: "账号封禁",
+    tagType: "danger",
+    className: ""
+  },
+  GROUP_BANNED: {
+    label: "群组封禁",
     tagType: "danger",
     className: ""
   },
@@ -26,11 +31,18 @@ const GROUP_SEND_STATUS_META: Record<string, GroupSendStatusMeta> = {
     tagType: "info",
     className: "group-status--no-permission"
   },
+  KICKED_OUT: {
+    label: "被踢出群聊",
+    tagType: "danger",
+    className: ""
+  },
   UNCONFIRMED: UNCONFIRMED_META
 };
 
 export function groupSendStatusMeta(
   status: string | null | undefined
 ): GroupSendStatusMeta {
-  return status ? (GROUP_SEND_STATUS_META[status] ?? UNCONFIRMED_META) : UNCONFIRMED_META;
+  return status
+    ? (GROUP_SEND_STATUS_META[status] ?? UNCONFIRMED_META)
+    : UNCONFIRMED_META;
 }
