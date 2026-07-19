@@ -51,3 +51,40 @@
 - [ ] **Step 5: Commit**
 
   `git commit -m "fix(buyer): load channel countries from master data"`
+
+### Task 2: 国旗、区号样式与目标国家必填
+
+**Files:**
+
+- Modify: `src/api/buyer-channel.ts`
+- Modify: `src/views/buyer/channel/domain/channel-country-options.ts`
+- Modify: `src/views/buyer/channel/domain/channel-country-options.test.ts`
+- Modify: `src/views/buyer/channel/components/ChannelFormDrawer.vue`
+- Modify: `src/views/buyer/channel/ChannelPageContract.test.ts`
+
+**Interfaces:**
+
+- Consumes: `IpCountryOption.flag`
+- Produces: `BuyerChannelOptions["countries"][number].flag: string`
+
+- [ ] **Step 1: Write the failing tests**
+
+  映射测试断言印度结果包含 `flag: "🇮🇳"`；页面契约断言目标国家规则有 `required: true`，且下拉渲染 `country.flag`、`country.name` 和 `country.dialCode`。
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+  Run: `node --import ./src/api/__tests__/node-test-alias.mjs --test --experimental-strip-types src/views/buyer/channel/domain/channel-country-options.test.ts src/views/buyer/channel/ChannelPageContract.test.ts`
+
+  Expected: FAIL，映射结果没有 `flag`，抽屉没有自定义展示和显式必填规则。
+
+- [ ] **Step 3: Implement the minimal UI and validation change**
+
+  为渠道国家类型和映射增加 `flag`；使用 `ElOption` 默认插槽展示国旗、国家名和灰色区号；混合项显示 `🌐`；为目标国家规则添加 `required: true`。
+
+- [ ] **Step 4: Verify tests and static checks**
+
+  Run: 上述测试命令、`pnpm typecheck`、针对五个改动文件的 ESLint。
+
+- [ ] **Step 5: Commit**
+
+  `git commit -m "fix(buyer): style required country selector"`
