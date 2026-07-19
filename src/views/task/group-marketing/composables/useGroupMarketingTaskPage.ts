@@ -728,6 +728,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       );
       ElMessage.success("营销素材已更新");
       closeMaterialDrawer();
+      await refreshTasks();
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "营销素材更新失败"));
     } finally {

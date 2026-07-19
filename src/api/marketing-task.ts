@@ -20,6 +20,9 @@ export interface MarketingTaskRow {
   accountGroupName: string;
   marketingTemplateId: number;
   marketingTemplateName: string;
+  marketingTemplateContent?: string | null;
+  marketingTemplateBodyText?: string | null;
+  marketingTemplatePromotionLink?: string | null;
   status: MarketingTaskStatus;
   selectedAccountCount: number;
   targetGroupCount: number;

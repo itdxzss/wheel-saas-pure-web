@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import WheelPagination from "@/components/WheelPagination/index.vue";
@@ -12,6 +12,12 @@ import {
 } from "../constants";
 import Delete from "~icons/ep/delete";
 import Plus from "~icons/ep/plus";
+import GroupMarketingTemplatePreviewDialog from "./GroupMarketingTemplatePreviewDialog.vue";
+import {
+  marketingPromotionHref,
+  marketingPromotionLink,
+  marketingTemplateSummary
+} from "./marketing-template-info";
 
 defineOptions({
   name: "GroupMarketingTaskTable"
@@ -45,6 +51,13 @@ const currentPageSize = computed({
   get: () => props.pageSize,
   set: value => emit("update:pageSize", value)
 });
+const templatePreviewVisible = ref(false);
+const previewTask = ref<MarketingTaskRow | null>(null);
+
+function openTemplatePreview(row: MarketingTaskRow): void {
+  previewTask.value = row;
+  templatePreviewVisible.value = true;
+}
 
 function asMarketingTaskRow(row: unknown): MarketingTaskRow {
   return row as MarketingTaskRow;
@@ -127,6 +140,71 @@ function taskLifecycleType(
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[2].hide"
+          label="营销模板预览"
+          min-width="240"
+        >
+          <template #default="{ row }">
+            <el-button
+              v-if="
+                marketingTemplateSummary(
+                  row.marketingTemplateContent,
+                  row.marketingTemplateBodyText
+                ) !== '—'
+              "
+              link
+              type="primary"
+              class="template-preview-button"
+              @click="openTemplatePreview(asMarketingTaskRow(row))"
+            >
+              <span class="template-summary">
+                {{
+                  marketingTemplateSummary(
+                    row.marketingTemplateContent,
+                    row.marketingTemplateBodyText
+                  )
+                }}
+              </span>
+            </el-button>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[3].hide"
+          label="推广链接"
+          min-width="220"
+        >
+          <template #default="{ row }">
+            <el-tooltip
+              v-if="marketingPromotionLink(row.marketingTemplatePromotionLink)"
+              :content="
+                marketingPromotionLink(row.marketingTemplatePromotionLink)
+              "
+              placement="top"
+            >
+              <el-link
+                v-if="
+                  marketingPromotionHref(row.marketingTemplatePromotionLink)
+                "
+                :href="
+                  marketingPromotionHref(row.marketingTemplatePromotionLink)
+                "
+                target="_blank"
+                rel="noopener noreferrer"
+                type="primary"
+                :underline="false"
+                class="promotion-link"
+              >
+                {{ marketingPromotionLink(row.marketingTemplatePromotionLink) }}
+              </el-link>
+              <span v-else class="promotion-link">
+                {{ marketingPromotionLink(row.marketingTemplatePromotionLink) }}
+              </span>
+            </el-tooltip>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[4].hide"
           label="营销账号在线数量"
           width="150"
         >
@@ -135,7 +213,7 @@ function taskLifecycleType(
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[3].hide"
+          v-if="!dynamicColumns[5].hide"
           label="营销账号封禁/禁言"
           width="150"
         >
@@ -146,7 +224,7 @@ function taskLifecycleType(
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[4].hide"
+          v-if="!dynamicColumns[6].hide"
           label="营销群组数量"
           width="130"
         >
@@ -155,7 +233,7 @@ function taskLifecycleType(
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[5].hide"
+          v-if="!dynamicColumns[7].hide"
           label="发送条数"
           width="110"
         >
@@ -164,7 +242,7 @@ function taskLifecycleType(
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[6].hide"
+          v-if="!dynamicColumns[8].hide"
           label="发送状态"
           width="120"
         >
@@ -179,7 +257,7 @@ function taskLifecycleType(
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[7].hide"
+          v-if="!dynamicColumns[9].hide"
           label="最后发送时间"
           width="180"
         >
@@ -241,6 +319,11 @@ function taskLifecycleType(
       />
     </template>
   </PureTableBar>
+
+  <GroupMarketingTemplatePreviewDialog
+    v-model="templatePreviewVisible"
+    :task="previewTask"
+  />
 </template>
 
 <style scoped>
@@ -252,5 +335,21 @@ function taskLifecycleType(
 .task-name-cell small {
   margin-top: 4px;
   color: var(--el-text-color-secondary);
+}
+
+.template-preview-button {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0;
+}
+
+.template-summary,
+.promotion-link {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 </style>
