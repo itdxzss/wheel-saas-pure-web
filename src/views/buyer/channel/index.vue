@@ -11,9 +11,11 @@ import {
   type BuyerChannelRow,
   type ChannelDetectResult
 } from "@/api/buyer-channel";
+import { listIpCountryOptions } from "@/api/resource-ip";
 import ChannelDetectDialog from "./components/ChannelDetectDialog.vue";
 import ChannelFormDrawer from "./components/ChannelFormDrawer.vue";
 import FacebookEventGuideDialog from "./components/FacebookEventGuideDialog.vue";
+import { toBuyerChannelCountries } from "./domain/channel-country-options";
 import { openSafeChannelLink } from "./domain/channel-domain";
 import { apiErrorMessage } from "@/utils/api-error";
 
@@ -131,11 +133,24 @@ async function remove(row: BuyerChannelRow): Promise<void> {
 }
 
 onMounted(async () => {
-  try {
-    options.value = await getBuyerChannelOptions();
-  } catch {
+  const [channelOptionsResult, countryOptionsResult] = await Promise.allSettled(
+    [getBuyerChannelOptions(), listIpCountryOptions()]
+  );
+
+  const nextOptions: BuyerChannelOptions =
+    channelOptionsResult.status === "fulfilled"
+      ? { ...channelOptionsResult.value, countries: [] }
+      : { ...emptyOptions, countries: [] };
+
+  if (channelOptionsResult.status === "rejected") {
     ElMessage.error("渠道筛选项加载失败");
   }
+  if (countryOptionsResult.status === "fulfilled") {
+    nextOptions.countries = toBuyerChannelCountries(countryOptionsResult.value);
+  } else {
+    ElMessage.error("目标国家加载失败");
+  }
+  options.value = nextOptions;
   await refresh();
 });
 </script>

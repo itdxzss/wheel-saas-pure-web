@@ -16,6 +16,11 @@ function drawerFormItem(label: string): string {
 }
 
 describe("buyer channel page contract", () => {
+  it("loads target countries from the existing country master data API", () => {
+    assert.ok(page.includes("listIpCountryOptions"));
+    assert.ok(page.includes("toBuyerChannelCountries"));
+  });
+
   it("contains required filters, columns, actions, permissions and pagination sizes", () => {
     for (const text of [
       "目标国家",
