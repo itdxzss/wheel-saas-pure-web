@@ -88,3 +88,37 @@
 - [ ] **Step 5: Commit**
 
   `git commit -m "fix(buyer): style required country selector"`
+
+### Task 3: 共享国家接口国旗标准化
+
+**Files:**
+
+- Modify: `src/api/resource-ip.ts`
+- Modify: `src/api/resource-ip.test.ts`
+
+**Interfaces:**
+
+- Consumes: 后端 `IpCountryOption.flag` 和 `IpCountryOption.iso2`
+- Produces: `listIpCountryOptions(): Promise<IpCountryOption[]>`，其中真实国家的 `flag` 为 Emoji
+
+- [ ] **Step 1: Write the failing test**
+
+  将国家 API 测试中的印度输入改为 `flag: "IN"`，断言 `listIpCountryOptions()` 返回 `flag: "🇮🇳"`；同时断言混合项 `🌐` 原样保留。
+
+- [ ] **Step 2: Run test to verify it fails**
+
+  Run: `node --import ./src/api/__tests__/node-test-alias.mjs --test --experimental-strip-types src/api/resource-ip.test.ts`
+
+  Expected: FAIL，实际返回 `IN` 而不是 `🇮🇳`。
+
+- [ ] **Step 3: Implement shared normalization**
+
+  在 `listIpCountryOptions()` 的返回映射中，仅将两位 ASCII 字母转换成 Unicode 区域指示符；已有 Emoji 原样保留；空 flag 使用 `iso2`。
+
+- [ ] **Step 4: Verify regression tests and static checks**
+
+  Run: 国家 API 测试、渠道国家映射测试、渠道页面契约测试、`pnpm typecheck` 和两个改动文件的 ESLint。
+
+- [ ] **Step 5: Commit**
+
+  `git commit -m "fix(resource): normalize country flags as emoji"`
