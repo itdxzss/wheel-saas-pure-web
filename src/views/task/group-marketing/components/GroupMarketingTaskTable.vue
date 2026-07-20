@@ -140,6 +140,68 @@ function taskLifecycleType(
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[2].hide"
+          label="营销账号在线数量"
+          width="150"
+        >
+          <template #default="{ row }">
+            {{ row.selectedAccountCount ?? 0 }} 个在线
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[3].hide"
+          label="营销账号封禁/禁言"
+          width="150"
+        >
+          <template #default="{ row }">
+            <el-tag size="small" type="warning" effect="plain">
+              失败 {{ row.failedMessageCount ?? 0 }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[4].hide"
+          label="营销群组数量"
+          width="130"
+        >
+          <template #default="{ row }">
+            {{ row.targetGroupCount ?? 0 }} 个群
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[5].hide"
+          label="发送条数"
+          width="110"
+        >
+          <template #default="{ row }">
+            {{ row.sentMessageCount ?? 0 }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[6].hide"
+          label="发送状态"
+          width="120"
+        >
+          <template #default="{ row }">
+            <el-tag
+              size="small"
+              :type="taskStatusTagType(row.status)"
+              effect="plain"
+            >
+              {{ taskStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[7].hide"
+          label="最后发送时间"
+          width="180"
+        >
+          <template #default="{ row }">
+            {{ formatEpoch(row.lastSentAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[8].hide"
           label="营销模板预览"
           min-width="240"
         >
@@ -169,7 +231,7 @@ function taskLifecycleType(
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[3].hide"
+          v-if="!dynamicColumns[9].hide"
           label="推广链接"
           min-width="220"
         >
@@ -201,68 +263,6 @@ function taskLifecycleType(
               </span>
             </el-tooltip>
             <span v-else>—</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[4].hide"
-          label="营销账号在线数量"
-          width="150"
-        >
-          <template #default="{ row }">
-            {{ row.selectedAccountCount ?? 0 }} 个在线
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[5].hide"
-          label="营销账号封禁/禁言"
-          width="150"
-        >
-          <template #default="{ row }">
-            <el-tag size="small" type="warning" effect="plain">
-              失败 {{ row.failedMessageCount ?? 0 }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[6].hide"
-          label="营销群组数量"
-          width="130"
-        >
-          <template #default="{ row }">
-            {{ row.targetGroupCount ?? 0 }} 个群
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[7].hide"
-          label="发送条数"
-          width="110"
-        >
-          <template #default="{ row }">
-            {{ row.sentMessageCount ?? 0 }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[8].hide"
-          label="发送状态"
-          width="120"
-        >
-          <template #default="{ row }">
-            <el-tag
-              size="small"
-              :type="taskStatusTagType(row.status)"
-              effect="plain"
-            >
-              {{ taskStatusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[9].hide"
-          label="最后发送时间"
-          width="180"
-        >
-          <template #default="{ row }">
-            {{ formatEpoch(row.lastSentAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="330">
