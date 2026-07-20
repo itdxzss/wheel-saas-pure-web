@@ -26,7 +26,7 @@ describe("resource IP API", () => {
         iso2: "IN",
         nameZh: "印度",
         phonePrefix: "+91",
-        flag: "🇮🇳",
+        flag: "IN",
         virtual: false
       }
     ];
@@ -34,7 +34,13 @@ describe("resource IP API", () => {
 
     const options = await listIpCountryOptions();
 
-    assert.deepEqual(options, rows);
+    assert.deepEqual(options, [
+      rows[0],
+      {
+        ...rows[1],
+        flag: "🇮🇳"
+      }
+    ]);
     assert.deepEqual(armadaCalls(), [
       {
         method: "get",

@@ -24,6 +24,18 @@ interface IpCountryOptionsResponse {
   rows?: IpCountryOption[] | null;
 }
 
+function normalizeCountryFlag(
+  flag: string | null | undefined,
+  iso2: string | null
+): string {
+  const rawFlag = flag?.trim() ?? "";
+  const code = rawFlag || iso2?.trim() || "";
+  if (!/^[a-z]{2}$/i.test(code)) return rawFlag;
+  return String.fromCodePoint(
+    ...Array.from(code.toUpperCase(), letter => letter.charCodeAt(0) + 127397)
+  );
+}
+
 export interface IpProxyImportInput {
   countryValue: string;
   allocationMode?: IpAllocationMode;
@@ -96,7 +108,9 @@ export function listIpProxies(
 }
 
 function importAllocationModeOf(input: IpProxyImportInput): IpAllocationMode {
-  return input.countryValue === "MIXED" ? "mixed" : input.allocationMode ?? "smart";
+  return input.countryValue === "MIXED"
+    ? "mixed"
+    : (input.allocationMode ?? "smart");
 }
 
 export function sampleCheckIpProxyImport(
@@ -179,5 +193,8 @@ export async function listIpCountryOptions(): Promise<IpCountryOption[]> {
     "/api/admin/countries/options",
     { params: { scope: "ip" } }
   );
-  return result.rows ?? [];
+  return (result.rows ?? []).map(country => ({
+    ...country,
+    flag: normalizeCountryFlag(country.flag, country.iso2)
+  }));
 }
