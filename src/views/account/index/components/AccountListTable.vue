@@ -147,55 +147,13 @@ function avatarText(row: TenantAccount) {
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[2].hide"
-          prop="ip_region"
-          label="国家"
-          width="120"
-        />
-        <el-table-column
-          v-if="!dynamicColumns[3].hide"
-          prop="ip_source"
-          label="IP来源"
-          min-width="140"
-        />
-        <el-table-column
-          v-if="!dynamicColumns[4].hide"
-          label="账号类型/设备"
-          width="140"
-        >
-          <template #default="{ row }">
-            {{ accountTypeDeviceLabel(row as TenantAccount) }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[5].hide"
-          prop="protocol_address"
-          label="协议"
-          min-width="160"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          v-if="!dynamicColumns[6].hide"
-          prop="truth_ip"
-          label="IP地址"
-          min-width="160"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          v-if="!dynamicColumns[7].hide"
-          label="渠道/来源"
-          min-width="150"
-        >
-          <template #default="{ row }">{{ sourceLabel(row) }}</template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[8].hide"
           prop="group_name"
           label="分组"
           min-width="140"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!dynamicColumns[9].hide"
+          v-if="!dynamicColumns[3].hide"
           label="账号状态"
           width="120"
         >
@@ -206,7 +164,7 @@ function avatarText(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[10].hide"
+          v-if="!dynamicColumns[4].hide"
           label="登录"
           width="100"
         >
@@ -215,6 +173,48 @@ function avatarText(row: TenantAccount) {
               {{ loginStateLabel(row.login_state) }}
             </el-tag>
           </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[5].hide"
+          prop="ip_region"
+          label="国家"
+          width="120"
+        />
+        <el-table-column
+          v-if="!dynamicColumns[6].hide"
+          prop="ip_source"
+          label="IP来源"
+          min-width="140"
+        />
+        <el-table-column
+          v-if="!dynamicColumns[7].hide"
+          label="账号类型/设备"
+          width="140"
+        >
+          <template #default="{ row }">
+            {{ accountTypeDeviceLabel(row as TenantAccount) }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[8].hide"
+          prop="protocol_address"
+          label="协议"
+          min-width="160"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="!dynamicColumns[9].hide"
+          prop="truth_ip"
+          label="IP地址"
+          min-width="160"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="!dynamicColumns[10].hide"
+          label="渠道/来源"
+          min-width="150"
+        >
+          <template #default="{ row }">{{ sourceLabel(row) }}</template>
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[11].hide"

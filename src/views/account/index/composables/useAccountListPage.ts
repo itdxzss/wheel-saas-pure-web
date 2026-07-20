@@ -677,37 +677,28 @@ export function useAccountListPage(): AccountListPageState {
       ElMessage.error("勾选的账号数据异常，请刷新列表后重试");
       return;
     }
-    if (analysis.abnormalCount > 0) {
-      await ElMessageBox.alert(
-        h("div", [
-          h("p", "勾选的账号存在非正常状态的WS账号，请审核。"),
-          h("p", `正常状态账号：${analysis.normalCount}个`),
-          h("p", `非正常状态账号：${analysis.abnormalCount}个`),
-          h("p", "请重新勾选后再操作。")
-        ]),
-        "无法导出WS号",
-        {
-          confirmButtonText: "我知道了",
-          type: "warning",
-          showClose: false
-        }
-      );
-      return;
-    }
+    const confirmContent =
+      analysis.abnormalCount > 0
+        ? [
+            h(
+              "p",
+              `本次预计导出 ${analysis.normalCount + analysis.abnormalCount} 个WS号码。`
+            ),
+            h("p", `正常状态账号：${analysis.normalCount}个`),
+            h("p", `非正常状态账号：${analysis.abnormalCount}个`),
+            h("p", `导出文件名称：${analysis.previewFilename}`)
+          ]
+        : [
+            h("p", `本次预计导出 ${analysis.normalCount}个WS号码。`),
+            h("p", `导出文件名称：${analysis.previewFilename}`)
+          ];
 
     try {
-      await ElMessageBox.confirm(
-        h("div", [
-          h("p", `本次预计导出 ${analysis.normalCount} 个WS号码。`),
-          h("p", `导出文件名称：${analysis.previewFilename}`)
-        ]),
-        "确认导出WS号",
-        {
-          confirmButtonText: "确认导出",
-          cancelButtonText: "取消",
-          type: "warning"
-        }
-      );
+      await ElMessageBox.confirm(h("div", confirmContent), "确认导出WS号", {
+        confirmButtonText: "确认导出",
+        cancelButtonText: "取消",
+        type: "warning"
+      });
     } catch {
       return;
     }

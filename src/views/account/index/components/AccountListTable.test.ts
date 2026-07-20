@@ -17,8 +17,37 @@ const composableSource = readFileSync(
   ),
   "utf8"
 );
+const columnsSource = readFileSync(
+  fileURLToPath(new URL("../constants.ts", import.meta.url)),
+  "utf8"
+);
+
+function assertOrdered(content: string, markers: string[]): void {
+  let previous = -1;
+  for (const marker of markers) {
+    const current = content.indexOf(marker);
+    assert.ok(
+      current > previous,
+      `${marker} should follow the previous column`
+    );
+    previous = current;
+  }
+}
 
 describe("AccountListTable protocol restart button", () => {
+  it("places group, account status and login directly after account", () => {
+    const orderedLabels = ["账号", "分组", "账号状态", "登录", "国家"];
+    assertOrdered(
+      columnsSource,
+      orderedLabels.map(label => `{ label: "${label}"`)
+    );
+    const tableSource = source.slice(source.indexOf("<el-table"));
+    assertOrdered(
+      tableSource,
+      orderedLabels.map(label => `label="${label}"`)
+    );
+  });
+
   it("exposes a loading restart button that emits restart-protocol", () => {
     assert.match(source, /protocolRestarting: boolean/);
     assert.match(source, /\(event: "restart-protocol"\): void/);
@@ -46,9 +75,27 @@ describe("AccountListTable protocol restart button", () => {
     );
     assert.match(pageSource, /:ws-exporting="wsExporting"/);
     assert.match(composableSource, /analyzeWsPhoneExportSelection/);
-    assert.match(composableSource, /ElMessageBox\.alert/);
-    assert.match(composableSource, /勾选的账号存在非正常状态的WS账号，请审核/);
+    assert.doesNotMatch(composableSource, /勾选的账号存在非正常状态的WS账号：/);
     assert.match(composableSource, /ElMessageBox\.confirm/);
+    assert.doesNotMatch(composableSource, /ElMessageBox\.alert/);
+    assert.match(
+      composableSource,
+      /正常状态账号：\$\{analysis\.normalCount\}个/
+    );
+    assert.match(
+      composableSource,
+      /非正常状态账号：\$\{analysis\.abnormalCount\}个/
+    );
+    assert.match(
+      composableSource,
+      /本次预计导出 \$\{analysis\.normalCount \+ analysis\.abnormalCount\} 个WS号码。/
+    );
+    assert.match(
+      composableSource,
+      /本次预计导出 \$\{analysis\.normalCount\}个WS号码。/
+    );
+    assert.match(composableSource, /confirmButtonText: "确认导出"/);
+    assert.match(composableSource, /cancelButtonText: "取消"/);
     assert.match(composableSource, /exportTenantAccountWsPhones/);
     assert.match(composableSource, /downloadBlobFile/);
     assert.match(

@@ -1,7 +1,7 @@
 # 变更记录：买号上量系统二期管理端
 
 - 日期：2026-07-17
-- 状态：设计已批准，尚未开发
+- 状态：管理端二期已实现并完成验证
 - 需求来源：买号上量系统 V1.1 Word 文档及四张确认效果图
 - 详细设计：`docs/superpowers/specs/2026-07-17-buyer-management-phase2-design.md`
 
@@ -36,8 +36,29 @@
 - 页面：`src/views/buyer/template/`、`src/views/buyer/channel/`、`src/views/buyer/channel-stats/`
 - Store：无
 
-## 当前未做
+## 渠道统计实际实现
 
-- 未修改业务代码、路由、菜单、Mock 或构建配置。
-- 未新增页面和 API 文件。
-- 未编写实施计划。
+- 新增 `src/api/buyer-channel-stats.ts`，覆盖筛选项、汇总、日明细、带版本补录和 Blob 导出五个接口。
+- 新增 `src/views/buyer/channel-stats/`，按宽表、日明细、状态 composable、格式/校验拆分；汇总列表无分页，支持允许字段排序。
+- 默认日期为 Asia/Shanghai 最近七个自然日；比率零分母显示 `-`，费用及转化公式集中计算。
+- 展开数据按 `channelId + countryCode` 隔离；补录校验非负数和整数计数，`VERSION_CONFLICT` 强制刷新并提示重试。
+- `mock/buyer.ts` 增加统计聚合、日明细更新和导出开发路由；`build/plugins.ts` 保持 `enableProd: false`，生产不兜底假数据。
+- 导出沿用当前筛选，读取 Content-Disposition 文件名，回退文件名包含日期；请求失败或空 Blob 不触发下载。
+- 权限使用 `tenant:buyer-channel-stats:edit` 与 `tenant:buyer-channel-stats:export`。
+
+## 验证证据
+
+- 统计核心 Node 测试：9/9 通过（API、格式/校验、按渠道国家隔离、冲突刷新、页面契约与生产 mock 开关）。
+- `pnpm typecheck`：通过。
+- `pnpm build`：通过，仅有依赖浏览器数据陈旧提示。
+
+## 明确不在本仓范围
+
+- 外部 H5 静态页没有在本仓实现；本仓仍只提供其管理端与运行配置契约。
+
+## 2026-07-18 静态预览修复
+
+- 后端菜单尚未提供期间，买号菜单改为独立业务静态路由模块，不依赖 `/api/tenant/me/menus`。
+- 删除买号 Fake Server 数据；业务接口失败时展示空/错误状态并结束 loading。
+- 恢复动态菜单、Armada、路由类型和 `RePureTableBar` 到功能开发前版本。
+- `src/router/index.ts`、`src/router/utils.ts`、权限 Store 和 layout 未修改。
