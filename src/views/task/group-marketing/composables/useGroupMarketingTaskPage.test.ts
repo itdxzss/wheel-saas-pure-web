@@ -699,17 +699,54 @@ describe("group marketing task page state", () => {
     }
   });
 
-  it("updates marketing material without optional body text", async () => {
-    resetArmadaMock({
-      id: 18,
-      templateName: "活动模板",
-      linkMode: 1,
-      textType: "PROMO",
-      content: "标题",
-      bodyText: "",
-      mentionAll: true,
-      buttons: []
-    });
+  it("updates marketing material and refreshes task template fields", async () => {
+    resetArmadaMockQueue([
+      {
+        id: 18,
+        templateName: "活动模板",
+        linkMode: 1,
+        textType: "PROMO",
+        imageFileId: null,
+        content: "新标题",
+        bodyText: "",
+        promotionLink: "https://example.com/new",
+        remark: null,
+        mentionAll: true,
+        buttons: [],
+        createdAt: 1000,
+        updatedAt: 2000
+      },
+      {
+        list: [
+          {
+            id: 42,
+            taskName: "夏季活动",
+            accountGroupId: 8,
+            accountGroupName: "北美账号",
+            marketingTemplateId: 18,
+            marketingTemplateName: "活动模板",
+            marketingTemplateContent: "新标题",
+            marketingTemplateBodyText: "",
+            marketingTemplatePromotionLink: "https://example.com/new",
+            status: 1,
+            selectedAccountCount: 1,
+            targetGroupCount: 0,
+            targetPairCount: 1,
+            sentMessageCount: 0,
+            failedMessageCount: 0,
+            sendPerRound: 1,
+            accountGroupSendIntervalSeconds: 0.5,
+            sendIntervalSeconds: 30,
+            onlineCheckEnabled: true,
+            abnormalGroupSkipped: true,
+            autoRetryEnabled: false
+          }
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 10
+      }
+    ]);
     resetElementPlusMock();
     const pageState = useGroupMarketingTaskPage();
     pageState.marketingTemplates.value = [
@@ -736,9 +773,11 @@ describe("group marketing task page state", () => {
     await pageState.submitMaterialUpdate();
 
     const calls = armadaCalls();
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 2);
     assert.equal(calls[0].method, "put");
     assert.equal(calls[0].url, "/api/marketing-tasks/42/marketing-template");
+    assert.equal(calls[1].method, "get");
+    assert.equal(calls[1].url, "/api/marketing-tasks");
     assert.equal(
       (calls[0].opts as { data: { bodyText: string } }).data.bodyText,
       ""
@@ -748,5 +787,10 @@ describe("group marketing task page state", () => {
       true
     );
     assert.equal(pageState.materialDrawerOpen.value, false);
+    assert.equal(pageState.rows.value[0].marketingTemplateContent, "新标题");
+    assert.equal(
+      pageState.rows.value[0].marketingTemplatePromotionLink,
+      "https://example.com/new"
+    );
   });
 });

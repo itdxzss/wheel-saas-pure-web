@@ -6,17 +6,10 @@ import type {
   MarketingTaskGroupStatRow
 } from "@/api/marketing-task";
 import {
-  formatEpoch,
-  targetStatusLabel,
-  targetStatusTagType
-} from "../constants";
-import {
-  firstGroup,
-  firstGroupDisplayName,
-  firstGroupSummary,
-  groupCountLabel,
-  hasGroupRows
-} from "./detail-rollup";
+  loginStateLabel,
+  loginStateTagType
+} from "@/views/account/index/account-display";
+import { formatEpoch } from "../constants";
 import { groupExecutionResultMeta } from "./group-execution-result";
 import { groupSendStatusMeta } from "./group-send-status";
 
@@ -84,183 +77,96 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
         row-key="accountId"
         border
       >
-        <el-table-column label="当前状态" width="110">
+        <el-table-column label="在线状态" width="110">
           <template #default="{ row }">
             <el-tag
               size="small"
-              :type="targetStatusTagType(row.status)"
               effect="plain"
+              :type="loginStateTagType(row.loginState)"
             >
-              {{ targetStatusLabel(row.status) }}
+              {{ loginStateLabel(row.loginState) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column
           prop="accountPhone"
-          label="发言号码"
+          label="发送账号"
           min-width="150"
           show-overflow-tooltip
         />
         <el-table-column
           prop="sentMessageCount"
-          label="号发送总条数"
-          width="130"
+          label="账号发送总条数"
+          width="150"
         />
-        <el-table-column type="expand" width="48">
+        <el-table-column type="expand" label="明细" width="80">
           <template #default="{ row }">
             <div class="group-rollup-expand">
-              <div
-                v-if="hasGroupRows(asAccountRow(row))"
-                class="group-rollup-detail-list"
-              >
-                <div
-                  v-for="group in asAccountRow(row).groups"
-                  :key="groupRowKey(group)"
-                  class="group-rollup-detail-row"
-                >
-                  <el-tag
-                    size="small"
-                    effect="plain"
-                    :type="groupSendStatusMeta(group.groupStatus).tagType"
-                    :class="groupSendStatusMeta(group.groupStatus).className"
-                  >
-                    {{ groupSendStatusMeta(group.groupStatus).label }}
-                  </el-tag>
-                  <el-tag
-                    v-if="
-                      groupExecutionResultMeta(group.executionResult).tagged
-                    "
-                    size="small"
-                    effect="plain"
-                    :type="
-                      groupExecutionResultMeta(group.executionResult).tagType
-                    "
-                  >
-                    {{ groupExecutionResultMeta(group.executionResult).label }}
-                  </el-tag>
-                  <span v-else class="group-rollup-empty">-</span>
-                  <span>{{ group.sentMessageCount }}</span>
-                  <span
-                    class="group-rollup-text"
-                    :title="group.groupLinkUrl || '-'"
-                  >
-                    {{ group.groupLinkUrl || "-" }}
-                  </span>
-                  <span
-                    class="group-rollup-text"
-                    :title="group.groupName || group.groupJid || '未命名群组'"
-                  >
-                    {{ group.groupName || group.groupJid || "未命名群组" }}
-                  </span>
-                  <span
-                    class="group-rollup-text"
-                    :title="group.lastReason || '-'"
-                  >
-                    {{ group.lastReason || "-" }}
-                  </span>
-                  <span>{{ formatEpoch(group.lastSentAt) }}</span>
+              <template v-if="asAccountRow(row).groups.length > 0">
+                <div class="group-rollup-header">
+                  <span>群组状态</span>
+                  <span>群名称</span>
+                  <span>单群发送条数</span>
+                  <span>最后发送时间</span>
+                  <span>执行情况</span>
                 </div>
-              </div>
+                <div class="group-rollup-detail-list">
+                  <div
+                    v-for="group in asAccountRow(row).groups"
+                    :key="groupRowKey(group)"
+                    class="group-rollup-detail-row"
+                  >
+                    <el-tag
+                      size="small"
+                      effect="plain"
+                      :type="groupSendStatusMeta(group.groupStatus).tagType"
+                      :class="groupSendStatusMeta(group.groupStatus).className"
+                    >
+                      {{ groupSendStatusMeta(group.groupStatus).label }}
+                    </el-tag>
+                    <span
+                      class="group-rollup-text"
+                      :title="group.groupName || group.groupJid || '未命名群组'"
+                    >
+                      {{ group.groupName || group.groupJid || "未命名群组" }}
+                    </span>
+                    <span class="group-rollup-number">
+                      {{ group.sentMessageCount }}
+                    </span>
+                    <span class="group-rollup-time">
+                      {{ formatEpoch(group.lastSentAt) }}
+                    </span>
+                    <div class="group-execution">
+                      <el-tag
+                        v-if="
+                          groupExecutionResultMeta(group.executionResult).tagged
+                        "
+                        size="small"
+                        effect="plain"
+                        :type="
+                          groupExecutionResultMeta(group.executionResult)
+                            .tagType
+                        "
+                      >
+                        {{
+                          groupExecutionResultMeta(group.executionResult).label
+                        }}
+                      </el-tag>
+                      <span v-else class="group-rollup-empty">-</span>
+                      <span
+                        v-if="group.executionResult === 'FAILED'"
+                        class="group-execution-reason"
+                        :title="group.executionReason || '未知原因'"
+                      >
+                        {{ group.executionReason || "未知原因" }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </template>
               <div v-else class="group-rollup-empty group-rollup-expand-empty">
                 暂无发送记录
               </div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column min-width="1000">
-          <template #header>
-            <div class="group-rollup-header">
-              <span>状态</span>
-              <span>执行情况</span>
-              <span>单群发送条数</span>
-              <span>群组链接</span>
-              <span>群组名称</span>
-              <span>最近原因</span>
-              <span>最后发送时间</span>
-            </div>
-          </template>
-          <template #default="{ row }">
-            <div class="group-rollup-summary">
-              <template v-if="firstGroup(asAccountRow(row))">
-                <div
-                  class="group-rollup-first-row"
-                  :title="firstGroupSummary(asAccountRow(row))"
-                >
-                  <el-tag
-                    size="small"
-                    effect="plain"
-                    :type="
-                      groupSendStatusMeta(
-                        firstGroup(asAccountRow(row))?.groupStatus
-                      ).tagType
-                    "
-                    :class="
-                      groupSendStatusMeta(
-                        firstGroup(asAccountRow(row))?.groupStatus
-                      ).className
-                    "
-                  >
-                    {{
-                      groupSendStatusMeta(
-                        firstGroup(asAccountRow(row))?.groupStatus
-                      ).label
-                    }}
-                  </el-tag>
-                  <el-tag
-                    v-if="
-                      groupExecutionResultMeta(
-                        firstGroup(asAccountRow(row))?.executionResult
-                      ).tagged
-                    "
-                    size="small"
-                    effect="plain"
-                    :type="
-                      groupExecutionResultMeta(
-                        firstGroup(asAccountRow(row))?.executionResult
-                      ).tagType
-                    "
-                  >
-                    {{
-                      groupExecutionResultMeta(
-                        firstGroup(asAccountRow(row))?.executionResult
-                      ).label
-                    }}
-                  </el-tag>
-                  <span v-else class="group-rollup-empty">-</span>
-                  <span class="group-rollup-number">
-                    {{ firstGroup(asAccountRow(row))?.sentMessageCount ?? 0 }}
-                  </span>
-                  <span
-                    class="group-rollup-text"
-                    :title="firstGroup(asAccountRow(row))?.groupLinkUrl || '-'"
-                  >
-                    {{ firstGroup(asAccountRow(row))?.groupLinkUrl || "-" }}
-                  </span>
-                  <span
-                    class="group-rollup-name"
-                    :title="firstGroupDisplayName(asAccountRow(row))"
-                  >
-                    <span>{{ firstGroupDisplayName(asAccountRow(row)) }}</span>
-                    <el-tag
-                      v-if="groupCountLabel(asAccountRow(row))"
-                      size="small"
-                      effect="plain"
-                    >
-                      {{ groupCountLabel(asAccountRow(row)) }}
-                    </el-tag>
-                  </span>
-                  <span
-                    class="group-rollup-text"
-                    :title="firstGroup(asAccountRow(row))?.lastReason || '-'"
-                  >
-                    {{ firstGroup(asAccountRow(row))?.lastReason || "-" }}
-                  </span>
-                  <span class="group-rollup-time">
-                    {{ formatEpoch(firstGroup(asAccountRow(row))?.lastSentAt) }}
-                  </span>
-                </div>
-              </template>
-              <span v-else class="group-rollup-empty"> 暂无发送记录 </span>
             </div>
           </template>
         </el-table-column>
@@ -286,17 +192,13 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
   background: var(--el-fill-color-lighter);
 }
 
-.group-rollup-summary {
-  min-width: 0;
-}
-
 .group-rollup-header,
-.group-rollup-first-row,
 .group-rollup-detail-row {
   display: grid;
-  grid-template-columns:
-    104px 104px 112px minmax(190px, 1.35fr) minmax(150px, 1fr)
-    minmax(130px, 0.9fr) 170px;
+  grid-template-columns: 120px minmax(180px, 1.3fr) 120px 170px minmax(
+      180px,
+      1fr
+    );
   gap: 16px;
   align-items: center;
   width: 100%;
@@ -304,12 +206,9 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 }
 
 .group-rollup-header {
+  padding: 0 16px 8px;
   font-weight: 600;
   color: var(--el-text-color-secondary);
-}
-
-.group-rollup-first-row {
-  color: var(--el-text-color-regular);
 }
 
 .group-status--no-permission {
@@ -336,19 +235,26 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
   border-bottom: 0;
 }
 
-.group-rollup-text,
-.group-rollup-name span:first-child {
+.group-rollup-text {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.group-rollup-name {
+.group-execution {
   display: flex;
   gap: 8px;
   align-items: center;
   min-width: 0;
+}
+
+.group-execution-reason {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--el-color-danger);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .group-rollup-number {
@@ -374,7 +280,6 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 
 @media (width <= 960px) {
   .group-rollup-header,
-  .group-rollup-first-row,
   .group-rollup-detail-row {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
   }

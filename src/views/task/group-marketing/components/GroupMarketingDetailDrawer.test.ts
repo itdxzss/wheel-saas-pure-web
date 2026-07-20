@@ -8,41 +8,37 @@ const source = readFileSync(
 );
 
 describe("group marketing detail drawer", () => {
-  it("uses account rollup rows and lightweight group dropdown", () => {
-    assert.match(source, /accountTargets/);
-    assert.match(source, /label="号发送总条数"/);
-    assert.match(source, /type="expand"/);
-    assert.match(source, /class="group-rollup-header"/);
-    assert.match(source, /class="group-rollup-first-row"/);
-    assert.match(source, /class="group-rollup-detail-list"/);
-    assert.doesNotMatch(source, /:data="asAccountRow\(row\)\.groups"/);
-    assert.match(source, /firstGroupSummary/);
+  it("renders the exact account and group detail fields in order", () => {
+    assert.match(
+      source,
+      /label="在线状态"[\s\S]*label="发送账号"[\s\S]*label="账号发送总条数"[\s\S]*label="明细"/
+    );
+    assert.match(
+      source,
+      /<span>群组状态<\/span>\s*<span>群名称<\/span>\s*<span>单群发送条数<\/span>\s*<span>最后发送时间<\/span>\s*<span>执行情况<\/span>/
+    );
+    assert.doesNotMatch(source, />群组链接</);
+    assert.doesNotMatch(source, />最近原因</);
+    assert.doesNotMatch(source, />当前状态</);
+    assert.doesNotMatch(source, />发言号码</);
   });
 
-  it("shows status and execution result before the remaining group fields", () => {
-    for (const label of [
-      "状态",
-      "执行情况",
-      "单群发送条数",
-      "群组链接",
-      "群组名称",
-      "最近原因",
-      "最后发送时间"
-    ]) {
-      assert.match(source, new RegExp(label));
-    }
+  it("uses live login state and renders failure reason inside execution", () => {
+    assert.match(source, /loginStateLabel/);
+    assert.match(source, /loginStateTagType/);
+    assert.match(source, /row\.loginState/);
+    assert.match(source, /group\.executionReason/);
+    assert.match(source, /group\.executionResult === ['"]FAILED['"]/);
+    assert.match(source, /group\.executionReason \|\| "未知原因"/);
+  });
+
+  it("keeps empty groups and nullable fields safe", () => {
+    assert.match(source, /暂无发送记录/);
     assert.match(
       source,
-      /<span>状态<\/span>\s*<span>执行情况<\/span>\s*<span>单群发送条数<\/span>/
+      /group\.groupName \|\| group\.groupJid \|\| "未命名群组"/
     );
-    assert.match(source, /groupSendStatusMeta/);
-    assert.match(source, /groupExecutionResultMeta/);
-    assert.match(source, /group-status--no-permission/);
-    assert.match(source, /group\.executionResult/);
-    assert.match(
-      source,
-      /firstGroup\(asAccountRow\(row\)\)\?\.executionResult/
-    );
+    assert.match(source, /formatEpoch\(group\.lastSentAt\)/);
   });
 
   it("renames summary sent count and removes summary last sent time", () => {
