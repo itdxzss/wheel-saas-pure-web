@@ -7,6 +7,7 @@ const drawer = readFileSync(
   new URL("./components/ChannelFormDrawer.vue", import.meta.url),
   "utf8"
 );
+const normalizedDrawer = drawer.replace(/\s+/g, " ");
 const channelForm = readFileSync(
   new URL("./domain/channel-form.ts", import.meta.url),
   "utf8"
@@ -61,37 +62,66 @@ describe("buyer channel page contract", () => {
     assert.match(drawer, /el-drawer/);
     for (const text of [
       "渠道名称",
-      "所属人",
+      "归属用户",
       "目标国家",
       "绑定模板",
-      "主题色",
       "https://",
-      "默认区号",
-      "Pixel ID",
-      "Access Token",
-      "Lead",
-      "InitiateCheckout",
-      "CompleteRegistration",
+      "预选区号",
+      "FB Pixel ID",
+      "FB Access Token",
+      "意向用户上报事件",
+      "请求登录上报事件",
+      "登录成功上报事件",
       "App 内打开",
-      "参加营销",
-      "状态"
+      "参加营销"
     ])
-      assert.ok(drawer.includes(text), text);
+      assert.ok(normalizedDrawer.includes(text), text);
+
+    for (const text of [
+      "仅用于渠道分类标记，比如主要投印度就选「印度」，选完后下方预选区号会自动填充。",
+      "域名需要解析后才可正常访问，请联系运营人员配置！",
+      "同一个域名只能在同一个模板下创建多个渠道链接，跨模板请使用新域名~",
+      "决定用户打开渠道链接后，手机号输入框默认显示的区号。",
+      "仅 Facebook / TikTok 支持 CAPI 探测",
+      "用户点击广告后，可直接在 Facebook 内置浏览器里完成登录上号，无需跳出 App。"
+    ])
+      assert.ok(normalizedDrawer.includes(text), text);
+
+    assert.ok(drawer.includes('type="textarea"'));
+    assert.ok(drawer.includes("inline-prompt"));
+    assert.doesNotMatch(drawer, /el-color-picker|label="状态"|事件映射/);
   });
 
-  it("uses option-driven fee, platform and event facts with MIXED/SPECIFIC dial behavior", () => {
+  it("uses fixed preview owners/templates and option-driven platform facts", () => {
     assert.ok(page.includes("options.uploadFee.label"));
     assert.ok(page.includes("options.uploadFee.value"));
     assert.ok(drawer.includes("混合（不限国家）"));
     assert.ok(drawer.includes("dialCodeOptions"));
     assert.ok(drawer.includes("options.platforms"));
-    assert.ok(drawer.includes("options.eventOptions"));
+    for (const owner of [
+      "test",
+      "testuser456",
+      "Rahu",
+      "ForeverAditya",
+      "pingzi",
+      "gose-"
+    ])
+      assert.ok(drawer.includes(owner), owner);
+    for (const template of [
+      "约会三代",
+      "基础领奖",
+      "基础约会-投男粉",
+      "基础约会-投女粉",
+      "约会二代"
+    ])
+      assert.ok(drawer.includes(template), template);
+    assert.ok(drawer.includes("reportingEventOptions"));
     assert.ok(drawer.includes("countryMode"));
   });
 
   it("offers all countries on first open and locks SPECIFIC to its dial code", () => {
     const countryField = drawerFormItem("目标国家");
-    const dialCodeField = drawerFormItem("默认区号");
+    const dialCodeField = drawerFormItem("预选区号");
     assert.ok(drawer.includes("@iconify/vue/offline"));
     assert.ok(drawer.includes("@iconify/json/json/flagpack.json"));
     assert.ok(countryField.includes('v-for="country in options.countries"'));
@@ -105,7 +135,7 @@ describe("buyer channel page contract", () => {
     assert.ok(countryField.includes('#label="{ value }"'));
     assert.ok(countryField.includes("country-check"));
     assert.doesNotMatch(countryField, /\{\{\s*country\.flag/);
-    assert.match(channelForm, /countryMode:\s*"MIXED"/);
+    assert.match(channelForm, /countryMode:\s*"SPECIFIC"/);
     assert.match(
       drawer,
       /targetCountry:\s*\[\s*\{[\s\S]*?required:\s*true[\s\S]*?validateTargetCountry/

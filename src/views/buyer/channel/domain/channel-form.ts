@@ -39,7 +39,7 @@ export function createDefaultChannelForm(): ChannelFormModel {
     name: "",
     ownerId: undefined,
     targetCountry: "",
-    countryMode: "MIXED",
+    countryMode: "SPECIFIC",
     templateId: undefined,
     themeColor: "#409EFF",
     domain: "",

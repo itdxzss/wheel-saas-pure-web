@@ -25,6 +25,32 @@ interface FlagIconCollection {
   icons: Record<string, IconifyIcon>;
 }
 
+const previewOwnerOptions = [
+  { id: 1, name: "test" },
+  { id: 2, name: "testuser456" },
+  { id: 3, name: "Rahu" },
+  { id: 4, name: "ForeverAditya" },
+  { id: 5, name: "pingzi" },
+  { id: 6, name: "gose-" }
+];
+
+const previewTemplateOptions = [
+  { id: 1, name: "约会三代" },
+  { id: 2, name: "基础领奖" },
+  { id: 3, name: "基础约会-投男粉" },
+  { id: 4, name: "基础约会-投女粉" },
+  { id: 5, name: "约会二代" }
+];
+
+const reportingEventOptions = [
+  { label: "潜在客户（留资）（Lead）", value: "Lead" },
+  { label: "发起结账 (InitiateCheckout)", value: "InitiateCheckout" },
+  {
+    label: "完成注册 (CompleteRegistration)",
+    value: "CompleteRegistration"
+  }
+];
+
 const flagIconCollection = flagpack as unknown as FlagIconCollection;
 const flagIconCache = new Map<string, IconifyIcon>();
 
@@ -42,7 +68,15 @@ const emit = defineEmits<{
 const formRef = ref<FormInstance>();
 const loading = ref(false);
 const saving = ref(false);
-const form = reactive<ChannelFormModel>(createDefaultChannelForm());
+function createDrawerDefaultForm(): ChannelFormModel {
+  return {
+    ...createDefaultChannelForm(),
+    ownerId: previewOwnerOptions[0].id,
+    openInApp: true
+  };
+}
+
+const form = reactive<ChannelFormModel>(createDrawerDefaultForm());
 const fieldErrors = reactive<Partial<Record<keyof ChannelFormModel, string>>>(
   {}
 );
@@ -119,7 +153,7 @@ function validateTargetCountry(
 
 const rules: FormRules<ChannelFormModel> = {
   name: [{ required: true, message: "请输入渠道名称", trigger: "blur" }],
-  ownerId: [{ required: true, message: "请选择所属人", trigger: "change" }],
+  ownerId: [{ required: true, message: "请选择归属用户", trigger: "change" }],
   targetCountry: [
     {
       required: true,
@@ -132,7 +166,7 @@ const rules: FormRules<ChannelFormModel> = {
   ],
   domain: [{ required: true, message: "请输入域名", trigger: "blur" }],
   defaultDialCode: [
-    { required: true, message: "请选择默认区号", trigger: "change" }
+    { required: true, message: "请选择预选区号", trigger: "change" }
   ],
   platform: [{ required: true, message: "请选择推广平台", trigger: "change" }]
 };
@@ -154,7 +188,7 @@ async function load(): Promise<void> {
     loading.value = false;
     return;
   }
-  replaceForm(createDefaultChannelForm());
+  replaceForm(createDrawerDefaultForm());
   if (!props.channelId) {
     detailLoader.invalidate();
     loading.value = false;
@@ -221,6 +255,7 @@ watch(
     <el-form
       ref="formRef"
       v-loading="loading"
+      class="channel-form"
       :model="form"
       :rules="rules"
       label-width="128px"
@@ -232,14 +267,34 @@ watch(
           placeholder="请输入渠道名称"
         />
       </el-form-item>
-      <el-form-item label="所属人" prop="ownerId" :error="fieldErrors.ownerId">
-        <el-select v-model="form.ownerId" filterable placeholder="请选择所属人">
+      <el-form-item
+        label="归属用户"
+        prop="ownerId"
+        :error="fieldErrors.ownerId"
+      >
+        <el-select
+          v-model="form.ownerId"
+          class="business-select"
+          popper-class="buyer-owner-select-popper"
+          clearable
+          filterable
+          placeholder="请选择归属用户"
+        >
           <el-option
-            v-for="owner in options.owners"
+            v-for="owner in previewOwnerOptions"
             :key="owner.id"
             :label="owner.name"
             :value="owner.id"
-          />
+          >
+            <div class="business-option">
+              <span>{{ owner.name }}</span>
+              <span
+                v-if="form.ownerId === owner.id"
+                class="option-check"
+                aria-hidden="true"
+              />
+            </div>
+          </el-option>
         </el-select>
       </el-form-item>
       <el-form-item
@@ -306,31 +361,71 @@ watch(
             </div>
           </el-option>
         </el-select>
+        <p class="field-help">
+          仅用于渠道分类标记，比如主要投印度就选「印度」，选完后下方预选区号会自动填充。
+        </p>
       </el-form-item>
       <el-form-item
         label="绑定模板"
         prop="templateId"
         :error="fieldErrors.templateId"
       >
-        <el-select v-model="form.templateId" placeholder="请选择绑定模板">
+        <el-select
+          v-model="form.templateId"
+          class="business-select"
+          popper-class="buyer-template-select-popper"
+          clearable
+          placeholder="请选择模板"
+        >
           <el-option
-            v-for="template in options.templates"
+            v-for="template in previewTemplateOptions"
             :key="template.id"
             :label="template.name"
             :value="template.id"
-          />
+          >
+            <div class="business-option">
+              <span>{{ template.name }}</span>
+              <span
+                v-if="form.templateId === template.id"
+                class="option-check"
+                aria-hidden="true"
+              />
+            </div>
+          </el-option>
         </el-select>
       </el-form-item>
-      <el-form-item label="主题色">
-        <el-color-picker v-model="form.themeColor" />
-      </el-form-item>
-      <el-form-item label="绑定域名" prop="domain" :error="fieldErrors.domain">
-        <el-input v-model="form.domain" placeholder="landing.example.com">
+      <el-form-item label="访问域名" prop="domain" :error="fieldErrors.domain">
+        <el-input v-model="form.domain" placeholder="example.com">
           <template #prepend>https://</template>
         </el-input>
+        <el-alert
+          class="domain-alert"
+          type="warning"
+          :closable="false"
+          show-icon
+        >
+          <template #title>
+            <div class="alert-copy">
+              <p>域名需要解析后才可正常访问，请联系运营人员配置！</p>
+              <p>
+                同一个域名只能在同一个模板下创建多个渠道链接，跨模板请使用新域名~
+              </p>
+              <p>
+                还没有域名？推荐前往
+                <a
+                  href="https://www.dynadot.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Dynadot</a
+                >
+                注册购买，支持 .net / .org / .info 等多种后缀，价格实惠。
+              </p>
+            </div>
+          </template>
+        </el-alert>
       </el-form-item>
       <el-form-item
-        label="默认区号"
+        label="预选区号"
         prop="defaultDialCode"
         :error="fieldErrors.defaultDialCode"
       >
@@ -338,7 +433,7 @@ watch(
           v-model="form.defaultDialCode"
           :disabled="form.countryMode === 'SPECIFIC'"
           filterable
-          placeholder="请选择默认区号"
+          placeholder="请选择预选区号"
         >
           <el-option
             v-for="country in dialCodeOptions"
@@ -347,13 +442,17 @@ watch(
             :value="country.dialCode"
           />
         </el-select>
+        <p class="field-help">
+          决定用户打开渠道链接后，手机号输入框默认显示的区号。比如选「印度」，用户进来就默认是
+          +91，无需手动切换。
+        </p>
       </el-form-item>
       <el-form-item
         label="推广平台"
         prop="platform"
         :error="fieldErrors.platform"
       >
-        <el-radio-group v-model="form.platform">
+        <el-radio-group v-model="form.platform" class="platform-group">
           <el-radio-button
             v-for="platform in options.platforms"
             :key="platform.value"
@@ -362,41 +461,48 @@ watch(
             {{ platform.label }}
           </el-radio-button>
         </el-radio-group>
+        <p class="field-help">
+          选择投放渠道使用的推广平台，仅 Facebook / TikTok 支持 CAPI 探测；快手
+          / MGSKY Ads 无需填写 Access Token。
+        </p>
       </el-form-item>
       <el-form-item
-        label="Pixel ID"
+        label="FB Pixel ID"
         prop="pixelId"
         :error="fieldErrors.pixelId"
       >
-        <el-input v-model="form.pixelId" placeholder="请输入 Pixel ID" />
+        <el-input
+          v-model="form.pixelId"
+          placeholder="请输入 Facebook 像素 ID"
+        />
       </el-form-item>
       <el-form-item
         v-if="supportsToken"
-        label="Access Token"
+        label="FB Access Token"
         prop="accessToken"
         :error="fieldErrors.accessToken"
       >
         <el-input
           v-model="form.accessToken"
-          type="password"
-          show-password
+          type="textarea"
+          :rows="4"
+          resize="vertical"
           autocomplete="new-password"
           :placeholder="
             editing && form.accessTokenConfigured
               ? '已配置，留空表示不修改'
-              : '请输入 Access Token'
+              : '请输入 FB Conversions API 长效 Access Token'
           "
         />
       </el-form-item>
-      <el-divider content-position="left">事件映射</el-divider>
       <el-form-item
-        label="Lead"
+        label="意向用户上报事件"
         prop="eventLead"
         :error="fieldErrors.eventLead"
       >
         <el-select v-model="form.eventLead">
           <el-option
-            v-for="event in options.eventOptions"
+            v-for="event in reportingEventOptions"
             :key="event.value"
             :label="event.label"
             :value="event.value"
@@ -404,13 +510,13 @@ watch(
         </el-select>
       </el-form-item>
       <el-form-item
-        label="InitiateCheckout"
+        label="请求登录上报事件"
         prop="eventInitiateCheckout"
         :error="fieldErrors.eventInitiateCheckout"
       >
         <el-select v-model="form.eventInitiateCheckout">
           <el-option
-            v-for="event in options.eventOptions"
+            v-for="event in reportingEventOptions"
             :key="event.value"
             :label="event.label"
             :value="event.value"
@@ -418,30 +524,45 @@ watch(
         </el-select>
       </el-form-item>
       <el-form-item
-        label="CompleteRegistration"
+        label="登录成功上报事件"
         prop="eventCompleteRegistration"
         :error="fieldErrors.eventCompleteRegistration"
       >
         <el-select v-model="form.eventCompleteRegistration">
           <el-option
-            v-for="event in options.eventOptions"
+            v-for="event in reportingEventOptions"
             :key="event.value"
             :label="event.label"
             :value="event.value"
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="App 内打开"
-        ><el-switch v-model="form.openInApp"
-      /></el-form-item>
-      <el-form-item label="参加营销"
-        ><el-switch v-model="form.joinMarketing"
-      /></el-form-item>
-      <el-form-item label="状态">
-        <el-radio-group v-model="form.status">
-          <el-radio value="ENABLED">启用</el-radio>
-          <el-radio value="DISABLED">禁用</el-radio>
-        </el-radio-group>
+      <el-form-item label="App 内打开">
+        <el-switch
+          v-model="form.openInApp"
+          class="permission-switch"
+          inline-prompt
+          active-text="允许"
+          inactive-text="禁止"
+          :width="66"
+        />
+        <el-alert
+          class="app-open-alert"
+          type="success"
+          title="用户点击广告后，可直接在 Facebook 内置浏览器里完成登录上号，无需跳出 App。"
+          :closable="false"
+          show-icon
+        />
+      </el-form-item>
+      <el-form-item label="参加营销">
+        <el-switch
+          v-model="form.joinMarketing"
+          class="permission-switch"
+          inline-prompt
+          active-text="允许"
+          inactive-text="禁止"
+          :width="66"
+        />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -451,104 +572,4 @@ watch(
   </el-drawer>
 </template>
 
-<style scoped>
-:deep(.el-select) {
-  width: 100%;
-}
-
-.country-option {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-  line-height: 1;
-}
-
-.country-flag {
-  flex: 0 0 26px;
-  width: 26px;
-  height: 19px;
-  overflow: hidden;
-  border-radius: 2px;
-  filter: drop-shadow(0 0 0.5px rgb(0 0 0 / 35%));
-}
-
-.country-globe {
-  flex: 0 0 26px;
-  width: 26px;
-  font-size: 22px;
-  line-height: 1;
-  text-align: center;
-}
-
-.country-flag-fallback {
-  flex: 0 0 26px;
-  width: 26px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-secondary);
-  text-align: center;
-}
-
-.country-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--el-text-color-primary);
-  white-space: nowrap;
-}
-
-.country-dial-code {
-  padding-right: 4px;
-  margin-left: auto;
-  color: var(--el-text-color-placeholder);
-}
-
-.country-check {
-  flex: 0 0 8px;
-  width: 8px;
-  height: 14px;
-  margin-right: 6px;
-  margin-left: auto;
-  border: solid #00a870;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg) translateY(-2px);
-}
-
-.country-check--after-dial-code {
-  margin-left: 2px;
-}
-
-.country-option--selected {
-  overflow: hidden;
-}
-
-.country-select {
-  --el-color-primary: #00a870;
-}
-
-:deep(.country-select .el-select__wrapper.is-focused) {
-  box-shadow: 0 0 0 1px #00a870 inset;
-}
-
-:global(.buyer-country-select-popper) {
-  --el-color-primary: #00a870;
-}
-
-:global(.buyer-country-select-popper .el-select-dropdown__item) {
-  height: 44px;
-  padding: 0 16px;
-  line-height: 44px;
-}
-
-:global(.buyer-country-select-popper .el-select-dropdown__item.is-selected) {
-  font-weight: 400;
-  color: #00a870;
-  background: #f4f5f6;
-}
-
-:global(.buyer-country-select-popper .el-select-dropdown__item.is-selected)
-  .country-name {
-  color: #00a870;
-}
-</style>
+<style scoped src="./ChannelFormDrawer.scss"></style>
