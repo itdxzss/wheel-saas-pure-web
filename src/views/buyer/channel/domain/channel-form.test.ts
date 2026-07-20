@@ -13,6 +13,8 @@ describe("shared channel form", () => {
     const first = createDefaultChannelForm();
     first.name = "dirty";
     assert.equal(createDefaultChannelForm().name, "");
+    assert.equal(first.countryMode, "MIXED");
+    assert.equal(first.targetCountry, "");
 
     const recordA = hydrateChannelForm({
       id: 1,

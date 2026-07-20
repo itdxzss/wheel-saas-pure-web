@@ -7,6 +7,10 @@ const drawer = readFileSync(
   new URL("./components/ChannelFormDrawer.vue", import.meta.url),
   "utf8"
 );
+const channelForm = readFileSync(
+  new URL("./domain/channel-form.ts", import.meta.url),
+  "utf8"
+);
 
 function drawerFormItem(label: string): string {
   const labelIndex = drawer.indexOf(`label="${label}"`);
@@ -88,10 +92,20 @@ describe("buyer channel page contract", () => {
   it("offers all countries on first open and locks SPECIFIC to its dial code", () => {
     const countryField = drawerFormItem("目标国家");
     const dialCodeField = drawerFormItem("默认区号");
+    assert.ok(drawer.includes("@iconify/vue/offline"));
+    assert.ok(drawer.includes("@iconify/json/json/flagpack.json"));
     assert.ok(countryField.includes('v-for="country in options.countries"'));
-    assert.ok(countryField.includes("country.flag"));
+    assert.ok(countryField.includes("countryFlagIcon(country.code)"));
     assert.ok(countryField.includes("country.dialCode"));
     assert.ok(countryField.includes("country-option"));
+    assert.ok(countryField.includes("clearable"));
+    assert.ok(
+      countryField.includes('popper-class="buyer-country-select-popper"')
+    );
+    assert.ok(countryField.includes('#label="{ value }"'));
+    assert.ok(countryField.includes("country-check"));
+    assert.doesNotMatch(countryField, /\{\{\s*country\.flag/);
+    assert.match(channelForm, /countryMode:\s*"MIXED"/);
     assert.match(
       drawer,
       /targetCountry:\s*\[\s*\{[\s\S]*?required:\s*true[\s\S]*?validateTargetCountry/

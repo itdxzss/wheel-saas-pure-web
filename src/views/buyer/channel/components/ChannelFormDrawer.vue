@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
+import { Icon, type IconifyIcon } from "@iconify/vue/offline";
+import flagpack from "@iconify/json/json/flagpack.json";
 import {
   createBuyerChannel,
   getBuyerChannel,
@@ -16,6 +18,15 @@ import {
   type ChannelFormModel
 } from "../domain/channel-form";
 import { createChannelDetailLoader } from "../domain/channel-detail-loader";
+
+interface FlagIconCollection {
+  width?: number;
+  height?: number;
+  icons: Record<string, IconifyIcon>;
+}
+
+const flagIconCollection = flagpack as unknown as FlagIconCollection;
+const flagIconCache = new Map<string, IconifyIcon>();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -39,6 +50,31 @@ const editing = computed(() => props.channelId !== undefined);
 const supportsToken = computed(
   () => form.platform === "FACEBOOK" || form.platform === "TIKTOK"
 );
+
+function countryFlagIcon(code: string): IconifyIcon | undefined {
+  const normalizedCode = code.trim().toLowerCase();
+  if (!normalizedCode) return undefined;
+  const cached = flagIconCache.get(normalizedCode);
+  if (cached) return cached;
+  const source = flagIconCollection.icons[normalizedCode];
+  if (!source) return undefined;
+  const icon: IconifyIcon = {
+    ...source,
+    width: source.width ?? flagIconCollection.width ?? 32,
+    height: source.height ?? flagIconCollection.height ?? 24
+  };
+  flagIconCache.set(normalizedCode, icon);
+  return icon;
+}
+
+function countrySelectionLabel(value: unknown): string {
+  if (value === "__MIXED__") return "混合（不限国家）";
+  if (typeof value !== "string") return "";
+  return (
+    props.options.countries.find(country => country.code === value)?.name ?? ""
+  );
+}
+
 const countrySelection = computed({
   get: () => (form.countryMode === "MIXED" ? "__MIXED__" : form.targetCountry),
   set: value => {
@@ -53,10 +89,11 @@ const countrySelection = computed({
       return;
     }
     form.countryMode = "SPECIFIC";
-    form.targetCountry = value;
+    form.targetCountry = typeof value === "string" ? value : "";
     form.defaultDialCode =
-      props.options.countries.find(country => country.code === value)
-        ?.dialCode ?? "";
+      props.options.countries.find(
+        country => country.code === form.targetCountry
+      )?.dialCode ?? "";
   }
 });
 const dialCodeOptions = computed(() =>
@@ -212,25 +249,60 @@ watch(
       >
         <el-select
           v-model="countrySelection"
+          class="country-select"
+          popper-class="buyer-country-select-popper"
+          clearable
           filterable
           placeholder="请选择目标国家"
         >
+          <template #label="{ value }">
+            <div class="country-option country-option--selected">
+              <span v-if="value === '__MIXED__'" class="country-globe">🌐</span>
+              <Icon
+                v-else-if="countryFlagIcon(String(value))"
+                :icon="countryFlagIcon(String(value))"
+                class="country-flag"
+                aria-hidden="true"
+              />
+              <span class="country-name">{{
+                countrySelectionLabel(value)
+              }}</span>
+            </div>
+          </template>
           <el-option label="🌐 混合（不限国家）" value="__MIXED__">
             <div class="country-option">
-              <span class="country-flag">🌐</span>
+              <span class="country-globe">🌐</span>
               <span class="country-name">混合（不限国家）</span>
+              <span
+                v-if="countrySelection === '__MIXED__'"
+                class="country-check"
+                aria-hidden="true"
+              />
             </div>
           </el-option>
           <el-option
             v-for="country in options.countries"
             :key="country.code"
-            :label="`${country.flag || '🏳️'} ${country.name} ${country.dialCode}`"
+            :label="`${country.name} ${country.dialCode}`"
             :value="country.code"
           >
             <div class="country-option">
-              <span class="country-flag">{{ country.flag || "🏳️" }}</span>
+              <Icon
+                v-if="countryFlagIcon(country.code)"
+                :icon="countryFlagIcon(country.code)"
+                class="country-flag"
+                aria-hidden="true"
+              />
+              <span v-else class="country-flag-fallback">{{
+                country.code
+              }}</span>
               <span class="country-name">{{ country.name }}</span>
               <span class="country-dial-code">{{ country.dialCode }}</span>
+              <span
+                v-if="countrySelection === country.code"
+                class="country-check country-check--after-dial-code"
+                aria-hidden="true"
+              />
             </div>
           </el-option>
         </el-select>
@@ -386,23 +458,97 @@ watch(
 
 .country-option {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
   width: 100%;
-}
-
-.country-flag {
-  width: 24px;
-  font-size: 18px;
+  min-width: 0;
   line-height: 1;
 }
 
+.country-flag {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 19px;
+  overflow: hidden;
+  border-radius: 2px;
+  filter: drop-shadow(0 0 0.5px rgb(0 0 0 / 35%));
+}
+
+.country-globe {
+  flex: 0 0 26px;
+  width: 26px;
+  font-size: 22px;
+  line-height: 1;
+  text-align: center;
+}
+
+.country-flag-fallback {
+  flex: 0 0 26px;
+  width: 26px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+}
+
 .country-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--el-text-color-primary);
+  white-space: nowrap;
 }
 
 .country-dial-code {
+  padding-right: 4px;
   margin-left: auto;
   color: var(--el-text-color-placeholder);
+}
+
+.country-check {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 14px;
+  margin-right: 6px;
+  margin-left: auto;
+  border: solid #00a870;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-2px);
+}
+
+.country-check--after-dial-code {
+  margin-left: 2px;
+}
+
+.country-option--selected {
+  overflow: hidden;
+}
+
+.country-select {
+  --el-color-primary: #00a870;
+}
+
+:deep(.country-select .el-select__wrapper.is-focused) {
+  box-shadow: 0 0 0 1px #00a870 inset;
+}
+
+:global(.buyer-country-select-popper) {
+  --el-color-primary: #00a870;
+}
+
+:global(.buyer-country-select-popper .el-select-dropdown__item) {
+  height: 44px;
+  padding: 0 16px;
+  line-height: 44px;
+}
+
+:global(.buyer-country-select-popper .el-select-dropdown__item.is-selected) {
+  font-weight: 400;
+  color: #00a870;
+  background: #f4f5f6;
+}
+
+:global(.buyer-country-select-popper .el-select-dropdown__item.is-selected)
+  .country-name {
+  color: #00a870;
 }
 </style>
