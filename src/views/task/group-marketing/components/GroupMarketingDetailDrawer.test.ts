@@ -15,7 +15,7 @@ describe("group marketing detail drawer", () => {
     );
     assert.match(
       source,
-      /<span>群组状态<\/span>\s*<span>群名称<\/span>\s*<span>单群发送条数<\/span>\s*<span>最后发送时间<\/span>\s*<span>执行情况<\/span>/
+      /<span>群组状态<\/span>\s*<span>群名称<\/span>\s*<span>群 GID<\/span>\s*<span>单群发送条数<\/span>\s*<span>最后发送时间<\/span>\s*<span>执行情况<\/span>/
     );
     assert.doesNotMatch(source, />群组链接</);
     assert.doesNotMatch(source, />最近原因</);
@@ -38,6 +38,7 @@ describe("group marketing detail drawer", () => {
       source,
       /group\.groupName \|\| group\.groupJid \|\| "未命名群组"/
     );
+    assert.match(source, /group\.groupJid \|\| "-"/);
     assert.match(source, /formatEpoch\(group\.lastSentAt\)/);
   });
 

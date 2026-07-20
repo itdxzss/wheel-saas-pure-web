@@ -106,6 +106,7 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                 <div class="group-rollup-header">
                   <span>群组状态</span>
                   <span>群名称</span>
+                  <span>群 GID</span>
                   <span>单群发送条数</span>
                   <span>最后发送时间</span>
                   <span>执行情况</span>
@@ -129,6 +130,12 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                       :title="group.groupName || group.groupJid || '未命名群组'"
                     >
                       {{ group.groupName || group.groupJid || "未命名群组" }}
+                    </span>
+                    <span
+                      class="group-rollup-text"
+                      :title="group.groupJid || '-'"
+                    >
+                      {{ group.groupJid || "-" }}
                     </span>
                     <span class="group-rollup-number">
                       {{ group.sentMessageCount }}
@@ -195,10 +202,9 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 .group-rollup-header,
 .group-rollup-detail-row {
   display: grid;
-  grid-template-columns: 120px minmax(180px, 1.3fr) 120px 170px minmax(
-      180px,
-      1fr
-    );
+  grid-template-columns:
+    120px minmax(180px, 1.3fr) minmax(210px, 1.4fr) 120px 170px
+    minmax(180px, 1fr);
   gap: 16px;
   align-items: center;
   width: 100%;
