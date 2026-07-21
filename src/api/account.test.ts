@@ -245,6 +245,8 @@ describe("account operation API", () => {
           numberSource: 1,
           friendsNum: 0,
           groupsNum: 2,
+          country: "印度",
+          countryFlag: "🇮🇳",
           dispatchedAt: 1782705600000
         }
       ],
@@ -258,6 +260,8 @@ describe("account operation API", () => {
     assert.equal(result.list?.[0]?.number_source, "买量");
     assert.equal(result.list?.[0]?.friends_num, 0);
     assert.equal(result.list?.[0]?.groups_num, 2);
+    assert.equal(result.list?.[0]?.country, "印度");
+    assert.equal(result.list?.[0]?.country_flag, "🇮🇳");
     assert.equal(result.list?.[0]?.dispatched_at, "2026-06-29 12:00:00");
   });
 
