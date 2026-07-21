@@ -13,12 +13,16 @@ const {
   columns,
   errorMessage,
   loading,
+  page,
+  pageSize,
+  pageSizes,
   previewRow,
   previewVisible,
   remarkDraft,
   remarkSaving,
   remarkVisible,
   rows,
+  total,
   changeVisibility,
   openPreview,
   openRemark,
@@ -57,6 +61,11 @@ async function onSaveRemark(): Promise<void> {
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "备注更新失败");
   }
+}
+
+async function onPageSizeChange(): Promise<void> {
+  page.value = 1;
+  await refreshRows();
 }
 
 onMounted(() => void refreshRows());
@@ -184,6 +193,16 @@ onMounted(() => void refreshRows());
             <el-empty description="暂无模板" />
           </template>
         </el-table>
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          class="pagination"
+          :page-sizes="pageSizes"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="total"
+          @current-change="refreshRows"
+          @size-change="onPageSizeChange"
+        />
       </template>
     </PureTableBar>
 
@@ -215,5 +234,10 @@ onMounted(() => void refreshRows());
 
 .param-tag {
   margin: 2px 4px 2px 0;
+}
+
+.pagination {
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

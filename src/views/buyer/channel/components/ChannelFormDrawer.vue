@@ -18,29 +18,19 @@ import {
   type ChannelFormModel
 } from "../domain/channel-form";
 import { createChannelDetailLoader } from "../domain/channel-detail-loader";
+import {
+  platformFieldConfigs,
+  previewPlatformOptions
+} from "./channel-platform-fields";
+import { usePreselectedCountrySelection } from "./channel-country-selection";
+import { previewOwnerOptions } from "./channel-preview-options";
+import { useChannelTrackingFields } from "./channel-tracking-fields";
 
 interface FlagIconCollection {
   width?: number;
   height?: number;
   icons: Record<string, IconifyIcon>;
 }
-
-const previewOwnerOptions = [
-  { id: 1, name: "test" },
-  { id: 2, name: "testuser456" },
-  { id: 3, name: "Rahu" },
-  { id: 4, name: "ForeverAditya" },
-  { id: 5, name: "pingzi" },
-  { id: 6, name: "gose-" }
-];
-
-const previewTemplateOptions = [
-  { id: 1, name: "约会三代" },
-  { id: 2, name: "基础领奖" },
-  { id: 3, name: "基础约会-投男粉" },
-  { id: 4, name: "基础约会-投女粉" },
-  { id: 5, name: "约会二代" }
-];
 
 const reportingEventOptions = [
   { label: "潜在客户（留资）（Lead）", value: "Lead" },
@@ -81,9 +71,15 @@ const fieldErrors = reactive<Partial<Record<keyof ChannelFormModel, string>>>(
   {}
 );
 const editing = computed(() => props.channelId !== undefined);
-const supportsToken = computed(
-  () => form.platform === "FACEBOOK" || form.platform === "TIKTOK"
-);
+const platformFieldConfig = computed(() => platformFieldConfigs[form.platform]);
+const {
+  supportsToken,
+  requiresAccessToken,
+  requiresPixelId,
+  appOpenMessage,
+  validatePixelId,
+  validateAccessToken
+} = useChannelTrackingFields(form, editing, platformFieldConfig);
 
 function countryFlagIcon(code: string): IconifyIcon | undefined {
   const normalizedCode = code.trim().toLowerCase();
@@ -115,10 +111,12 @@ const countrySelection = computed({
     if (value === "__MIXED__") {
       form.countryMode = "MIXED";
       const supported = props.options.countries.some(
-        country => country.dialCode === form.defaultDialCode
+        country => country.code === form.preselectedCountry
       );
       if (!supported) {
-        form.defaultDialCode = props.options.countries[0]?.dialCode ?? "";
+        const firstCountry = props.options.countries[0];
+        form.preselectedCountry = firstCountry?.code ?? "";
+        form.defaultDialCode = firstCountry?.dialCode ?? "";
       }
       return;
     }
@@ -128,8 +126,13 @@ const countrySelection = computed({
       props.options.countries.find(
         country => country.code === form.targetCountry
       )?.dialCode ?? "";
+    form.preselectedCountry = form.targetCountry;
   }
 });
+const preselectedCountrySelection = usePreselectedCountrySelection(
+  form,
+  () => props.options.countries
+);
 const dialCodeOptions = computed(() =>
   form.countryMode === "MIXED"
     ? props.options.countries
@@ -165,10 +168,12 @@ const rules: FormRules<ChannelFormModel> = {
     { required: true, message: "请选择绑定模板", trigger: "change" }
   ],
   domain: [{ required: true, message: "请输入域名", trigger: "blur" }],
-  defaultDialCode: [
+  preselectedCountry: [
     { required: true, message: "请选择预选区号", trigger: "change" }
   ],
-  platform: [{ required: true, message: "请选择推广平台", trigger: "change" }]
+  platform: [{ required: true, message: "请选择推广平台", trigger: "change" }],
+  pixelId: [{ validator: validatePixelId, trigger: ["blur", "change"] }],
+  accessToken: [{ validator: validateAccessToken, trigger: ["blur", "change"] }]
 };
 
 function replaceForm(next: ChannelFormModel): void {
@@ -375,10 +380,11 @@ watch(
           class="business-select"
           popper-class="buyer-template-select-popper"
           clearable
+          filterable
           placeholder="请选择模板"
         >
           <el-option
-            v-for="template in previewTemplateOptions"
+            v-for="template in options.templates"
             :key="template.id"
             :label="template.name"
             :value="template.id"
@@ -426,11 +432,11 @@ watch(
       </el-form-item>
       <el-form-item
         label="预选区号"
-        prop="defaultDialCode"
-        :error="fieldErrors.defaultDialCode"
+        prop="preselectedCountry"
+        :error="fieldErrors.preselectedCountry"
       >
         <el-select
-          v-model="form.defaultDialCode"
+          v-model="preselectedCountrySelection"
           :disabled="form.countryMode === 'SPECIFIC'"
           filterable
           placeholder="请选择预选区号"
@@ -439,7 +445,7 @@ watch(
             v-for="country in dialCodeOptions"
             :key="`${country.code}-${country.dialCode}`"
             :label="`${country.name} ${country.dialCode}`"
-            :value="country.dialCode"
+            :value="country.code"
           />
         </el-select>
         <p class="field-help">
@@ -448,13 +454,14 @@ watch(
         </p>
       </el-form-item>
       <el-form-item
+        class="platform-form-item"
         label="推广平台"
         prop="platform"
         :error="fieldErrors.platform"
       >
         <el-radio-group v-model="form.platform" class="platform-group">
           <el-radio-button
-            v-for="platform in options.platforms"
+            v-for="platform in previewPlatformOptions"
             :key="platform.value"
             :value="platform.value"
           >
@@ -467,19 +474,21 @@ watch(
         </p>
       </el-form-item>
       <el-form-item
-        label="FB Pixel ID"
+        :label="platformFieldConfig.pixelLabel"
         prop="pixelId"
+        :required="requiresPixelId"
         :error="fieldErrors.pixelId"
       >
         <el-input
           v-model="form.pixelId"
-          placeholder="请输入 Facebook 像素 ID"
+          :placeholder="platformFieldConfig.pixelPlaceholder"
         />
       </el-form-item>
       <el-form-item
         v-if="supportsToken"
-        label="FB Access Token"
+        :label="platformFieldConfig.accessTokenLabel || ''"
         prop="accessToken"
+        :required="requiresAccessToken"
         :error="fieldErrors.accessToken"
       >
         <el-input
@@ -491,52 +500,54 @@ watch(
           :placeholder="
             editing && form.accessTokenConfigured
               ? '已配置，留空表示不修改'
-              : '请输入 FB Conversions API 长效 Access Token'
+              : platformFieldConfig.accessTokenPlaceholder
           "
         />
       </el-form-item>
-      <el-form-item
-        label="意向用户上报事件"
-        prop="eventLead"
-        :error="fieldErrors.eventLead"
-      >
-        <el-select v-model="form.eventLead">
-          <el-option
-            v-for="event in reportingEventOptions"
-            :key="event.value"
-            :label="event.label"
-            :value="event.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item
-        label="请求登录上报事件"
-        prop="eventInitiateCheckout"
-        :error="fieldErrors.eventInitiateCheckout"
-      >
-        <el-select v-model="form.eventInitiateCheckout">
-          <el-option
-            v-for="event in reportingEventOptions"
-            :key="event.value"
-            :label="event.label"
-            :value="event.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item
-        label="登录成功上报事件"
-        prop="eventCompleteRegistration"
-        :error="fieldErrors.eventCompleteRegistration"
-      >
-        <el-select v-model="form.eventCompleteRegistration">
-          <el-option
-            v-for="event in reportingEventOptions"
-            :key="event.value"
-            :label="event.label"
-            :value="event.value"
-          />
-        </el-select>
-      </el-form-item>
+      <template v-if="platformFieldConfig.showEvents">
+        <el-form-item
+          label="意向用户上报事件"
+          prop="eventLead"
+          :error="fieldErrors.eventLead"
+        >
+          <el-select v-model="form.eventLead">
+            <el-option
+              v-for="event in reportingEventOptions"
+              :key="event.value"
+              :label="event.label"
+              :value="event.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item
+          label="请求登录上报事件"
+          prop="eventInitiateCheckout"
+          :error="fieldErrors.eventInitiateCheckout"
+        >
+          <el-select v-model="form.eventInitiateCheckout">
+            <el-option
+              v-for="event in reportingEventOptions"
+              :key="event.value"
+              :label="event.label"
+              :value="event.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item
+          label="登录成功上报事件"
+          prop="eventCompleteRegistration"
+          :error="fieldErrors.eventCompleteRegistration"
+        >
+          <el-select v-model="form.eventCompleteRegistration">
+            <el-option
+              v-for="event in reportingEventOptions"
+              :key="event.value"
+              :label="event.label"
+              :value="event.value"
+            />
+          </el-select>
+        </el-form-item>
+      </template>
       <el-form-item label="App 内打开">
         <el-switch
           v-model="form.openInApp"
@@ -549,7 +560,7 @@ watch(
         <el-alert
           class="app-open-alert"
           type="success"
-          title="用户点击广告后，可直接在 Facebook 内置浏览器里完成登录上号，无需跳出 App。"
+          :title="appOpenMessage"
           :closable="false"
           show-icon
         />

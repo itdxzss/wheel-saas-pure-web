@@ -70,6 +70,10 @@
   flex-wrap: wrap;
 }
 
+:deep(.platform-form-item .el-form-item__label::before) {
+  display: none;
+}
+
 :deep(.permission-switch) {
   --el-switch-on-color: #00a870;
 }

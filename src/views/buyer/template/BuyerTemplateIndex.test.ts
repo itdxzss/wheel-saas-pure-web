@@ -25,6 +25,8 @@ describe("buyer template index", () => {
     assert.match(source, />\s*编辑备注\s*</);
     assert.match(source, /tenant:buyer-template:visibility/);
     assert.match(source, /tenant:buyer-template:remark/);
+    assert.match(source, /<el-pagination/);
+    assert.match(source, /pageSizes/);
   });
 
   it("does not add out-of-scope controls", () => {
@@ -32,9 +34,6 @@ describe("buyer template index", () => {
       source,
       />\s*(?:查询|搜索|新增|添加|删除|批量删除)\s*</
     );
-    assert.doesNotMatch(
-      source,
-      /WheelPagination|el-pagination|type=["']selection["']/
-    );
+    assert.doesNotMatch(source, /WheelPagination|type=["']selection["']/);
   });
 });

@@ -21,6 +21,7 @@ export interface ChannelFormModel {
   templateId?: number;
   themeColor: string;
   domain: string;
+  preselectedCountry: string;
   defaultDialCode: string;
   platform: ChannelPlatform;
   pixelId: string;
@@ -43,6 +44,7 @@ export function createDefaultChannelForm(): ChannelFormModel {
     templateId: undefined,
     themeColor: "#409EFF",
     domain: "",
+    preselectedCountry: "",
     defaultDialCode: "",
     platform: "FACEBOOK",
     pixelId: "",
@@ -65,6 +67,9 @@ export function hydrateChannelForm(
     ...detail,
     countryMode: detail.countryMode ?? "SPECIFIC",
     themeColor: detail.themeColor ?? "#409EFF",
+    preselectedCountry:
+      detail.preselectedCountry ??
+      (detail.countryMode === "MIXED" ? "" : detail.targetCountry),
     pixelId: detail.pixelId ?? "",
     accessToken: "",
     eventLead: detail.eventLead ?? "Lead",
@@ -83,6 +88,9 @@ export function buildChannelPayload(
 ): BuyerChannelPayload {
   if (!form.templateId) throw new Error("请选择绑定模板");
   const country = countries.find(item => item.code === form.targetCountry);
+  const preselectedCountry = countries.find(
+    item => item.code === form.preselectedCountry
+  );
   if (
     form.countryMode === "SPECIFIC" &&
     country &&
@@ -90,6 +98,7 @@ export function buildChannelPayload(
   ) {
     throw new Error("默认区号必须与目标国家一致");
   }
+  if (!preselectedCountry) throw new Error("请选择预选区号");
   const payload: BuyerChannelPayload = {
     name: form.name.trim(),
     ownerId: form.ownerId,
@@ -98,7 +107,8 @@ export function buildChannelPayload(
     templateId: form.templateId,
     themeColor: form.themeColor,
     domain: normalizeChannelDomain(form.domain),
-    defaultDialCode: form.defaultDialCode,
+    preselectedCountry: preselectedCountry.code,
+    defaultDialCode: preselectedCountry.dialCode,
     platform: form.platform,
     pixelId: form.pixelId.trim() || undefined,
     eventLead: form.eventLead.trim(),
@@ -172,6 +182,7 @@ export function channelFormFieldErrors(
     "templateId",
     "themeColor",
     "domain",
+    "preselectedCountry",
     "defaultDialCode",
     "platform",
     "pixelId",
@@ -217,13 +228,15 @@ export async function saveChannelForm(
   countries: Array<{ code: string; dialCode: string }> = []
 ): Promise<void> {
   const payload = buildChannelPayload(form, editing, countries);
-  const binding = await services.precheck({
-    domain: payload.domain,
-    templateId: payload.templateId,
-    excludeChannelId: editing ? form.id : undefined
-  });
-  if (!binding.available && binding.templateId !== payload.templateId) {
-    throw new Error(DOMAIN_TEMPLATE_CONFLICT_MESSAGE);
+  if (editing) {
+    const binding = await services.precheck({
+      domain: payload.domain,
+      templateId: payload.templateId,
+      excludeChannelId: form.id
+    });
+    if (!binding.available && binding.templateId !== payload.templateId) {
+      throw new Error(DOMAIN_TEMPLATE_CONFLICT_MESSAGE);
+    }
   }
   try {
     let result: { published: boolean };

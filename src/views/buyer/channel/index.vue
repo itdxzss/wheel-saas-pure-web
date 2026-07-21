@@ -2,34 +2,39 @@
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { PureTableBar } from "@/components/RePureTableBar";
+import FacebookDetectIcon from "~icons/logos/facebook";
+import TikTokDetectIcon from "~icons/logos/tiktok-icon";
 import {
   deleteBuyerChannel,
   detectBuyerChannel,
-  getBuyerChannelOptions,
   listBuyerChannels,
   type BuyerChannelOptions,
   type BuyerChannelRow,
+  type ChannelPlatform,
   type ChannelDetectResult
 } from "@/api/buyer-channel";
+import { listBuyerTemplateOptions } from "@/api/buyer-template";
 import { listIpCountryOptions } from "@/api/resource-ip";
 import ChannelDetectDialog from "./components/ChannelDetectDialog.vue";
 import ChannelFormDrawer from "./components/ChannelFormDrawer.vue";
 import FacebookEventGuideDialog from "./components/FacebookEventGuideDialog.vue";
+import { previewPlatformOptions } from "./components/channel-platform-fields";
+import { previewOwnerOptions } from "./components/channel-preview-options";
 import { toBuyerChannelCountries } from "./domain/channel-country-options";
 import { openSafeChannelLink } from "./domain/channel-domain";
 import { apiErrorMessage } from "@/utils/api-error";
 
 defineOptions({ name: "BuyerChannel" });
 
-const emptyOptions: BuyerChannelOptions = {
-  uploadFee: { label: "上号服务费", value: 0 },
-  platforms: [],
+const previewOptions: BuyerChannelOptions = {
+  uploadFee: { label: "买量通道上号成功费用", value: 0.05 },
+  platforms: previewPlatformOptions,
   eventOptions: [],
   countries: [],
   templates: [],
-  owners: [],
-  creators: [],
-  parentUsers: []
+  owners: previewOwnerOptions,
+  creators: previewOwnerOptions,
+  parentUsers: previewOwnerOptions
 };
 const filters = reactive<{
   targetCountry?: string;
@@ -37,7 +42,7 @@ const filters = reactive<{
   creatorId?: number;
   parentUserId?: number;
 }>({});
-const options = ref<BuyerChannelOptions>(emptyOptions);
+const options = ref<BuyerChannelOptions>(previewOptions);
 const rows = ref<BuyerChannelRow[]>([]);
 const errorMessage = ref("");
 const loading = ref(false);
@@ -107,7 +112,23 @@ function openLink(url: string): void {
   }
 }
 
+function supportsDetection(row: BuyerChannelRow): boolean {
+  return row.platform === "FACEBOOK" || row.platform === "TIKTOK";
+}
+
+function detectionIcon(platform: ChannelPlatform) {
+  return platform === "TIKTOK" ? TikTokDetectIcon : FacebookDetectIcon;
+}
+
+function platformLabel(platform: ChannelPlatform): string {
+  return (
+    previewOptions.platforms.find(option => option.value === platform)?.label ??
+    platform
+  );
+}
+
 async function detect(row: BuyerChannelRow): Promise<void> {
+  if (!supportsDetection(row)) return;
   try {
     detectResult.value = await detectBuyerChannel(row.id);
     detectVisible.value = true;
@@ -133,24 +154,24 @@ async function remove(row: BuyerChannelRow): Promise<void> {
 }
 
 onMounted(async () => {
-  const [channelOptionsResult, countryOptionsResult] = await Promise.allSettled(
-    [getBuyerChannelOptions(), listIpCountryOptions()]
-  );
-
-  const nextOptions: BuyerChannelOptions =
-    channelOptionsResult.status === "fulfilled"
-      ? { ...channelOptionsResult.value, countries: [] }
-      : { ...emptyOptions, countries: [] };
-
-  if (channelOptionsResult.status === "rejected") {
-    ElMessage.error("渠道筛选项加载失败");
-  }
-  if (countryOptionsResult.status === "fulfilled") {
-    nextOptions.countries = toBuyerChannelCountries(countryOptionsResult.value);
-  } else {
+  const [countryResult, templateResult] = await Promise.allSettled([
+    listIpCountryOptions(),
+    listBuyerTemplateOptions()
+  ]);
+  options.value = {
+    ...previewOptions,
+    countries:
+      countryResult.status === "fulfilled"
+        ? toBuyerChannelCountries(countryResult.value)
+        : [],
+    templates: templateResult.status === "fulfilled" ? templateResult.value : []
+  };
+  if (countryResult.status === "rejected") {
     ElMessage.error("目标国家加载失败");
   }
-  options.value = nextOptions;
+  if (templateResult.status === "rejected") {
+    ElMessage.error("模板选项加载失败");
+  }
   await refresh();
 });
 </script>
@@ -265,6 +286,9 @@ onMounted(async () => {
                 row.status === "ENABLED" ? "启用" : "禁用"
               }}</el-tag></template
             >
+            <template v-else-if="column.prop === 'platform'" #default="{ row }"
+              ><el-tag type="info">{{ platformLabel(row.platform) }}</el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="操作" fixed="right" width="210">
             <template #default="{ row }">
@@ -276,11 +300,13 @@ onMounted(async () => {
                 >编辑</el-button
               >
               <el-button
+                v-if="supportsDetection(row)"
                 v-auth="'tenant:buyer-channel:detect'"
                 link
                 type="primary"
+                :icon="detectionIcon(row.platform)"
                 @click="detect(row)"
-                >检测</el-button
+                >探测</el-button
               >
               <el-button
                 v-auth="'tenant:buyer-channel:delete'"

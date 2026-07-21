@@ -76,6 +76,7 @@ describe("shared channel form", () => {
       targetCountry: "",
       templateId: 1,
       domain: "mixed.example.com",
+      preselectedCountry: "GB",
       defaultDialCode: "+44"
     });
     const payload = buildChannelPayload(form, false, [
@@ -84,6 +85,7 @@ describe("shared channel form", () => {
     ]);
     assert.equal(payload.countryMode, "MIXED");
     assert.equal(payload.targetCountry, "");
+    assert.equal(payload.preselectedCountry, "GB");
     assert.equal(payload.defaultDialCode, "+44");
   });
 

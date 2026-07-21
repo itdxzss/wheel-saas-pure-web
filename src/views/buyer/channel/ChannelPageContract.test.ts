@@ -7,9 +7,26 @@ const drawer = readFileSync(
   new URL("./components/ChannelFormDrawer.vue", import.meta.url),
   "utf8"
 );
-const normalizedDrawer = drawer.replace(/\s+/g, " ");
+const platformFields = readFileSync(
+  new URL("./components/channel-platform-fields.ts", import.meta.url),
+  "utf8"
+);
+const trackingFields = readFileSync(
+  new URL("./components/channel-tracking-fields.ts", import.meta.url),
+  "utf8"
+);
+const previewOptions = readFileSync(
+  new URL("./components/channel-preview-options.ts", import.meta.url),
+  "utf8"
+);
+const drawerContract = `${drawer}\n${platformFields}\n${trackingFields}\n${previewOptions}`;
+const normalizedDrawer = drawerContract.replace(/\s+/g, " ");
 const channelForm = readFileSync(
   new URL("./domain/channel-form.ts", import.meta.url),
+  "utf8"
+);
+const channelApi = readFileSync(
+  new URL("../../../api/buyer-channel.ts", import.meta.url),
   "utf8"
 );
 
@@ -83,7 +100,7 @@ describe("buyer channel page contract", () => {
       "同一个域名只能在同一个模板下创建多个渠道链接，跨模板请使用新域名~",
       "决定用户打开渠道链接后，手机号输入框默认显示的区号。",
       "仅 Facebook / TikTok 支持 CAPI 探测",
-      "用户点击广告后，可直接在 Facebook 内置浏览器里完成登录上号，无需跳出 App。"
+      "用户点击广告后，可直接在"
     ])
       assert.ok(normalizedDrawer.includes(text), text);
 
@@ -92,12 +109,17 @@ describe("buyer channel page contract", () => {
     assert.doesNotMatch(drawer, /el-color-picker|label="状态"|事件映射/);
   });
 
-  it("uses fixed preview owners/templates and option-driven platform facts", () => {
+  it("uses fixed preview owners, backend templates and platform facts", () => {
     assert.ok(page.includes("options.uploadFee.label"));
     assert.ok(page.includes("options.uploadFee.value"));
     assert.ok(drawer.includes("混合（不限国家）"));
     assert.ok(drawer.includes("dialCodeOptions"));
-    assert.ok(drawer.includes("options.platforms"));
+    assert.ok(drawer.includes("previewPlatformOptions"));
+    assert.ok(page.includes("listBuyerTemplateOptions"));
+    assert.ok(drawer.includes("options.templates"));
+    assert.doesNotMatch(drawer, /previewTemplateOptions/);
+    for (const platform of ["Facebook", "TikTok", "快手", "MGSKY Ads"])
+      assert.ok(drawerContract.includes(platform), platform);
     for (const owner of [
       "test",
       "testuser456",
@@ -106,17 +128,47 @@ describe("buyer channel page contract", () => {
       "pingzi",
       "gose-"
     ])
-      assert.ok(drawer.includes(owner), owner);
-    for (const template of [
-      "约会三代",
-      "基础领奖",
-      "基础约会-投男粉",
-      "基础约会-投女粉",
-      "约会二代"
-    ])
-      assert.ok(drawer.includes(template), template);
+      assert.ok(drawerContract.includes(owner), owner);
     assert.ok(drawer.includes("reportingEventOptions"));
     assert.ok(drawer.includes("countryMode"));
+  });
+
+  it("switches pixel, token, events and app guidance by platform", () => {
+    for (const text of [
+      "FB Pixel ID",
+      "FB Access Token",
+      "TikTok Pixel ID",
+      "TikTok Access Token",
+      "快手 Pixel ID",
+      "MGSKY Ads Pixel ID",
+      "TikTok Events API 长效 Access Token"
+    ])
+      assert.ok(drawerContract.includes(text), text);
+    assert.ok(drawer.includes("platformFieldConfig"));
+    assert.ok(drawer.includes("appOpenMessage"));
+    assert.ok(drawer.includes("platformFieldConfig.showEvents"));
+    assert.ok(drawer.includes("validatePixelId"));
+    assert.ok(drawer.includes("validateAccessToken"));
+    assert.ok(drawer.includes(':required="requiresAccessToken"'));
+  });
+
+  it("only offers branded detection for Facebook and TikTok", () => {
+    assert.ok(page.includes("supportsDetection"));
+    assert.ok(page.includes("FacebookDetectIcon"));
+    assert.ok(page.includes("TikTokDetectIcon"));
+    assert.ok(page.includes('v-if="supportsDetection(row)"'));
+    assert.ok(page.includes("探测"));
+  });
+
+  it("uses the promotion channel create/query contract and maps every platform tracking id", () => {
+    assert.ok(channelApi.includes("/api/promotion-channels/create"));
+    assert.ok(channelApi.includes("/api/promotion-channels/query"));
+    assert.ok(channelApi.includes("trackingId: payload.pixelId"));
+    assert.ok(channelApi.includes("KUAISHOU: 3"));
+    assert.ok(channelApi.includes("MGSKY: 4"));
+    assert.ok(channelApi.includes("preselectedCountry"));
+    assert.ok(channelApi.includes("creatorUserId"));
+    assert.ok(channelApi.includes("ownerUserIds"));
   });
 
   it("offers all countries on first open and locks SPECIFIC to its dial code", () => {

@@ -14,16 +14,19 @@ function row(overrides: Partial<BuyerTemplateRow> = {}): BuyerTemplateRow {
     remark: "原备注",
     createdAt: "2026-07-17 10:00:00",
     updatedAt: "2026-07-17 10:00:00",
-    runtimeVersion: "v1",
     ...overrides
   };
+}
+
+function pageResult(list: BuyerTemplateRow[]) {
+  return { list, page: 1, pageSize: 20, total: list.length, totalPages: 1 };
 }
 
 describe("buyer template page state", () => {
   it("rolls visibility back when saving fails", async () => {
     const target = row();
     const page = useBuyerTemplatePage({
-      list: async () => [target],
+      query: async () => pageResult([target]),
       updateVisibility: async () => {
         throw new Error("network failed");
       },
@@ -41,9 +44,9 @@ describe("buyer template page state", () => {
     const target = row();
     let fail = false;
     const page = useBuyerTemplatePage({
-      list: async () => {
+      query: async () => {
         if (fail) throw new Error("forbidden");
-        return [target];
+        return pageResult([target]);
       },
       updateVisibility: async () => undefined,
       updateRemark: async () => undefined
@@ -62,7 +65,7 @@ describe("buyer template page state", () => {
     const second = row({ id: 2, remark: "第二条" });
     const saved: Array<[number, string]> = [];
     const page = useBuyerTemplatePage({
-      list: async () => [first, second],
+      query: async () => pageResult([first, second]),
       updateVisibility: async () => undefined,
       updateRemark: async (id, remark) => {
         saved.push([id, remark]);
@@ -92,7 +95,7 @@ describe("buyer template page state", () => {
     let saved = false;
     const target = row();
     const page = useBuyerTemplatePage({
-      list: async () => [target],
+      query: async () => pageResult([target]),
       updateVisibility: async () => undefined,
       updateRemark: async () => {
         saved = true;
