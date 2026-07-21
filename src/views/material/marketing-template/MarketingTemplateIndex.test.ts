@@ -10,4 +10,9 @@ describe("marketing template index", () => {
     assert.match(source, /label="消息类型"/);
     assert.doesNotMatch(source, /label="文本类型"/);
   });
+
+  it("renders the computed promotion link instead of the raw field", () => {
+    assert.match(source, /promotionLink\(row\)/);
+    assert.doesNotMatch(source, /\{\{ row\.promotionLink \}\}/);
+  });
 });

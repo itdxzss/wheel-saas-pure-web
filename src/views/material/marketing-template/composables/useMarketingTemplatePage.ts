@@ -61,6 +61,17 @@ export interface MarketingTemplateForm {
   remark: string;
 }
 
+export function marketingTemplatePromotionLink(
+  row: Pick<MarketingTemplateRow, "linkMode" | "promotionLink" | "buttons">
+): string {
+  if (row.linkMode !== "BUTTON") return row.promotionLink.trim();
+  return (
+    row.buttons
+      .find(button => button.type === "link" && button.value.trim().length > 0)
+      ?.value.trim() ?? ""
+  );
+}
+
 let nextButtonId = 1;
 let imagePreviewRequestId = 0;
 let persistedImageObjectUrl = "";
