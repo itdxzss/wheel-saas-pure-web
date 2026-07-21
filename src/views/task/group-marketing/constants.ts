@@ -18,6 +18,12 @@ export const taskStatusOptions: Array<{
 export const taskColumns: TableColumnList = [
   { label: "ID", prop: "id", width: 90 },
   { label: "任务名称", prop: "taskName", minWidth: 220 },
+  { label: "营销账号在线数量", prop: "selectedAccountCount", width: 150 },
+  { label: "营销账号封禁/禁言", prop: "failedMessageCount", width: 150 },
+  { label: "营销群组数量", prop: "targetGroupCount", width: 130 },
+  { label: "发送条数", prop: "sentMessageCount", width: 110 },
+  { label: "发送状态", prop: "status", width: 120 },
+  { label: "最后发送时间", prop: "lastSentAt", width: 180 },
   {
     label: "营销模板预览",
     prop: "marketingTemplateContent",
@@ -27,13 +33,7 @@ export const taskColumns: TableColumnList = [
     label: "推广链接",
     prop: "marketingTemplatePromotionLink",
     minWidth: 220
-  },
-  { label: "营销账号在线数量", prop: "selectedAccountCount", width: 150 },
-  { label: "营销账号封禁/禁言", prop: "failedMessageCount", width: 150 },
-  { label: "营销群组数量", prop: "targetGroupCount", width: 130 },
-  { label: "发送条数", prop: "sentMessageCount", width: 110 },
-  { label: "发送状态", prop: "status", width: 120 },
-  { label: "最后发送时间", prop: "lastSentAt", width: 180 }
+  }
 ];
 
 export function taskStatusLabel(status?: MarketingTaskStatus | null): string {

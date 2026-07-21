@@ -7,14 +7,13 @@ function source(relativePath: string): string {
 }
 
 describe("group marketing task template info ui", () => {
-  it("registers preview and promotion columns immediately after task name", () => {
+  it("registers preview and promotion columns at the end", () => {
     const constants = source("../constants.ts");
-    const taskName = constants.indexOf('label: "任务名称"');
+    const lastSentAt = constants.indexOf('label: "最后发送时间"');
     const preview = constants.indexOf('label: "营销模板预览"');
     const promotion = constants.indexOf('label: "推广链接"');
-    const online = constants.indexOf('label: "营销账号在线数量"');
 
-    assert.ok(taskName < preview && preview < promotion && promotion < online);
+    assert.ok(lastSentAt < preview && preview < promotion);
   });
 
   it("renders an ellipsis preview button and opens the read-only dialog", () => {
