@@ -104,6 +104,16 @@ function query(): void {
   page.value = 1;
   void refresh();
 }
+
+async function resetFilters(): Promise<void> {
+  filters.targetCountry = undefined;
+  filters.templateId = undefined;
+  filters.creatorId = undefined;
+  filters.parentUserId = undefined;
+  page.value = 1;
+  await refresh();
+}
+
 function openLink(url: string): void {
   try {
     openSafeChannelLink(url);
@@ -228,13 +238,7 @@ onMounted(async () => {
         ></el-form-item>
         <el-form-item
           ><el-button type="primary" @click="query">查询</el-button
-          ><el-button
-            @click="
-              Object.keys(filters).forEach(key => delete filters[key]);
-              query();
-            "
-            >重置</el-button
-          ></el-form-item
+          ><el-button @click="resetFilters">重置</el-button></el-form-item
         >
       </el-form>
     </el-card>

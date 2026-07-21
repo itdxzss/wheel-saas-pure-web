@@ -75,6 +75,28 @@ describe("buyer channel page contract", () => {
     assert.ok(page.includes("[30, 60, 200, 500]"));
   });
 
+  it("resets every filter before querying page one and refreshes from the backend", () => {
+    assert.ok(page.includes("async function resetFilters(): Promise<void>"));
+    for (const filter of [
+      "targetCountry",
+      "templateId",
+      "creatorId",
+      "parentUserId"
+    ]) {
+      assert.ok(page.includes(`filters.${filter} = undefined;`), filter);
+    }
+    assert.match(
+      page,
+      /async function resetFilters\(\): Promise<void> \{[\s\S]*?page\.value = 1;[\s\S]*?await refresh\(\);[\s\S]*?\}/
+    );
+    assert.ok(page.includes('@click="resetFilters">重置'));
+    assert.ok(page.includes('<el-button @click="refresh">刷新</el-button>'));
+    assert.match(
+      page,
+      /async function refresh\(\): Promise<void> \{[\s\S]*?listBuyerChannels\(/
+    );
+  });
+
   it("uses Element Plus and renders all required shared drawer fields", () => {
     assert.match(drawer, /el-drawer/);
     for (const text of [
