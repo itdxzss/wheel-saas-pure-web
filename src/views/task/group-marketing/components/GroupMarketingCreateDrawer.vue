@@ -19,6 +19,7 @@ import type {
   GroupMarketingCreateForm,
   GroupMarketingCreatePayload
 } from "../composables/useGroupMarketingTaskPage";
+import { groupMembershipStatusMeta } from "./group-membership-status";
 
 defineOptions({
   name: "GroupMarketingCreateDrawer"
@@ -29,6 +30,8 @@ interface TreeNode {
   label: string;
   disabled?: boolean;
   disabledReason?: string;
+  membershipLabel?: string;
+  membershipTagType?: "success" | "warning" | "danger" | "info";
   isLeaf?: boolean;
   children?: TreeNode[];
 }
@@ -212,14 +215,19 @@ function isTreeNode(value: unknown): value is TreeNode {
 }
 
 function toGroupTreeNodes(account: MarketingTreeAccount): TreeNode[] {
-  return account.groups.map(group => ({
-    id: groupTreeKey(account.accountId, group.groupLinkId),
-    label: `${group.groupName || group.groupJid} · ${
-      group.isAdmin ? "管理员" : "成员"
-    }`,
-    disabled: !accountSelectable(account),
-    isLeaf: true
-  }));
+  return account.groups.map(group => {
+    const statusMeta = groupMembershipStatusMeta(group.membershipStatus);
+    return {
+      id: groupTreeKey(account.accountId, group.groupLinkId),
+      label: `${group.groupName || group.groupJid} · ${
+        group.isAdmin ? "管理员" : "成员"
+      }`,
+      disabled: !accountSelectable(account),
+      membershipLabel: group.membershipStatusText?.trim() || statusMeta.label,
+      membershipTagType: statusMeta.tagType,
+      isLeaf: true
+    };
+  });
 }
 
 const loadTreeNode: LoadFunction = (node, resolve) => {
@@ -338,6 +346,14 @@ function submit(): void {
               >
                 <span class="tree-node-content">
                   <span>{{ data.label }}</span>
+                  <el-tag
+                    v-if="data.membershipLabel"
+                    size="small"
+                    effect="plain"
+                    :type="data.membershipTagType"
+                  >
+                    {{ data.membershipLabel }}
+                  </el-tag>
                   <small v-if="data.disabledReason">
                     {{ data.disabledReason }}
                   </small>
@@ -499,6 +515,10 @@ function submit(): void {
   text-overflow: ellipsis;
   color: var(--el-color-danger);
   white-space: nowrap;
+}
+
+.tree-node-content :deep(.el-tag) {
+  flex: none;
 }
 
 .switch-list {

@@ -23,5 +23,7 @@ describe("group send status meta", () => {
   it("falls back to unconfirmed for a missing or future status", () => {
     assert.equal(groupSendStatusMeta(null).label, "未确认");
     assert.equal(groupSendStatusMeta("FUTURE_STATUS").label, "未确认");
+    assert.equal(groupSendStatusMeta("LEFT").label, "未确认");
+    assert.equal(groupSendStatusMeta("NOT_IN_GROUP").label, "未确认");
   });
 });

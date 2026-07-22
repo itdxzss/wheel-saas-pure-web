@@ -11,6 +11,7 @@ import {
 } from "@/views/account/index/account-display";
 import { formatEpoch } from "../constants";
 import { groupExecutionResultMeta } from "./group-execution-result";
+import { groupMembershipStatusMeta } from "./group-membership-status";
 import { groupSendStatusMeta } from "./group-send-status";
 
 defineOptions({
@@ -60,6 +61,9 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
         <el-descriptions-item label="失败条数">
           {{ detail.failedMessageCount }}
         </el-descriptions-item>
+        <el-descriptions-item label="跳过条数">
+          {{ detail.skippedMessageCount ?? 0 }}
+        </el-descriptions-item>
         <el-descriptions-item label="账号群组发送时间">
           {{ formatEpoch(detail.accountGroupSendAt) }}
         </el-descriptions-item>
@@ -99,17 +103,30 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
           label="账号发送总条数"
           width="150"
         />
+        <el-table-column
+          prop="failedMessageCount"
+          label="账号失败条数"
+          width="130"
+        />
+        <el-table-column label="账号跳过条数" width="130">
+          <template #default="{ row }">
+            {{ row.skippedMessageCount ?? 0 }}
+          </template>
+        </el-table-column>
         <el-table-column type="expand" label="明细" width="80">
           <template #default="{ row }">
             <div class="group-rollup-expand">
               <template v-if="asAccountRow(row).groups.length > 0">
                 <div class="group-rollup-header">
-                  <span>群组状态</span>
+                  <span>当前关系</span>
+                  <span>最后协议状态</span>
                   <span>群名称</span>
                   <span>群 GID</span>
-                  <span>单群发送条数</span>
+                  <span>成功</span>
+                  <span>失败</span>
+                  <span>跳过</span>
                   <span>最后发送时间</span>
-                  <span>执行情况</span>
+                  <span>最后执行</span>
                 </div>
                 <div class="group-rollup-detail-list">
                   <div
@@ -117,6 +134,18 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                     :key="groupRowKey(group)"
                     class="group-rollup-detail-row"
                   >
+                    <el-tag
+                      size="small"
+                      effect="plain"
+                      :type="
+                        groupMembershipStatusMeta(group.membershipStatus)
+                          .tagType
+                      "
+                    >
+                      {{
+                        groupMembershipStatusMeta(group.membershipStatus).label
+                      }}
+                    </el-tag>
                     <el-tag
                       size="small"
                       effect="plain"
@@ -140,6 +169,12 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                     <span class="group-rollup-number">
                       {{ group.sentMessageCount }}
                     </span>
+                    <span class="group-rollup-number">
+                      {{ group.failedMessageCount }}
+                    </span>
+                    <span class="group-rollup-number">
+                      {{ group.skippedMessageCount ?? 0 }}
+                    </span>
                     <span class="group-rollup-time">
                       {{ formatEpoch(group.lastSentAt) }}
                     </span>
@@ -161,7 +196,11 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                       </el-tag>
                       <span v-else class="group-rollup-empty">-</span>
                       <span
-                        v-if="group.executionResult === 'FAILED'"
+                        v-if="
+                          ['FAILED', 'SKIPPED'].includes(
+                            group.executionResult ?? ''
+                          )
+                        "
                         class="group-execution-reason"
                         :title="group.executionReason || '未知原因'"
                       >
@@ -196,6 +235,7 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 
 .group-rollup-expand {
   padding: 10px 24px 10px 72px;
+  overflow-x: auto;
   background: var(--el-fill-color-lighter);
 }
 
@@ -203,12 +243,12 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 .group-rollup-detail-row {
   display: grid;
   grid-template-columns:
-    120px minmax(180px, 1.3fr) minmax(210px, 1.4fr) 120px 170px
-    minmax(180px, 1fr);
+    112px 112px minmax(160px, 1.2fr) minmax(210px, 1.3fr) 64px 64px 64px
+    160px minmax(190px, 1fr);
   gap: 16px;
   align-items: center;
   width: 100%;
-  min-width: 0;
+  min-width: 1280px;
 }
 
 .group-rollup-header {
@@ -258,8 +298,8 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 .group-execution-reason {
   min-width: 0;
   overflow: hidden;
-  color: var(--el-color-danger);
   text-overflow: ellipsis;
+  color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
 
@@ -288,6 +328,7 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
   .group-rollup-header,
   .group-rollup-detail-row {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
+    min-width: 0;
   }
 }
 </style>
