@@ -22,6 +22,53 @@
   color: var(--el-text-color-placeholder);
 }
 
+.template-params-divider {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 4px 0 28px;
+  color: var(--el-text-color-secondary);
+}
+
+.template-params-divider::before,
+.template-params-divider::after {
+  height: 1px;
+  content: "";
+  background: var(--el-border-color-lighter);
+}
+
+.template-params-divider::before {
+  flex: 0 0 32px;
+}
+
+.template-params-divider::after {
+  flex: 1;
+}
+
+.theme-color-field {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+:deep(.theme-picker),
+:deep(.theme-picker .el-color-picker__trigger) {
+  width: 48px;
+  height: 40px;
+}
+
+:deep(.theme-color-input .el-input__wrapper) {
+  background: var(--channel-theme-preview, #409eff);
+}
+
+:deep(.theme-color-input .el-input__inner) {
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+}
+
 .domain-alert,
 .app-open-alert {
   width: 100%;

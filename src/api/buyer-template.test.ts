@@ -34,8 +34,14 @@ describe("buyer template API", () => {
     assert.equal(result.list[0].id, 37);
     assert.equal(result.list[0].name, "约会二代");
     assert.deepEqual(result.list[0].supportedParams, ["主题色"]);
+    assert.deepEqual(result.list[0].supportedParamCodes, ["themeColor"]);
     assert.deepEqual(await listBuyerTemplateOptions(), [
-      { id: 37, name: "约会二代" }
+      {
+        id: 37,
+        code: "base_sex",
+        name: "约会二代",
+        supportedParamCodes: ["themeColor"]
+      }
     ]);
     assert.deepEqual(armadaCalls(), [
       {

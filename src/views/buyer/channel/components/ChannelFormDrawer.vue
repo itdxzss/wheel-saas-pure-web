@@ -62,6 +62,21 @@ const fieldErrors = reactive<Partial<Record<keyof ChannelFormModel, string>>>(
 );
 const editing = computed(() => props.channelId !== undefined);
 const platformFieldConfig = computed(() => platformFieldConfigs[form.platform]);
+const selectedTemplate = computed(() =>
+  props.options.templates.find(template => template.id === form.templateId)
+);
+const selectedTemplateParamCodes = computed(
+  () => selectedTemplate.value?.supportedParamCodes ?? []
+);
+const supportsThemeColor = computed(() =>
+  selectedTemplateParamCodes.value.includes("themeColor")
+);
+const supportsAppDownload = computed(() =>
+  selectedTemplateParamCodes.value.includes("showAppDownload")
+);
+const hasTemplateParams = computed(
+  () => supportsThemeColor.value || supportsAppDownload.value
+);
 const {
   supportsToken,
   requiresAccessToken,
@@ -128,6 +143,18 @@ function validateTargetCountry(
   callback(new Error("请选择目标国家"));
 }
 
+function validateThemeColor(
+  _rule: unknown,
+  value: unknown,
+  callback: (error?: string | Error) => void
+): void {
+  if (!supportsThemeColor.value || /^#[0-9a-f]{6}$/i.test(String(value))) {
+    callback();
+    return;
+  }
+  callback(new Error("请输入 #RRGGBB 格式的主题色"));
+}
+
 const rules: FormRules<ChannelFormModel> = {
   name: [{ required: true, message: "请输入渠道名称", trigger: "blur" }],
   ownerId: [{ required: true, message: "请选择归属用户", trigger: "change" }],
@@ -141,6 +168,7 @@ const rules: FormRules<ChannelFormModel> = {
   templateId: [
     { required: true, message: "请选择绑定模板", trigger: "change" }
   ],
+  themeColor: [{ validator: validateThemeColor, trigger: ["blur", "change"] }],
   domain: [{ required: true, message: "请输入域名", trigger: "blur" }],
   preselectedCountry: [
     { required: true, message: "请选择预选区号", trigger: "change" }
@@ -209,7 +237,8 @@ async function save(): Promise<void> {
         create: createBuyerChannel,
         update: updateBuyerChannel
       },
-      props.options.countries
+      props.options.countries,
+      selectedTemplateParamCodes.value
     );
     ElMessage.success(editing.value ? "渠道已更新" : "渠道已新增");
     emit("update:modelValue", false);
@@ -380,6 +409,47 @@ watch(
           </el-option>
         </el-select>
       </el-form-item>
+      <template v-if="hasTemplateParams">
+        <div class="template-params-divider">
+          <span>模板参数配置</span>
+        </div>
+        <el-form-item
+          v-if="supportsThemeColor"
+          label="主题色"
+          prop="themeColor"
+          :error="fieldErrors.themeColor"
+        >
+          <div class="theme-color-field">
+            <el-color-picker v-model="form.themeColor" class="theme-picker" />
+            <el-input
+              v-model="form.themeColor"
+              class="theme-color-input"
+              maxlength="7"
+              placeholder="#409EFF"
+              :style="{ '--channel-theme-preview': form.themeColor }"
+            />
+          </div>
+          <p class="field-help">主题色，可以更改模板的主题颜色。</p>
+        </el-form-item>
+        <el-form-item
+          v-if="supportsAppDownload"
+          label="展示底部应用下载"
+          prop="showAppDownload"
+          :error="fieldErrors.showAppDownload"
+        >
+          <el-switch
+            v-model="form.showAppDownload"
+            class="permission-switch"
+            inline-prompt
+            active-text="展示"
+            inactive-text="隐藏"
+            :width="70"
+          />
+          <p class="field-help">
+            是否展示底部 Google Play &amp; Apple Store 下载区域。
+          </p>
+        </el-form-item>
+      </template>
       <el-form-item label="访问域名" prop="domain" :error="fieldErrors.domain">
         <el-input v-model="form.domain" placeholder="example.com">
           <template #prepend>https://</template>

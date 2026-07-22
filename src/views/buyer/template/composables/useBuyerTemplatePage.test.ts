@@ -11,6 +11,7 @@ function row(overrides: Partial<BuyerTemplateRow> = {}): BuyerTemplateRow {
     previewUrl: "https://example.com/preview",
     subaccountVisible: true,
     supportedParams: ["phone"],
+    supportedParamCodes: ["phone"],
     remark: "原备注",
     createdAt: "2026-07-17 10:00:00",
     updatedAt: "2026-07-17 10:00:00",

@@ -91,6 +91,32 @@ describe("shared channel form", () => {
     assert.equal(payload.defaultDialCode, "+44");
   });
 
+  it("only submits parameters supported by the selected template", () => {
+    const form = createDefaultChannelForm();
+    Object.assign(form, {
+      name: "Template params",
+      targetCountry: "US",
+      templateId: 1,
+      themeColor: "#E11D48",
+      showAppDownload: true,
+      domain: "params.example.com",
+      preselectedCountry: "US",
+      defaultDialCode: "+1"
+    });
+
+    const themeOnly = buildChannelPayload(form, false, countries, [
+      "themeColor"
+    ]);
+    assert.equal(themeOnly.themeColor, "#E11D48");
+    assert.equal("showAppDownload" in themeOnly, false);
+
+    const allParams = buildChannelPayload(form, false, countries, [
+      "themeColor",
+      "showAppDownload"
+    ]);
+    assert.equal(allParams.showAppDownload, true);
+  });
+
   it("maps Armada 422 field errors without requiring an Axios response", () => {
     assert.deepEqual(
       channelFormFieldErrors({

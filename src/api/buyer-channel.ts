@@ -1,4 +1,5 @@
 import { armadaRequest } from "@/api/armada";
+import type { BuyerTemplateOption } from "@/api/buyer-template";
 
 export type ChannelPlatform = "FACEBOOK" | "TIKTOK" | "KUAISHOU" | "MGSKY";
 export type ChannelStatus = "ENABLED" | "DISABLED";
@@ -14,7 +15,7 @@ export interface BuyerChannelOptions {
     dialCode: string;
     flag?: string;
   }>;
-  templates: Array<{ id: number; name: string }>;
+  templates: BuyerTemplateOption[];
   owners: Array<{ id: number; name: string }>;
   creators: Array<{ id: number; name: string }>;
   parentUsers: Array<{ id: number; name: string }>;
@@ -48,6 +49,7 @@ export interface BuyerChannelDetail {
   countryMode?: CountryMode;
   templateId: number;
   themeColor?: string;
+  showAppDownload?: boolean;
   domain: string;
   preselectedCountry?: string;
   defaultDialCode: string;
@@ -68,7 +70,8 @@ export interface BuyerChannelPayload {
   targetCountry: string;
   countryMode: CountryMode;
   templateId: number;
-  themeColor: string;
+  themeColor?: string;
+  showAppDownload?: boolean;
   domain: string;
   preselectedCountry: string;
   defaultDialCode: string;
@@ -125,26 +128,11 @@ export interface ChannelDetectResult {
 }
 
 export interface BuyerChannelRuntimeConfig {
-  channelId: number;
-  channelCode: string;
-  runtimeVersion: string;
-  templateId: number;
-  templateVersion: string;
-  templateAssets: Record<string, string>;
-  templateParams: Record<string, string | boolean>;
-  countryMode: CountryMode;
-  allowedCountries: Array<{ code: string; dialCode: string }>;
-  defaultDialCode: string;
+  templateCode: string;
   themeColor: string;
-  platform: ChannelPlatform;
-  pixelId?: string;
-  eventMappings: {
-    lead: string;
-    loginRequest: string;
-    loginSuccess: string;
-  };
-  appOpenEnabled: boolean;
-  marketingEnabled: boolean;
+  showAppDownload: boolean;
+  targetCountry: string;
+  preselectedCountry: string;
 }
 
 export interface BuyerChannelMutationResult {
@@ -196,6 +184,8 @@ interface PromotionChannelDetailVO {
   ownerUserId: number;
   targetCountry: string;
   landingTemplateId: number;
+  themeColor?: string;
+  showAppDownload?: boolean;
   domain: string;
   preselectedCountry: string;
   platform: number;
@@ -214,6 +204,8 @@ interface PromotionChannelCreatePayload {
   ownerUserId?: number;
   targetCountry: string;
   landingTemplateId: number;
+  themeColor?: string;
+  showAppDownload?: boolean;
   domain: string;
   preselectedCountry: string;
   platform: number;
@@ -331,6 +323,8 @@ function toBuyerChannelDetail(
     targetCountry: mixedTargetCountry ? "" : value.targetCountry,
     countryMode: mixedTargetCountry ? "MIXED" : "SPECIFIC",
     templateId: value.landingTemplateId,
+    themeColor: value.themeColor,
+    showAppDownload: value.showAppDownload,
     domain: value.domain,
     preselectedCountry: value.preselectedCountry,
     defaultDialCode: "",
@@ -357,6 +351,8 @@ function toPromotionChannelCreatePayload(
     targetCountry:
       payload.countryMode === "MIXED" ? "MIXED" : payload.targetCountry,
     landingTemplateId: payload.templateId,
+    themeColor: payload.themeColor,
+    showAppDownload: payload.showAppDownload,
     domain: payload.domain,
     preselectedCountry: payload.preselectedCountry,
     platform: promotionPlatformCodes[payload.platform],
@@ -448,6 +444,7 @@ export async function createBuyerChannel(
       countryMode: channel.mixedTargetCountry ? "MIXED" : "SPECIFIC",
       templateId: channel.landingTemplateId,
       themeColor: payload.themeColor,
+      showAppDownload: payload.showAppDownload,
       domain: payload.domain,
       preselectedCountry:
         channel.preselectedCountryIso2 ?? channel.preselectedCountry,
@@ -495,14 +492,10 @@ export function detectBuyerChannel(
 }
 
 export function getPublicBuyerChannelRuntime(
-  host: string,
   channelCode: string
 ): Promise<BuyerChannelRuntimeConfig> {
   return armadaRequest<BuyerChannelRuntimeConfig>(
     "get",
-    "/api/public/buyer/channel-runtime",
-    {
-      params: { host, channelCode }
-    }
+    `/api/public/promotion-channels/runtime/${encodeURIComponent(channelCode)}`
   );
 }

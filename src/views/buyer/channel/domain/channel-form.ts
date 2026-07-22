@@ -22,6 +22,7 @@ export interface ChannelFormModel {
   countryMode: CountryMode;
   templateId?: number;
   themeColor: string;
+  showAppDownload: boolean;
   domain: string;
   preselectedCountry: string;
   defaultDialCode: string;
@@ -45,6 +46,7 @@ export function createDefaultChannelForm(): ChannelFormModel {
     countryMode: "SPECIFIC",
     templateId: undefined,
     themeColor: "#409EFF",
+    showAppDownload: false,
     domain: "",
     preselectedCountry: "",
     defaultDialCode: "",
@@ -69,6 +71,7 @@ export function hydrateChannelForm(
     ...detail,
     countryMode: detail.countryMode ?? "SPECIFIC",
     themeColor: detail.themeColor ?? "#409EFF",
+    showAppDownload: detail.showAppDownload ?? false,
     preselectedCountry:
       detail.preselectedCountry ??
       (detail.countryMode === "MIXED" ? "" : detail.targetCountry),
@@ -86,7 +89,8 @@ export function hydrateChannelForm(
 export function buildChannelPayload(
   form: ChannelFormModel,
   editing: boolean,
-  countries: Array<{ code: string; dialCode: string }> = []
+  countries: Array<{ code: string; dialCode: string }> = [],
+  supportedParamCodes: readonly string[] = ["themeColor", "showAppDownload"]
 ): BuyerChannelPayload {
   if (!form.templateId) throw new Error("请选择绑定模板");
   const country = countries.find(item => item.code === form.targetCountry);
@@ -107,7 +111,6 @@ export function buildChannelPayload(
     targetCountry: form.targetCountry,
     countryMode: form.countryMode,
     templateId: form.templateId,
-    themeColor: form.themeColor,
     domain: normalizeChannelDomain(form.domain),
     preselectedCountry: preselectedCountry.code,
     defaultDialCode: preselectedCountry.dialCode,
@@ -120,6 +123,12 @@ export function buildChannelPayload(
     joinMarketing: form.joinMarketing,
     status: form.status
   };
+  if (supportedParamCodes.includes("themeColor")) {
+    payload.themeColor = form.themeColor;
+  }
+  if (supportedParamCodes.includes("showAppDownload")) {
+    payload.showAppDownload = form.showAppDownload;
+  }
   const supportsToken =
     form.platform === "FACEBOOK" || form.platform === "TIKTOK";
   if (
@@ -201,6 +210,7 @@ export function channelFormFieldErrors(
     "targetCountry",
     "templateId",
     "themeColor",
+    "showAppDownload",
     "domain",
     "preselectedCountry",
     "defaultDialCode",
@@ -245,9 +255,15 @@ export async function saveChannelForm(
   form: ChannelFormModel,
   editing: boolean,
   services: ChannelSaveServices,
-  countries: Array<{ code: string; dialCode: string }> = []
+  countries: Array<{ code: string; dialCode: string }> = [],
+  supportedParamCodes: readonly string[] = ["themeColor", "showAppDownload"]
 ): Promise<void> {
-  const payload = buildChannelPayload(form, editing, countries);
+  const payload = buildChannelPayload(
+    form,
+    editing,
+    countries,
+    supportedParamCodes
+  );
   if (editing && services.precheck) {
     const binding = await services.precheck({
       domain: payload.domain,

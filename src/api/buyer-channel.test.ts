@@ -53,6 +53,8 @@ describe("buyer channel API contract", () => {
       ownerUserId: 1,
       targetCountry: "US",
       landingTemplateId: 2,
+      themeColor: "#E11D48",
+      showAppDownload: true,
       domain: "go.example.com",
       preselectedCountry: "US",
       platform: 1,
@@ -83,6 +85,7 @@ describe("buyer channel API contract", () => {
       countryMode: "SPECIFIC",
       templateId: 2,
       themeColor: "#409EFF",
+      showAppDownload: true,
       domain: "go.example.com",
       preselectedCountry: "US",
       defaultDialCode: "+1",
@@ -113,7 +116,7 @@ describe("buyer channel API contract", () => {
     await updateBuyerChannel(7, payload);
     await deleteBuyerChannel(7);
     await detectBuyerChannel(7);
-    await getPublicBuyerChannelRuntime("go.example.com", "CH007");
+    await getPublicBuyerChannelRuntime("CH007");
 
     assert.deepEqual(armadaCalls(), [
       { method: "get", url: "/api/buyer/channels/options", opts: undefined },
@@ -156,6 +159,8 @@ describe("buyer channel API contract", () => {
             ownerUserId: 1,
             targetCountry: "US",
             landingTemplateId: 2,
+            themeColor: "#409EFF",
+            showAppDownload: true,
             domain: "go.example.com",
             preselectedCountry: "US",
             platform: 1,
@@ -178,6 +183,8 @@ describe("buyer channel API contract", () => {
             ownerUserId: 1,
             targetCountry: "US",
             landingTemplateId: 2,
+            themeColor: "#409EFF",
+            showAppDownload: true,
             domain: "go.example.com",
             preselectedCountry: "US",
             platform: 1,
@@ -197,11 +204,15 @@ describe("buyer channel API contract", () => {
         url: "/api/promotion-channels/delete/7",
         opts: undefined
       },
-      { method: "post", url: "/api/buyer/channels/7/detect", opts: undefined },
+      {
+        method: "post",
+        url: "/api/promotion-channels/probe/7",
+        opts: { data: undefined }
+      },
       {
         method: "get",
-        url: "/api/public/buyer/channel-runtime",
-        opts: { params: { host: "go.example.com", channelCode: "CH007" } }
+        url: "/api/public/promotion-channels/runtime/CH007",
+        opts: undefined
       }
     ]);
     assert.deepEqual(detail, {
@@ -211,6 +222,8 @@ describe("buyer channel API contract", () => {
       targetCountry: "US",
       countryMode: "SPECIFIC",
       templateId: 2,
+      themeColor: "#E11D48",
+      showAppDownload: true,
       domain: "go.example.com",
       preselectedCountry: "US",
       defaultDialCode: "",

@@ -7,6 +7,7 @@ export interface BuyerTemplateRow {
   previewUrl: string;
   subaccountVisible: boolean;
   supportedParams: string[];
+  supportedParamCodes: string[];
   remark: string;
   createdAt: string;
   updatedAt: string;
@@ -27,7 +28,9 @@ export interface BuyerTemplatePage {
 
 export interface BuyerTemplateOption {
   id: number;
+  code: string;
   name: string;
+  supportedParamCodes: string[];
 }
 
 interface PromotionTemplateSupportedParam {
@@ -41,7 +44,7 @@ interface PromotionTemplateVO {
   templateName: string;
   previewUri: string;
   subaccountVisible: boolean;
-  supportedParams: PromotionTemplateSupportedParam[];
+  supportedParams?: PromotionTemplateSupportedParam[];
   remark?: string | null;
   createdAt: number;
   updatedAt: number;
@@ -67,13 +70,15 @@ function formatTimestamp(timestamp: number): string {
 }
 
 function toBuyerTemplateRow(value: PromotionTemplateVO): BuyerTemplateRow {
+  const supportedParams = value.supportedParams ?? [];
   return {
     id: value.id,
     code: value.templateCode,
     name: value.templateName,
     previewUrl: value.previewUri,
     subaccountVisible: value.subaccountVisible,
-    supportedParams: value.supportedParams.map(param => param.label),
+    supportedParams: supportedParams.map(param => param.label),
+    supportedParamCodes: supportedParams.map(param => param.code),
     remark: value.remark ?? "",
     createdAt: formatTimestamp(value.createdAt),
     updatedAt: formatTimestamp(value.updatedAt)
@@ -106,7 +111,12 @@ export async function listBuyerTemplateOptions(): Promise<
   );
   const pages = [firstPage, ...remainingPages];
   return pages.flatMap(result =>
-    result.list.map(template => ({ id: template.id, name: template.name }))
+    result.list.map(template => ({
+      id: template.id,
+      code: template.code,
+      name: template.name,
+      supportedParamCodes: template.supportedParamCodes
+    }))
   );
 }
 
