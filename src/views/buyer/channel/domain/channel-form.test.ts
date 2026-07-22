@@ -270,4 +270,19 @@ describe("shared channel form", () => {
       /该域名已经绑定其他模板/
     );
   });
+
+  it("maps a template bound to another domain onto both related fields", () => {
+    assert.deepEqual(
+      channelFormFieldErrors({
+        response: {
+          status: 409,
+          data: { message: "模板已绑定其他域名，请使用原域名" }
+        }
+      }),
+      {
+        templateId: "该模板已经绑定其他域名",
+        domain: "该模板已经绑定其他域名"
+      }
+    );
+  });
 });

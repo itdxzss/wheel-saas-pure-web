@@ -22,7 +22,6 @@ import FacebookEventGuideDialog from "./components/FacebookEventGuideDialog.vue"
 import { previewPlatformOptions } from "./components/channel-platform-fields";
 import { previewOwnerOptions } from "./components/channel-preview-options";
 import { toBuyerChannelCountries } from "./domain/channel-country-options";
-import { openSafeChannelLink } from "./domain/channel-domain";
 import { countryFlagIcon } from "./domain/channel-country-flag";
 import { apiErrorMessage } from "@/utils/api-error";
 
@@ -114,14 +113,6 @@ async function resetFilters(): Promise<void> {
   filters.parentUserId = undefined;
   page.value = 1;
   await refresh();
-}
-
-function openLink(url: string): void {
-  try {
-    openSafeChannelLink(url);
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "链接无效");
-  }
 }
 
 function supportsDetection(row: BuyerChannelRow): boolean {
@@ -287,14 +278,9 @@ onMounted(async () => {
                 column.prop === 'promotionUrl' || column.prop === 'fissionUrl'
               "
               #default="{ row }"
-              ><el-button
-                class="channel-url"
-                link
-                type="primary"
-                :title="row[column.prop]"
-                @click="openLink(row[column.prop])"
-                >{{ row[column.prop] || "-" }}</el-button
-              ></template
+              ><span class="channel-url" :title="row[column.prop]">{{
+                row[column.prop] || "-"
+              }}</span></template
             >
             <template
               v-else-if="column.prop === 'targetCountry'"
@@ -431,11 +417,11 @@ onMounted(async () => {
 }
 
 .channel-url {
-  height: auto;
-  padding: 0;
-  text-align: left;
+  color: var(--el-color-primary);
   overflow-wrap: anywhere;
   white-space: normal;
+  cursor: text;
+  user-select: text;
 }
 
 :deep(.filter-card .el-select) {

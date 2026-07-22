@@ -1,4 +1,5 @@
 export const DOMAIN_TEMPLATE_CONFLICT_MESSAGE = "该域名已经绑定其他模板";
+export const TEMPLATE_DOMAIN_CONFLICT_MESSAGE = "该模板已经绑定其他域名";
 
 export interface DomainBinding {
   templateId: number;

@@ -8,6 +8,7 @@ import type {
 } from "../../../../api/buyer-channel";
 import {
   DOMAIN_TEMPLATE_CONFLICT_MESSAGE,
+  TEMPLATE_DOMAIN_CONFLICT_MESSAGE,
   normalizeChannelDomain
 } from "@/views/buyer/channel/domain/channel-domain";
 import { hasBuyerApiErrorCode } from "@/views/buyer/shared/api-error-code";
@@ -144,13 +145,23 @@ export interface ChannelSaveServices {
   ) => Promise<{ published: boolean }>;
 }
 
-function isConflict(error: unknown): boolean {
+function conflictMessage(error: unknown): string | undefined {
   const message = apiErrorMessage(error, "");
-  return (
+  if (
     hasBuyerApiErrorCode(error, "DOMAIN_TEMPLATE_CONFLICT") ||
     message.includes("访问域名已绑定其他模板") ||
     message.includes("该域名已经绑定其他模板")
-  );
+  ) {
+    return DOMAIN_TEMPLATE_CONFLICT_MESSAGE;
+  }
+  if (
+    hasBuyerApiErrorCode(error, "TEMPLATE_DOMAIN_CONFLICT") ||
+    message.includes("模板已绑定其他域名") ||
+    message.includes("模板已经绑定其他域名")
+  ) {
+    return TEMPLATE_DOMAIN_CONFLICT_MESSAGE;
+  }
+  return undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -168,12 +179,15 @@ function fieldMessage(value: unknown): string | undefined {
 export function channelFormFieldErrors(
   error: unknown
 ): Partial<Record<keyof ChannelFormModel, string>> {
-  if (
-    isConflict(error) ||
-    (error instanceof Error &&
-      error.message === DOMAIN_TEMPLATE_CONFLICT_MESSAGE)
-  ) {
+  const bindingConflict = conflictMessage(error);
+  if (bindingConflict === DOMAIN_TEMPLATE_CONFLICT_MESSAGE) {
     return { domain: DOMAIN_TEMPLATE_CONFLICT_MESSAGE };
+  }
+  if (bindingConflict === TEMPLATE_DOMAIN_CONFLICT_MESSAGE) {
+    return {
+      templateId: TEMPLATE_DOMAIN_CONFLICT_MESSAGE,
+      domain: TEMPLATE_DOMAIN_CONFLICT_MESSAGE
+    };
   }
   const root = asRecord(error);
   const response = asRecord(root?.response);
@@ -254,7 +268,8 @@ export async function saveChannelForm(
     }
     if (result.published !== true) throw new Error("渠道发布失败，请重试");
   } catch (error) {
-    if (isConflict(error)) throw new Error(DOMAIN_TEMPLATE_CONFLICT_MESSAGE);
+    const bindingConflict = conflictMessage(error);
+    if (bindingConflict) throw new Error(bindingConflict);
     throw error;
   }
 }

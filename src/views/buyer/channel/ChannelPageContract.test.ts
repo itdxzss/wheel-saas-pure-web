@@ -191,6 +191,8 @@ describe("buyer channel page contract", () => {
     assert.ok(page.includes("countryFlagIcon(row.preselectedCountryIso2)"));
     assert.ok(page.includes('row[column.prop] || "-"'));
     assert.doesNotMatch(page, />打开链接<\/el-button>/);
+    assert.doesNotMatch(page, /openLink\(/);
+    assert.ok(page.includes("user-select: text"));
     assert.ok(
       channelApi.includes("targetCountryIso2: value.targetCountryIso2")
     );
