@@ -194,6 +194,10 @@ interface PromotionChannelCreatePayload {
   marketingAllowed: boolean;
 }
 
+interface PromotionChannelUpdatePayload extends PromotionChannelCreatePayload {
+  status: number;
+}
+
 const promotionPlatformCodes: Record<ChannelPlatform, number> = {
   FACEBOOK: 1,
   TIKTOK: 2,
@@ -315,6 +319,15 @@ function toPromotionChannelCreatePayload(
   };
 }
 
+function toPromotionChannelUpdatePayload(
+  payload: BuyerChannelPayload
+): PromotionChannelUpdatePayload {
+  return {
+    ...toPromotionChannelCreatePayload(payload),
+    status: payload.status === "ENABLED" ? 1 : 0
+  };
+}
+
 export function getBuyerChannelOptions(): Promise<BuyerChannelOptions> {
   return armadaRequest<BuyerChannelOptions>(
     "get",
@@ -396,19 +409,18 @@ export async function createBuyerChannel(
   };
 }
 
-export function updateBuyerChannel(
+export async function updateBuyerChannel(
   id: number,
   payload: BuyerChannelPayload
-): Promise<BuyerChannelMutationResult> {
-  return armadaRequest<BuyerChannelMutationResult>(
-    "put",
-    `/api/buyer/channels/${id}`,
-    { data: payload }
-  );
+): Promise<{ published: boolean }> {
+  await armadaRequest<void>("put", `/api/promotion-channels/update/${id}`, {
+    data: toPromotionChannelUpdatePayload(payload)
+  });
+  return { published: true };
 }
 
 export function deleteBuyerChannel(id: number): Promise<void> {
-  return armadaRequest<void>("delete", `/api/buyer/channels/${id}`);
+  return armadaRequest<void>("delete", `/api/promotion-channels/delete/${id}`);
 }
 
 export function detectBuyerChannel(id: number): Promise<ChannelDetectResult> {

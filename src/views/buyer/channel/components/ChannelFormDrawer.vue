@@ -6,7 +6,6 @@ import flagpack from "@iconify/json/json/flagpack.json";
 import {
   createBuyerChannel,
   getBuyerChannel,
-  precheckBuyerChannelDomain,
   updateBuyerChannel,
   type BuyerChannelOptions
 } from "@/api/buyer-channel";
@@ -225,7 +224,6 @@ async function save(): Promise<void> {
       form,
       editing.value,
       {
-        precheck: precheckBuyerChannelDomain,
         create: createBuyerChannel,
         update: updateBuyerChannel
       },

@@ -131,7 +131,7 @@ export function buildChannelPayload(
 }
 
 export interface ChannelSaveServices {
-  precheck: (params: {
+  precheck?: (params: {
     domain: string;
     templateId: number;
     excludeChannelId?: number;
@@ -144,7 +144,12 @@ export interface ChannelSaveServices {
 }
 
 function isConflict(error: unknown): boolean {
-  return hasBuyerApiErrorCode(error, "DOMAIN_TEMPLATE_CONFLICT");
+  return (
+    hasBuyerApiErrorCode(error, "DOMAIN_TEMPLATE_CONFLICT") ||
+    (error instanceof Error &&
+      (error.message.includes("访问域名已绑定其他模板") ||
+        error.message.includes("该域名已经绑定其他模板")))
+  );
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -228,7 +233,7 @@ export async function saveChannelForm(
   countries: Array<{ code: string; dialCode: string }> = []
 ): Promise<void> {
   const payload = buildChannelPayload(form, editing, countries);
-  if (editing) {
+  if (editing && services.precheck) {
     const binding = await services.precheck({
       domain: payload.domain,
       templateId: payload.templateId,

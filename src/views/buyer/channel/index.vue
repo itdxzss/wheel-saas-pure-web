@@ -154,6 +154,9 @@ async function remove(row: BuyerChannelRow): Promise<void> {
     });
     await deleteBuyerChannel(row.id);
     ElMessage.success("渠道已删除");
+    if (rows.value.length === 1 && page.value > 1) {
+      page.value -= 1;
+    }
     await refresh();
   } catch (error) {
     if (error === "cancel" || error === "close") return;
@@ -161,6 +164,10 @@ async function remove(row: BuyerChannelRow): Promise<void> {
       error instanceof Error ? error.message : "渠道仍被占用，无法删除"
     );
   }
+}
+
+async function handleSaved(): Promise<void> {
+  await refresh();
 }
 
 onMounted(async () => {
@@ -339,7 +346,7 @@ onMounted(async () => {
       v-model="drawerVisible"
       :channel-id="editingId"
       :options="options"
-      @saved="refresh"
+      @saved="handleSaved"
     />
     <FacebookEventGuideDialog v-model="guideVisible" />
     <ChannelDetectDialog v-model="detectVisible" :result="detectResult" />

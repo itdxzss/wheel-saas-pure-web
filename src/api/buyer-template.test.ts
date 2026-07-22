@@ -65,7 +65,7 @@ describe("buyer template API", () => {
       },
       {
         method: "patch",
-        url: "/api/buyer/templates/7/remark",
+        url: "/api/promotion-templates/7/remark",
         opts: { data: { remark: "已确认" } }
       }
     ]);

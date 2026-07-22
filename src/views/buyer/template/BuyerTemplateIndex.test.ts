@@ -21,12 +21,20 @@ describe("buyer template index", () => {
       assert.match(source, new RegExp(`label=["']${label}["']`));
     }
     assert.match(source, /title=["']模板列表["']/);
-    assert.match(source, />\s*预览\s*</);
+    assert.match(
+      source,
+      /class=["']thumbnail["'][\s\S]*?lazy[\s\S]*?@click=["']openPreview/
+    );
+    assert.doesNotMatch(source, /<el-button[\s\S]*?>\s*预览\s*<\/el-button>/);
     assert.match(source, />\s*编辑备注\s*</);
     assert.match(source, /tenant:buyer-template:visibility/);
     assert.match(source, /tenant:buyer-template:remark/);
     assert.match(source, /<el-pagination/);
     assert.match(source, /pageSizes/);
+    assert.match(
+      source,
+      /async function onSaveRemark\(\)[\s\S]*?await saveRemark\(\);[\s\S]*?await refreshRows\(\);/
+    );
   });
 
   it("does not add out-of-scope controls", () => {

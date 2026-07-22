@@ -182,15 +182,29 @@ describe("buyer channel page contract", () => {
     assert.ok(page.includes("探测"));
   });
 
-  it("uses the promotion channel create/query contract and maps every platform tracking id", () => {
+  it("uses the promotion channel CRUD contract and maps every platform tracking id", () => {
     assert.ok(channelApi.includes("/api/promotion-channels/create"));
     assert.ok(channelApi.includes("/api/promotion-channels/query"));
+    assert.ok(channelApi.includes("/api/promotion-channels/update/${id}"));
+    assert.ok(channelApi.includes("/api/promotion-channels/delete/${id}"));
     assert.ok(channelApi.includes("trackingId: payload.pixelId"));
     assert.ok(channelApi.includes("KUAISHOU: 3"));
     assert.ok(channelApi.includes("MGSKY: 4"));
     assert.ok(channelApi.includes("preselectedCountry"));
     assert.ok(channelApi.includes("creatorUserId"));
     assert.ok(channelApi.includes("ownerUserIds"));
+  });
+
+  it("refreshes the current page after saving and safely backs up after deleting the last row", () => {
+    assert.ok(page.includes('@saved="handleSaved"'));
+    assert.match(
+      page,
+      /async function handleSaved\(\): Promise<void> \{[\s\S]*?await refresh\(\);[\s\S]*?\}/
+    );
+    assert.match(
+      page,
+      /rows\.value\.length === 1 && page\.value > 1[\s\S]*?page\.value -= 1;[\s\S]*?await refresh\(\);/
+    );
   });
 
   it("offers all countries on first open and locks SPECIFIC to its dial code", () => {

@@ -58,6 +58,7 @@ async function onSaveRemark(): Promise<void> {
   try {
     await saveRemark();
     ElMessage.success("备注已更新");
+    await refreshRows();
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "备注更新失败");
   }
@@ -116,6 +117,8 @@ onMounted(() => void refreshRows());
                 class="thumbnail"
                 :src="row.previewUrl"
                 fit="cover"
+                lazy
+                title="点击预览"
                 @click="openPreview(asTemplateRow(row))"
               />
             </template>
@@ -170,15 +173,8 @@ onMounted(() => void refreshRows());
             prop="updatedAt"
             width="180"
           />
-          <el-table-column label="操作" fixed="right" width="150">
+          <el-table-column label="操作" fixed="right" width="110">
             <template #default="{ row }">
-              <el-button
-                link
-                type="primary"
-                @click="openPreview(asTemplateRow(row))"
-              >
-                预览
-              </el-button>
               <el-button
                 v-auth="'tenant:buyer-template:remark'"
                 link

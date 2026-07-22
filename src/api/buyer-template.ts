@@ -125,7 +125,7 @@ export function updateBuyerTemplateRemark(
   id: number,
   remark: string
 ): Promise<void> {
-  return armadaRequest<void>("patch", `/api/buyer/templates/${id}/remark`, {
+  return armadaRequest<void>("patch", `/api/promotion-templates/${id}/remark`, {
     data: { remark }
   });
 }

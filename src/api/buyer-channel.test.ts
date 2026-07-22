@@ -147,8 +147,34 @@ describe("buyer channel API contract", () => {
           }
         }
       },
-      { method: "put", url: "/api/buyer/channels/7", opts: { data: payload } },
-      { method: "delete", url: "/api/buyer/channels/7", opts: undefined },
+      {
+        method: "put",
+        url: "/api/promotion-channels/update/7",
+        opts: {
+          data: {
+            channelName: "A",
+            ownerUserId: 1,
+            targetCountry: "US",
+            landingTemplateId: 2,
+            domain: "go.example.com",
+            preselectedCountry: "US",
+            platform: 1,
+            trackingId: undefined,
+            accessToken: undefined,
+            leadEventName: "Lead",
+            loginRequestEventName: "Checkout",
+            loginSuccessEventName: "Complete",
+            inAppOpenAllowed: false,
+            marketingAllowed: true,
+            status: 1
+          }
+        }
+      },
+      {
+        method: "delete",
+        url: "/api/promotion-channels/delete/7",
+        opts: undefined
+      },
       { method: "post", url: "/api/buyer/channels/7/detect", opts: undefined },
       {
         method: "get",
