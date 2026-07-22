@@ -193,6 +193,9 @@ describe("buyer channel page contract", () => {
     assert.doesNotMatch(page, />打开链接<\/el-button>/);
     assert.doesNotMatch(page, /openLink\(/);
     assert.ok(page.includes("user-select: text"));
+    assert.ok(page.includes("copyChannelLink"));
+    assert.ok(page.includes("navigator.clipboard.writeText"));
+    assert.ok(page.includes("链接已复制"));
     assert.ok(
       channelApi.includes("targetCountryIso2: value.targetCountryIso2")
     );

@@ -115,6 +115,20 @@ async function resetFilters(): Promise<void> {
   await refresh();
 }
 
+async function copyChannelLink(url: string): Promise<void> {
+  if (!url) return;
+  if (!navigator.clipboard?.writeText) {
+    ElMessage.error("当前浏览器不支持自动复制，请手动选择链接复制");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    ElMessage.success("链接已复制");
+  } catch {
+    ElMessage.error("复制失败，请手动选择链接复制");
+  }
+}
+
 function supportsDetection(row: BuyerChannelRow): boolean {
   return row.platform === "FACEBOOK" || row.platform === "TIKTOK";
 }
@@ -278,9 +292,16 @@ onMounted(async () => {
                 column.prop === 'promotionUrl' || column.prop === 'fissionUrl'
               "
               #default="{ row }"
-              ><span class="channel-url" :title="row[column.prop]">{{
-                row[column.prop] || "-"
-              }}</span></template
+              ><span
+                class="channel-url"
+                :class="{ 'is-copyable': Boolean(row[column.prop]) }"
+                :title="row[column.prop] ? '点击复制链接' : ''"
+                :tabindex="row[column.prop] ? 0 : -1"
+                role="button"
+                @click="copyChannelLink(row[column.prop])"
+                @keydown.enter="copyChannelLink(row[column.prop])"
+                >{{ row[column.prop] || "-" }}</span
+              ></template
             >
             <template
               v-else-if="column.prop === 'targetCountry'"
@@ -420,8 +441,11 @@ onMounted(async () => {
   color: var(--el-color-primary);
   overflow-wrap: anywhere;
   white-space: normal;
-  cursor: text;
   user-select: text;
+}
+
+.channel-url.is-copyable {
+  cursor: copy;
 }
 
 :deep(.filter-card .el-select) {
