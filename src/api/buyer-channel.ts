@@ -25,6 +25,8 @@ export interface BuyerChannelRow {
   name: string;
   channelCode: string;
   targetCountry: string;
+  targetCountryIso2?: string;
+  mixedTargetCountry: boolean;
   templateId: number;
   templateName: string;
   platform: ChannelPlatform;
@@ -32,6 +34,7 @@ export interface BuyerChannelRow {
   promotionUrl: string;
   fissionUrl: string;
   defaultDialCode: string;
+  preselectedCountryIso2?: string;
   status: ChannelStatus;
   creatorName: string;
   createdAt: string;
@@ -177,6 +180,25 @@ interface PromotionChannelPageResult {
   totalPages: number;
 }
 
+interface PromotionChannelDetailVO {
+  id: number;
+  channelName: string;
+  ownerUserId: number;
+  targetCountry: string;
+  landingTemplateId: number;
+  domain: string;
+  preselectedCountry: string;
+  platform: number;
+  trackingId?: string;
+  accessTokenConfigured: boolean;
+  leadEventName?: string;
+  loginRequestEventName?: string;
+  loginSuccessEventName?: string;
+  inAppOpenAllowed: boolean;
+  marketingAllowed: boolean;
+  status: number;
+}
+
 interface PromotionChannelCreatePayload {
   channelName: string;
   ownerUserId?: number;
@@ -224,19 +246,14 @@ const previewCreatorNames: Record<number, string> = {
 function displayCountry(
   mixed: boolean,
   name?: string,
-  flag?: string,
   fallback?: string
 ): string {
-  if (mixed) return "🌐 混合（不限国家）";
-  return [flag, name ?? fallback].filter(Boolean).join(" ");
+  if (mixed) return "混合（不限国家）";
+  return name ?? fallback ?? "-";
 }
 
 function displayPreselectedCountry(value: PromotionChannelVO): string {
-  return [
-    value.preselectedCountryFlag,
-    value.preselectedCountryName,
-    value.preselectedPhonePrefix
-  ]
+  return [value.preselectedCountryName, value.preselectedPhonePrefix]
     .filter(Boolean)
     .join(" ");
 }
@@ -273,9 +290,10 @@ function toBuyerChannelRow(value: PromotionChannelVO): BuyerChannelRow {
     targetCountry: displayCountry(
       value.mixedTargetCountry,
       value.targetCountryName,
-      value.targetCountryFlag,
       value.targetCountryIso2 ?? value.targetCountry
     ),
+    targetCountryIso2: value.targetCountryIso2,
+    mixedTargetCountry: value.mixedTargetCountry,
     templateId: value.landingTemplateId,
     templateName: value.templateName,
     platform: channelPlatformsByCode[value.platform] ?? "FACEBOOK",
@@ -284,10 +302,37 @@ function toBuyerChannelRow(value: PromotionChannelVO): BuyerChannelRow {
     fissionUrl: value.splitLink,
     defaultDialCode:
       displayPreselectedCountry(value) || value.preselectedPhonePrefix || "-",
+    preselectedCountryIso2: value.preselectedCountryIso2,
     status: value.status === 1 ? "ENABLED" : "DISABLED",
     creatorName:
       previewCreatorNames[value.creatorUserId] ?? String(value.creatorUserId),
     createdAt: formatCreatedAt(value.createdAt)
+  };
+}
+
+function toBuyerChannelDetail(
+  value: PromotionChannelDetailVO
+): BuyerChannelDetail {
+  const mixedTargetCountry = value.targetCountry === "MIXED";
+  return {
+    id: value.id,
+    name: value.channelName,
+    ownerId: value.ownerUserId,
+    targetCountry: mixedTargetCountry ? "" : value.targetCountry,
+    countryMode: mixedTargetCountry ? "MIXED" : "SPECIFIC",
+    templateId: value.landingTemplateId,
+    domain: value.domain,
+    preselectedCountry: value.preselectedCountry,
+    defaultDialCode: "",
+    platform: channelPlatformsByCode[value.platform] ?? "FACEBOOK",
+    pixelId: value.trackingId,
+    accessTokenConfigured: value.accessTokenConfigured,
+    eventLead: value.leadEventName,
+    eventInitiateCheckout: value.loginRequestEventName,
+    eventCompleteRegistration: value.loginSuccessEventName,
+    openInApp: value.inAppOpenAllowed,
+    joinMarketing: value.marketingAllowed,
+    status: value.status === 1 ? "ENABLED" : "DISABLED"
   };
 }
 
@@ -358,8 +403,12 @@ export async function listBuyerChannels(
   };
 }
 
-export function getBuyerChannel(id: number): Promise<BuyerChannelDetail> {
-  return armadaRequest<BuyerChannelDetail>("get", `/api/buyer/channels/${id}`);
+export async function getBuyerChannel(id: number): Promise<BuyerChannelDetail> {
+  const detail = await armadaRequest<PromotionChannelDetailVO>(
+    "get",
+    `/api/promotion-channels/detail/${id}`
+  );
+  return toBuyerChannelDetail(detail);
 }
 
 export function precheckBuyerChannelDomain(

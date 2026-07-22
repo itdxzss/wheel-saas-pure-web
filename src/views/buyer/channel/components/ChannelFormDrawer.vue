@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
-import { Icon, type IconifyIcon } from "@iconify/vue/offline";
-import flagpack from "@iconify/json/json/flagpack.json";
+import { Icon } from "@iconify/vue/offline";
 import {
   createBuyerChannel,
   getBuyerChannel,
@@ -17,6 +16,7 @@ import {
   type ChannelFormModel
 } from "../domain/channel-form";
 import { createChannelDetailLoader } from "../domain/channel-detail-loader";
+import { countryFlagIcon } from "../domain/channel-country-flag";
 import {
   platformFieldConfigs,
   previewPlatformOptions
@@ -24,12 +24,6 @@ import {
 import { usePreselectedCountrySelection } from "./channel-country-selection";
 import { previewOwnerOptions } from "./channel-preview-options";
 import { useChannelTrackingFields } from "./channel-tracking-fields";
-
-interface FlagIconCollection {
-  width?: number;
-  height?: number;
-  icons: Record<string, IconifyIcon>;
-}
 
 const reportingEventOptions = [
   { label: "潜在客户（留资）（Lead）", value: "Lead" },
@@ -39,9 +33,6 @@ const reportingEventOptions = [
     value: "CompleteRegistration"
   }
 ];
-
-const flagIconCollection = flagpack as unknown as FlagIconCollection;
-const flagIconCache = new Map<string, IconifyIcon>();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -79,22 +70,6 @@ const {
   validatePixelId,
   validateAccessToken
 } = useChannelTrackingFields(form, editing, platformFieldConfig);
-
-function countryFlagIcon(code: string): IconifyIcon | undefined {
-  const normalizedCode = code.trim().toLowerCase();
-  if (!normalizedCode) return undefined;
-  const cached = flagIconCache.get(normalizedCode);
-  if (cached) return cached;
-  const source = flagIconCollection.icons[normalizedCode];
-  if (!source) return undefined;
-  const icon: IconifyIcon = {
-    ...source,
-    width: source.width ?? flagIconCollection.width ?? 32,
-    height: source.height ?? flagIconCollection.height ?? 24
-  };
-  flagIconCache.set(normalizedCode, icon);
-  return icon;
-}
 
 function countrySelectionLabel(value: unknown): string {
   if (value === "__MIXED__") return "混合（不限国家）";
@@ -200,7 +175,14 @@ async function load(): Promise<void> {
   }
   loading.value = true;
   await detailLoader.load(props.channelId, {
-    resolved: detail => replaceForm(hydrateChannelForm(detail)),
+    resolved: detail => {
+      const next = hydrateChannelForm(detail);
+      next.defaultDialCode =
+        props.options.countries.find(
+          country => country.code === next.preselectedCountry
+        )?.dialCode ?? "";
+      replaceForm(next);
+    },
     rejected: error => {
       ElMessage.error(
         error instanceof Error ? error.message : "渠道详情加载失败"

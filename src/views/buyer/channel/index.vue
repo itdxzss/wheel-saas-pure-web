@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { Icon } from "@iconify/vue/offline";
 import { PureTableBar } from "@/components/RePureTableBar";
 import FacebookDetectIcon from "~icons/logos/facebook";
 import TikTokDetectIcon from "~icons/logos/tiktok-icon";
@@ -22,6 +23,7 @@ import { previewPlatformOptions } from "./components/channel-platform-fields";
 import { previewOwnerOptions } from "./components/channel-preview-options";
 import { toBuyerChannelCountries } from "./domain/channel-country-options";
 import { openSafeChannelLink } from "./domain/channel-domain";
+import { countryFlagIcon } from "./domain/channel-country-flag";
 import { apiErrorMessage } from "@/utils/api-error";
 
 defineOptions({ name: "BuyerChannel" });
@@ -286,12 +288,54 @@ onMounted(async () => {
               "
               #default="{ row }"
               ><el-button
+                class="channel-url"
                 link
                 type="primary"
+                :title="row[column.prop]"
                 @click="openLink(row[column.prop])"
-                >打开链接</el-button
+                >{{ row[column.prop] || "-" }}</el-button
               ></template
             >
+            <template
+              v-else-if="column.prop === 'targetCountry'"
+              #default="{ row }"
+            >
+              <div class="country-cell">
+                <span v-if="row.mixedTargetCountry" class="country-globe"
+                  >🌐</span
+                >
+                <Icon
+                  v-else-if="countryFlagIcon(row.targetCountryIso2)"
+                  :icon="countryFlagIcon(row.targetCountryIso2)"
+                  class="country-flag"
+                  aria-hidden="true"
+                />
+                <span v-else-if="row.targetCountryIso2" class="country-code">
+                  {{ row.targetCountryIso2 }}
+                </span>
+                <span>{{ row.targetCountry }}</span>
+              </div>
+            </template>
+            <template
+              v-else-if="column.prop === 'defaultDialCode'"
+              #default="{ row }"
+            >
+              <div class="country-cell">
+                <Icon
+                  v-if="countryFlagIcon(row.preselectedCountryIso2)"
+                  :icon="countryFlagIcon(row.preselectedCountryIso2)"
+                  class="country-flag"
+                  aria-hidden="true"
+                />
+                <span
+                  v-else-if="row.preselectedCountryIso2"
+                  class="country-code"
+                >
+                  {{ row.preselectedCountryIso2 }}
+                </span>
+                <span>{{ row.defaultDialCode }}</span>
+              </div>
+            </template>
             <template v-else-if="column.prop === 'status'" #default="{ row }"
               ><el-tag :type="row.status === 'ENABLED' ? 'success' : 'info'">{{
                 row.status === "ENABLED" ? "启用" : "禁用"
@@ -367,6 +411,31 @@ onMounted(async () => {
 .pagination {
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.country-cell {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.country-flag {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 16px;
+}
+
+.country-globe,
+.country-code {
+  flex: 0 0 auto;
+}
+
+.channel-url {
+  height: auto;
+  padding: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 :deep(.filter-card .el-select) {

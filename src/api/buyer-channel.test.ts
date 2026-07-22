@@ -47,10 +47,28 @@ describe("buyer channel API contract", () => {
       marketingAllowed: true,
       createdAt: 1_721_465_309_000
     };
+    const detailResponse = {
+      id: 7,
+      channelName: "A",
+      ownerUserId: 1,
+      targetCountry: "US",
+      landingTemplateId: 2,
+      domain: "go.example.com",
+      preselectedCountry: "US",
+      platform: 1,
+      trackingId: "pixel-7",
+      accessTokenConfigured: true,
+      leadEventName: "Lead",
+      loginRequestEventName: "Checkout",
+      loginSuccessEventName: "Complete",
+      inAppOpenAllowed: false,
+      marketingAllowed: true,
+      status: 1
+    };
     resetArmadaMockQueue([
       {},
       { list: [channelResponse], page: 2, pageSize: 60, total: 1 },
-      {},
+      detailResponse,
       {},
       channelResponse,
       {},
@@ -85,7 +103,7 @@ describe("buyer channel API contract", () => {
       creatorId: 3,
       parentUserId: 4
     });
-    await getBuyerChannel(7);
+    const detail = await getBuyerChannel(7);
     await precheckBuyerChannelDomain({
       domain: "go.example.com",
       templateId: 2,
@@ -113,7 +131,11 @@ describe("buyer channel API contract", () => {
           }
         }
       },
-      { method: "get", url: "/api/buyer/channels/7", opts: undefined },
+      {
+        method: "get",
+        url: "/api/promotion-channels/detail/7",
+        opts: undefined
+      },
       {
         method: "get",
         url: "/api/buyer/channels/domain-binding",
@@ -182,5 +204,25 @@ describe("buyer channel API contract", () => {
         opts: { params: { host: "go.example.com", channelCode: "CH007" } }
       }
     ]);
+    assert.deepEqual(detail, {
+      id: 7,
+      name: "A",
+      ownerId: 1,
+      targetCountry: "US",
+      countryMode: "SPECIFIC",
+      templateId: 2,
+      domain: "go.example.com",
+      preselectedCountry: "US",
+      defaultDialCode: "",
+      platform: "FACEBOOK",
+      pixelId: "pixel-7",
+      accessTokenConfigured: true,
+      eventLead: "Lead",
+      eventInitiateCheckout: "Checkout",
+      eventCompleteRegistration: "Complete",
+      openInApp: false,
+      joinMarketing: true,
+      status: "ENABLED"
+    });
   });
 });

@@ -25,6 +25,10 @@ const channelForm = readFileSync(
   new URL("./domain/channel-form.ts", import.meta.url),
   "utf8"
 );
+const countryFlag = readFileSync(
+  new URL("./domain/channel-country-flag.ts", import.meta.url),
+  "utf8"
+);
 const channelApi = readFileSync(
   new URL("../../../api/buyer-channel.ts", import.meta.url),
   "utf8"
@@ -182,9 +186,25 @@ describe("buyer channel page contract", () => {
     assert.ok(page.includes("探测"));
   });
 
+  it("renders country flags and the complete promotion and fission URLs", () => {
+    assert.ok(page.includes("countryFlagIcon(row.targetCountryIso2)"));
+    assert.ok(page.includes("countryFlagIcon(row.preselectedCountryIso2)"));
+    assert.ok(page.includes('row[column.prop] || "-"'));
+    assert.doesNotMatch(page, />打开链接<\/el-button>/);
+    assert.ok(
+      channelApi.includes("targetCountryIso2: value.targetCountryIso2")
+    );
+    assert.ok(
+      channelApi.includes(
+        "preselectedCountryIso2: value.preselectedCountryIso2"
+      )
+    );
+  });
+
   it("uses the promotion channel CRUD contract and maps every platform tracking id", () => {
     assert.ok(channelApi.includes("/api/promotion-channels/create"));
     assert.ok(channelApi.includes("/api/promotion-channels/query"));
+    assert.ok(channelApi.includes("/api/promotion-channels/detail/${id}"));
     assert.ok(channelApi.includes("/api/promotion-channels/update/${id}"));
     assert.ok(channelApi.includes("/api/promotion-channels/delete/${id}"));
     assert.ok(channelApi.includes("trackingId: payload.pixelId"));
@@ -211,7 +231,7 @@ describe("buyer channel page contract", () => {
     const countryField = drawerFormItem("目标国家");
     const dialCodeField = drawerFormItem("预选区号");
     assert.ok(drawer.includes("@iconify/vue/offline"));
-    assert.ok(drawer.includes("@iconify/json/json/flagpack.json"));
+    assert.ok(countryFlag.includes("@iconify/json/json/flagpack.json"));
     assert.ok(countryField.includes('v-for="country in options.countries"'));
     assert.ok(countryField.includes("countryFlagIcon(country.code)"));
     assert.ok(countryField.includes("country.dialCode"));
