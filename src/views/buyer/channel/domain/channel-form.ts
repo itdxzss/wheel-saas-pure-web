@@ -11,6 +11,7 @@ import {
   normalizeChannelDomain
 } from "@/views/buyer/channel/domain/channel-domain";
 import { hasBuyerApiErrorCode } from "@/views/buyer/shared/api-error-code";
+import { apiErrorMessage } from "@/utils/api-error";
 
 export interface ChannelFormModel {
   id?: number;
@@ -144,11 +145,11 @@ export interface ChannelSaveServices {
 }
 
 function isConflict(error: unknown): boolean {
+  const message = apiErrorMessage(error, "");
   return (
     hasBuyerApiErrorCode(error, "DOMAIN_TEMPLATE_CONFLICT") ||
-    (error instanceof Error &&
-      (error.message.includes("访问域名已绑定其他模板") ||
-        error.message.includes("该域名已经绑定其他模板")))
+    message.includes("访问域名已绑定其他模板") ||
+    message.includes("该域名已经绑定其他模板")
   );
 }
 

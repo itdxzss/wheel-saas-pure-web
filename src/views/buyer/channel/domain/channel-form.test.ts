@@ -8,6 +8,8 @@ import {
   saveChannelForm
 } from "./channel-form";
 
+const countries = [{ code: "US", dialCode: "+1" }];
+
 describe("shared channel form", () => {
   it("creates fresh add defaults and fully rehydrates each edited record", () => {
     const first = createDefaultChannelForm();
@@ -118,11 +120,16 @@ describe("shared channel form", () => {
       accessTokenConfigured: false
     });
     await assert.rejects(
-      saveChannelForm(form, true, {
-        precheck: async () => ({ available: true }),
-        update: async () => ({ published: false }),
-        create: async () => ({ published: false })
-      }),
+      saveChannelForm(
+        form,
+        true,
+        {
+          precheck: async () => ({ available: true }),
+          update: async () => ({ published: false }),
+          create: async () => ({ published: false })
+        },
+        countries
+      ),
       /渠道发布失败/
     );
   });
@@ -139,11 +146,20 @@ describe("shared channel form", () => {
       status: "ENABLED",
       accessTokenConfigured: true
     });
-    assert.equal("accessToken" in buildChannelPayload(edit, true), false);
+    assert.equal(
+      "accessToken" in buildChannelPayload(edit, true, countries),
+      false
+    );
     edit.accessToken = "new-secret";
-    assert.equal(buildChannelPayload(edit, true).accessToken, "new-secret");
+    assert.equal(
+      buildChannelPayload(edit, true, countries).accessToken,
+      "new-secret"
+    );
     edit.platform = "KUAISHOU";
-    assert.equal("accessToken" in buildChannelPayload(edit, true), false);
+    assert.equal(
+      "accessToken" in buildChannelPayload(edit, true, countries),
+      false
+    );
   });
 
   it("prechecks before save and maps structured conflicts to the exact message", async () => {
@@ -160,22 +176,27 @@ describe("shared channel form", () => {
     });
     const calls: string[] = [];
     await assert.rejects(
-      saveChannelForm(form, true, {
-        precheck: async () => {
-          calls.push("precheck");
-          return { available: true };
+      saveChannelForm(
+        form,
+        true,
+        {
+          precheck: async () => {
+            calls.push("precheck");
+            return { available: true };
+          },
+          update: async () => {
+            calls.push("update");
+            throw Object.assign(new Error("conflict"), {
+              code: "DOMAIN_TEMPLATE_CONFLICT"
+            });
+          },
+          create: async () => {
+            calls.push("create");
+            return { published: true };
+          }
         },
-        update: async () => {
-          calls.push("update");
-          throw Object.assign(new Error("conflict"), {
-            code: "DOMAIN_TEMPLATE_CONFLICT"
-          });
-        },
-        create: async () => {
-          calls.push("create");
-          return { published: true };
-        }
-      }),
+        countries
+      ),
       /该域名已经绑定其他模板/
     );
     assert.deepEqual(calls, ["precheck", "update"]);
@@ -196,18 +217,57 @@ describe("shared channel form", () => {
     for (const data of [
       { errorCode: "DOMAIN_TEMPLATE_CONFLICT" },
       { code: "DOMAIN_TEMPLATE_CONFLICT" },
-      { message: "DOMAIN_TEMPLATE_CONFLICT" }
+      { message: "DOMAIN_TEMPLATE_CONFLICT" },
+      { message: "访问域名已绑定其他模板，请更换域名: used.example.com" }
     ]) {
       await assert.rejects(
-        saveChannelForm(form, true, {
-          precheck: async () => ({ available: true }),
-          update: async () => {
-            throw { response: { status: 409, data } };
+        saveChannelForm(
+          form,
+          true,
+          {
+            precheck: async () => ({ available: true }),
+            update: async () => {
+              throw { response: { status: 409, data } };
+            },
+            create: async () => ({ published: true })
           },
-          create: async () => ({ published: true })
-        }),
+          countries
+        ),
         /该域名已经绑定其他模板/
       );
     }
+  });
+
+  it("maps a create conflict to the same domain error used by editing", async () => {
+    const form = hydrateChannelForm({
+      id: 4,
+      name: "A",
+      platform: "FACEBOOK",
+      domain: "used.example.com",
+      templateId: 3,
+      targetCountry: "US",
+      defaultDialCode: "+1",
+      status: "ENABLED",
+      accessTokenConfigured: false
+    });
+    await assert.rejects(
+      saveChannelForm(
+        form,
+        false,
+        {
+          update: async () => ({ published: true }),
+          create: async () => {
+            throw {
+              response: {
+                status: 409,
+                data: { message: "访问域名已绑定其他模板，请更换域名" }
+              }
+            };
+          }
+        },
+        countries
+      ),
+      /该域名已经绑定其他模板/
+    );
   });
 });
