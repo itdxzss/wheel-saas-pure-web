@@ -108,10 +108,20 @@ export interface DomainBindingResult {
   templateId?: number;
 }
 
+export interface ChannelProbePayload {
+  testEventCode?: string;
+}
+
 export interface ChannelDetectResult {
   success: boolean;
-  summary: string;
-  checkedAt: string;
+  status: "NORMAL" | "ABNORMAL" | string;
+  trackingId?: string;
+  accessTokenConfigured: boolean;
+  eventName?: string;
+  eventId?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  probedAt: number;
 }
 
 export interface BuyerChannelRuntimeConfig {
@@ -472,10 +482,15 @@ export function deleteBuyerChannel(id: number): Promise<void> {
   return armadaRequest<void>("delete", `/api/promotion-channels/delete/${id}`);
 }
 
-export function detectBuyerChannel(id: number): Promise<ChannelDetectResult> {
+export function detectBuyerChannel(
+  id: number,
+  payload: ChannelProbePayload = {}
+): Promise<ChannelDetectResult> {
+  const testEventCode = payload.testEventCode?.trim();
   return armadaRequest<ChannelDetectResult>(
     "post",
-    `/api/buyer/channels/${id}/detect`
+    `/api/promotion-channels/probe/${id}`,
+    { data: testEventCode ? { testEventCode } : undefined }
   );
 }
 

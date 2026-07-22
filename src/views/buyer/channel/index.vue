@@ -55,6 +55,9 @@ const drawerVisible = ref(false);
 const editingId = ref<number>();
 const guideVisible = ref(false);
 const detectVisible = ref(false);
+const detectChannel = ref<BuyerChannelRow | null>(null);
+const detectLoading = ref(false);
+const detectErrorMessage = ref("");
 const detectResult = ref<ChannelDetectResult | null>(null);
 
 const columns = [
@@ -144,13 +147,28 @@ function platformLabel(platform: ChannelPlatform): string {
   );
 }
 
-async function detect(row: BuyerChannelRow): Promise<void> {
+function openDetect(row: BuyerChannelRow): void {
   if (!supportsDetection(row)) return;
+  detectChannel.value = row;
+  detectResult.value = null;
+  detectErrorMessage.value = "";
+  detectVisible.value = true;
+}
+
+async function runDetect(testEventCode?: string): Promise<void> {
+  if (!detectChannel.value || detectLoading.value) return;
+  detectLoading.value = true;
+  detectErrorMessage.value = "";
   try {
-    detectResult.value = await detectBuyerChannel(row.id);
-    detectVisible.value = true;
+    detectResult.value = await detectBuyerChannel(detectChannel.value.id, {
+      testEventCode
+    });
+    await refresh();
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "渠道检测失败");
+    detectErrorMessage.value = apiErrorMessage(error, "渠道探测失败");
+    ElMessage.error(detectErrorMessage.value);
+  } finally {
+    detectLoading.value = false;
   }
 }
 
@@ -367,7 +385,7 @@ onMounted(async () => {
                 link
                 type="primary"
                 :icon="detectionIcon(row.platform)"
-                @click="detect(row)"
+                @click="openDetect(row)"
                 >探测</el-button
               >
               <el-button
@@ -400,7 +418,14 @@ onMounted(async () => {
       @saved="handleSaved"
     />
     <FacebookEventGuideDialog v-model="guideVisible" />
-    <ChannelDetectDialog v-model="detectVisible" :result="detectResult" />
+    <ChannelDetectDialog
+      v-model="detectVisible"
+      :channel="detectChannel"
+      :loading="detectLoading"
+      :result="detectResult"
+      :error-message="detectErrorMessage"
+      @probe="runDetect"
+    />
   </div>
 </template>
 

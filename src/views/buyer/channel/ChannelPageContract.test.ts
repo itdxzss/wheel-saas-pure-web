@@ -7,6 +7,10 @@ const drawer = readFileSync(
   new URL("./components/ChannelFormDrawer.vue", import.meta.url),
   "utf8"
 );
+const detectDialog = readFileSync(
+  new URL("./components/ChannelDetectDialog.vue", import.meta.url),
+  "utf8"
+);
 const platformFields = readFileSync(
   new URL("./components/channel-platform-fields.ts", import.meta.url),
   "utf8"
@@ -184,6 +188,23 @@ describe("buyer channel page contract", () => {
     assert.ok(page.includes("TikTokDetectIcon"));
     assert.ok(page.includes('v-if="supportsDetection(row)"'));
     assert.ok(page.includes("探测"));
+    assert.ok(page.includes("openDetect"));
+    assert.ok(page.includes("runDetect"));
+    assert.ok(page.includes('@probe="runDetect"'));
+    assert.ok(channelApi.includes("/api/promotion-channels/probe/${id}"));
+    assert.ok(channelApi.includes("testEventCode"));
+    for (const text of [
+      "Meta Test Event Code",
+      "trackingId",
+      "accessTokenConfigured",
+      "eventName",
+      "eventId",
+      "errorCode",
+      "errorMessage",
+      "probedAt"
+    ]) {
+      assert.ok(detectDialog.includes(text), text);
+    }
   });
 
   it("renders country flags and the complete promotion and fission URLs", () => {
