@@ -116,3 +116,18 @@ export function batchDeleteAccountGroups(
     data: { ids }
   }).then(count => ({ deleted_count: count ?? 0 }));
 }
+
+export function splitAccountGroup(
+  groupId: number,
+  groupCount: number
+): Promise<void> {
+  return armadaRequest<void>("post", "/api/account-groups/split", {
+    data: { groupId, groupCount }
+  });
+}
+
+export function mergeAccountGroups(groupIds: number[]): Promise<void> {
+  return armadaRequest<void>("post", "/api/account-groups/merge", {
+    data: { groupIds }
+  });
+}
