@@ -21,6 +21,7 @@ const props = withDefaults(
   defineProps<{
     promotionCode?: string;
     requirePromotionCode?: boolean;
+    runtimeConfig?: BuyerChannelRuntimeConfig;
   }>(),
   {
     promotionCode: "",
@@ -35,7 +36,7 @@ const guideVisible = ref(false);
 const pairingCode = ref("11111111");
 const loggedCountry = ref<DateV2Country>(dateV2MockCountries[0]);
 const loggedPhone = ref("");
-const runtimeConfig = ref<BuyerChannelRuntimeConfig>();
+const resolvedRuntimeConfig = ref<BuyerChannelRuntimeConfig>();
 const runtimeLoading = ref(false);
 const runtimeError = ref("");
 let runtimeRequestVersion = 0;
@@ -52,17 +53,19 @@ const promotionCode = computed(
 
 const themeColor = computed(() =>
   normalizeDateV2ThemeColor(
-    runtimeConfig.value?.themeColor ?? locationQueryValue("themeColor")
+    resolvedRuntimeConfig.value?.themeColor ?? locationQueryValue("themeColor")
   )
 );
 
 const showAppDownload = computed(() => {
-  if (runtimeConfig.value) return runtimeConfig.value.showAppDownload;
+  if (resolvedRuntimeConfig.value) {
+    return resolvedRuntimeConfig.value.showAppDownload;
+  }
   return locationQueryValue("showAppDownload").toLowerCase() === "true";
 });
 
 const availableCountries = computed(() => {
-  const targetCountry = runtimeConfig.value?.targetCountry;
+  const targetCountry = resolvedRuntimeConfig.value?.targetCountry;
   if (!targetCountry || targetCountry === "MIXED") return dateV2MockCountries;
   const country = dateV2MockCountries.find(
     item => item.code === targetCountry.toUpperCase()
@@ -72,7 +75,8 @@ const availableCountries = computed(() => {
 
 const initialCountryCode = computed(() => {
   const requested =
-    runtimeConfig.value?.preselectedCountry ?? locationQueryValue("country");
+    resolvedRuntimeConfig.value?.preselectedCountry ??
+    locationQueryValue("country");
   const normalized = requested?.toUpperCase() ?? "US";
   return availableCountries.value.some(country => country.code === normalized)
     ? normalized
@@ -80,11 +84,20 @@ const initialCountryCode = computed(() => {
 });
 
 watch(
-  promotionCode,
-  async code => {
+  [promotionCode, () => props.runtimeConfig],
+  async ([code, suppliedRuntimeConfig]) => {
     const requestVersion = ++runtimeRequestVersion;
-    runtimeConfig.value = undefined;
+    resolvedRuntimeConfig.value = undefined;
     runtimeError.value = "";
+    if (suppliedRuntimeConfig) {
+      if (!dateV2TemplateCodes.has(suppliedRuntimeConfig.templateCode)) {
+        runtimeError.value = "推广链接绑定的不是约会二代模板";
+        return;
+      }
+      resolvedRuntimeConfig.value = suppliedRuntimeConfig;
+      runtimeLoading.value = false;
+      return;
+    }
     if (!code) {
       if (props.requirePromotionCode) {
         runtimeError.value = "推广链接格式不正确";
@@ -98,7 +111,7 @@ watch(
       if (!dateV2TemplateCodes.has(result.templateCode)) {
         throw new Error("推广链接绑定的不是约会二代模板");
       }
-      runtimeConfig.value = result;
+      resolvedRuntimeConfig.value = result;
     } catch (error) {
       if (requestVersion !== runtimeRequestVersion) return;
       runtimeError.value =

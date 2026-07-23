@@ -2,6 +2,19 @@ import axios from "axios";
 import type { ArmadaResp } from "@/api/armada";
 import type { BuyerChannelRuntimeConfig } from "@/api/buyer-channel";
 
+export interface PublicWhatsAppPairingPayload {
+  channelCode: string;
+  countryCode: string;
+  dialCode: string;
+  phone: string;
+}
+
+export interface PublicWhatsAppPairingResult {
+  requestId: string;
+  pairingCode: string;
+  expiresInSeconds: number;
+}
+
 const publicClient = axios.create({
   timeout: 10000,
   headers: {

@@ -11,15 +11,14 @@ import {
   ElScrollbar,
   ElSkeleton
 } from "element-plus";
-import DateV2PublicApp from "@/views/buyer/date-v2-preview/index.vue";
+import PublicPromotionApp from "@/views/buyer/public-promotion/index.vue";
 import { resolveDateV2PathPromotionCode } from "@/views/buyer/date-v2-preview/domain/date-v2-preview";
 import "element-plus/dist/index.css";
 import "@/views/buyer/date-v2-preview/public-entry.scss";
 
 const promotionCode = resolveDateV2PathPromotionCode(window.location.pathname);
-const app = createApp(DateV2PublicApp, {
-  promotionCode,
-  requirePromotionCode: true
+const app = createApp(PublicPromotionApp, {
+  promotionCode
 });
 
 app
