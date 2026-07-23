@@ -54,6 +54,15 @@ describe("group marketing create drawer", () => {
     assert.match(source, /disabled: !accountSelectable\(account\)/);
   });
 
+  it("shows membership status for every lazy-loaded group without disabling it", () => {
+    assert.match(source, /groupMembershipStatusMeta/);
+    assert.match(source, /group\.membershipStatusText/);
+    assert.match(source, /group\.membershipStatus/);
+    assert.match(source, /membershipLabel/);
+    assert.match(source, /disabled: !accountSelectable\(account\)/);
+    assert.doesNotMatch(source, /membershipStatus[^\n]*disabled/);
+  });
+
   it("shows the backend lock owner message on disabled account nodes", () => {
     assert.match(source, /disabledReason: accountDisabledReason\(account\)/);
     assert.match(source, /<el-tooltip/);

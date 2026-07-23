@@ -11,24 +11,35 @@ describe("group marketing detail drawer", () => {
   it("renders the exact account and group detail fields in order", () => {
     assert.match(
       source,
-      /label="在线状态"[\s\S]*label="发送账号"[\s\S]*label="账号发送总条数"[\s\S]*label="明细"/
+      /label="在线状态"[\s\S]*label="发送账号"[\s\S]*label="账号发送总条数"[\s\S]*label="账号失败条数"[\s\S]*label="账号跳过条数"[\s\S]*label="明细"/
     );
     assert.match(
       source,
-      /<span>群组状态<\/span>\s*<span>群名称<\/span>\s*<span>群 GID<\/span>\s*<span>单群发送条数<\/span>\s*<span>最后发送时间<\/span>\s*<span>执行情况<\/span>/
+      /<span>当前关系<\/span>\s*<span>最后协议状态<\/span>\s*<span>群名称<\/span>\s*<span>群 GID<\/span>\s*<span>成功<\/span>\s*<span>失败<\/span>\s*<span>跳过<\/span>\s*<span>最后发送时间<\/span>\s*<span>最后执行<\/span>/
     );
     assert.doesNotMatch(source, />群组链接</);
     assert.doesNotMatch(source, />最近原因</);
-    assert.doesNotMatch(source, />当前状态</);
     assert.doesNotMatch(source, />发言号码</);
   });
 
-  it("uses live login state and renders failure reason inside execution", () => {
+  it("renders membership, protocol status, execution result and skipped counts separately", () => {
+    assert.match(source, /label="跳过条数"/);
+    assert.match(
+      source,
+      /groupMembershipStatusMeta\(group\.membershipStatus\)/
+    );
+    assert.match(source, /groupSendStatusMeta\(group\.groupStatus\)/);
+    assert.match(source, /groupExecutionResultMeta\(group\.executionResult\)/);
+    assert.match(source, /group\.skippedMessageCount \?\? 0/);
+    assert.match(source, /row\.skippedMessageCount \?\? 0/);
+  });
+
+  it("uses live login state and renders failed or skipped reason inside execution", () => {
     assert.match(source, /loginStateLabel/);
     assert.match(source, /loginStateTagType/);
     assert.match(source, /row\.loginState/);
     assert.match(source, /group\.executionReason/);
-    assert.match(source, /group\.executionResult === ['"]FAILED['"]/);
+    assert.match(source, /\[['"]FAILED['"], ['"]SKIPPED['"]\]\.includes/);
     assert.match(source, /group\.executionReason \|\| "未知原因"/);
   });
 

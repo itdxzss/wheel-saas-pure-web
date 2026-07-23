@@ -16,6 +16,11 @@ describe("group execution result meta", () => {
       tagType: "danger",
       tagged: true
     });
+    assert.deepEqual(groupExecutionResultMeta("SKIPPED"), {
+      label: "已跳过",
+      tagType: "warning",
+      tagged: true
+    });
   });
 
   it("shows a plain dash for missing or unknown values", () => {

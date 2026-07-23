@@ -1,6 +1,6 @@
 export interface GroupExecutionResultMeta {
   label: string;
-  tagType: "success" | "danger" | "info";
+  tagType: "success" | "warning" | "danger" | "info";
   tagged: boolean;
 }
 
@@ -19,6 +19,11 @@ const RESULT_META: Record<string, GroupExecutionResultMeta> = {
   FAILED: {
     label: "发送失败",
     tagType: "danger",
+    tagged: true
+  },
+  SKIPPED: {
+    label: "已跳过",
+    tagType: "warning",
     tagged: true
   }
 };

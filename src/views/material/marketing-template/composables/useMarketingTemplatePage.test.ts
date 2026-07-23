@@ -10,6 +10,26 @@ import * as marketingTemplatePage from "./useMarketingTemplatePage";
 
 const { useMarketingTemplatePage } = marketingTemplatePage;
 
+type PromotionLinkRow = {
+  linkMode: "NORMAL" | "BUTTON" | "IMAGE_TEXT";
+  promotionLink: string;
+  buttons: Array<{
+    type: "link" | "copy" | "quick";
+    value: string;
+  }>;
+};
+
+function displayPromotionLink(row: PromotionLinkRow): string {
+  const moduleWithDisplayHelper =
+    marketingTemplatePage as typeof marketingTemplatePage & {
+      marketingTemplatePromotionLink?: (row: PromotionLinkRow) => string;
+    };
+  return (
+    moduleWithDisplayHelper.marketingTemplatePromotionLink?.(row) ??
+    "display-helper-missing"
+  );
+}
+
 type LinkValidationMessage =
   | ""
   | "请输入跳转链接"
@@ -28,6 +48,32 @@ function validateLink(value: string): LinkValidationMessage {
 }
 
 describe("marketing template page state", () => {
+  it("shows the first link button URL for a button template", () => {
+    assert.equal(
+      displayPromotionLink({
+        linkMode: "BUTTON",
+        promotionLink: "",
+        buttons: [
+          { type: "copy", value: "VIP88" },
+          { type: "link", value: "https://translate.google.com/" },
+          { type: "link", value: "https://example.com/second" }
+        ]
+      }),
+      "https://translate.google.com/"
+    );
+  });
+
+  it("keeps the promotion link for a normal template", () => {
+    assert.equal(
+      displayPromotionLink({
+        linkMode: "NORMAL",
+        promotionLink: "https://example.com/promotion",
+        buttons: [{ type: "link", value: "https://example.com/button" }]
+      }),
+      "https://example.com/promotion"
+    );
+  });
+
   it("starts a new template with one empty link button", () => {
     const pageState = useMarketingTemplatePage();
 

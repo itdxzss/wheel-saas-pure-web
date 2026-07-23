@@ -12,6 +12,12 @@ export type MarketingTaskStatus = 1 | 2 | 5 | 7 | 8;
 export type MarketingTaskTargetStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type MarketingTaskStartMode = "PENDING" | "IMMEDIATE";
 export type MarketingTargetScope = "GROUP_FIXED" | "ACCOUNT_DYNAMIC";
+export type AccountGroupMembershipStatus =
+  | "IN_GROUP"
+  | "UNCONFIRMED"
+  | "KICKED_OUT"
+  | "LEFT"
+  | "NOT_IN_GROUP";
 
 export interface MarketingTaskRow {
   id: number;
@@ -65,18 +71,20 @@ export interface MarketingTaskTargetRow {
   lastReason?: string | null;
 }
 
-export type MarketingGroupExecutionResult = "SUCCESS" | "FAILED";
+export type MarketingGroupExecutionResult = "SUCCESS" | "FAILED" | "SKIPPED";
 
 export interface MarketingTaskGroupStatRow {
   groupLinkId?: number | null;
   groupJid?: string | null;
   groupLinkUrl?: string | null;
   groupName?: string | null;
+  membershipStatus?: AccountGroupMembershipStatus | null;
   groupStatus?: MarketingGroupSendStatus | null;
   executionResult?: MarketingGroupExecutionResult | null;
   executionReason?: string | null;
   sentMessageCount: number;
   failedMessageCount: number;
+  skippedMessageCount?: number | null;
   lastAttemptAt?: number | null;
   lastSentAt?: number | null;
   lastReason?: string | null;
@@ -97,6 +105,7 @@ export interface MarketingTaskAccountTargetRow {
   status: MarketingTaskTargetStatus;
   sentMessageCount: number;
   failedMessageCount: number;
+  skippedMessageCount?: number | null;
   lastAttemptAt?: number | null;
   lastSentAt?: number | null;
   lastReason?: string | null;
@@ -104,6 +113,7 @@ export interface MarketingTaskAccountTargetRow {
 }
 
 export interface MarketingTaskDetail extends MarketingTaskRow {
+  skippedMessageCount?: number | null;
   targets: MarketingTaskTargetRow[];
   accountTargets?: MarketingTaskAccountTargetRow[];
 }
@@ -124,6 +134,9 @@ export interface MarketingTreeGroup {
   groupName?: string | null;
   linkUrl: string;
   isAdmin?: boolean | null;
+  membershipStatus?: AccountGroupMembershipStatus | null;
+  membershipStatusText?: string | null;
+  statusUpdatedAt?: number | null;
 }
 
 export interface MarketingTreeAccount {

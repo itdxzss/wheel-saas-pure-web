@@ -11,6 +11,7 @@ import View from "~icons/ep/view";
 import Delete from "~icons/ep/delete";
 import MarketingTemplateDrawer from "./components/MarketingTemplateDrawer.vue";
 import {
+  marketingTemplatePromotionLink,
   type MarketingTemplateRow,
   useMarketingTemplatePage
 } from "./composables/useMarketingTemplatePage";
@@ -64,6 +65,10 @@ function linkModeTagType(mode: MarketingTemplateRow["linkMode"]) {
 
 function promotionHref(value: string) {
   return /^https?:\/\//.test(value) ? value : undefined;
+}
+
+function promotionLink(row: unknown): string {
+  return marketingTemplatePromotionLink(asMarketingTemplateRow(row));
 }
 
 function asMarketingTemplateRow(row: unknown): MarketingTemplateRow {
@@ -215,10 +220,7 @@ onMounted(() => {
             width="130"
           >
             <template #default="{ row }">
-              <el-tag
-                :type="linkModeTagType(row.linkMode)"
-                effect="plain"
-              >
+              <el-tag :type="linkModeTagType(row.linkMode)" effect="plain">
                 {{ linkModeLabel(row.linkMode) }}
               </el-tag>
             </template>
@@ -232,13 +234,13 @@ onMounted(() => {
           >
             <template #default="{ row }">
               <el-link
-                v-if="promotionHref(row.promotionLink)"
+                v-if="promotionHref(promotionLink(row))"
                 type="primary"
-                :href="promotionHref(row.promotionLink)"
+                :href="promotionHref(promotionLink(row))"
                 target="_blank"
                 :underline="false"
               >
-                {{ row.promotionLink }}
+                {{ promotionLink(row) }}
               </el-link>
               <span v-else>-</span>
             </template>

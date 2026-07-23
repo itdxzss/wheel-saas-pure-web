@@ -9,6 +9,8 @@ import {
   batchDeleteAccountGroups,
   createAccountGroup,
   listAccountGroups,
+  mergeAccountGroups,
+  splitAccountGroup,
   updateAccountGroup
 } from "@/api/account-group";
 import { apiErrorMessage } from "@/utils/api-error";
@@ -60,6 +62,7 @@ const loading = ref(false);
 const createLoading = ref(false);
 const editLoading = ref(false);
 const deleteLoading = ref(false);
+const operationLoading = ref(false);
 const showCreateDrawer = ref(false);
 const showEditDrawer = ref(false);
 const rows = ref<AccountGroupRow[]>([]);
@@ -127,7 +130,79 @@ async function refreshAccountGroups() {
 }
 
 function onSelectionChange(rows: AccountGroupRow[]) {
-  selectedRows.value = rows;
+  const selectedIds = new Set(rows.map(row => row.id));
+  selectedRows.value = selectedRows.value.filter(row =>
+    selectedIds.has(row.id)
+  );
+  for (const row of rows) {
+    if (!selectedRows.value.some(selected => selected.id === row.id)) {
+      selectedRows.value.push(row);
+    }
+  }
+}
+
+async function splitSelectedGroup() {
+  const group = selectedRows.value[0];
+  if (!group || selectedRows.value.length !== 1) return;
+  if (group.totalAccounts === 0) {
+    ElMessage.warning("空分组不允许拆分");
+    return;
+  }
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `分组“${group.name}”共有 ${group.totalAccounts} 个账号，请输入拆分后的小组数量（2-${group.totalAccounts}）`,
+      "拆分分组",
+      {
+        inputPattern: /^\d+$/,
+        inputErrorMessage: "请输入整数",
+        confirmButtonText: "下一步"
+      }
+    );
+    const count = Number(value);
+    if (count < 2 || count > group.totalAccounts) {
+      ElMessage.warning(`拆分数量须为 2-${group.totalAccounts}`);
+      return;
+    }
+    await ElMessageBox.confirm(
+      `确认将“${group.name}”的 ${group.totalAccounts} 个账号拆分为 ${count} 个小组吗？原分组将被删除。`,
+      "拆分确认",
+      { type: "warning", confirmButtonText: "确认拆分" }
+    );
+    operationLoading.value = true;
+    await splitAccountGroup(group.id, count);
+    ElMessage.success("分组拆分成功");
+    await refreshAccountGroups();
+  } catch (error) {
+    if (error !== "cancel" && error !== "close")
+      ElMessage.error(apiErrorMessage(error, "分组拆分失败"));
+  } finally {
+    operationLoading.value = false;
+  }
+}
+
+async function mergeSelectedGroups() {
+  if (selectedRows.value.length < 2) return;
+  const [mainGroup] = selectedRows.value;
+  const accountCount = selectedRows.value.reduce(
+    (sum, row) => sum + row.totalAccounts,
+    0
+  );
+  try {
+    await ElMessageBox.confirm(
+      `确认合并分组“${selectedRows.value.map(row => row.name).join("、")}”吗？共涉及 ${accountCount} 个账号，主分组为“${mainGroup.name}”，其余分组将被删除。`,
+      "合并确认",
+      { type: "warning", confirmButtonText: "确认合并" }
+    );
+    operationLoading.value = true;
+    await mergeAccountGroups(selectedRows.value.map(row => row.id));
+    ElMessage.success("分组合并成功");
+    await refreshAccountGroups();
+  } catch (error) {
+    if (error !== "cancel" && error !== "close")
+      ElMessage.error(apiErrorMessage(error, "分组合并失败"));
+  } finally {
+    operationLoading.value = false;
+  }
 }
 
 function isSelectable(row: AccountGroupRow) {
@@ -299,6 +374,16 @@ onMounted(() => {
     >
       <template #buttons>
         <el-button type="primary" @click="openCreateDrawer">新增分组</el-button>
+        <el-button
+          :disabled="selectedRows.length !== 1 || operationLoading"
+          @click="splitSelectedGroup"
+          >拆分分组</el-button
+        >
+        <el-button
+          :disabled="selectedRows.length < 2 || operationLoading"
+          @click="mergeSelectedGroups"
+          >合并分组</el-button
+        >
         <el-button
           type="danger"
           plain
