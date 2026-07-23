@@ -9,6 +9,8 @@ import {
 import DateV2Chat from "./components/DateV2Chat.vue";
 import DateV2Landing from "./components/DateV2Landing.vue";
 import DateV2LoginDialog from "./components/DateV2LoginDialog.vue";
+import DateV2PairingDialog from "./components/DateV2PairingDialog.vue";
+import DateV2WhatsAppGuideDialog from "./components/DateV2WhatsAppGuideDialog.vue";
 import {
   normalizeDateV2ThemeColor,
   resolveDateV2PromotionCode,
@@ -28,6 +30,9 @@ const props = withDefaults(
 
 const stage = ref<"landing" | "chat">("landing");
 const loginVisible = ref(false);
+const pairingVisible = ref(false);
+const guideVisible = ref(false);
+const pairingCode = ref("11111111");
 const loggedCountry = ref<DateV2Country>(dateV2MockCountries[0]);
 const loggedPhone = ref("");
 const runtimeConfig = ref<BuyerChannelRuntimeConfig>();
@@ -110,7 +115,12 @@ watch(
 function handleLogin(payload: { country: DateV2Country; phone: string }): void {
   loggedCountry.value = payload.country;
   loggedPhone.value = payload.phone;
-  stage.value = "chat";
+  pairingVisible.value = true;
+}
+
+function handlePairingCopied(): void {
+  pairingVisible.value = false;
+  guideVisible.value = true;
 }
 </script>
 
@@ -145,6 +155,17 @@ function handleLogin(payload: { country: DateV2Country; phone: string }): void {
       :initial-country-code="initialCountryCode"
       :theme-color="themeColor"
       @login="handleLogin"
+    />
+    <DateV2PairingDialog
+      v-model="pairingVisible"
+      :pairing-code="pairingCode"
+      :theme-color="themeColor"
+      @copied="handlePairingCopied"
+    />
+    <DateV2WhatsAppGuideDialog
+      v-model="guideVisible"
+      :pairing-code="pairingCode"
+      :theme-color="themeColor"
     />
   </main>
 </template>
