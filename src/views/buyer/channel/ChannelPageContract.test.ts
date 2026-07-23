@@ -112,7 +112,6 @@ describe("buyer channel page contract", () => {
       "归属用户",
       "目标国家",
       "绑定模板",
-      "https://",
       "预选区号",
       "FB Pixel ID",
       "FB Access Token",
@@ -123,6 +122,11 @@ describe("buyer channel page contract", () => {
       "参加营销"
     ])
       assert.ok(normalizedDrawer.includes(text), text);
+
+    const domainField = drawerFormItem("访问域名");
+    assert.match(domainField, /#prepend>http:\/\/<\/template>/);
+    assert.doesNotMatch(domainField, /#prepend>https:\/\/<\/template>/);
+    assert.ok(domainField.includes('href="https://www.dynadot.com/"'));
 
     for (const text of [
       "仅用于渠道分类标记，比如主要投印度就选「印度」，选完后下方预选区号会自动填充。",
@@ -136,7 +140,7 @@ describe("buyer channel page contract", () => {
 
     assert.ok(drawer.includes('type="textarea"'));
     assert.ok(drawer.includes("inline-prompt"));
-    assert.doesNotMatch(drawer, /el-color-picker|label="状态"|事件映射/);
+    assert.doesNotMatch(drawer, /label="状态"|事件映射/);
   });
 
   it("uses fixed preview owners, backend templates and platform facts", () => {

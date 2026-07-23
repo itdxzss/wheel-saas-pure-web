@@ -452,7 +452,7 @@ watch(
       </template>
       <el-form-item label="访问域名" prop="domain" :error="fieldErrors.domain">
         <el-input v-model="form.domain" placeholder="example.com">
-          <template #prepend>https://</template>
+          <template #prepend>http://</template>
         </el-input>
         <el-alert
           class="domain-alert"
