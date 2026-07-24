@@ -49,7 +49,11 @@ describe("date v2 preview domain", () => {
   it("keeps the standalone entry path-only for every generated code", () => {
     assert.equal(resolveDateV2PathPromotionCode("/aaat99zx"), "aaat99zx");
     assert.equal(resolveDateV2PathPromotionCode("/bewbmr9k"), "bewbmr9k");
+    assert.equal(resolveDateV2PathPromotionCode("/aaat99zx/1"), "aaat99zx");
+    assert.equal(resolveDateV2PathPromotionCode("/bewbmr9k/1024/"), "bewbmr9k");
     assert.equal(resolveDateV2PathPromotionCode("/date-v2/aaat99zx"), "");
+    assert.equal(resolveDateV2PathPromotionCode("/aaat99zx/member-1"), "");
+    assert.equal(resolveDateV2PathPromotionCode("/aaat99zx/1/extra"), "");
     assert.equal(resolveDateV2PathPromotionCode("/"), "");
   });
 });

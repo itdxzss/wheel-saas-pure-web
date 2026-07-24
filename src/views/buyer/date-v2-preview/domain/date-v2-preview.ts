@@ -17,17 +17,23 @@ export interface DateV2Profile {
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const PROMOTION_CODE = /^[a-z0-9_-]{6,32}$/i;
+const FISSION_CODE = /^\d{1,32}$/;
 
 export interface DateV2LocationInput {
   pathname: string;
   search: string;
 }
 
-/** 独立落地页只允许从“域名/推广码”的路径中读取渠道码。 */
+/** 独立落地页支持“域名/推广码”和“域名/推广码/数字裂变标识”。 */
 export function resolveDateV2PathPromotionCode(pathname: string): string {
   const pathSegments = pathname.split("/").filter(Boolean);
-  const pathCode = pathSegments.length === 1 ? pathSegments[0].trim() : "";
-  return PROMOTION_CODE.test(pathCode) ? pathCode : "";
+  if (pathSegments.length < 1 || pathSegments.length > 2) return "";
+
+  const promotionCode = pathSegments[0]?.trim() ?? "";
+  const fissionCode = pathSegments[1]?.trim();
+  if (!PROMOTION_CODE.test(promotionCode)) return "";
+  if (fissionCode && !FISSION_CODE.test(fissionCode)) return "";
+  return promotionCode;
 }
 
 /** 开发预览入口兼容 query，生产独立入口不得使用此 query 回退。 */

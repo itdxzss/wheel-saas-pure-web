@@ -23,9 +23,9 @@ describe("buyer template index", () => {
     assert.match(source, /title=["']模板列表["']/);
     assert.match(
       source,
-      /class=["']thumbnail["'][\s\S]*?lazy[\s\S]*?@click=["']openPreview/
+      /<el-button[\s\S]*?@click=["']openPreview\(asTemplateRow\(row\)\)["'][\s\S]*?>\s*预览\s*<\/el-button>/
     );
-    assert.doesNotMatch(source, /<el-button[\s\S]*?>\s*预览\s*<\/el-button>/);
+    assert.doesNotMatch(source, /class=["']thumbnail["']/);
     assert.match(source, />\s*编辑备注\s*</);
     assert.match(source, /tenant:buyer-template:visibility/);
     assert.match(source, /tenant:buyer-template:remark/);

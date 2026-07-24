@@ -109,18 +109,13 @@ onMounted(() => void refreshRows());
           <el-table-column
             v-if="!dynamicColumns[3]?.hide"
             label="预览图"
-            prop="previewUrl"
             width="110"
+            align="center"
           >
             <template #default="{ row }">
-              <el-image
-                class="thumbnail"
-                :src="row.previewUrl"
-                fit="cover"
-                lazy
-                title="点击预览"
-                @click="openPreview(asTemplateRow(row))"
-              />
+              <el-button size="small" @click="openPreview(asTemplateRow(row))">
+                预览
+              </el-button>
             </template>
           </el-table-column>
           <el-table-column
@@ -219,13 +214,6 @@ onMounted(() => void refreshRows());
 
 .buyer-template-page > .el-alert {
   margin-bottom: 16px;
-}
-
-.thumbnail {
-  width: 56px;
-  height: 56px;
-  cursor: pointer;
-  border-radius: 4px;
 }
 
 .param-tag {
