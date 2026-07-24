@@ -39,4 +39,9 @@ describe("temporary system management routes", () => {
     ])
       assert.ok(routes.includes(`"${permission}"`), permission);
   });
+
+  it("removes the pure-admin permission demo from business navigation", () => {
+    assert.equal(routes.includes('title: "权限管理"'), false);
+    assert.equal(routes.includes("permissionRouter"), false);
+  });
 });
