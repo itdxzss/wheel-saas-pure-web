@@ -87,19 +87,7 @@ const accountRouter = {
         module_key: "account",
         perm_key: "tenant:account-group:view"
       }
-    }
-  ]
-};
-
-const taskRouter = {
-  path: "/task",
-  meta: {
-    title: "任务中心",
-    icon: "ep:list",
-    rank: 3,
-    module_key: "pull_task"
-  },
-  children: [
+    },
     {
       path: "/account/import",
       component: "account/import/index",
@@ -111,7 +99,19 @@ const taskRouter = {
         module_key: "account",
         perm_key: "tenant:account:edit"
       }
-    },
+    }
+  ]
+};
+
+const groupRouter = {
+  path: "/group",
+  meta: {
+    title: "群组管理",
+    icon: "ep:chat-dot-round",
+    rank: 3,
+    module_key: "group_management"
+  },
+  children: [
     {
       path: "/task/group-link/imports",
       component: "group/imports/index",
@@ -147,7 +147,19 @@ const taskRouter = {
         module_key: "historical_group",
         perm_key: "tenant:historical_group:view"
       }
-    },
+    }
+  ]
+};
+
+const taskRouter = {
+  path: "/task",
+  meta: {
+    title: "任务中心",
+    icon: "ep:list",
+    rank: 4,
+    module_key: "pull_task"
+  },
+  children: [
     {
       path: "/task/pull",
       component: "task/pull-task/index",
@@ -204,7 +216,7 @@ const materialRouter = {
   meta: {
     title: "素材管理",
     icon: "ep:collection",
-    rank: 4,
+    rank: 5,
     module_key: "material_management"
   },
   children: [
@@ -223,13 +235,13 @@ const materialRouter = {
   ]
 };
 
-const operationRouter = {
-  path: "/operation",
+const resourceRouter = {
+  path: "/resource",
   meta: {
-    title: "运营管理",
-    icon: "ep:operation",
-    rank: 5,
-    module_key: "ops_management"
+    title: "资源管理",
+    icon: "ep:connection",
+    rank: 6,
+    module_key: "resource_management"
   },
   children: [
     {
@@ -259,6 +271,54 @@ const operationRouter = {
   ]
 };
 
+const systemRouter = {
+  path: "/system",
+  meta: {
+    title: "系统管理",
+    icon: "ep:setting",
+    rank: 8,
+    module_key: "system_management"
+  },
+  children: [
+    {
+      path: "/system/user",
+      component: "system/user/index",
+      name: "SystemUser",
+      meta: {
+        title: "用户管理",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "system_management",
+        perm_key: "tenant:system-user:view"
+      }
+    },
+    {
+      path: "/system/role",
+      component: "system/role/index",
+      name: "SystemRole",
+      meta: {
+        title: "角色管理",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "system_management",
+        perm_key: "tenant:system-role:view"
+      }
+    },
+    {
+      path: "/system/menu",
+      component: "system/menu/index",
+      name: "SystemMenu",
+      meta: {
+        title: "菜单管理",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "system_management",
+        perm_key: "tenant:system-menu:view"
+      }
+    }
+  ]
+};
+
 export default defineFakeRoute([
   {
     url: "/get-async-routes",
@@ -268,9 +328,11 @@ export default defineFakeRoute([
         success: true,
         data: [
           accountRouter,
+          groupRouter,
           taskRouter,
           materialRouter,
-          operationRouter,
+          resourceRouter,
+          systemRouter,
           permissionRouter
         ]
       };
