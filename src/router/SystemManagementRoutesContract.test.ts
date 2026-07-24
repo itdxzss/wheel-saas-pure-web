@@ -22,4 +22,21 @@ describe("temporary system management routes", () => {
     ])
       assert.ok(routes.includes(text), text);
   });
+
+  it("grants temporary fixed login every system management action", () => {
+    for (const permission of [
+      "tenant:system-user:create",
+      "tenant:system-user:edit",
+      "tenant:system-user:reset-password",
+      "tenant:system-user:status",
+      "tenant:system-role:create",
+      "tenant:system-role:edit",
+      "tenant:system-role:grant",
+      "tenant:system-role:status",
+      "tenant:system-menu:create",
+      "tenant:system-menu:edit",
+      "tenant:system-menu:status"
+    ])
+      assert.ok(routes.includes(`"${permission}"`), permission);
+  });
 });

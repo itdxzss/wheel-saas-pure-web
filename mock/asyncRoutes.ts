@@ -314,7 +314,14 @@ const systemRouter = {
         roles: ["admin", "common"],
         showParent: true,
         module_key: "system_management",
-        perm_key: "tenant:system-user:view"
+        perm_key: "tenant:system-user:view",
+        // 当前仍使用固定登录，按钮权限先随临时路由下发；真实登录接入后改由角色菜单接口返回。
+        auths: [
+          "tenant:system-user:create",
+          "tenant:system-user:edit",
+          "tenant:system-user:reset-password",
+          "tenant:system-user:status"
+        ]
       }
     },
     {
@@ -326,7 +333,13 @@ const systemRouter = {
         roles: ["admin", "common"],
         showParent: true,
         module_key: "system_management",
-        perm_key: "tenant:system-role:view"
+        perm_key: "tenant:system-role:view",
+        auths: [
+          "tenant:system-role:create",
+          "tenant:system-role:edit",
+          "tenant:system-role:grant",
+          "tenant:system-role:status"
+        ]
       }
     },
     {
@@ -338,7 +351,12 @@ const systemRouter = {
         roles: ["admin", "common"],
         showParent: true,
         module_key: "system_management",
-        perm_key: "tenant:system-menu:view"
+        perm_key: "tenant:system-menu:view",
+        auths: [
+          "tenant:system-menu:create",
+          "tenant:system-menu:edit",
+          "tenant:system-menu:status"
+        ]
       }
     }
   ]
