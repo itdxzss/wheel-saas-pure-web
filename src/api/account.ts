@@ -12,6 +12,16 @@ export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;
 export type NumberSource = 1 | 2 | 3;
 export type MuteStatus = 1 | 2;
+/** 账号菜单使用的营销整组占用展示类型。 */
+export type MarketingOccupancyDisplayType =
+  | "FREE"
+  | "SIMPLE_MARKETING"
+  | "GROUP_PULL_MARKETING"
+  | "GROUP_PULL_MODE_2"
+  | "GROUP_PULL_MODE_3"
+  | "OTHER_MARKETING"
+  | "PAUSED"
+  | "RELEASING";
 
 export interface TenantAccount {
   id?: number;
@@ -27,6 +37,9 @@ export interface TenantAccount {
   risk_status?: RiskStatus | null;
   group_id?: number | null;
   group_name?: string | null;
+  marketing_occupancy_type?: MarketingOccupancyDisplayType | null;
+  marketing_occupancy_task_id?: number | null;
+  marketing_locked_at?: string | null;
   assigned_service?: string | null;
   service_name?: string | null;
   friends_num?: number | null;
@@ -77,6 +90,13 @@ export interface TenantAccountListQuery {
   ip_group_name?: string;
   truth_ip?: string;
   truthIp?: string;
+  marketing_occupancy_type?: MarketingOccupancyDisplayType | "";
+  marketingOccupancyType?: MarketingOccupancyDisplayType | "";
+  occupied_task_keyword?: string;
+  occupiedTaskKeyword?: string;
+  occupied_business_type?: number | "";
+  occupiedBusinessType?: number | "";
+  callable?: boolean | "";
 }
 
 export interface TenantAccountSummary {
@@ -186,6 +206,9 @@ interface ArmadaTenantAccount {
   protocolId?: string | null;
   accountGroupId?: number | null;
   groupName?: string | null;
+  marketingOccupancyType?: MarketingOccupancyDisplayType | null;
+  marketingOccupancyTaskId?: number | null;
+  marketingLockedAt?: number | null;
   ownership?: number | null;
   leaseUntil?: number | null;
   dispatchedAt?: number | null;
@@ -287,6 +310,9 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     risk_status: row.riskStatus ?? null,
     group_id: row.accountGroupId ?? null,
     group_name: row.groupName ?? null,
+    marketing_occupancy_type: row.marketingOccupancyType ?? "FREE",
+    marketing_occupancy_task_id: row.marketingOccupancyTaskId ?? null,
+    marketing_locked_at: formatEpochMillis(row.marketingLockedAt, null),
     assigned_service: null,
     service_name: null,
     friends_num: row.friendsNum ?? 0,

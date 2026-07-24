@@ -581,6 +581,17 @@ describe("group marketing task page state", () => {
     }
   });
 
+  it("opens an existing task detail directly by task ID", async () => {
+    resetArmadaMock(marketingDetail(42, 7, "SUCCESS"));
+    const pageState = useGroupMarketingTaskPage();
+
+    await pageState.openDetailById(42);
+
+    assert.equal(pageState.detailDrawerOpen.value, true);
+    assert.equal(pageState.detailTask.value?.id, 42);
+    assert.equal(armadaCalls()[0]?.url, "/api/marketing-tasks/42");
+  });
+
   it("skips overlapping polls and ignores a stale response after switching tasks", async () => {
     const timers = installIntervalHarness();
     try {

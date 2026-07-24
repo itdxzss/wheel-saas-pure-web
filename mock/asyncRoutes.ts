@@ -185,6 +185,31 @@ const taskRouter = {
       }
     },
     {
+      path: "/task/group-pull-marketing",
+      component: "task/group-pull-marketing/index",
+      name: "TaskGroupPullMarketing",
+      meta: {
+        title: "拉群营销",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "group_pull_marketing",
+        perm_key: "tenant:group_pull_marketing:view"
+      }
+    },
+    {
+      path: "/task/group-pull-marketing/:id",
+      component: "task/group-pull-marketing/detail/index",
+      name: "TaskGroupPullMarketingDetail",
+      meta: {
+        title: "拉群营销明细",
+        showLink: false,
+        activePath: "/task/group-pull-marketing",
+        roles: ["admin", "common"],
+        module_key: "group_pull_marketing",
+        perm_key: "tenant:group_pull_marketing:view"
+      }
+    },
+    {
       path: "/task/group-creation-marketing",
       component: "task/group-creation-marketing/index",
       name: "TaskGroupCreationMarketing",
