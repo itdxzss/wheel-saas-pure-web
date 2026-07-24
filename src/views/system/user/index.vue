@@ -13,6 +13,11 @@ import {
 } from "@/api/system-user";
 import { listSystemRoles, type SystemRole } from "@/api/system-role";
 import { apiErrorMessage } from "@/utils/api-error";
+import {
+  isValidPassword,
+  PASSWORD_PATTERN,
+  PASSWORD_RULE_MESSAGE
+} from "@/utils/password-policy";
 
 defineOptions({ name: "SystemUser" });
 
@@ -49,9 +54,8 @@ const rules = {
         value: string,
         callback: (error?: Error) => void
       ) => {
-        if (editingId.value || (value.length >= 8 && value.length <= 64))
-          callback();
-        else callback(new Error("密码长度必须为8至64个字符"));
+        if (editingId.value || isValidPassword(value)) callback();
+        else callback(new Error(PASSWORD_RULE_MESSAGE));
       },
       trigger: "blur"
     }
@@ -152,8 +156,8 @@ async function resetPassword(row: SystemUser): Promise<void> {
       "重置密码",
       {
         inputType: "password",
-        inputPattern: /^.{8,64}$/,
-        inputErrorMessage: "密码长度必须为8至64个字符",
+        inputPattern: PASSWORD_PATTERN,
+        inputErrorMessage: PASSWORD_RULE_MESSAGE,
         confirmButtonText: "确认重置",
         cancelButtonText: "取消"
       }
@@ -339,13 +343,16 @@ onMounted(refresh);
 .system-page {
   padding: 16px;
 }
+
 .filter-card,
 .system-page > .el-alert {
   margin-bottom: 16px;
 }
+
 .full-width {
   width: 100%;
 }
+
 :deep(.filter-card .el-input),
 :deep(.filter-card .el-select) {
   width: 220px;
