@@ -1,5 +1,6 @@
 import { armadaRequest } from "@/api/armada";
 import { formatEpochMillis } from "@/utils/time";
+import type { MarketingOccupancyDisplayType } from "./account";
 
 export interface AccountGroupApiRow {
   id: number;
@@ -12,6 +13,9 @@ export interface AccountGroupApiRow {
   updatedAt: string;
   remark?: string | null;
   systemBuiltin: boolean;
+  marketingOccupancyType?: number | null;
+  marketingOccupancyTaskId?: number | null;
+  marketingLockedAt?: number | null;
 }
 
 export interface AccountGroupWriteRequest {
@@ -21,6 +25,20 @@ export interface AccountGroupWriteRequest {
 
 export interface AccountGroupBatchDeleteResponse {
   deleted_count: number;
+}
+
+/** 点击账号分组名称后按需加载的营销整组占用详情。 */
+export interface AccountGroupMarketingOccupancy {
+  groupId: number;
+  occupancyType: MarketingOccupancyDisplayType;
+  taskBusinessType?: number | null;
+  taskId?: number | null;
+  taskName?: string | null;
+  taskStatus?: number | null;
+  resourceStatus?: number | null;
+  lockedAt?: number | null;
+  marketingAccountTotalCount: number;
+  marketingAccountUsedCount: number;
 }
 
 export interface AccountGroupListQuery {
@@ -51,6 +69,9 @@ interface ArmadaAccountGroupRow {
   bannedCount?: number | null;
   createdAt?: number | null;
   updatedAt?: number | null;
+  marketingOccupancyType?: number | null;
+  marketingOccupancyTaskId?: number | null;
+  marketingLockedAt?: number | null;
 }
 
 function toQuery(params: AccountGroupListQuery) {
@@ -77,7 +98,10 @@ function toAccountGroupRow(row: ArmadaAccountGroupRow): AccountGroupApiRow {
     bannedAccounts,
     accountCountSummary: `${totalAccounts} - ${onlineAccounts} / ${abnormalAccounts} / ${bannedAccounts}`,
     updatedAt: formatEpochMillis(row.updatedAt ?? row.createdAt),
-    systemBuiltin: row.systemBuiltin === true || row.systemBuiltin === 1
+    systemBuiltin: row.systemBuiltin === true || row.systemBuiltin === 1,
+    marketingOccupancyType: row.marketingOccupancyType ?? null,
+    marketingOccupancyTaskId: row.marketingOccupancyTaskId ?? null,
+    marketingLockedAt: row.marketingLockedAt ?? null
   };
 }
 
@@ -92,6 +116,20 @@ export function listAccountGroups(
     ...result,
     list: result.list?.map(toAccountGroupRow) ?? []
   }));
+}
+
+/**
+ * 查询单个账号分组的营销占用详情。
+ *
+ * 该接口仅在用户点击分组标签时调用，账号列表分页加载不会逐行请求。
+ */
+export function getAccountGroupMarketingOccupancy(
+  groupId: number
+): Promise<AccountGroupMarketingOccupancy> {
+  return armadaRequest<AccountGroupMarketingOccupancy>(
+    "get",
+    `/api/account-groups/${groupId}/marketing-occupancy`
+  );
 }
 
 export function createAccountGroup(

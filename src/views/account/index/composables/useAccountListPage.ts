@@ -25,6 +25,7 @@ import {
   previewTenantAccountBatch,
   type AccountType,
   type LoginState,
+  type MarketingOccupancyDisplayType,
   type NumberSource,
   type RiskStatus,
   type TenantAccount,
@@ -35,8 +36,10 @@ import {
 } from "@/api/account";
 import { toTenantAccountBatchQuery } from "@/api/account-mapping";
 import {
+  getAccountGroupMarketingOccupancy,
   listAccountGroups,
-  type AccountGroupApiRow
+  type AccountGroupApiRow,
+  type AccountGroupMarketingOccupancy
 } from "@/api/account-group";
 import { restartProtocolProcesses } from "@/api/protocol";
 import { apiErrorMessage } from "@/utils/api-error";
@@ -72,6 +75,7 @@ import {
   type AccountQueryRequest
 } from "../account-query-state";
 import { analyzeWsPhoneExportSelection } from "../account-ws-phone-export";
+import { createMarketingOccupancyDetailSession } from "../marketing-occupancy";
 
 export interface AccountSearchForm {
   keyword: string;
@@ -86,6 +90,10 @@ export interface AccountSearchForm {
   accountStatus: AccountStatusFilter;
   ipGroupName: string;
   groupId: "" | number;
+  marketingOccupancyType: "" | MarketingOccupancyDisplayType;
+  occupiedTaskKeyword: string;
+  occupiedBusinessType: "" | number;
+  callable: "" | boolean;
   country: string;
   assignedService: string;
 }
@@ -129,6 +137,9 @@ export interface AccountListPageState {
   handleBatchAction: (command: string) => void;
   loginStateOptions: Array<{ label: string; value: string }>;
   loading: Ref<boolean>;
+  marketingOccupancyDetail: Ref<AccountGroupMarketingOccupancy | null>;
+  marketingOccupancyDialogOpen: Ref<boolean>;
+  marketingOccupancyLoading: Ref<boolean>;
   numberSourceOptions: Array<{ label: string; value: NumberSource }>;
   onSelectionChange: (selection: TenantAccount[]) => void;
   page: Ref<number>;
@@ -141,6 +152,7 @@ export interface AccountListPageState {
   handleRowAction: (row: TenantAccount, action: string) => void;
   isOnlineActionDisabled: (row: TenantAccount) => boolean;
   onlineActionLabel: (row: TenantAccount) => string;
+  openMarketingOccupancy: (row: TenantAccount) => Promise<void>;
   rows: Ref<TenantAccount[]>;
   searchAccounts: () => void;
   searchForm: AccountSearchForm;
@@ -196,6 +208,10 @@ export function useAccountListPage(): AccountListPageState {
     accountStatus: "",
     ipGroupName: "",
     groupId: initialGroupId,
+    marketingOccupancyType: "",
+    occupiedTaskKeyword: "",
+    occupiedBusinessType: "",
+    callable: "",
     country: "",
     assignedService: ""
   });
@@ -216,6 +232,16 @@ export function useAccountListPage(): AccountListPageState {
   const wsExporting = ref(false);
   const showAdvancedSearch = ref(initialGroupId !== "");
   const showBatchMoveDrawer = ref(false);
+  const marketingOccupancyDialogOpen = ref(false);
+  const marketingOccupancyLoading = ref(false);
+  const marketingOccupancyDetail = ref<AccountGroupMarketingOccupancy | null>(
+    null
+  );
+  // 会话负责请求去重与失效；弹窗只接收最后一次点击对应的结果。
+  const marketingOccupancySession = createMarketingOccupancyDetailSession(
+    getAccountGroupMarketingOccupancy
+  );
+  let marketingOccupancyRequestVersion = 0;
   const page = ref(1);
   const pageSize = ref(10);
   const total = ref(0);
@@ -338,6 +364,16 @@ export function useAccountListPage(): AccountListPageState {
       Object.assign(query, accountStatusToQuery(searchForm.accountStatus));
     }
     if (searchForm.groupId) query.accountGroupId = Number(searchForm.groupId);
+    if (searchForm.marketingOccupancyType) {
+      query.marketingOccupancyType = searchForm.marketingOccupancyType;
+    }
+    if (searchForm.occupiedTaskKeyword.trim()) {
+      query.occupiedTaskKeyword = searchForm.occupiedTaskKeyword.trim();
+    }
+    if (searchForm.occupiedBusinessType) {
+      query.occupiedBusinessType = searchForm.occupiedBusinessType;
+    }
+    if (searchForm.callable !== "") query.callable = searchForm.callable;
     if (searchForm.country.trim()) query.country = searchForm.country.trim();
     return toTenantAccountBatchQuery(query);
   }
@@ -381,6 +417,11 @@ export function useAccountListPage(): AccountListPageState {
       total.value = response.total ?? 0;
       page.value = requestedPage;
       selectedRows.value = [];
+      marketingOccupancyRequestVersion += 1;
+      marketingOccupancySession.invalidate();
+      marketingOccupancyDialogOpen.value = false;
+      marketingOccupancyLoading.value = false;
+      marketingOccupancyDetail.value = null;
       if (applyFiltersOnSuccess) queryState.commit(request);
       return true;
     } catch (error) {
@@ -422,6 +463,10 @@ export function useAccountListPage(): AccountListPageState {
     searchForm.accountStatus = "";
     searchForm.ipGroupName = "";
     searchForm.groupId = "";
+    searchForm.marketingOccupancyType = "";
+    searchForm.occupiedTaskKeyword = "";
+    searchForm.occupiedBusinessType = "";
+    searchForm.callable = "";
     searchForm.country = "";
     searchForm.assignedService = "";
     searchAccounts();
@@ -429,6 +474,31 @@ export function useAccountListPage(): AccountListPageState {
 
   function onSelectionChange(selection: TenantAccount[]) {
     selectedRows.value = selection;
+  }
+
+  /**
+   * 用户点击分组标签后再加载详情；同一页面内重复点击复用一次结果。
+   */
+  async function openMarketingOccupancy(row: TenantAccount): Promise<void> {
+    const groupId = row.group_id;
+    if (!groupId) return;
+
+    const requestVersion = ++marketingOccupancyRequestVersion;
+    marketingOccupancyDialogOpen.value = true;
+    marketingOccupancyDetail.value = null;
+    marketingOccupancyLoading.value = true;
+    try {
+      const detail = await marketingOccupancySession.select(groupId);
+      if (detail) marketingOccupancyDetail.value = detail;
+    } catch (error) {
+      if (requestVersion === marketingOccupancyRequestVersion) {
+        ElMessage.error(apiErrorMessage(error, "营销占用详情加载失败"));
+      }
+    } finally {
+      if (requestVersion === marketingOccupancyRequestVersion) {
+        marketingOccupancyLoading.value = false;
+      }
+    }
   }
 
   function openBatchMoveDrawer() {
@@ -806,6 +876,9 @@ export function useAccountListPage(): AccountListPageState {
     handleBatchAction,
     loginStateOptions,
     loading,
+    marketingOccupancyDetail,
+    marketingOccupancyDialogOpen,
+    marketingOccupancyLoading,
     numberSourceOptions,
     onSelectionChange,
     page,
@@ -818,6 +891,7 @@ export function useAccountListPage(): AccountListPageState {
     handleRowAction,
     isOnlineActionDisabled,
     onlineActionLabel,
+    openMarketingOccupancy,
     rows,
     searchAccounts,
     searchForm,

@@ -103,4 +103,23 @@ describe("AccountListTable protocol restart button", () => {
       /导出成功，共导出\$\{result\.exportedCount\}个WS号码。/
     );
   });
+
+  it("renders the group name as a colored occupancy tag without row requests", () => {
+    assert.match(source, /marketingOccupancyMeta/);
+    assert.match(source, /\(event: "group-click", row: TenantAccount\): void/);
+    assert.match(source, /class="marketing-occupancy-tag"/);
+    assert.match(source, /emit\('group-click', row as TenantAccount\)/);
+    assert.doesNotMatch(source, /getAccountGroupMarketingOccupancy/);
+    assert.match(pageSource, /@group-click="openMarketingOccupancy"/);
+  });
+
+  it("exposes the confirmed marketing occupancy filters", () => {
+    assert.match(pageSource, /营销占用类型/);
+    assert.match(pageSource, /占用任务/);
+    assert.match(pageSource, /可调用状态/);
+    assert.match(composableSource, /marketingOccupancyType/);
+    assert.match(composableSource, /occupiedTaskKeyword/);
+    assert.match(composableSource, /occupiedBusinessType/);
+    assert.match(composableSource, /callable/);
+  });
 });

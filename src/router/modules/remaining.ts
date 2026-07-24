@@ -1,5 +1,19 @@
 const Layout = () => import("@/layout/index.vue");
 
+const developmentPreviewRoutes = import.meta.env.DEV
+  ? [
+      {
+        path: "/date-v2-preview",
+        name: "DateV2Preview",
+        component: () => import("@/views/buyer/date-v2-preview/index.vue"),
+        meta: {
+          title: "约会二代预览",
+          showLink: false
+        }
+      }
+    ]
+  : [];
+
 export default [
   {
     path: "/login",
@@ -44,5 +58,6 @@ export default [
         component: () => import("@/layout/redirect.vue")
       }
     ]
-  }
+  },
+  ...developmentPreviewRoutes
 ] satisfies Array<RouteConfigsTable>;

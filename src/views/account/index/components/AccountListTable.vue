@@ -16,6 +16,7 @@ import {
   riskStatusLabel,
   sourceLabel
 } from "../account-display";
+import { marketingOccupancyMeta } from "../marketing-occupancy";
 
 defineOptions({
   name: "AccountListTable"
@@ -40,6 +41,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: "batch-command", command: string): void;
+  (event: "group-click", row: TenantAccount): void;
   (event: "refresh"): void;
   (event: "restart-protocol"): void;
   (event: "row-action", row: TenantAccount, action: string): void;
@@ -64,6 +66,16 @@ function formatDate(value?: string | null) {
 
 function avatarText(row: TenantAccount) {
   return row.nickname?.slice(0, 1) || row.ws_phone?.slice(-2) || "号";
+}
+
+/** 标签颜色完全由列表接口返回的展示类型决定，不在表格内请求任务详情。 */
+function occupancyTagStyle(row: TenantAccount) {
+  const { color } = marketingOccupancyMeta(row.marketing_occupancy_type);
+  return {
+    backgroundColor: color,
+    borderColor: color,
+    color: "#FFFFFF"
+  };
 }
 </script>
 
@@ -147,11 +159,22 @@ function avatarText(row: TenantAccount) {
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[2].hide"
-          prop="group_name"
           label="分组"
           min-width="140"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.group_id"
+              class="marketing-occupancy-tag"
+              :style="occupancyTagStyle(row as TenantAccount)"
+              @click="emit('group-click', row as TenantAccount)"
+            >
+              {{ row.group_name || "未命名分组" }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[3].hide"
           label="账号状态"
@@ -333,5 +356,11 @@ small {
   display: block;
   margin-top: 4px;
   color: var(--el-text-color-secondary);
+}
+
+.marketing-occupancy-tag {
+  max-width: 100%;
+  color: #fff;
+  cursor: pointer;
 }
 </style>

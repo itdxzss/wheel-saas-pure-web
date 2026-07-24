@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
+import { Icon } from "@iconify/vue/offline";
 import {
   createBuyerChannel,
   getBuyerChannel,
-  precheckBuyerChannelDomain,
   updateBuyerChannel,
   type BuyerChannelOptions
 } from "@/api/buyer-channel";
@@ -16,6 +16,23 @@ import {
   type ChannelFormModel
 } from "../domain/channel-form";
 import { createChannelDetailLoader } from "../domain/channel-detail-loader";
+import { countryFlagIcon } from "../domain/channel-country-flag";
+import {
+  platformFieldConfigs,
+  previewPlatformOptions
+} from "./channel-platform-fields";
+import { usePreselectedCountrySelection } from "./channel-country-selection";
+import { previewOwnerOptions } from "./channel-preview-options";
+import { useChannelTrackingFields } from "./channel-tracking-fields";
+
+const reportingEventOptions = [
+  { label: "潜在客户（留资）（Lead）", value: "Lead" },
+  { label: "发起结账 (InitiateCheckout)", value: "InitiateCheckout" },
+  {
+    label: "完成注册 (CompleteRegistration)",
+    value: "CompleteRegistration"
+  }
+];
 
 const props = defineProps<{
   modelValue: boolean;
@@ -31,34 +48,80 @@ const emit = defineEmits<{
 const formRef = ref<FormInstance>();
 const loading = ref(false);
 const saving = ref(false);
-const form = reactive<ChannelFormModel>(createDefaultChannelForm());
+function createDrawerDefaultForm(): ChannelFormModel {
+  return {
+    ...createDefaultChannelForm(),
+    ownerId: previewOwnerOptions[0].id,
+    openInApp: true
+  };
+}
+
+const form = reactive<ChannelFormModel>(createDrawerDefaultForm());
 const fieldErrors = reactive<Partial<Record<keyof ChannelFormModel, string>>>(
   {}
 );
 const editing = computed(() => props.channelId !== undefined);
-const supportsToken = computed(
-  () => form.platform === "FACEBOOK" || form.platform === "TIKTOK"
+const platformFieldConfig = computed(() => platformFieldConfigs[form.platform]);
+const selectedTemplate = computed(() =>
+  props.options.templates.find(template => template.id === form.templateId)
 );
+const selectedTemplateParamCodes = computed(
+  () => selectedTemplate.value?.supportedParamCodes ?? []
+);
+const supportsThemeColor = computed(() =>
+  selectedTemplateParamCodes.value.includes("themeColor")
+);
+const supportsAppDownload = computed(() =>
+  selectedTemplateParamCodes.value.includes("showAppDownload")
+);
+const hasTemplateParams = computed(
+  () => supportsThemeColor.value || supportsAppDownload.value
+);
+const {
+  supportsToken,
+  requiresAccessToken,
+  requiresPixelId,
+  appOpenMessage,
+  validatePixelId,
+  validateAccessToken
+} = useChannelTrackingFields(form, editing, platformFieldConfig);
+
+function countrySelectionLabel(value: unknown): string {
+  if (value === "__MIXED__") return "混合（不限国家）";
+  if (typeof value !== "string") return "";
+  return (
+    props.options.countries.find(country => country.code === value)?.name ?? ""
+  );
+}
+
 const countrySelection = computed({
   get: () => (form.countryMode === "MIXED" ? "__MIXED__" : form.targetCountry),
   set: value => {
     if (value === "__MIXED__") {
       form.countryMode = "MIXED";
       const supported = props.options.countries.some(
-        country => country.dialCode === form.defaultDialCode
+        country => country.code === form.preselectedCountry
       );
       if (!supported) {
-        form.defaultDialCode = props.options.countries[0]?.dialCode ?? "";
+        const firstCountry = props.options.countries[0];
+        form.preselectedCountry = firstCountry?.code ?? "";
+        form.defaultDialCode = firstCountry?.dialCode ?? "";
       }
       return;
     }
     form.countryMode = "SPECIFIC";
-    form.targetCountry = value;
+    form.targetCountry = typeof value === "string" ? value : "";
     form.defaultDialCode =
-      props.options.countries.find(country => country.code === value)
-        ?.dialCode ?? "";
+      props.options.countries.find(
+        country => country.code === form.targetCountry
+      )?.dialCode ?? "";
+    form.preselectedCountry = form.targetCountry;
   }
 });
+const preselectedCountrySelection = usePreselectedCountrySelection(
+  form,
+  () => props.options.countries
+);
 const dialCodeOptions = computed(() =>
   form.countryMode === "MIXED"
     ? props.options.countries
@@ -80,9 +143,21 @@ function validateTargetCountry(
   callback(new Error("请选择目标国家"));
 }
 
+function validateThemeColor(
+  _rule: unknown,
+  value: unknown,
+  callback: (error?: string | Error) => void
+): void {
+  if (!supportsThemeColor.value || /^#[0-9a-f]{6}$/i.test(String(value))) {
+    callback();
+    return;
+  }
+  callback(new Error("请输入 #RRGGBB 格式的主题色"));
+}
+
 const rules: FormRules<ChannelFormModel> = {
   name: [{ required: true, message: "请输入渠道名称", trigger: "blur" }],
-  ownerId: [{ required: true, message: "请选择所属人", trigger: "change" }],
+  ownerId: [{ required: true, message: "请选择归属用户", trigger: "change" }],
   targetCountry: [
     {
       required: true,
@@ -93,11 +168,14 @@ const rules: FormRules<ChannelFormModel> = {
   templateId: [
     { required: true, message: "请选择绑定模板", trigger: "change" }
   ],
+  themeColor: [{ validator: validateThemeColor, trigger: ["blur", "change"] }],
   domain: [{ required: true, message: "请输入域名", trigger: "blur" }],
-  defaultDialCode: [
-    { required: true, message: "请选择默认区号", trigger: "change" }
+  preselectedCountry: [
+    { required: true, message: "请选择预选区号", trigger: "change" }
   ],
-  platform: [{ required: true, message: "请选择推广平台", trigger: "change" }]
+  platform: [{ required: true, message: "请选择推广平台", trigger: "change" }],
+  pixelId: [{ validator: validatePixelId, trigger: ["blur", "change"] }],
+  accessToken: [{ validator: validateAccessToken, trigger: ["blur", "change"] }]
 };
 
 function replaceForm(next: ChannelFormModel): void {
@@ -117,7 +195,7 @@ async function load(): Promise<void> {
     loading.value = false;
     return;
   }
-  replaceForm(createDefaultChannelForm());
+  replaceForm(createDrawerDefaultForm());
   if (!props.channelId) {
     detailLoader.invalidate();
     loading.value = false;
@@ -125,7 +203,14 @@ async function load(): Promise<void> {
   }
   loading.value = true;
   await detailLoader.load(props.channelId, {
-    resolved: detail => replaceForm(hydrateChannelForm(detail)),
+    resolved: detail => {
+      const next = hydrateChannelForm(detail);
+      next.defaultDialCode =
+        props.options.countries.find(
+          country => country.code === next.preselectedCountry
+        )?.dialCode ?? "";
+      replaceForm(next);
+    },
     rejected: error => {
       ElMessage.error(
         error instanceof Error ? error.message : "渠道详情加载失败"
@@ -149,11 +234,11 @@ async function save(): Promise<void> {
       form,
       editing.value,
       {
-        precheck: precheckBuyerChannelDomain,
         create: createBuyerChannel,
         update: updateBuyerChannel
       },
-      props.options.countries
+      props.options.countries,
+      selectedTemplateParamCodes.value
     );
     ElMessage.success(editing.value ? "渠道已更新" : "渠道已新增");
     emit("update:modelValue", false);
@@ -184,6 +269,7 @@ watch(
     <el-form
       ref="formRef"
       v-loading="loading"
+      class="channel-form"
       :model="form"
       :rules="rules"
       label-width="128px"
@@ -195,14 +281,34 @@ watch(
           placeholder="请输入渠道名称"
         />
       </el-form-item>
-      <el-form-item label="所属人" prop="ownerId" :error="fieldErrors.ownerId">
-        <el-select v-model="form.ownerId" filterable placeholder="请选择所属人">
+      <el-form-item
+        label="归属用户"
+        prop="ownerId"
+        :error="fieldErrors.ownerId"
+      >
+        <el-select
+          v-model="form.ownerId"
+          class="business-select"
+          popper-class="buyer-owner-select-popper"
+          clearable
+          filterable
+          placeholder="请选择归属用户"
+        >
           <el-option
-            v-for="owner in options.owners"
+            v-for="owner in previewOwnerOptions"
             :key="owner.id"
             :label="owner.name"
             :value="owner.id"
-          />
+          >
+            <div class="business-option">
+              <span>{{ owner.name }}</span>
+              <span
+                v-if="form.ownerId === owner.id"
+                class="option-check"
+                aria-hidden="true"
+              />
+            </div>
+          </el-option>
         </el-select>
       </el-form-item>
       <el-form-item
@@ -212,164 +318,312 @@ watch(
       >
         <el-select
           v-model="countrySelection"
+          class="country-select"
+          popper-class="buyer-country-select-popper"
+          clearable
           filterable
           placeholder="请选择目标国家"
         >
+          <template #label="{ value }">
+            <div class="country-option country-option--selected">
+              <span v-if="value === '__MIXED__'" class="country-globe">🌐</span>
+              <Icon
+                v-else-if="countryFlagIcon(String(value))"
+                :icon="countryFlagIcon(String(value))"
+                class="country-flag"
+                aria-hidden="true"
+              />
+              <span class="country-name">{{
+                countrySelectionLabel(value)
+              }}</span>
+            </div>
+          </template>
           <el-option label="🌐 混合（不限国家）" value="__MIXED__">
             <div class="country-option">
-              <span class="country-flag">🌐</span>
+              <span class="country-globe">🌐</span>
               <span class="country-name">混合（不限国家）</span>
+              <span
+                v-if="countrySelection === '__MIXED__'"
+                class="country-check"
+                aria-hidden="true"
+              />
             </div>
           </el-option>
           <el-option
             v-for="country in options.countries"
             :key="country.code"
-            :label="`${country.flag || '🏳️'} ${country.name} ${country.dialCode}`"
+            :label="`${country.name} ${country.dialCode}`"
             :value="country.code"
           >
             <div class="country-option">
-              <span class="country-flag">{{ country.flag || "🏳️" }}</span>
+              <Icon
+                v-if="countryFlagIcon(country.code)"
+                :icon="countryFlagIcon(country.code)"
+                class="country-flag"
+                aria-hidden="true"
+              />
+              <span v-else class="country-flag-fallback">{{
+                country.code
+              }}</span>
               <span class="country-name">{{ country.name }}</span>
               <span class="country-dial-code">{{ country.dialCode }}</span>
+              <span
+                v-if="countrySelection === country.code"
+                class="country-check country-check--after-dial-code"
+                aria-hidden="true"
+              />
             </div>
           </el-option>
         </el-select>
+        <p class="field-help">
+          仅用于渠道分类标记，比如主要投印度就选「印度」，选完后下方预选区号会自动填充。
+        </p>
       </el-form-item>
       <el-form-item
         label="绑定模板"
         prop="templateId"
         :error="fieldErrors.templateId"
       >
-        <el-select v-model="form.templateId" placeholder="请选择绑定模板">
+        <el-select
+          v-model="form.templateId"
+          class="business-select"
+          popper-class="buyer-template-select-popper"
+          clearable
+          filterable
+          placeholder="请选择模板"
+        >
           <el-option
             v-for="template in options.templates"
             :key="template.id"
             :label="template.name"
             :value="template.id"
-          />
+          >
+            <div class="business-option">
+              <span>{{ template.name }}</span>
+              <span
+                v-if="form.templateId === template.id"
+                class="option-check"
+                aria-hidden="true"
+              />
+            </div>
+          </el-option>
         </el-select>
       </el-form-item>
-      <el-form-item label="主题色">
-        <el-color-picker v-model="form.themeColor" />
-      </el-form-item>
-      <el-form-item label="绑定域名" prop="domain" :error="fieldErrors.domain">
-        <el-input v-model="form.domain" placeholder="landing.example.com">
-          <template #prepend>https://</template>
+      <template v-if="hasTemplateParams">
+        <div class="template-params-divider">
+          <span>模板参数配置</span>
+        </div>
+        <el-form-item
+          v-if="supportsThemeColor"
+          label="主题色"
+          prop="themeColor"
+          :error="fieldErrors.themeColor"
+        >
+          <div class="theme-color-field">
+            <el-color-picker v-model="form.themeColor" class="theme-picker" />
+            <el-input
+              v-model="form.themeColor"
+              class="theme-color-input"
+              maxlength="7"
+              placeholder="#409EFF"
+              :style="{ '--channel-theme-preview': form.themeColor }"
+            />
+          </div>
+          <p class="field-help">主题色，可以更改模板的主题颜色。</p>
+        </el-form-item>
+        <el-form-item
+          v-if="supportsAppDownload"
+          label="展示底部应用下载"
+          prop="showAppDownload"
+          :error="fieldErrors.showAppDownload"
+        >
+          <el-switch
+            v-model="form.showAppDownload"
+            class="permission-switch"
+            inline-prompt
+            active-text="展示"
+            inactive-text="隐藏"
+            :width="70"
+          />
+          <p class="field-help">
+            是否展示底部 Google Play &amp; Apple Store 下载区域。
+          </p>
+        </el-form-item>
+      </template>
+      <el-form-item label="访问域名" prop="domain" :error="fieldErrors.domain">
+        <el-input v-model="form.domain" placeholder="example.com">
+          <template #prepend>http://</template>
         </el-input>
+        <el-alert
+          class="domain-alert"
+          type="warning"
+          :closable="false"
+          show-icon
+        >
+          <template #title>
+            <div class="alert-copy">
+              <p>域名需要解析后才可正常访问，请联系运营人员配置！</p>
+              <p>
+                同一个域名只能在同一个模板下创建多个渠道链接，跨模板请使用新域名~
+              </p>
+              <p>
+                还没有域名？推荐前往
+                <a
+                  href="https://www.dynadot.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Dynadot</a
+                >
+                注册购买，支持 .net / .org / .info 等多种后缀，价格实惠。
+              </p>
+            </div>
+          </template>
+        </el-alert>
       </el-form-item>
       <el-form-item
-        label="默认区号"
-        prop="defaultDialCode"
-        :error="fieldErrors.defaultDialCode"
+        label="预选区号"
+        prop="preselectedCountry"
+        :error="fieldErrors.preselectedCountry"
       >
         <el-select
-          v-model="form.defaultDialCode"
+          v-model="preselectedCountrySelection"
           :disabled="form.countryMode === 'SPECIFIC'"
           filterable
-          placeholder="请选择默认区号"
+          placeholder="请选择预选区号"
         >
           <el-option
             v-for="country in dialCodeOptions"
             :key="`${country.code}-${country.dialCode}`"
             :label="`${country.name} ${country.dialCode}`"
-            :value="country.dialCode"
+            :value="country.code"
           />
         </el-select>
+        <p class="field-help">
+          决定用户打开渠道链接后，手机号输入框默认显示的区号。比如选「印度」，用户进来就默认是
+          +91，无需手动切换。
+        </p>
       </el-form-item>
       <el-form-item
+        class="platform-form-item"
         label="推广平台"
         prop="platform"
         :error="fieldErrors.platform"
       >
-        <el-radio-group v-model="form.platform">
+        <el-radio-group v-model="form.platform" class="platform-group">
           <el-radio-button
-            v-for="platform in options.platforms"
+            v-for="platform in previewPlatformOptions"
             :key="platform.value"
             :value="platform.value"
           >
             {{ platform.label }}
           </el-radio-button>
         </el-radio-group>
+        <p class="field-help">
+          选择投放渠道使用的推广平台，仅 Facebook / TikTok 支持 CAPI 探测；快手
+          / MGSKY Ads 无需填写 Access Token。
+        </p>
       </el-form-item>
       <el-form-item
-        label="Pixel ID"
+        :label="platformFieldConfig.pixelLabel"
         prop="pixelId"
+        :required="requiresPixelId"
         :error="fieldErrors.pixelId"
       >
-        <el-input v-model="form.pixelId" placeholder="请输入 Pixel ID" />
+        <el-input
+          v-model="form.pixelId"
+          :placeholder="platformFieldConfig.pixelPlaceholder"
+        />
       </el-form-item>
       <el-form-item
         v-if="supportsToken"
-        label="Access Token"
+        :label="platformFieldConfig.accessTokenLabel || ''"
         prop="accessToken"
+        :required="requiresAccessToken"
         :error="fieldErrors.accessToken"
       >
         <el-input
           v-model="form.accessToken"
-          type="password"
-          show-password
+          type="textarea"
+          :rows="4"
+          resize="vertical"
           autocomplete="new-password"
           :placeholder="
             editing && form.accessTokenConfigured
               ? '已配置，留空表示不修改'
-              : '请输入 Access Token'
+              : platformFieldConfig.accessTokenPlaceholder
           "
         />
       </el-form-item>
-      <el-divider content-position="left">事件映射</el-divider>
-      <el-form-item
-        label="Lead"
-        prop="eventLead"
-        :error="fieldErrors.eventLead"
-      >
-        <el-select v-model="form.eventLead">
-          <el-option
-            v-for="event in options.eventOptions"
-            :key="event.value"
-            :label="event.label"
-            :value="event.value"
-          />
-        </el-select>
+      <template v-if="platformFieldConfig.showEvents">
+        <el-form-item
+          label="意向用户上报事件"
+          prop="eventLead"
+          :error="fieldErrors.eventLead"
+        >
+          <el-select v-model="form.eventLead">
+            <el-option
+              v-for="event in reportingEventOptions"
+              :key="event.value"
+              :label="event.label"
+              :value="event.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item
+          label="请求登录上报事件"
+          prop="eventInitiateCheckout"
+          :error="fieldErrors.eventInitiateCheckout"
+        >
+          <el-select v-model="form.eventInitiateCheckout">
+            <el-option
+              v-for="event in reportingEventOptions"
+              :key="event.value"
+              :label="event.label"
+              :value="event.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item
+          label="登录成功上报事件"
+          prop="eventCompleteRegistration"
+          :error="fieldErrors.eventCompleteRegistration"
+        >
+          <el-select v-model="form.eventCompleteRegistration">
+            <el-option
+              v-for="event in reportingEventOptions"
+              :key="event.value"
+              :label="event.label"
+              :value="event.value"
+            />
+          </el-select>
+        </el-form-item>
+      </template>
+      <el-form-item label="App 内打开">
+        <el-switch
+          v-model="form.openInApp"
+          class="permission-switch"
+          inline-prompt
+          active-text="允许"
+          inactive-text="禁止"
+          :width="66"
+        />
+        <el-alert
+          class="app-open-alert"
+          type="success"
+          :title="appOpenMessage"
+          :closable="false"
+          show-icon
+        />
       </el-form-item>
-      <el-form-item
-        label="InitiateCheckout"
-        prop="eventInitiateCheckout"
-        :error="fieldErrors.eventInitiateCheckout"
-      >
-        <el-select v-model="form.eventInitiateCheckout">
-          <el-option
-            v-for="event in options.eventOptions"
-            :key="event.value"
-            :label="event.label"
-            :value="event.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item
-        label="CompleteRegistration"
-        prop="eventCompleteRegistration"
-        :error="fieldErrors.eventCompleteRegistration"
-      >
-        <el-select v-model="form.eventCompleteRegistration">
-          <el-option
-            v-for="event in options.eventOptions"
-            :key="event.value"
-            :label="event.label"
-            :value="event.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="App 内打开"
-        ><el-switch v-model="form.openInApp"
-      /></el-form-item>
-      <el-form-item label="参加营销"
-        ><el-switch v-model="form.joinMarketing"
-      /></el-form-item>
-      <el-form-item label="状态">
-        <el-radio-group v-model="form.status">
-          <el-radio value="ENABLED">启用</el-radio>
-          <el-radio value="DISABLED">禁用</el-radio>
-        </el-radio-group>
+      <el-form-item label="参加营销">
+        <el-switch
+          v-model="form.joinMarketing"
+          class="permission-switch"
+          inline-prompt
+          active-text="允许"
+          inactive-text="禁止"
+          :width="66"
+        />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -379,30 +633,4 @@ watch(
   </el-drawer>
 </template>
 
-<style scoped>
-:deep(.el-select) {
-  width: 100%;
-}
-
-.country-option {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  width: 100%;
-}
-
-.country-flag {
-  width: 24px;
-  font-size: 18px;
-  line-height: 1;
-}
-
-.country-name {
-  color: var(--el-text-color-primary);
-}
-
-.country-dial-code {
-  margin-left: auto;
-  color: var(--el-text-color-placeholder);
-}
-</style>
+<style scoped src="./ChannelFormDrawer.scss"></style>

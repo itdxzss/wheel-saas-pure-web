@@ -1,35 +1,41 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { Icon } from "@iconify/vue/offline";
 import { PureTableBar } from "@/components/RePureTableBar";
+import FacebookDetectIcon from "~icons/logos/facebook";
+import TikTokDetectIcon from "~icons/logos/tiktok-icon";
 import {
   deleteBuyerChannel,
   detectBuyerChannel,
-  getBuyerChannelOptions,
   listBuyerChannels,
   type BuyerChannelOptions,
   type BuyerChannelRow,
+  type ChannelPlatform,
   type ChannelDetectResult
 } from "@/api/buyer-channel";
+import { listBuyerTemplateOptions } from "@/api/buyer-template";
 import { listIpCountryOptions } from "@/api/resource-ip";
 import ChannelDetectDialog from "./components/ChannelDetectDialog.vue";
 import ChannelFormDrawer from "./components/ChannelFormDrawer.vue";
 import FacebookEventGuideDialog from "./components/FacebookEventGuideDialog.vue";
+import { previewPlatformOptions } from "./components/channel-platform-fields";
+import { previewOwnerOptions } from "./components/channel-preview-options";
 import { toBuyerChannelCountries } from "./domain/channel-country-options";
-import { openSafeChannelLink } from "./domain/channel-domain";
+import { countryFlagIcon } from "./domain/channel-country-flag";
 import { apiErrorMessage } from "@/utils/api-error";
 
 defineOptions({ name: "BuyerChannel" });
 
-const emptyOptions: BuyerChannelOptions = {
-  uploadFee: { label: "上号服务费", value: 0 },
-  platforms: [],
+const previewOptions: BuyerChannelOptions = {
+  uploadFee: { label: "买量通道上号成功费用", value: 0.05 },
+  platforms: previewPlatformOptions,
   eventOptions: [],
   countries: [],
   templates: [],
-  owners: [],
-  creators: [],
-  parentUsers: []
+  owners: previewOwnerOptions,
+  creators: previewOwnerOptions,
+  parentUsers: previewOwnerOptions
 };
 const filters = reactive<{
   targetCountry?: string;
@@ -37,7 +43,7 @@ const filters = reactive<{
   creatorId?: number;
   parentUserId?: number;
 }>({});
-const options = ref<BuyerChannelOptions>(emptyOptions);
+const options = ref<BuyerChannelOptions>(previewOptions);
 const rows = ref<BuyerChannelRow[]>([]);
 const errorMessage = ref("");
 const loading = ref(false);
@@ -49,6 +55,9 @@ const drawerVisible = ref(false);
 const editingId = ref<number>();
 const guideVisible = ref(false);
 const detectVisible = ref(false);
+const detectChannel = ref<BuyerChannelRow | null>(null);
+const detectLoading = ref(false);
+const detectErrorMessage = ref("");
 const detectResult = ref<ChannelDetectResult | null>(null);
 
 const columns = [
@@ -99,20 +108,67 @@ function query(): void {
   page.value = 1;
   void refresh();
 }
-function openLink(url: string): void {
+
+async function resetFilters(): Promise<void> {
+  filters.targetCountry = undefined;
+  filters.templateId = undefined;
+  filters.creatorId = undefined;
+  filters.parentUserId = undefined;
+  page.value = 1;
+  await refresh();
+}
+
+async function copyChannelLink(url: string): Promise<void> {
+  if (!url) return;
+  if (!navigator.clipboard?.writeText) {
+    ElMessage.error("当前浏览器不支持自动复制，请手动选择链接复制");
+    return;
+  }
   try {
-    openSafeChannelLink(url);
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "链接无效");
+    await navigator.clipboard.writeText(url);
+    ElMessage.success("链接已复制");
+  } catch {
+    ElMessage.error("复制失败，请手动选择链接复制");
   }
 }
 
-async function detect(row: BuyerChannelRow): Promise<void> {
+function supportsDetection(row: BuyerChannelRow): boolean {
+  return row.platform === "FACEBOOK" || row.platform === "TIKTOK";
+}
+
+function detectionIcon(platform: ChannelPlatform) {
+  return platform === "TIKTOK" ? TikTokDetectIcon : FacebookDetectIcon;
+}
+
+function platformLabel(platform: ChannelPlatform): string {
+  return (
+    previewOptions.platforms.find(option => option.value === platform)?.label ??
+    platform
+  );
+}
+
+function openDetect(row: BuyerChannelRow): void {
+  if (!supportsDetection(row)) return;
+  detectChannel.value = row;
+  detectResult.value = null;
+  detectErrorMessage.value = "";
+  detectVisible.value = true;
+}
+
+async function runDetect(testEventCode?: string): Promise<void> {
+  if (!detectChannel.value || detectLoading.value) return;
+  detectLoading.value = true;
+  detectErrorMessage.value = "";
   try {
-    detectResult.value = await detectBuyerChannel(row.id);
-    detectVisible.value = true;
+    detectResult.value = await detectBuyerChannel(detectChannel.value.id, {
+      testEventCode
+    });
+    await refresh();
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "渠道检测失败");
+    detectErrorMessage.value = apiErrorMessage(error, "渠道探测失败");
+    ElMessage.error(detectErrorMessage.value);
+  } finally {
+    detectLoading.value = false;
   }
 }
 
@@ -123,6 +179,9 @@ async function remove(row: BuyerChannelRow): Promise<void> {
     });
     await deleteBuyerChannel(row.id);
     ElMessage.success("渠道已删除");
+    if (rows.value.length === 1 && page.value > 1) {
+      page.value -= 1;
+    }
     await refresh();
   } catch (error) {
     if (error === "cancel" || error === "close") return;
@@ -132,25 +191,29 @@ async function remove(row: BuyerChannelRow): Promise<void> {
   }
 }
 
+async function handleSaved(): Promise<void> {
+  await refresh();
+}
+
 onMounted(async () => {
-  const [channelOptionsResult, countryOptionsResult] = await Promise.allSettled(
-    [getBuyerChannelOptions(), listIpCountryOptions()]
-  );
-
-  const nextOptions: BuyerChannelOptions =
-    channelOptionsResult.status === "fulfilled"
-      ? { ...channelOptionsResult.value, countries: [] }
-      : { ...emptyOptions, countries: [] };
-
-  if (channelOptionsResult.status === "rejected") {
-    ElMessage.error("渠道筛选项加载失败");
-  }
-  if (countryOptionsResult.status === "fulfilled") {
-    nextOptions.countries = toBuyerChannelCountries(countryOptionsResult.value);
-  } else {
+  const [countryResult, templateResult] = await Promise.allSettled([
+    listIpCountryOptions(),
+    listBuyerTemplateOptions()
+  ]);
+  options.value = {
+    ...previewOptions,
+    countries:
+      countryResult.status === "fulfilled"
+        ? toBuyerChannelCountries(countryResult.value)
+        : [],
+    templates: templateResult.status === "fulfilled" ? templateResult.value : []
+  };
+  if (countryResult.status === "rejected") {
     ElMessage.error("目标国家加载失败");
   }
-  options.value = nextOptions;
+  if (templateResult.status === "rejected") {
+    ElMessage.error("模板选项加载失败");
+  }
   await refresh();
 });
 </script>
@@ -207,13 +270,7 @@ onMounted(async () => {
         ></el-form-item>
         <el-form-item
           ><el-button type="primary" @click="query">查询</el-button
-          ><el-button
-            @click="
-              Object.keys(filters).forEach(key => delete filters[key]);
-              query();
-            "
-            >重置</el-button
-          ></el-form-item
+          ><el-button @click="resetFilters">重置</el-button></el-form-item
         >
       </el-form>
     </el-card>
@@ -253,18 +310,65 @@ onMounted(async () => {
                 column.prop === 'promotionUrl' || column.prop === 'fissionUrl'
               "
               #default="{ row }"
-              ><el-button
-                link
-                type="primary"
-                @click="openLink(row[column.prop])"
-                >打开链接</el-button
+              ><span
+                class="channel-url"
+                :class="{ 'is-copyable': Boolean(row[column.prop]) }"
+                :title="row[column.prop] ? '点击复制链接' : ''"
+                :tabindex="row[column.prop] ? 0 : -1"
+                role="button"
+                @click="copyChannelLink(row[column.prop])"
+                @keydown.enter="copyChannelLink(row[column.prop])"
+                >{{ row[column.prop] || "-" }}</span
               ></template
             >
+            <template
+              v-else-if="column.prop === 'targetCountry'"
+              #default="{ row }"
+            >
+              <div class="country-cell">
+                <span v-if="row.mixedTargetCountry" class="country-globe"
+                  >🌐</span
+                >
+                <Icon
+                  v-else-if="countryFlagIcon(row.targetCountryIso2)"
+                  :icon="countryFlagIcon(row.targetCountryIso2)"
+                  class="country-flag"
+                  aria-hidden="true"
+                />
+                <span v-else-if="row.targetCountryIso2" class="country-code">
+                  {{ row.targetCountryIso2 }}
+                </span>
+                <span>{{ row.targetCountry }}</span>
+              </div>
+            </template>
+            <template
+              v-else-if="column.prop === 'defaultDialCode'"
+              #default="{ row }"
+            >
+              <div class="country-cell">
+                <Icon
+                  v-if="countryFlagIcon(row.preselectedCountryIso2)"
+                  :icon="countryFlagIcon(row.preselectedCountryIso2)"
+                  class="country-flag"
+                  aria-hidden="true"
+                />
+                <span
+                  v-else-if="row.preselectedCountryIso2"
+                  class="country-code"
+                >
+                  {{ row.preselectedCountryIso2 }}
+                </span>
+                <span>{{ row.defaultDialCode }}</span>
+              </div>
+            </template>
             <template v-else-if="column.prop === 'status'" #default="{ row }"
               ><el-tag :type="row.status === 'ENABLED' ? 'success' : 'info'">{{
                 row.status === "ENABLED" ? "启用" : "禁用"
               }}</el-tag></template
             >
+            <template v-else-if="column.prop === 'platform'" #default="{ row }"
+              ><el-tag type="info">{{ platformLabel(row.platform) }}</el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="操作" fixed="right" width="210">
             <template #default="{ row }">
@@ -276,11 +380,13 @@ onMounted(async () => {
                 >编辑</el-button
               >
               <el-button
+                v-if="supportsDetection(row)"
                 v-auth="'tenant:buyer-channel:detect'"
                 link
                 type="primary"
-                @click="detect(row)"
-                >检测</el-button
+                :icon="detectionIcon(row.platform)"
+                @click="openDetect(row)"
+                >探测</el-button
               >
               <el-button
                 v-auth="'tenant:buyer-channel:delete'"
@@ -309,10 +415,17 @@ onMounted(async () => {
       v-model="drawerVisible"
       :channel-id="editingId"
       :options="options"
-      @saved="refresh"
+      @saved="handleSaved"
     />
     <FacebookEventGuideDialog v-model="guideVisible" />
-    <ChannelDetectDialog v-model="detectVisible" :result="detectResult" />
+    <ChannelDetectDialog
+      v-model="detectVisible"
+      :channel="detectChannel"
+      :loading="detectLoading"
+      :result="detectResult"
+      :error-message="detectErrorMessage"
+      @probe="runDetect"
+    />
   </div>
 </template>
 
@@ -330,6 +443,34 @@ onMounted(async () => {
 .pagination {
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.country-cell {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.country-flag {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 16px;
+}
+
+.country-globe,
+.country-code {
+  flex: 0 0 auto;
+}
+
+.channel-url {
+  color: var(--el-color-primary);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  user-select: text;
+}
+
+.channel-url.is-copyable {
+  cursor: copy;
 }
 
 :deep(.filter-card .el-select) {

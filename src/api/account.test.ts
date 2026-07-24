@@ -261,6 +261,35 @@ describe("account operation API", () => {
     assert.equal(result.list?.[0]?.dispatched_at, "2026-06-29 12:00:00");
   });
 
+  it("maps marketing occupancy facts returned by the account list", async () => {
+    resetArmadaMock({
+      list: [
+        {
+          id: 100,
+          marketingOccupancyType: "GROUP_PULL_MARKETING",
+          marketingOccupancyTaskId: 88,
+          marketingLockedAt: 1782705600000
+        }
+      ],
+      total: 1
+    });
+
+    const result = await listTenantAccounts();
+
+    assert.deepEqual(
+      {
+        type: result.list?.[0]?.marketing_occupancy_type,
+        taskId: result.list?.[0]?.marketing_occupancy_task_id,
+        lockedAt: result.list?.[0]?.marketing_locked_at
+      },
+      {
+        type: "GROUP_PULL_MARKETING",
+        taskId: 88,
+        lockedAt: "2026-06-29 12:00:00"
+      }
+    );
+  });
+
   it("exports selected WS phones as a blob with backend filename and count", async () => {
     const blob = new Blob(["60123456789\n6598765432"], {
       type: "text/plain;charset=UTF-8"

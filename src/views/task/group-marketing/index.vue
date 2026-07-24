@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { watch } from "vue";
+import { useRoute } from "vue-router";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import Search from "~icons/ri/search-line";
 import RefreshRight from "~icons/ep/refresh-right";
@@ -13,6 +15,8 @@ import type { MarketingTaskRow } from "@/api/marketing-task";
 defineOptions({
   name: "TaskGroupMarketing"
 });
+
+const route = useRoute();
 
 const {
   accountGroups,
@@ -35,6 +39,7 @@ const {
   marketingTemplates,
   onSelectionChange,
   openCreateDrawer,
+  openDetailById,
   openDetailDrawer,
   openMaterialDrawer,
   page,
@@ -54,6 +59,22 @@ const {
   treeAccounts,
   treeLoading
 } = useGroupMarketingTaskPage();
+
+let lastOpenedTaskId: number | null = null;
+
+/** 账号占用弹窗通过 taskId 查询参数复用当前菜单的明细抽屉。 */
+watch(
+  () => route.query.taskId,
+  value => {
+    const raw = Array.isArray(value) ? value[0] : value;
+    const taskId = typeof raw === "string" ? Number(raw) : Number.NaN;
+    if (!Number.isSafeInteger(taskId) || taskId <= 0) return;
+    if (lastOpenedTaskId === taskId) return;
+    lastOpenedTaskId = taskId;
+    void openDetailById(taskId);
+  },
+  { immediate: true }
+);
 
 function onTaskAction(row: MarketingTaskRow, action: string): void {
   if (action === "detail") {

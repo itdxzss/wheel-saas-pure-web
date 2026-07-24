@@ -13,12 +13,16 @@ const {
   columns,
   errorMessage,
   loading,
+  page,
+  pageSize,
+  pageSizes,
   previewRow,
   previewVisible,
   remarkDraft,
   remarkSaving,
   remarkVisible,
   rows,
+  total,
   changeVisibility,
   openPreview,
   openRemark,
@@ -54,9 +58,15 @@ async function onSaveRemark(): Promise<void> {
   try {
     await saveRemark();
     ElMessage.success("备注已更新");
+    await refreshRows();
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "备注更新失败");
   }
+}
+
+async function onPageSizeChange(): Promise<void> {
+  page.value = 1;
+  await refreshRows();
 }
 
 onMounted(() => void refreshRows());
@@ -99,16 +109,13 @@ onMounted(() => void refreshRows());
           <el-table-column
             v-if="!dynamicColumns[3]?.hide"
             label="预览图"
-            prop="previewUrl"
             width="110"
+            align="center"
           >
             <template #default="{ row }">
-              <el-image
-                class="thumbnail"
-                :src="row.previewUrl"
-                fit="cover"
-                @click="openPreview(asTemplateRow(row))"
-              />
+              <el-button size="small" @click="openPreview(asTemplateRow(row))">
+                预览
+              </el-button>
             </template>
           </el-table-column>
           <el-table-column
@@ -161,15 +168,8 @@ onMounted(() => void refreshRows());
             prop="updatedAt"
             width="180"
           />
-          <el-table-column label="操作" fixed="right" width="150">
+          <el-table-column label="操作" fixed="right" width="110">
             <template #default="{ row }">
-              <el-button
-                link
-                type="primary"
-                @click="openPreview(asTemplateRow(row))"
-              >
-                预览
-              </el-button>
               <el-button
                 v-auth="'tenant:buyer-template:remark'"
                 link
@@ -184,6 +184,16 @@ onMounted(() => void refreshRows());
             <el-empty description="暂无模板" />
           </template>
         </el-table>
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          class="pagination"
+          :page-sizes="pageSizes"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="total"
+          @current-change="refreshRows"
+          @size-change="onPageSizeChange"
+        />
       </template>
     </PureTableBar>
 
@@ -206,14 +216,12 @@ onMounted(() => void refreshRows());
   margin-bottom: 16px;
 }
 
-.thumbnail {
-  width: 56px;
-  height: 56px;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
 .param-tag {
   margin: 2px 4px 2px 0;
+}
+
+.pagination {
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>
