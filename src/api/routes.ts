@@ -1,10 +1,6 @@
-import { http } from "@/utils/http";
+import { armadaRequest } from "./armada";
+import type { RouteRecordRaw } from "vue-router";
 
-type Result = {
-  success: boolean;
-  data: Array<any>;
-};
-
-export const getAsyncRoutes = () => {
-  return http.request<Result>("get", "/get-async-routes");
-};
+/** 当前登录用户的真实租户动态菜单。 */
+export const getAsyncRoutes = () =>
+  armadaRequest<RouteRecordRaw[]>("get", "/api/tenant/me/menus");

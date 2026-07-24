@@ -3,7 +3,7 @@ import Motion from "./utils/motion";
 import { useRouter } from "vue-router";
 import { message } from "@/utils/message";
 import { loginRules } from "./utils/rule";
-import { ref, reactive, toRaw } from "vue";
+import { ref, reactive, toRaw, onMounted } from "vue";
 import { debounce } from "@pureadmin/utils";
 import { useNav } from "@/layout/hooks/useNav";
 import { useEventListener } from "@vueuse/core";
@@ -14,6 +14,7 @@ import { initRouter, getTopMenu } from "@/router/utils";
 import { bg, avatar, illustration } from "./utils/static";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
+import { getCaptcha } from "@/api/auth";
 
 import dayIcon from "@/assets/svg/day.svg?component";
 import darkIcon from "@/assets/svg/dark.svg?component";
@@ -28,6 +29,8 @@ const router = useRouter();
 const loading = ref(false);
 const disabled = ref(false);
 const ruleFormRef = ref<FormInstance>();
+const captchaImage = ref("");
+const captchaLoading = ref(false);
 
 const { initStorage } = useLayout();
 initStorage();
@@ -37,9 +40,27 @@ dataThemeChange(overallStyle.value);
 const { title } = useNav();
 
 const ruleForm = reactive({
-  username: "demo", // 租户码
-  password: ""
+  username: "admin",
+  password: "",
+  captchaId: "",
+  captchaCode: ""
 });
+
+const refreshCaptcha = async () => {
+  captchaLoading.value = true;
+  try {
+    const captcha = await getCaptcha();
+    ruleForm.captchaId = captcha.captchaId;
+    ruleForm.captchaCode = "";
+    captchaImage.value = captcha.imageBase64;
+  } catch (error) {
+    message(error instanceof Error ? error.message : "验证码加载失败", {
+      type: "error"
+    });
+  } finally {
+    captchaLoading.value = false;
+  }
+};
 
 const onLogin = async (formEl: FormInstance | undefined) => {
   if (!formEl) return;
@@ -49,7 +70,9 @@ const onLogin = async (formEl: FormInstance | undefined) => {
       useUserStoreHook()
         .loginByUsername({
           username: ruleForm.username,
-          password: ruleForm.password
+          password: ruleForm.password,
+          captchaId: ruleForm.captchaId,
+          captchaCode: ruleForm.captchaCode
         })
         .then(res => {
           if (res.success) {
@@ -65,6 +88,7 @@ const onLogin = async (formEl: FormInstance | undefined) => {
             });
           } else {
             message(res.message ?? "登录失败", { type: "error" });
+            refreshCaptcha();
           }
         })
         .finally(() => (loading.value = false));
@@ -86,6 +110,8 @@ useEventListener(document, "keydown", ({ code }) => {
   )
     immediateDebounce(ruleFormRef.value);
 });
+
+onMounted(refreshCaptcha);
 </script>
 
 <template>
@@ -119,20 +145,11 @@ useEventListener(document, "keydown", ({ code }) => {
             size="large"
           >
             <Motion :delay="100">
-              <el-form-item
-                :rules="[
-                  {
-                    required: true,
-                    message: '请输入租户码',
-                    trigger: 'blur'
-                  }
-                ]"
-                prop="username"
-              >
+              <el-form-item prop="username">
                 <el-input
                   v-model="ruleForm.username"
                   clearable
-                  placeholder="租户码"
+                  placeholder="用户名"
                   :prefix-icon="useRenderIcon(User)"
                 />
               </el-form-item>
@@ -147,6 +164,35 @@ useEventListener(document, "keydown", ({ code }) => {
                   placeholder="密码"
                   :prefix-icon="useRenderIcon(Lock)"
                 />
+              </el-form-item>
+            </Motion>
+
+            <Motion :delay="200">
+              <el-form-item prop="captchaCode">
+                <div class="captcha-row">
+                  <el-input
+                    v-model="ruleForm.captchaCode"
+                    clearable
+                    maxlength="4"
+                    placeholder="图片验证码"
+                  />
+                  <button
+                    class="captcha-button"
+                    type="button"
+                    :disabled="captchaLoading"
+                    title="点击刷新验证码"
+                    @click="refreshCaptcha"
+                  >
+                    <img
+                      v-if="captchaImage"
+                      :src="captchaImage"
+                      alt="图片验证码"
+                    />
+                    <span v-else>{{
+                      captchaLoading ? "加载中" : "点击刷新"
+                    }}</span>
+                  </button>
+                </div>
               </el-form-item>
             </Motion>
 
@@ -176,5 +222,26 @@ useEventListener(document, "keydown", ({ code }) => {
 <style lang="scss" scoped>
 :deep(.el-input-group__append, .el-input-group__prepend) {
   padding: 0;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.captcha-button {
+  width: 120px;
+  height: 40px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--el-border-radius-base);
+}
+
+.captcha-button img {
+  width: 120px;
+  height: 40px;
 }
 </style>
