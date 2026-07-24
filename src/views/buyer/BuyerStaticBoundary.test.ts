@@ -5,14 +5,15 @@ import { describe, it } from "node:test";
 const root = new URL("../../../", import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root), "utf8");
 
-describe("buyer static preview boundary", () => {
-  it("keeps the original dynamic menu contract", () => {
+describe("buyer permission boundary", () => {
+  it("loads buyer navigation from the authenticated tenant menu", () => {
     const routes = read("src/api/routes.ts");
-    const fakeRoutes = read("mock/asyncRoutes.ts");
-    assert.match(routes, /\/get-async-routes/);
-    assert.doesNotMatch(routes, /\/api\/tenant\/me\/menus|menu-mapping/);
-    assert.match(fakeRoutes, /url:\s*["']\/get-async-routes["']/);
-    assert.doesNotMatch(fakeRoutes, /buyerRouter|toWheelMenuNode/);
+    assert.match(routes, /\/api\/tenant\/me\/menus/);
+    assert.doesNotMatch(routes, /\/get-async-routes|menu-mapping/);
+    assert.equal(
+      existsSync(new URL("src/router/modules/buyer.ts", root)),
+      false
+    );
   });
 
   it("uses the original shared table and request contracts", () => {

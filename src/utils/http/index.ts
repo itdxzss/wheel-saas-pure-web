@@ -11,6 +11,7 @@ import type {
 } from "./types.d";
 import { stringify } from "qs";
 import { getToken, formatToken, removeToken } from "@/utils/auth";
+import { isUnauthorizedHttpStatus } from "@/router/auth-access";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -92,6 +93,12 @@ class PureHttp {
       (error: PureHttpError) => {
         const $error = error;
         $error.isCancelRequest = Axios.isCancel($error);
+        if (isUnauthorizedHttpStatus($error.response?.status)) {
+          removeToken();
+          if (window.location.hash !== "#/login") {
+            window.location.replace(`${window.location.origin}/#/login`);
+          }
+        }
         // 所有的响应异常 区分来源为取消请求/非取消请求
         return Promise.reject($error);
       }
