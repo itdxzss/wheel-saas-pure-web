@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+import { ElMessage } from "element-plus";
 import type { BuyerChannelRuntimeConfig } from "@/api/buyer-channel";
-import type { PublicWhatsAppPairingPayload } from "@/api/public-promotion-channel";
 import { dateV2MockCountries } from "../../../../mock/date-v2-preview";
 import {
   normalizeDateV2ThemeColor,
@@ -11,6 +11,7 @@ import BasicEarnGuideDialog from "./components/BasicEarnGuideDialog.vue";
 import BasicEarnLanding from "./components/BasicEarnLanding.vue";
 import BasicEarnLoginDialog from "./components/BasicEarnLoginDialog.vue";
 import BasicEarnPairingDialog from "./components/BasicEarnPairingDialog.vue";
+import { usePublicPromotionPairing } from "../public-promotion/composables/usePublicPromotionPairing";
 
 const props = defineProps<{
   promotionCode: string;
@@ -20,8 +21,7 @@ const props = defineProps<{
 const loginVisible = ref(false);
 const pairingVisible = ref(false);
 const guideVisible = ref(false);
-const pairingCode = ref("11111111");
-const lastPairingPayload = ref<PublicWhatsAppPairingPayload>();
+const pairing = usePublicPromotionPairing();
 
 const themeColor = computed(() =>
   normalizeDateV2ThemeColor(props.runtimeConfig.themeColor, "#f5a20a")
@@ -46,25 +46,43 @@ const initialCountryCode = computed(() => {
 });
 
 function handleLogin(payload: { country: DateV2Country; phone: string }): void {
-  lastPairingPayload.value = {
+  guideVisible.value = false;
+  pairingVisible.value = true;
+  void pairing.start({
     channelCode: props.promotionCode,
-    countryCode: payload.country.code,
     dialCode: payload.country.dialCode,
     phone: payload.phone
-  };
-  pairingCode.value = "11111111";
-  pairingVisible.value = true;
+  });
 }
 
 function handlePairingCopied(): void {
+  if (pairing.status.value !== "WAITING_CONFIRMATION") return;
   pairingVisible.value = false;
   guideVisible.value = true;
 }
 
 function handleResend(): void {
-  if (!lastPairingPayload.value) return;
-  pairingCode.value = "11111111";
+  guideVisible.value = false;
+  pairingVisible.value = true;
+  void pairing.retry();
 }
+
+watch(pairing.status, currentStatus => {
+  if (
+    currentStatus === "FINALIZING" ||
+    currentStatus === "FAILED" ||
+    currentStatus === "EXPIRED"
+  ) {
+    guideVisible.value = false;
+    pairingVisible.value = true;
+    return;
+  }
+  if (currentStatus === "SUCCEEDED") {
+    pairingVisible.value = false;
+    guideVisible.value = false;
+    ElMessage.success("WhatsApp 登录成功，奖励已解锁");
+  }
+});
 </script>
 
 <template>
@@ -82,13 +100,16 @@ function handleResend(): void {
     />
     <BasicEarnPairingDialog
       v-model="pairingVisible"
-      :pairing-code="pairingCode"
+      :pairing-code="pairing.pairingCode.value"
       :theme-color="themeColor"
+      :status="pairing.status.value"
+      :error-message="pairing.errorMessage.value"
       @copied="handlePairingCopied"
+      @retry="handleResend"
     />
     <BasicEarnGuideDialog
       v-model="guideVisible"
-      :pairing-code="pairingCode"
+      :pairing-code="pairing.pairingCode.value"
       :theme-color="themeColor"
       @resend="handleResend"
     />

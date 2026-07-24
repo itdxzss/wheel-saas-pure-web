@@ -17,8 +17,8 @@ let countdownTimer: ReturnType<typeof setInterval> | undefined;
 let instructionTimer: ReturnType<typeof setTimeout> | undefined;
 
 const formattedCode = computed(() => {
-  const digits = props.pairingCode.replace(/\D/g, "").padEnd(8, "1");
-  return `${digits.slice(0, 4)}-${digits.slice(4, 8)}`;
+  const code = props.pairingCode.trim().slice(0, 8);
+  return code.length > 4 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
 });
 
 function clearTimers(): void {

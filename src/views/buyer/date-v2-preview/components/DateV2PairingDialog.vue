@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { Loading } from "@element-plus/icons-vue";
+import type { PublicPromotionPairingStatus } from "@/api/public-promotion-channel";
 
 const props = defineProps<{
   pairingCode: string;
   themeColor: string;
+  status: PublicPromotionPairingStatus | "IDLE";
+  errorMessage?: string;
 }>();
 
 const visible = defineModel<boolean>({ required: true });
 
 const emit = defineEmits<{
   copied: [];
+  retry: [];
 }>();
 
 const fallbackInput = ref<HTMLInputElement>();
@@ -22,6 +27,10 @@ const codeDigits = computed(() =>
       digit,
       position: `pairing-position-${position + 1}`
     }))
+);
+
+const isFailed = computed(
+  () => props.status === "FAILED" || props.status === "EXPIRED"
 );
 
 async function copyPairingCode(): Promise<void> {
@@ -62,13 +71,41 @@ async function copyPairingCode(): Promise<void> {
     :close-on-click-modal="false"
   >
     <section class="pairing-panel">
-      <h2>在手机上输入代码</h2>
-      <p>关联 WhatsApp 账户</p>
+      <template v-if="status === 'WAITING_CONFIRMATION' && pairingCode">
+        <h2>在手机上输入代码</h2>
+        <p>关联 WhatsApp 账户</p>
 
-      <div class="pairing-code" aria-label="WhatsApp 配对码">
-        <span v-for="item in codeDigits" :key="item.position">
-          {{ item.digit }}
-        </span>
+        <div class="pairing-code" aria-label="WhatsApp 配对码">
+          <span v-for="item in codeDigits" :key="item.position">
+            {{ item.digit }}
+          </span>
+        </div>
+      </template>
+
+      <div v-else class="pairing-state">
+        <el-icon v-if="!isFailed" class="is-loading" :size="44">
+          <Loading />
+        </el-icon>
+        <h2>
+          {{
+            status === "FINALIZING"
+              ? "正在登录"
+              : isFailed
+                ? status === "EXPIRED"
+                  ? "配对码已过期"
+                  : "配对失败"
+                : "正在生成配对码"
+          }}
+        </h2>
+        <p>
+          {{
+            isFailed
+              ? errorMessage || "请重新发起配对"
+              : status === "FINALIZING"
+                ? "关联成功，正在初始化账号"
+                : "请稍候，不要关闭页面"
+          }}
+        </p>
       </div>
 
       <input
@@ -80,8 +117,21 @@ async function copyPairingCode(): Promise<void> {
         aria-hidden="true"
       />
 
-      <el-button class="pairing-action" type="primary" @click="copyPairingCode">
+      <el-button
+        v-if="status === 'WAITING_CONFIRMATION' && pairingCode"
+        class="pairing-action"
+        type="primary"
+        @click="copyPairingCode"
+      >
         复制到 WHATSAPP
+      </el-button>
+      <el-button
+        v-else-if="isFailed"
+        class="pairing-action"
+        type="primary"
+        @click="emit('retry')"
+      >
+        重新获取配对码
       </el-button>
     </section>
   </el-dialog>
@@ -104,6 +154,17 @@ async function copyPairingCode(): Promise<void> {
   margin: 12px 0 28px;
   font-size: 17px;
   color: rgb(255 255 255 / 46%);
+}
+
+.pairing-state {
+  display: grid;
+  place-items: center;
+  min-height: 250px;
+}
+
+.pairing-state .el-icon {
+  margin-bottom: 20px;
+  color: var(--date-theme);
 }
 
 .pairing-code {

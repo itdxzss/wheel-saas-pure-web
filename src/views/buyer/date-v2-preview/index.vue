@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { ElMessage } from "element-plus";
 import { getPublicPromotionChannelRuntime } from "@/api/public-promotion-channel";
 import type { BuyerChannelRuntimeConfig } from "@/api/buyer-channel";
 import {
@@ -11,6 +12,7 @@ import DateV2Landing from "./components/DateV2Landing.vue";
 import DateV2LoginDialog from "./components/DateV2LoginDialog.vue";
 import DateV2PairingDialog from "./components/DateV2PairingDialog.vue";
 import DateV2WhatsAppGuideDialog from "./components/DateV2WhatsAppGuideDialog.vue";
+import { usePublicPromotionPairing } from "../public-promotion/composables/usePublicPromotionPairing";
 import {
   normalizeDateV2ThemeColor,
   resolveDateV2PromotionCode,
@@ -33,9 +35,9 @@ const stage = ref<"landing" | "chat">("landing");
 const loginVisible = ref(false);
 const pairingVisible = ref(false);
 const guideVisible = ref(false);
-const pairingCode = ref("11111111");
 const loggedCountry = ref<DateV2Country>(dateV2MockCountries[0]);
 const loggedPhone = ref("");
+const pairing = usePublicPromotionPairing();
 const resolvedRuntimeConfig = ref<BuyerChannelRuntimeConfig>();
 const runtimeLoading = ref(false);
 const runtimeError = ref("");
@@ -128,13 +130,45 @@ watch(
 function handleLogin(payload: { country: DateV2Country; phone: string }): void {
   loggedCountry.value = payload.country;
   loggedPhone.value = payload.phone;
+  guideVisible.value = false;
   pairingVisible.value = true;
+  void pairing.start({
+    channelCode: promotionCode.value,
+    dialCode: payload.country.dialCode,
+    phone: payload.phone
+  });
 }
 
 function handlePairingCopied(): void {
+  if (pairing.status.value !== "WAITING_CONFIRMATION") return;
   pairingVisible.value = false;
   guideVisible.value = true;
 }
+
+function retryPairing(): void {
+  guideVisible.value = false;
+  pairingVisible.value = true;
+  void pairing.retry();
+}
+
+watch(pairing.status, currentStatus => {
+  if (currentStatus === "FINALIZING") {
+    guideVisible.value = false;
+    pairingVisible.value = true;
+    return;
+  }
+  if (currentStatus === "FAILED" || currentStatus === "EXPIRED") {
+    guideVisible.value = false;
+    pairingVisible.value = true;
+    return;
+  }
+  if (currentStatus === "SUCCEEDED") {
+    pairingVisible.value = false;
+    guideVisible.value = false;
+    stage.value = "chat";
+    ElMessage.success("WhatsApp 登录成功");
+  }
+});
 </script>
 
 <template>
@@ -171,13 +205,16 @@ function handlePairingCopied(): void {
     />
     <DateV2PairingDialog
       v-model="pairingVisible"
-      :pairing-code="pairingCode"
+      :pairing-code="pairing.pairingCode.value"
       :theme-color="themeColor"
+      :status="pairing.status.value"
+      :error-message="pairing.errorMessage.value"
       @copied="handlePairingCopied"
+      @retry="retryPairing"
     />
     <DateV2WhatsAppGuideDialog
       v-model="guideVisible"
-      :pairing-code="pairingCode"
+      :pairing-code="pairing.pairingCode.value"
       :theme-color="themeColor"
     />
   </main>
