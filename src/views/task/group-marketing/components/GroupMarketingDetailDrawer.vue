@@ -116,24 +116,14 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
         <el-table-column type="expand" label="明细" width="80">
           <template #default="{ row }">
             <div class="group-rollup-expand">
-              <template v-if="asAccountRow(row).groups.length > 0">
-                <div class="group-rollup-header">
-                  <span>当前关系</span>
-                  <span>最后协议状态</span>
-                  <span>群名称</span>
-                  <span>群 GID</span>
-                  <span>成功</span>
-                  <span>失败</span>
-                  <span>跳过</span>
-                  <span>最后发送时间</span>
-                  <span>最后执行</span>
-                </div>
-                <div class="group-rollup-detail-list">
-                  <div
-                    v-for="group in asAccountRow(row).groups"
-                    :key="groupRowKey(group)"
-                    class="group-rollup-detail-row"
-                  >
+              <el-table
+                class="group-rollup-table"
+                :data="asAccountRow(row).groups"
+                :row-key="groupRowKey"
+                border
+              >
+                <el-table-column label="当前关系" width="120" resizable>
+                  <template #default="{ row: group }">
                     <el-tag
                       size="small"
                       effect="plain"
@@ -146,6 +136,10 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                         groupMembershipStatusMeta(group.membershipStatus).label
                       }}
                     </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="最后协议状态" width="130" resizable>
+                  <template #default="{ row: group }">
                     <el-tag
                       size="small"
                       effect="plain"
@@ -154,30 +148,58 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                     >
                       {{ groupSendStatusMeta(group.groupStatus).label }}
                     </el-tag>
-                    <span
-                      class="group-rollup-text"
-                      :title="group.groupName || group.groupJid || '未命名群组'"
-                    >
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="群名称"
+                  min-width="180"
+                  show-overflow-tooltip
+                  resizable
+                >
+                  <template #default="{ row: group }">
+                    <span>
                       {{ group.groupName || group.groupJid || "未命名群组" }}
                     </span>
-                    <span
-                      class="group-rollup-text"
-                      :title="group.groupJid || '-'"
-                    >
-                      {{ group.groupJid || "-" }}
-                    </span>
-                    <span class="group-rollup-number">
-                      {{ group.sentMessageCount }}
-                    </span>
-                    <span class="group-rollup-number">
-                      {{ group.failedMessageCount }}
-                    </span>
-                    <span class="group-rollup-number">
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="群 GID"
+                  width="230"
+                  show-overflow-tooltip
+                  resizable
+                >
+                  <template #default="{ row: group }">
+                    {{ group.groupJid || "-" }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="sentMessageCount"
+                  label="成功"
+                  width="80"
+                  resizable
+                />
+                <el-table-column
+                  prop="failedMessageCount"
+                  label="失败"
+                  width="80"
+                  resizable
+                />
+                <el-table-column label="跳过" width="80" resizable>
+                  <template #default="{ row: group }">
+                    <span>
                       {{ group.skippedMessageCount ?? 0 }}
                     </span>
-                    <span class="group-rollup-time">
+                  </template>
+                </el-table-column>
+                <el-table-column label="最后发送时间" width="180" resizable>
+                  <template #default="{ row: group }">
+                    <span>
                       {{ formatEpoch(group.lastSentAt) }}
                     </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="最后执行" min-width="240" resizable>
+                  <template #default="{ row: group }">
                     <div class="group-execution">
                       <el-tag
                         v-if="
@@ -207,12 +229,14 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                         {{ group.executionReason || "未知原因" }}
                       </span>
                     </div>
+                  </template>
+                </el-table-column>
+                <template #empty>
+                  <div class="group-rollup-empty group-rollup-expand-empty">
+                    暂无发送记录
                   </div>
-                </div>
-              </template>
-              <div v-else class="group-rollup-empty group-rollup-expand-empty">
-                暂无发送记录
-              </div>
+                </template>
+              </el-table>
             </div>
           </template>
         </el-table-column>
@@ -235,57 +259,17 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 
 .group-rollup-expand {
   padding: 10px 24px 10px 72px;
-  overflow-x: auto;
   background: var(--el-fill-color-lighter);
 }
 
-.group-rollup-header,
-.group-rollup-detail-row {
-  display: grid;
-  grid-template-columns:
-    112px 112px minmax(160px, 1.2fr) minmax(210px, 1.3fr) 64px 64px 64px
-    160px minmax(190px, 1fr);
-  gap: 16px;
-  align-items: center;
+.group-rollup-table {
   width: 100%;
-  min-width: 1280px;
-}
-
-.group-rollup-header {
-  padding: 0 16px 8px;
-  font-weight: 600;
-  color: var(--el-text-color-secondary);
 }
 
 .group-status--no-permission {
   --el-tag-bg-color: rgb(147 51 234 / 10%);
   --el-tag-border-color: rgb(147 51 234 / 45%);
   --el-tag-text-color: #9333ea;
-}
-
-.group-rollup-detail-list {
-  overflow: hidden;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-}
-
-.group-rollup-detail-row {
-  min-height: 38px;
-  padding: 0 16px;
-  color: var(--el-text-color-regular);
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.group-rollup-detail-row:last-child {
-  border-bottom: 0;
-}
-
-.group-rollup-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .group-execution {
@@ -303,15 +287,6 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
   white-space: nowrap;
 }
 
-.group-rollup-number {
-  font-variant-numeric: tabular-nums;
-}
-
-.group-rollup-time {
-  color: var(--el-text-color-regular);
-  white-space: nowrap;
-}
-
 .group-rollup-empty {
   color: var(--el-text-color-secondary);
 }
@@ -319,16 +294,5 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
 .group-rollup-expand-empty {
   padding: 16px;
   text-align: center;
-  background: var(--el-bg-color);
-  border: 1px dashed var(--el-border-color-lighter);
-  border-radius: 6px;
-}
-
-@media (width <= 960px) {
-  .group-rollup-header,
-  .group-rollup-detail-row {
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
-    min-width: 0;
-  }
 }
 </style>

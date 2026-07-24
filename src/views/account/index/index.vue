@@ -1,14 +1,23 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router";
+import type { AccountGroupMarketingOccupancy } from "@/api/account-group";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import AccountListTable from "./components/AccountListTable.vue";
+import MarketingOccupancyDialog from "./components/MarketingOccupancyDialog.vue";
 import { accountListColumns } from "./constants";
 import { useAccountListPage } from "./composables/useAccountListPage";
+import {
+  marketingOccupancyOptions,
+  occupiedBusinessTypeOptions
+} from "./marketing-occupancy";
 import Search from "~icons/ri/search-line";
 import RefreshRight from "~icons/ep/refresh-right";
 
 defineOptions({
   name: "AccountIndex"
 });
+
+const router = useRouter();
 
 const {
   accountGroups,
@@ -23,8 +32,12 @@ const {
   isOnlineActionDisabled,
   loginStateOptions,
   loading,
+  marketingOccupancyDetail,
+  marketingOccupancyDialogOpen,
+  marketingOccupancyLoading,
   numberSourceOptions,
   onlineActionLabel,
+  openMarketingOccupancy,
   onSelectionChange,
   page,
   pageSize,
@@ -46,6 +59,23 @@ const {
   total,
   wsExporting
 } = useAccountListPage();
+
+/** 仅已接入详情页的任务类型支持从占用弹窗跳转。 */
+function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
+  if (!detail.taskId) return;
+  if (detail.taskBusinessType === 1) {
+    marketingOccupancyDialogOpen.value = false;
+    void router.push({
+      path: "/task/group-marketing",
+      query: { taskId: String(detail.taskId) }
+    });
+    return;
+  }
+  if (detail.taskBusinessType === 2) {
+    marketingOccupancyDialogOpen.value = false;
+    void router.push(`/task/group-pull-marketing/${detail.taskId}`);
+  }
+}
 </script>
 
 <template>
@@ -228,6 +258,57 @@ const {
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="营销占用类型">
+          <el-select
+            v-model="searchForm.marketingOccupancyType"
+            clearable
+            placeholder="请选择占用类型"
+          >
+            <el-option
+              v-for="item in marketingOccupancyOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            >
+              <span
+                class="occupancy-option-dot"
+                :style="{ backgroundColor: item.color }"
+              />
+              {{ item.label }}
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="占用任务">
+          <el-input
+            v-model="searchForm.occupiedTaskKeyword"
+            clearable
+            placeholder="任务ID / 任务名称"
+          />
+        </el-form-item>
+        <el-form-item label="占用任务类型">
+          <el-select
+            v-model="searchForm.occupiedBusinessType"
+            clearable
+            placeholder="请选择任务类型"
+          >
+            <el-option
+              v-for="item in occupiedBusinessTypeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="可调用状态">
+          <el-select
+            v-model="searchForm.callable"
+            clearable
+            placeholder="请选择可调用状态"
+          >
+            <el-option label="可调用" :value="true" />
+            <el-option label="不可调用" :value="false" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="IP分组">
           <el-input
             v-model="searchForm.ipGroupName"
@@ -263,10 +344,18 @@ const {
       :total="total"
       :ws-exporting="wsExporting"
       @batch-command="handleBatchAction"
+      @group-click="openMarketingOccupancy"
       @refresh="refreshAccountList"
       @restart-protocol="restartProtocol"
       @row-action="handleRowAction"
       @selection-change="onSelectionChange"
+    />
+
+    <MarketingOccupancyDialog
+      v-model="marketingOccupancyDialogOpen"
+      :detail="marketingOccupancyDetail"
+      :loading="marketingOccupancyLoading"
+      @task-click="openOccupancyTask"
     />
 
     <el-drawer
@@ -390,6 +479,14 @@ const {
 
 .account-batch-alert {
   margin-bottom: 16px;
+}
+
+.occupancy-option-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 50%;
 }
 
 @media (width <= 1280px) {

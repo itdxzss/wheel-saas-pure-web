@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
-import { listAccountGroups } from "./account-group";
+import {
+  getAccountGroupMarketingOccupancy,
+  listAccountGroups
+} from "./account-group";
 
 describe("account group API", () => {
   it("maps abnormal account count from restrictedCount before riskCount", async () => {
@@ -58,5 +61,59 @@ describe("account group API", () => {
 
     assert.equal(result.list?.[0]?.abnormalAccounts, 3);
     assert.equal(result.list?.[0]?.accountCountSummary, "8 - 2 / 3 / 1");
+  });
+
+  it("maps marketing occupancy facts without loading task details", async () => {
+    resetArmadaMock({
+      list: [
+        {
+          id: 12,
+          name: "营销组",
+          marketingOccupancyType: 2,
+          marketingOccupancyTaskId: 88,
+          marketingLockedAt: 1782705600000
+        }
+      ],
+      total: 1
+    });
+
+    const result = await listAccountGroups();
+
+    assert.deepEqual(
+      {
+        type: result.list?.[0]?.marketingOccupancyType,
+        taskId: result.list?.[0]?.marketingOccupancyTaskId,
+        lockedAt: result.list?.[0]?.marketingLockedAt
+      },
+      { type: 2, taskId: 88, lockedAt: 1782705600000 }
+    );
+    assert.equal(armadaCalls().length, 1);
+  });
+
+  it("loads marketing occupancy details only for the selected group", async () => {
+    resetArmadaMock({
+      groupId: 12,
+      occupancyType: "GROUP_PULL_MARKETING",
+      taskBusinessType: 2,
+      taskId: 88,
+      taskName: "印度拉群任务",
+      taskStatus: 2,
+      resourceStatus: 2,
+      lockedAt: 1782705600000,
+      marketingAccountTotalCount: 50,
+      marketingAccountUsedCount: 18
+    });
+
+    const result = await getAccountGroupMarketingOccupancy(12);
+
+    assert.equal(result.taskName, "印度拉群任务");
+    assert.equal(result.marketingAccountUsedCount, 18);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "get",
+        url: "/api/account-groups/12/marketing-occupancy",
+        opts: undefined
+      }
+    ]);
   });
 });

@@ -100,6 +100,7 @@ export interface GroupMarketingTaskPageState {
   marketingTemplates: Ref<MarketingTemplateRow[]>;
   onSelectionChange: (rows: MarketingTaskRow[]) => void;
   openCreateDrawer: () => Promise<void>;
+  openDetailById: (taskId: number) => Promise<void>;
   openDetailDrawer: (row: MarketingTaskRow) => Promise<void>;
   openMaterialDrawer: (row: MarketingTaskRow) => Promise<void>;
   page: Ref<number>;
@@ -569,12 +570,17 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     }
   }
 
-  async function openDetailDrawer(row: MarketingTaskRow): Promise<void> {
+  /** 供账号占用详情等入口按任务 ID 复用现有明细抽屉。 */
+  async function openDetailById(taskId: number): Promise<void> {
     invalidateDetailRequests();
-    detailTaskId = row.id;
+    detailTaskId = taskId;
     detailTask.value = null;
     detailDrawerOpen.value = true;
-    await refreshDetailTask(row.id, false);
+    await refreshDetailTask(taskId, false);
+  }
+
+  async function openDetailDrawer(row: MarketingTaskRow): Promise<void> {
+    await openDetailById(row.id);
   }
 
   function resetDetailState(): void {
@@ -773,6 +779,7 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
     marketingTemplates,
     onSelectionChange,
     openCreateDrawer,
+    openDetailById,
     openDetailDrawer,
     openMaterialDrawer,
     page,

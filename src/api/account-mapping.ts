@@ -2,6 +2,7 @@ import type {
   AccountState,
   AccountType,
   LoginState,
+  MarketingOccupancyDisplayType,
   MuteStatus,
   NumberSource,
   RiskStatus,
@@ -24,6 +25,10 @@ export interface BackendTenantAccountListParams {
   accountGroupId?: number;
   country?: string;
   truthIp?: string;
+  marketingOccupancyType?: MarketingOccupancyDisplayType;
+  occupiedTaskKeyword?: string;
+  occupiedBusinessType?: number;
+  callable?: boolean;
 }
 
 function trimToUndefined(value?: string | null): string | undefined {
@@ -70,7 +75,17 @@ export function toTenantAccountListParams(
     muteStatus: muteStatusToCode(query.muteStatus ?? query.mute_status),
     accountGroupId: numberToUndefined(query.accountGroupId ?? query.group_id),
     country: trimToUndefined(query.country),
-    truthIp: trimToUndefined(query.truthIp ?? query.truth_ip)
+    truthIp: trimToUndefined(query.truthIp ?? query.truth_ip),
+    marketingOccupancyType:
+      (query.marketingOccupancyType ?? query.marketing_occupancy_type) ||
+      undefined,
+    occupiedTaskKeyword: trimToUndefined(
+      query.occupiedTaskKeyword ?? query.occupied_task_keyword
+    ),
+    occupiedBusinessType: numberToUndefined(
+      query.occupiedBusinessType ?? query.occupied_business_type
+    ),
+    callable: query.callable === "" ? undefined : query.callable
   });
 }
 

@@ -67,4 +67,21 @@ describe("account list mapping", () => {
       }
     );
   });
+
+  it("maps marketing occupancy filters and preserves false callable value", () => {
+    assert.deepEqual(
+      toTenantAccountListParams({
+        marketing_occupancy_type: "GROUP_PULL_MARKETING",
+        occupied_task_keyword: " 任务-88 ",
+        occupied_business_type: 2,
+        callable: false
+      }),
+      {
+        marketingOccupancyType: "GROUP_PULL_MARKETING",
+        occupiedTaskKeyword: "任务-88",
+        occupiedBusinessType: 2,
+        callable: false
+      }
+    );
+  });
 });
