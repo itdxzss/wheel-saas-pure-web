@@ -57,10 +57,21 @@ describe("AccountListTable protocol restart button", () => {
   });
 
   it("names and guards the two lifecycle batch actions", () => {
-    assert.match(source, />\s*批量登录\s*</);
+    assert.match(source, /batchOnlineCooldownRemaining: number/);
+    assert.match(source, /批量登录\({{ batchOnlineCooldownRemaining }}s\)/);
     assert.match(source, />\s*批量离线\s*</);
     assert.match(source, /batchSubmitting: boolean/);
     assert.match(source, /:loading="batchSubmitting \|\| wsExporting"/);
+    assert.match(
+      source,
+      /command="online"[\s\S]*:disabled="batchSubmitting \|\| batchOnlineCooldownRemaining > 0"/
+    );
+    assert.match(
+      pageSource,
+      /:batch-online-cooldown-remaining="batchOnlineCooldownRemaining"/
+    );
+    assert.match(composableSource, /isRequestTimeout/);
+    assert.match(composableSource, /正在上线，请稍后/);
   });
 
   it("wires the guarded WS phone export flow below takeover", () => {

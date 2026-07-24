@@ -23,6 +23,7 @@ const {
   accountGroups,
   accountStatusOptions,
   accountTypeOptions,
+  batchOnlineCooldownRemaining,
   batchSubmitting,
   batchMoveForm,
   batchMoveModeOptions,
@@ -332,6 +333,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
       v-model:page="page"
       v-model:page-size="pageSize"
       :columns="accountListColumns"
+      :batch-online-cooldown-remaining="batchOnlineCooldownRemaining"
       :batch-submitting="batchSubmitting"
       :loading="loading"
       :online-action-disabled="isOnlineActionDisabled"
