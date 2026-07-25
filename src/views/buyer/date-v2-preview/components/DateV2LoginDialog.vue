@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { Icon } from "@iconify/vue/offline";
 import { Search } from "@element-plus/icons-vue";
 import { countryFlagIcon } from "../../channel/domain/channel-country-flag";
+import { countryFlagEmoji } from "../../public-promotion/domain/public-promotion-countries";
 import {
   normalizePhoneDigits,
   validateDateV2Phone,
@@ -110,6 +111,9 @@ function submit(): void {
                 class="country-flag"
                 :icon="countryFlagIcon(selectedCountry?.code)!"
               />
+              <span v-else class="country-flag">
+                {{ countryFlagEmoji(selectedCountry?.code) }}
+              </span>
               <span>{{ selectedCountry?.dialCode }}</span>
               <span class="country-trigger__arrow">⌄</span>
             </el-button>
@@ -169,6 +173,9 @@ function submit(): void {
           class="country-flag"
           :icon="countryFlagIcon(country.code)!"
         />
+        <span v-else class="country-flag">
+          {{ countryFlagEmoji(country.code) }}
+        </span>
         <span>{{ country.name }}</span>
         <span class="country-code">{{ country.dialCode }}</span>
         <span
