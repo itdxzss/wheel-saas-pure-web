@@ -93,10 +93,26 @@ const iconOptions = [
   { label: "工具", value: "ep:tools" },
   { label: "监控", value: "ep:monitor" }
 ];
+const MENU_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 const rules = {
   menuName: [{ required: true, message: "请输入节点名称", trigger: "blur" }],
-  menuKey: [{ required: true, message: "请输入菜单标识", trigger: "blur" }],
-  menuType: [{ required: true, message: "请选择节点类型", trigger: "change" }]
+  menuKey: [
+    { required: true, message: "请输入菜单标识", trigger: "blur" },
+    {
+      pattern: MENU_KEY_PATTERN,
+      message: "菜单标识只能由字母、数字和下划线组成，且必须以字母开头",
+      trigger: "blur"
+    }
+  ],
+  menuType: [{ required: true, message: "请选择节点类型", trigger: "change" }],
+  routePath: [
+    { required: true, message: "请输入路由路径", trigger: "blur" },
+    { pattern: /^\//, message: "路由路径必须以/开头", trigger: "blur" }
+  ],
+  componentPath: [
+    { required: true, message: "请选择组件路径", trigger: "change" }
+  ],
+  permKey: [{ required: true, message: "请输入权限编码", trigger: "blur" }]
 };
 
 const flatNodes = computed(() => {
@@ -365,27 +381,49 @@ onMounted(refresh);
           <el-input :model-value="editingParentName" disabled />
         </el-form-item>
         <el-form-item label="节点名称" prop="menuName"
-          ><el-input v-model="form.menuName" maxlength="64"
+          ><el-input
+            v-model="form.menuName"
+            maxlength="64"
+            placeholder="例如 用户管理"
         /></el-form-item>
         <el-form-item label="菜单标识" prop="menuKey"
-          ><el-input v-model="form.menuKey" maxlength="64"
+          ><el-input
+            v-model="form.menuKey"
+            maxlength="64"
+            placeholder="例如 SystemUser"
         /></el-form-item>
-        <el-form-item v-if="form.menuType === 'M'" label="路由路径"
+        <el-form-item
+          v-if="form.menuType === 'M'"
+          label="路由路径"
+          prop="routePath"
           ><el-input
             v-model="form.routePath"
             placeholder="例如 /system/user"
             maxlength="128"
         /></el-form-item>
-        <el-form-item v-if="form.menuType === 'M'" label="组件路径"
-          ><el-select v-model="form.componentPath" filterable class="full-width"
+        <el-form-item
+          v-if="form.menuType === 'M'"
+          label="组件路径"
+          prop="componentPath"
+          ><el-select
+            v-model="form.componentPath"
+            filterable
+            class="full-width"
+            placeholder="请选择对应页面组件"
             ><el-option
               v-for="item in componentOptions"
               :key="item"
               :label="item"
               :value="item" /></el-select
         ></el-form-item>
-        <el-form-item v-if="form.menuType !== 'D'" label="权限编码"
-          ><el-input v-model="form.permKey" maxlength="128"
+        <el-form-item
+          v-if="form.menuType !== 'D'"
+          label="权限编码"
+          prop="permKey"
+          ><el-input
+            v-model="form.permKey"
+            maxlength="128"
+            placeholder="例如 tenant:system-user:view"
         /></el-form-item>
         <el-form-item v-if="form.menuType !== 'B'" label="图标">
           <el-select

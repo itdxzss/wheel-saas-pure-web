@@ -9,6 +9,9 @@ describe("system role page contract", () => {
     for (const text of [
       "角色名称",
       "角色编码",
+      "例如 运营人员",
+      "例如 OPERATOR",
+      "创建后不可修改",
       "用户数量",
       "备注",
       "新增角色",

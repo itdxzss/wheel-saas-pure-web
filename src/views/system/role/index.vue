@@ -312,13 +312,17 @@ onMounted(refresh);
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="角色名称" prop="roleName"
-          ><el-input v-model="form.roleName" maxlength="64"
+          ><el-input
+            v-model="form.roleName"
+            maxlength="64"
+            placeholder="请输入角色名称，例如 运营人员"
         /></el-form-item>
         <el-form-item label="角色编码" prop="roleCode"
           ><el-input
             v-model="form.roleCode"
             :disabled="Boolean(editingRole)"
             maxlength="64"
+            placeholder="请输入角色编码，例如 OPERATOR，创建后不可修改"
         /></el-form-item>
         <el-form-item label="备注"
           ><el-input
@@ -377,17 +381,21 @@ onMounted(refresh);
 .system-page {
   padding: 16px;
 }
+
 .filter-card,
 .system-page > .el-alert {
   margin-bottom: 16px;
 }
+
 .system-tag {
   margin-left: 8px;
 }
+
 .permission-tree {
   min-height: 280px;
   margin-top: 12px;
 }
+
 :deep(.filter-card .el-input),
 :deep(.filter-card .el-select) {
   width: 220px;

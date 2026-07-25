@@ -23,6 +23,9 @@ describe("system menu page contract", () => {
     assert.ok(page.includes("D目录"));
     assert.ok(page.includes("M菜单"));
     assert.ok(page.includes("B按钮"));
+    assert.ok(page.includes("菜单标识只能由字母、数字和下划线组成"));
+    assert.ok(page.includes("例如 SystemUser"));
+    assert.ok(page.includes("例如 tenant:system-user:view"));
   });
 
   it("uses a searchable icon picker with visible icon previews", () => {

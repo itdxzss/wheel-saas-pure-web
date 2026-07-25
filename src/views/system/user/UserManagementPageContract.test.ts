@@ -7,8 +7,10 @@ const page = readFileSync(new URL("./index.vue", import.meta.url), "utf8");
 describe("system user page contract", () => {
   it("contains filters, user fields and all approved actions", () => {
     for (const text of [
-      "用户名",
-      "昵称",
+      "登录账号",
+      "用户昵称",
+      "例如 test0001",
+      "例如 普通用户测试",
       "角色",
       "状态",
       "新增用户",
@@ -20,6 +22,7 @@ describe("system user page contract", () => {
       assert.ok(page.includes(text), text);
     assert.ok(page.includes("multiple"));
     assert.ok(page.includes("8至64"));
+    assert.ok(page.includes("只能包含字母、数字、点、下划线和短横线"));
   });
 
   it("uses API wrappers, visible error state and permission directives", () => {

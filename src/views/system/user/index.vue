@@ -38,15 +38,23 @@ const form = reactive({
   password: "",
   roleIds: [] as number[]
 });
+const LOGIN_ACCOUNT_PATTERN = /^[A-Za-z0-9._-]+$/;
 const columns = [
-  { label: "用户名", prop: "username" },
-  { label: "昵称", prop: "nickname" },
+  { label: "登录账号", prop: "username" },
+  { label: "用户昵称", prop: "nickname" },
   { label: "角色", prop: "roleIds" },
   { label: "状态", prop: "status" },
   { label: "创建时间", prop: "createdAt" }
 ];
 const rules = {
-  username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
+  username: [
+    { required: true, message: "请输入登录账号", trigger: "blur" },
+    {
+      pattern: LOGIN_ACCOUNT_PATTERN,
+      message: "登录账号只能包含字母、数字、点、下划线和短横线",
+      trigger: "blur"
+    }
+  ],
   password: [
     {
       validator: (
@@ -197,7 +205,7 @@ onMounted(refresh);
   <div class="system-page">
     <el-card shadow="never" class="filter-card">
       <el-form :inline="true" :model="filters">
-        <el-form-item label="用户名/昵称">
+        <el-form-item label="登录账号/用户昵称">
           <el-input
             v-model="filters.keyword"
             clearable
@@ -295,14 +303,18 @@ onMounted(refresh);
       destroy-on-close
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
-        <el-form-item label="用户名" prop="username"
+        <el-form-item label="登录账号" prop="username"
           ><el-input
             v-model="form.username"
             :disabled="Boolean(editingId)"
             maxlength="64"
+            placeholder="请输入登录账号，例如 test0001"
         /></el-form-item>
-        <el-form-item label="昵称"
-          ><el-input v-model="form.nickname" maxlength="64"
+        <el-form-item label="用户昵称"
+          ><el-input
+            v-model="form.nickname"
+            maxlength="64"
+            placeholder="请输入用户昵称，例如 普通用户测试"
         /></el-form-item>
         <el-form-item v-if="!editingId" label="密码" prop="password"
           ><el-input
