@@ -23,6 +23,7 @@ const saving = ref(false);
 const errorMessage = ref("");
 const dialogVisible = ref(false);
 const editingId = ref<number>();
+const createParent = ref<SystemMenuNode | null>(null);
 const formRef = ref<FormInstance>();
 const treeProps = { children: "children", hasChildren: "hasChildren" };
 const form = reactive<SystemMenuPayload>({
@@ -114,6 +115,23 @@ const parentOptions = computed(() =>
     return node.menuType === "D";
   })
 );
+const isCreating = computed(() => editingId.value === undefined);
+const isRootCreate = computed(
+  () => isCreating.value && createParent.value === null
+);
+const selectableTypeOptions = computed(() => {
+  if (!isCreating.value) return typeOptions;
+  const parent = createParent.value;
+  if (!parent) return typeOptions.filter(item => item.value === "D");
+  if (parent.menuType === "M")
+    return typeOptions.filter(item => item.value === "B");
+  return typeOptions.filter(item => item.value !== "B");
+});
+const dialogTitle = computed(() => {
+  if (editingId.value !== undefined) return "编辑菜单节点";
+  if (isRootCreate.value) return "新增一级目录";
+  return `在“${createParent.value?.menuName ?? ""}”下新增子节点`;
+});
 
 function nodeTypeLabel(type: SystemMenuType): string {
   return typeOptions.find(item => item.value === type)?.label ?? type;
@@ -149,6 +167,7 @@ function resetForm(): void {
 
 function openCreate(parent?: SystemMenuNode): void {
   editingId.value = undefined;
+  createParent.value = parent ?? null;
   resetForm();
   if (parent) {
     form.parentId = parent.id;
@@ -159,6 +178,7 @@ function openCreate(parent?: SystemMenuNode): void {
 
 function openEdit(row: SystemMenuNode): void {
   editingId.value = row.id;
+  createParent.value = null;
   Object.assign(form, {
     parentId: row.parentId,
     menuName: row.menuName,
@@ -246,7 +266,7 @@ onMounted(refresh);
           v-auth="'tenant:system-menu:create'"
           type="primary"
           @click="openCreate()"
-          >新增根目录</el-button
+          >新增一级目录</el-button
         ></template
       >
       <template #default="{ dynamicColumns }">
@@ -306,22 +326,25 @@ onMounted(refresh);
 
     <el-dialog
       v-model="dialogVisible"
-      :title="editingId ? '编辑菜单节点' : '新增菜单节点'"
+      :title="dialogTitle"
       width="600px"
       destroy-on-close
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="节点类型" prop="menuType"
+        <el-form-item v-if="!isRootCreate" label="节点类型" prop="menuType"
           ><el-radio-group v-model="form.menuType"
             ><el-radio-button
-              v-for="item in typeOptions"
+              v-for="item in selectableTypeOptions"
               :key="item.value"
               :value="item.value"
               >{{ item.label }}</el-radio-button
             ></el-radio-group
           ></el-form-item
         >
-        <el-form-item label="父节点"
+        <el-form-item v-if="createParent" label="父节点">
+          <el-input :model-value="createParent?.menuName" disabled />
+        </el-form-item>
+        <el-form-item v-else-if="editingId !== undefined" label="父节点"
           ><el-select v-model="form.parentId" filterable class="full-width"
             ><el-option
               v-if="form.menuType === 'D'"
@@ -337,9 +360,6 @@ onMounted(refresh);
         /></el-form-item>
         <el-form-item label="菜单标识" prop="menuKey"
           ><el-input v-model="form.menuKey" maxlength="64"
-        /></el-form-item>
-        <el-form-item v-if="form.menuType === 'D'" label="路由路径"
-          ><el-input disabled placeholder="目录路由由系统根据菜单标识生成"
         /></el-form-item>
         <el-form-item v-if="form.menuType === 'M'" label="路由路径"
           ><el-input

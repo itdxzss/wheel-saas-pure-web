@@ -33,6 +33,20 @@ describe("system menu page contract", () => {
     assert.ok(!page.includes('placeholder="例如 ep:setting"'));
   });
 
+  it("treats the toolbar action as creating a fixed top-level directory", () => {
+    assert.ok(page.includes("新增一级目录"));
+    assert.ok(page.includes("isRootCreate"));
+    assert.ok(page.includes('v-if="!isRootCreate"'));
+    assert.ok(page.includes("createParent?.menuName"));
+    assert.ok(!page.includes("新增根目录"));
+  });
+
+  it("limits child node types according to the selected parent", () => {
+    assert.ok(page.includes("selectableTypeOptions"));
+    assert.ok(page.includes('parent.menuType === "M"'));
+    assert.ok(page.includes('item.value !== "B"'));
+  });
+
   it("uses approved APIs, errors and permissions without delete action", () => {
     for (const name of [
       "getSystemMenuTree",
