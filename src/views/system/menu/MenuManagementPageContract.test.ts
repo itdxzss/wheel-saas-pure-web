@@ -25,6 +25,14 @@ describe("system menu page contract", () => {
     assert.ok(page.includes("B按钮"));
   });
 
+  it("uses a searchable icon picker with visible icon previews", () => {
+    assert.ok(page.includes("IconifyIconOnline"));
+    assert.ok(page.includes("iconOptions"));
+    assert.ok(page.includes("请选择菜单图标"));
+    assert.ok(page.includes('value: "ep:setting"'));
+    assert.ok(!page.includes('placeholder="例如 ep:setting"'));
+  });
+
   it("uses approved APIs, errors and permissions without delete action", () => {
     for (const name of [
       "getSystemMenuTree",

@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox, type FormInstance } from "element-plus";
 import { PureTableBar } from "@/components/RePureTableBar";
+import { IconifyIconOnline } from "@/components/ReIcon";
 import {
   changeSystemMenuStatus,
   createSystemMenu,
@@ -70,6 +71,24 @@ const componentOptions = [
   "system/user/index",
   "system/role/index",
   "system/menu/index"
+];
+const iconOptions = [
+  { label: "用户", value: "ep:user" },
+  { label: "群聊", value: "ep:chat-dot-round" },
+  { label: "列表", value: "ep:list" },
+  { label: "文档", value: "ep:document" },
+  { label: "连接", value: "ep:connection" },
+  { label: "趋势", value: "ep:trend-charts" },
+  { label: "设置", value: "ep:setting" },
+  { label: "首页", value: "ep:home-filled" },
+  { label: "文件夹", value: "ep:folder" },
+  { label: "数据分析", value: "ep:data-analysis" },
+  { label: "任务", value: "ep:tickets" },
+  { label: "资源", value: "ep:coin" },
+  { label: "权限", value: "ep:lock" },
+  { label: "菜单", value: "ep:menu" },
+  { label: "工具", value: "ep:tools" },
+  { label: "监控", value: "ep:monitor" }
 ];
 const rules = {
   menuName: [{ required: true, message: "请输入节点名称", trigger: "blur" }],
@@ -338,12 +357,28 @@ onMounted(refresh);
         <el-form-item v-if="form.menuType !== 'D'" label="权限编码"
           ><el-input v-model="form.permKey" maxlength="128"
         /></el-form-item>
-        <el-form-item v-if="form.menuType !== 'B'" label="图标"
-          ><el-input
+        <el-form-item v-if="form.menuType !== 'B'" label="图标">
+          <el-select
             v-model="form.icon"
-            placeholder="例如 ep:setting"
-            maxlength="64"
-        /></el-form-item>
+            filterable
+            clearable
+            class="full-width"
+            placeholder="请选择菜单图标"
+          >
+            <el-option
+              v-for="item in iconOptions"
+              :key="item.value"
+              :label="`${item.label} ${item.value}`"
+              :value="item.value"
+            >
+              <div class="icon-option">
+                <IconifyIconOnline :icon="item.value" />
+                <span>{{ item.label }}</span>
+                <code>{{ item.value }}</code>
+              </div>
+            </el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="排序"
           ><el-input-number v-model="form.sortNo" :min="0" :max="9999"
         /></el-form-item>
@@ -362,10 +397,23 @@ onMounted(refresh);
 .system-page {
   padding: 16px;
 }
+
 .system-page > .el-alert {
   margin-bottom: 16px;
 }
+
 .full-width {
   width: 100%;
+}
+
+.icon-option {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.icon-option code {
+  margin-left: auto;
+  color: var(--el-text-color-secondary);
 }
 </style>
