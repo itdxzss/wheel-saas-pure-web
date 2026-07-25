@@ -36,7 +36,7 @@ describe("system menu page contract", () => {
   it("treats the toolbar action as creating a fixed top-level directory", () => {
     assert.ok(page.includes("新增一级目录"));
     assert.ok(page.includes("isRootCreate"));
-    assert.ok(page.includes('v-if="!isRootCreate"'));
+    assert.ok(page.includes('v-if="isChildCreate"'));
     assert.ok(page.includes("createParent?.menuName"));
     assert.ok(!page.includes("新增根目录"));
   });
@@ -45,6 +45,14 @@ describe("system menu page contract", () => {
     assert.ok(page.includes("selectableTypeOptions"));
     assert.ok(page.includes('parent.menuType === "M"'));
     assert.ok(page.includes('item.value !== "B"'));
+  });
+
+  it("keeps node type and parent fixed while editing", () => {
+    assert.ok(page.includes("editingNode"));
+    assert.ok(page.includes("isEditing"));
+    assert.ok(page.includes("editingParentName"));
+    assert.ok(page.includes("编辑${nodeTypeName"));
+    assert.ok(page.includes('v-if="isChildCreate"'));
   });
 
   it("uses approved APIs, errors and permissions without delete action", () => {

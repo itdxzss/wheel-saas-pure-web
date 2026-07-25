@@ -23,6 +23,7 @@ const saving = ref(false);
 const errorMessage = ref("");
 const dialogVisible = ref(false);
 const editingId = ref<number>();
+const editingNode = ref<SystemMenuNode | null>(null);
 const createParent = ref<SystemMenuNode | null>(null);
 const formRef = ref<FormInstance>();
 const treeProps = { children: "children", hasChildren: "hasChildren" };
@@ -108,16 +109,13 @@ const flatNodes = computed(() => {
   visit(rows.value);
   return result;
 });
-const parentOptions = computed(() =>
-  flatNodes.value.filter(node => {
-    if (node.id === editingId.value) return false;
-    if (form.menuType === "B") return node.menuType === "M";
-    return node.menuType === "D";
-  })
-);
 const isCreating = computed(() => editingId.value === undefined);
+const isEditing = computed(() => editingId.value !== undefined);
 const isRootCreate = computed(
   () => isCreating.value && createParent.value === null
+);
+const isChildCreate = computed(
+  () => isCreating.value && createParent.value !== null
 );
 const selectableTypeOptions = computed(() => {
   if (!isCreating.value) return typeOptions;
@@ -128,13 +126,27 @@ const selectableTypeOptions = computed(() => {
   return typeOptions.filter(item => item.value !== "B");
 });
 const dialogTitle = computed(() => {
-  if (editingId.value !== undefined) return "编辑菜单节点";
+  if (editingNode.value)
+    return `编辑${nodeTypeName(editingNode.value.menuType)}“${editingNode.value.menuName}”`;
   if (isRootCreate.value) return "新增一级目录";
   return `在“${createParent.value?.menuName ?? ""}”下新增子节点`;
+});
+const editingParentName = computed(() => {
+  if (!editingNode.value?.parentId) return "根节点";
+  return (
+    flatNodes.value.find(node => node.id === editingNode.value?.parentId)
+      ?.menuName ?? "未知父节点"
+  );
 });
 
 function nodeTypeLabel(type: SystemMenuType): string {
   return typeOptions.find(item => item.value === type)?.label ?? type;
+}
+
+function nodeTypeName(type: SystemMenuType): string {
+  if (type === "D") return "目录";
+  if (type === "M") return "菜单";
+  return "按钮";
 }
 
 async function refresh(): Promise<void> {
@@ -167,6 +179,7 @@ function resetForm(): void {
 
 function openCreate(parent?: SystemMenuNode): void {
   editingId.value = undefined;
+  editingNode.value = null;
   createParent.value = parent ?? null;
   resetForm();
   if (parent) {
@@ -178,6 +191,7 @@ function openCreate(parent?: SystemMenuNode): void {
 
 function openEdit(row: SystemMenuNode): void {
   editingId.value = row.id;
+  editingNode.value = row;
   createParent.value = null;
   Object.assign(form, {
     parentId: row.parentId,
@@ -331,7 +345,7 @@ onMounted(refresh);
       destroy-on-close
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item v-if="!isRootCreate" label="节点类型" prop="menuType"
+        <el-form-item v-if="isChildCreate" label="节点类型" prop="menuType"
           ><el-radio-group v-model="form.menuType"
             ><el-radio-button
               v-for="item in selectableTypeOptions"
@@ -341,20 +355,15 @@ onMounted(refresh);
             ></el-radio-group
           ></el-form-item
         >
+        <el-form-item v-if="isEditing" label="节点类型">
+          <el-input :model-value="nodeTypeName(form.menuType)" disabled />
+        </el-form-item>
         <el-form-item v-if="createParent" label="父节点">
           <el-input :model-value="createParent?.menuName" disabled />
         </el-form-item>
-        <el-form-item v-else-if="editingId !== undefined" label="父节点"
-          ><el-select v-model="form.parentId" filterable class="full-width"
-            ><el-option
-              v-if="form.menuType === 'D'"
-              label="根节点"
-              :value="0" /><el-option
-              v-for="item in parentOptions"
-              :key="item.id"
-              :label="item.menuName"
-              :value="item.id" /></el-select
-        ></el-form-item>
+        <el-form-item v-else-if="isEditing" label="父节点">
+          <el-input :model-value="editingParentName" disabled />
+        </el-form-item>
         <el-form-item label="节点名称" prop="menuName"
           ><el-input v-model="form.menuName" maxlength="64"
         /></el-form-item>
