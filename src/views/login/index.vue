@@ -40,7 +40,7 @@ dataThemeChange(overallStyle.value);
 const { title } = useNav();
 
 const ruleForm = reactive({
-  username: "admin",
+  username: "",
   password: "",
   captchaId: "",
   captchaCode: ""
