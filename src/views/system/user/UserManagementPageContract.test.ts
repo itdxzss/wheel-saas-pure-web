@@ -43,4 +43,10 @@ describe("system user page contract", () => {
     ])
       assert.ok(page.includes(permission), permission);
   });
+
+  it("allows the operator to inspect a new password before resetting it", () => {
+    assert.ok(page.includes("resetDialogVisible"));
+    assert.ok(page.includes("resetTarget"));
+    assert.match(page, /v-model="resetForm\.password"[\s\S]*?show-password/);
+  });
 });

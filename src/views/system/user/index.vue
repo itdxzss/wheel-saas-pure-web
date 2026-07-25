@@ -32,12 +32,17 @@ const filters = reactive<{ keyword: string; status?: SystemStatus }>({
 const dialogVisible = ref(false);
 const editingId = ref<number>();
 const formRef = ref<FormInstance>();
+const resetDialogVisible = ref(false);
+const resetTarget = ref<SystemUser>();
+const resetFormRef = ref<FormInstance>();
+const resetSaving = ref(false);
 const form = reactive({
   username: "",
   nickname: "",
   password: "",
   roleIds: [] as number[]
 });
+const resetForm = reactive({ password: "" });
 const LOGIN_ACCOUNT_PATTERN = /^[A-Za-z0-9._-]+$/;
 const columns = [
   { label: "登录账号", prop: "username" },
@@ -65,6 +70,16 @@ const rules = {
         if (editingId.value || isValidPassword(value)) callback();
         else callback(new Error(PASSWORD_RULE_MESSAGE));
       },
+      trigger: "blur"
+    }
+  ]
+};
+const resetRules = {
+  password: [
+    { required: true, message: "请输入新密码", trigger: "blur" },
+    {
+      pattern: PASSWORD_PATTERN,
+      message: PASSWORD_RULE_MESSAGE,
       trigger: "blur"
     }
   ]
@@ -157,24 +172,23 @@ async function save(): Promise<void> {
   }
 }
 
-async function resetPassword(row: SystemUser): Promise<void> {
+function openResetPassword(row: SystemUser): void {
+  resetTarget.value = row;
+  resetForm.password = "";
+  resetDialogVisible.value = true;
+}
+
+async function submitResetPassword(): Promise<void> {
+  if (!(await resetFormRef.value?.validate()) || !resetTarget.value) return;
+  resetSaving.value = true;
   try {
-    const { value } = await ElMessageBox.prompt(
-      `请输入用户“${row.username}”的新密码`,
-      "重置密码",
-      {
-        inputType: "password",
-        inputPattern: PASSWORD_PATTERN,
-        inputErrorMessage: PASSWORD_RULE_MESSAGE,
-        confirmButtonText: "确认重置",
-        cancelButtonText: "取消"
-      }
-    );
-    await resetSystemUserPassword(row.id, value);
+    await resetSystemUserPassword(resetTarget.value.id, resetForm.password);
     ElMessage.success("密码已重置");
+    resetDialogVisible.value = false;
   } catch (error) {
-    if (error === "cancel" || error === "close") return;
     ElMessage.error(apiErrorMessage(error, "密码重置失败"));
+  } finally {
+    resetSaving.value = false;
   }
 }
 
@@ -279,7 +293,7 @@ onMounted(refresh);
                 v-auth="'tenant:system-user:reset-password'"
                 link
                 type="primary"
-                @click="resetPassword(row)"
+                @click="openResetPassword(row)"
                 >重置密码</el-button
               >
               <el-button
@@ -348,6 +362,41 @@ onMounted(refresh);
         ></template
       >
     </el-dialog>
+
+    <el-dialog
+      v-model="resetDialogVisible"
+      title="重置密码"
+      width="520px"
+      destroy-on-close
+    >
+      <p class="reset-tip">
+        请为登录账号“{{ resetTarget?.username ?? "" }}”设置新密码
+      </p>
+      <el-form
+        ref="resetFormRef"
+        :model="resetForm"
+        :rules="resetRules"
+        label-width="90px"
+      >
+        <el-form-item label="新密码" prop="password">
+          <el-input
+            v-model="resetForm.password"
+            type="password"
+            show-password
+            placeholder="8至64个字符"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resetDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="resetSaving"
+          @click="submitResetPassword"
+          >确认重置</el-button
+        >
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -363,6 +412,11 @@ onMounted(refresh);
 
 .full-width {
   width: 100%;
+}
+
+.reset-tip {
+  margin: 0 0 16px;
+  color: var(--el-text-color-regular);
 }
 
 :deep(.filter-card .el-input),
