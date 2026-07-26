@@ -15,33 +15,6 @@ const permissionRouter = {
   },
   children: [
     {
-      path: "/permission/user/index",
-      component: "permission/user/index",
-      name: "PermissionUserManagement",
-      meta: {
-        title: "用户管理",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/permission/role/index",
-      component: "permission/role/index",
-      name: "PermissionRoleManagement",
-      meta: {
-        title: "角色管理",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/permission/menu/index",
-      component: "permission/menu/index",
-      name: "PermissionMenuManagement",
-      meta: {
-        title: "菜单管理",
-        roles: ["admin"]
-      }
-    },
-    {
       path: "/permission/page/index",
       name: "PermissionPage",
       meta: {
