@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
 const routeSource = readFileSync(
-  fileURLToPath(new URL("../../mock/asyncRoutes.ts", import.meta.url)),
+  fileURLToPath(new URL("../api/routes.ts", import.meta.url)),
   "utf8"
 );
 const marketingPageSource = readFileSync(
@@ -24,7 +24,10 @@ const groupPullDetailSource = readFileSync(
 );
 
 describe("group pull marketing navigation", () => {
-  it("registers a hidden detail route under the application layout", () => {
+  it("derives a hidden detail route from the authorized real menu", () => {
+    assert.match(routeSource, /appendAuthorizedCompanionRoutes/);
+    assert.match(routeSource, /TaskGroupPullMarketing/);
+    assert.match(routeSource, /get.*\/api\/tenant\/me\/menus/);
     assert.match(routeSource, /\/task\/group-pull-marketing\/:id/);
     assert.match(routeSource, /GroupPullMarketingDetail/);
     assert.match(routeSource, /activePath: "\/task\/group-pull-marketing"/);

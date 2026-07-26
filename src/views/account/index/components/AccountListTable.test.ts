@@ -36,7 +36,7 @@ function assertOrdered(content: string, markers: string[]): void {
 
 describe("AccountListTable protocol restart button", () => {
   it("places group, account status and login directly after account", () => {
-    const orderedLabels = ["账号", "分组", "账号状态", "登录", "国家"];
+    const orderedLabels = ["账号", "分组", "账号状态", "登录", "IP来源"];
     assertOrdered(
       columnsSource,
       orderedLabels.map(label => `{ label: "${label}"`)
@@ -46,6 +46,13 @@ describe("AccountListTable protocol restart button", () => {
       tableSource,
       orderedLabels.map(label => `label="${label}"`)
     );
+  });
+
+  it("shows a concrete-country flag beside the account and removes the country column", () => {
+    assert.match(source, /v-if="row\.country_flag"/);
+    assert.match(source, /\{\{ row\.country_flag \}\}/);
+    assert.doesNotMatch(columnsSource, /label: "国家"/);
+    assert.doesNotMatch(source, /label="国家"/);
   });
 
   it("exposes a loading restart button that emits restart-protocol", () => {

@@ -1,12 +1,40 @@
 import { armadaRequest } from "./armada";
 
-/** armada 登录出参。token 为占位串(先测,无 JWT)。 */
-export interface TenantLoginResult {
-  tenantCode: string;
-  tenantName: string;
-  token: string;
+export interface CaptchaResult {
+  captchaId: string;
+  imageBase64: string;
+  expiresInSeconds: number;
 }
 
-/** 租户登录(免鉴权公开接口)。 */
-export const loginTenant = (data: { tenantCode: string; password: string }) =>
-  armadaRequest<TenantLoginResult>("post", "/api/public/auth/login", { data });
+export interface AuthUser {
+  id: number;
+  username: string;
+  nickname?: string;
+  roles: string[];
+  permissions: string[];
+}
+
+/** Redis Bearer Token 登录结果。 */
+export interface UserLoginResult {
+  token: string;
+  tokenType: "Bearer";
+  idleTimeoutSeconds: number;
+  absoluteExpiresAt: number;
+  user: AuthUser;
+  tenant: { id: number; code: string; name: string };
+}
+
+export interface UserLoginRequest {
+  username: string;
+  password: string;
+  captchaId: string;
+  captchaCode: string;
+}
+
+export const getCaptcha = () =>
+  armadaRequest<CaptchaResult>("get", "/api/public/auth/captcha");
+
+export const loginUser = (data: UserLoginRequest) =>
+  armadaRequest<UserLoginResult>("post", "/api/public/auth/login", { data });
+
+export const logoutUser = () => armadaRequest<void>("post", "/api/auth/logout");

@@ -158,7 +158,12 @@ function occupancyTagStyle(row: TenantAccount) {
           min-width="160"
         >
           <template #default="{ row }">
-            <strong>{{ row.ws_phone || "-" }}</strong>
+            <strong class="account-phone">
+              <span v-if="row.country_flag" class="account-country-flag">
+                {{ row.country_flag }}
+              </span>
+              {{ row.ws_phone || "-" }}
+            </strong>
             <small>
               {{ row.assigned_service || row.service_name || "未绑定客服" }}
             </small>
@@ -206,18 +211,12 @@ function occupancyTagStyle(row: TenantAccount) {
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[5].hide"
-          prop="ip_region"
-          label="国家"
-          width="120"
-        />
-        <el-table-column
-          v-if="!dynamicColumns[6].hide"
           prop="ip_source"
           label="IP来源"
           min-width="140"
         />
         <el-table-column
-          v-if="!dynamicColumns[7].hide"
+          v-if="!dynamicColumns[6].hide"
           label="账号类型/设备"
           width="140"
         >
@@ -226,28 +225,28 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[8].hide"
+          v-if="!dynamicColumns[7].hide"
           prop="protocol_address"
           label="协议"
           min-width="160"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!dynamicColumns[9].hide"
+          v-if="!dynamicColumns[8].hide"
           prop="truth_ip"
           label="IP地址"
           min-width="160"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!dynamicColumns[10].hide"
+          v-if="!dynamicColumns[9].hide"
           label="渠道/来源"
           min-width="150"
         >
           <template #default="{ row }">{{ sourceLabel(row) }}</template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[11].hide"
+          v-if="!dynamicColumns[10].hide"
           label="风控"
           width="120"
         >
@@ -256,7 +255,7 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[12].hide"
+          v-if="!dynamicColumns[11].hide"
           label="好友 / 群"
           width="120"
         >
@@ -265,26 +264,26 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[13].hide"
+          v-if="!dynamicColumns[12].hide"
           prop="pull_into_group_count"
           label="拉人数量"
           width="110"
         />
         <el-table-column
-          v-if="!dynamicColumns[14].hide"
+          v-if="!dynamicColumns[13].hide"
           prop="hyperlink_sent_count"
           label="超链寿命"
           width="110"
         />
         <el-table-column
-          v-if="!dynamicColumns[15].hide"
+          v-if="!dynamicColumns[14].hide"
           prop="block_reason"
           label="封号错误码/封号原因"
           min-width="180"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!dynamicColumns[16].hide"
+          v-if="!dynamicColumns[15].hide"
           label="入库时间"
           width="180"
         >
@@ -293,7 +292,7 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[17].hide"
+          v-if="!dynamicColumns[16].hide"
           label="失效时间"
           width="180"
         >
@@ -302,7 +301,7 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[18].hide"
+          v-if="!dynamicColumns[17].hide"
           label="操作"
           fixed="right"
           width="210"
@@ -359,6 +358,18 @@ function occupancyTagStyle(row: TenantAccount) {
 </template>
 
 <style scoped>
+.account-phone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-country-flag {
+  flex: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
 small {
   display: block;
   margin-top: 4px;

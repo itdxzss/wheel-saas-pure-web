@@ -50,7 +50,8 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
       chunkSizeWarningLimit: 4000,
       rollupOptions: {
         input: {
-          index: pathResolve("./index.html", import.meta.url)
+          index: pathResolve("./index.html", import.meta.url),
+          dateV2: pathResolve("./date-v2.html", import.meta.url)
         },
         // 静态资源分类打包
         output: {

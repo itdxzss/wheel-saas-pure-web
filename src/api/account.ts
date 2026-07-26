@@ -48,6 +48,7 @@ export interface TenantAccount {
   nickname?: string | null;
   remark?: string | null;
   country?: string | null;
+  country_flag?: string | null;
   mute_status?: string | null;
   ip_region?: string | null;
   ip_source?: string | null;
@@ -228,6 +229,7 @@ interface ArmadaTenantAccount {
   groupsNum?: number | null;
   hyperlinkSentCount?: number | null;
   country?: string | null;
+  countryFlag?: string | null;
   ipSource?: string | null;
 }
 
@@ -321,6 +323,7 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     nickname: null,
     remark: null,
     country: row.country ?? null,
+    country_flag: row.countryFlag ?? null,
     mute_status: muteStatusLabel(row.muteStatus),
     ip_region: row.country ?? null,
     ip_source: row.ipSource ?? null,
