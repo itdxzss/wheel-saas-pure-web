@@ -189,6 +189,7 @@ function asPullTaskRow(row: unknown): PullTaskRow {
     >
       <template #buttons>
         <el-button
+          v-auth="'tenant:pull_task:create'"
           type="primary"
           :icon="useRenderIcon(Plus)"
           @click="openCreateDrawer"
@@ -196,6 +197,7 @@ function asPullTaskRow(row: unknown): PullTaskRow {
           新增拉群任务
         </el-button>
         <el-button
+          v-auth="'tenant:pull_task:delete'"
           type="danger"
           plain
           :disabled="selectedCount === 0"
@@ -335,6 +337,7 @@ function asPullTaskRow(row: unknown): PullTaskRow {
                 查看详情
               </el-button>
               <el-button
+                v-auth="'tenant:pull_task:operate'"
                 link
                 type="success"
                 :disabled="row.status !== 'WAIT_START'"
@@ -343,6 +346,7 @@ function asPullTaskRow(row: unknown): PullTaskRow {
                 启动
               </el-button>
               <el-button
+                v-auth="'tenant:pull_task:operate'"
                 link
                 type="warning"
                 :disabled="row.status !== 'EXECUTING'"
@@ -351,6 +355,7 @@ function asPullTaskRow(row: unknown): PullTaskRow {
                 暂停
               </el-button>
               <el-button
+                v-auth="'tenant:pull_task:operate'"
                 link
                 type="danger"
                 :disabled="row.status === 'COMPLETED' || row.status === 'ENDED'"
