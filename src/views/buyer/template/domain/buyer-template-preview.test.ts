@@ -4,14 +4,21 @@ import { describe, it } from "node:test";
 import { resolveBuyerTemplatePreviewKind } from "./buyer-template-preview.ts";
 
 describe("buyer template preview resolver", () => {
-  it("resolves the two completed template homepages", () => {
+  it("resolves the completed template homepages", () => {
     assert.equal(resolveBuyerTemplatePreviewKind("base_sex2"), "date-v2");
     assert.equal(resolveBuyerTemplatePreviewKind("basic_earn"), "basic-earn");
+    assert.equal(
+      resolveBuyerTemplatePreviewKind("basic_party_man"),
+      "basic-party-man"
+    );
   });
 
-  it("normalizes template codes and rejects unfinished templates", () => {
+  it("normalizes template codes and rejects unknown templates", () => {
     assert.equal(resolveBuyerTemplatePreviewKind(" BASE_SEX2 "), "date-v2");
-    assert.equal(resolveBuyerTemplatePreviewKind("basic_party_man"), undefined);
+    assert.equal(
+      resolveBuyerTemplatePreviewKind(" BASIC_PARTY_MAN "),
+      "basic-party-man"
+    );
     assert.equal(resolveBuyerTemplatePreviewKind(undefined), undefined);
   });
 });

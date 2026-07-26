@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { getPublicPromotionChannelRuntime } from "@/api/public-promotion-channel";
 import type { BuyerChannelRuntimeConfig } from "@/api/buyer-channel";
 import BasicEarnPreview from "../basic-earn-preview/index.vue";
+import BasicPartyManPreview from "../basic-party-man-preview/index.vue";
 import DateV2Preview from "../date-v2-preview/index.vue";
 import {
   resolvePublicPromotionTemplate,
@@ -42,10 +43,15 @@ watch(
         throw new Error("当前推广模板暂未开放静态页面");
       }
       runtimeConfig.value = result;
+      const resolvedTemplate = resolvePublicPromotionTemplate(
+        result.templateCode
+      );
       document.title =
-        resolvePublicPromotionTemplate(result.templateCode) === "basic-earn"
+        resolvedTemplate === "basic-earn"
           ? "RewardClub"
-          : "My love day";
+          : resolvedTemplate === "basic-party-man"
+            ? "LoveSync"
+            : "My love day";
     } catch (error) {
       if (currentVersion !== requestVersion) return;
       runtimeError.value =
@@ -77,6 +83,11 @@ watch(
     />
     <BasicEarnPreview
       v-else-if="template === 'basic-earn' && runtimeConfig"
+      :promotion-code="promotionCode"
+      :runtime-config="runtimeConfig"
+    />
+    <BasicPartyManPreview
+      v-else-if="template === 'basic-party-man' && runtimeConfig"
       :promotion-code="promotionCode"
       :runtime-config="runtimeConfig"
     />
