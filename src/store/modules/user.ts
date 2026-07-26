@@ -7,17 +7,20 @@ import {
   routerArrays,
   storageLocal
 } from "../utils";
-import { type RefreshTokenResult, refreshTokenApi } from "@/api/user";
 import { useMultiTagsStoreHook } from "./multiTags";
+import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
 import {
-  type DataInfo,
-  setToken,
-  removeToken,
-  userKey,
-  setTenantCode,
-  removeTenantCode
-} from "@/utils/auth";
-import { loginTenant } from "@/api/auth";
+  loginUser,
+  logoutUser,
+  type UserLoginRequest,
+  type UserLoginResult
+} from "@/api/auth";
+
+interface LoginActionResult {
+  success: boolean;
+  data?: UserLoginResult;
+  message?: string;
+}
 
 export const useUserStore = defineStore("pure-user", {
   state: (): userType => ({
@@ -66,54 +69,42 @@ export const useUserStore = defineStore("pure-user", {
     SET_LOGINDAY(value: number) {
       this.loginDay = Number(value);
     },
-    /** 登入(先测:username 即租户码,密码为统一测试密码) */
-    async loginByUsername(data) {
-      return new Promise<any>(resolve => {
-        loginTenant({ tenantCode: data.username, password: data.password })
+    /** 使用用户名、密码和一次性图片验证码登录。 */
+    async loginByUsername(data: UserLoginRequest) {
+      return new Promise<LoginActionResult>(resolve => {
+        loginUser(data)
           .then(res => {
-            // res = { tenantCode, tenantName, token };先测无 JWT,构造占位会话满足 pure-admin 机制。
-            setTenantCode(res.tenantCode);
             setToken({
               accessToken: res.token,
-              refreshToken: res.token,
-              // 占位过期时间:7 天后(pure-admin 用 Date 解析)
-              expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-              username: res.tenantName,
-              roles: ["admin"],
-              permissions: ["*:*:*"]
-            } as any);
+              refreshToken: "",
+              expires: new Date(res.absoluteExpiresAt),
+              username: res.user.username,
+              nickname: res.user.nickname ?? res.user.username,
+              roles: res.user.roles,
+              permissions: res.user.permissions
+            });
             resolve({ success: true, data: res });
           })
-          .catch(err => {
-            resolve({ success: false, message: err?.message ?? "登录失败" });
+          .catch((error: unknown) => {
+            resolve({
+              success: false,
+              message: error instanceof Error ? error.message : "登录失败"
+            });
           });
       });
     },
-    /** 前端登出（不调用接口） */
+    /** 服务端退出后清理本地身份；接口失效时也必须完成本地清理。 */
     logOut() {
-      this.username = "";
-      this.roles = [];
-      this.permissions = [];
-      removeToken();
-      removeTenantCode();
-      useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
-      resetRouter();
-      router.push("/login");
-    },
-    /** 刷新`token` */
-    async handRefreshToken(data) {
-      return new Promise<RefreshTokenResult>((resolve, reject) => {
-        refreshTokenApi(data)
-          .then(data => {
-            if (data) {
-              setToken(data.data);
-              resolve(data);
-            }
-          })
-          .catch(error => {
-            reject(error);
-          });
-      });
+      const clear = () => {
+        this.username = "";
+        this.roles = [];
+        this.permissions = [];
+        removeToken();
+        useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
+        resetRouter();
+        router.push("/login");
+      };
+      logoutUser().finally(clear);
     }
   }
 });

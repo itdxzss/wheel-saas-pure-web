@@ -1,4 +1,5 @@
 import { armadaRequest } from "@/api/armada";
+import type { BuyerTemplateOption } from "@/api/buyer-template";
 
 export type ChannelPlatform = "FACEBOOK" | "TIKTOK" | "KUAISHOU" | "MGSKY";
 export type ChannelStatus = "ENABLED" | "DISABLED";
@@ -14,7 +15,7 @@ export interface BuyerChannelOptions {
     dialCode: string;
     flag?: string;
   }>;
-  templates: Array<{ id: number; name: string }>;
+  templates: BuyerTemplateOption[];
   owners: Array<{ id: number; name: string }>;
   creators: Array<{ id: number; name: string }>;
   parentUsers: Array<{ id: number; name: string }>;
@@ -25,6 +26,8 @@ export interface BuyerChannelRow {
   name: string;
   channelCode: string;
   targetCountry: string;
+  targetCountryIso2?: string;
+  mixedTargetCountry: boolean;
   templateId: number;
   templateName: string;
   platform: ChannelPlatform;
@@ -32,6 +35,7 @@ export interface BuyerChannelRow {
   promotionUrl: string;
   fissionUrl: string;
   defaultDialCode: string;
+  preselectedCountryIso2?: string;
   status: ChannelStatus;
   creatorName: string;
   createdAt: string;
@@ -45,7 +49,9 @@ export interface BuyerChannelDetail {
   countryMode?: CountryMode;
   templateId: number;
   themeColor?: string;
+  showAppDownload?: boolean;
   domain: string;
+  preselectedCountry?: string;
   defaultDialCode: string;
   platform: ChannelPlatform;
   pixelId?: string;
@@ -64,8 +70,10 @@ export interface BuyerChannelPayload {
   targetCountry: string;
   countryMode: CountryMode;
   templateId: number;
-  themeColor: string;
+  themeColor?: string;
+  showAppDownload?: boolean;
   domain: string;
+  preselectedCountry: string;
   defaultDialCode: string;
   platform: ChannelPlatform;
   pixelId?: string;
@@ -103,39 +111,272 @@ export interface DomainBindingResult {
   templateId?: number;
 }
 
+export interface ChannelProbePayload {
+  testEventCode?: string;
+}
+
 export interface ChannelDetectResult {
   success: boolean;
-  summary: string;
-  checkedAt: string;
+  status: "NORMAL" | "ABNORMAL" | string;
+  trackingId?: string;
+  accessTokenConfigured: boolean;
+  eventName?: string;
+  eventId?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  probedAt: number;
 }
 
 export interface BuyerChannelRuntimeConfig {
-  channelId: number;
-  channelCode: string;
-  runtimeVersion: string;
-  templateId: number;
-  templateVersion: string;
-  templateAssets: Record<string, string>;
-  templateParams: Record<string, string | boolean>;
-  countryMode: CountryMode;
-  allowedCountries: Array<{ code: string; dialCode: string }>;
-  defaultDialCode: string;
+  templateCode: string;
   themeColor: string;
-  platform: ChannelPlatform;
-  pixelId?: string;
-  eventMappings: {
-    lead: string;
-    loginRequest: string;
-    loginSuccess: string;
-  };
-  appOpenEnabled: boolean;
-  marketingEnabled: boolean;
+  showAppDownload: boolean;
+  targetCountry: string;
+  preselectedCountry: string;
 }
 
 export interface BuyerChannelMutationResult {
   channel: BuyerChannelDetail;
   runtimeVersion: string;
   published: boolean;
+}
+
+interface PromotionChannelVO {
+  id: number;
+  channelName: string;
+  channelCode: string;
+  ownerUserId: number;
+  creatorUserId: number;
+  targetCountry: string;
+  targetCountryIso2?: string;
+  targetCountryName?: string;
+  targetCountryFlag?: string;
+  mixedTargetCountry: boolean;
+  landingTemplateId: number;
+  templateName: string;
+  platform: number;
+  platformName: string;
+  trackingStatus: string;
+  promotionLink: string;
+  splitLink: string;
+  preselectedCountry: string;
+  preselectedCountryIso2?: string;
+  preselectedCountryName?: string;
+  preselectedPhonePrefix?: string;
+  preselectedCountryFlag?: string;
+  status: number;
+  inAppOpenAllowed: boolean;
+  marketingAllowed: boolean;
+  createdAt: number;
+}
+
+interface PromotionChannelPageResult {
+  list: PromotionChannelVO[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+interface PromotionChannelDetailVO {
+  id: number;
+  channelName: string;
+  ownerUserId: number;
+  targetCountry: string;
+  landingTemplateId: number;
+  themeColor?: string;
+  showAppDownload?: boolean;
+  domain: string;
+  preselectedCountry: string;
+  platform: number;
+  trackingId?: string;
+  accessTokenConfigured: boolean;
+  leadEventName?: string;
+  loginRequestEventName?: string;
+  loginSuccessEventName?: string;
+  inAppOpenAllowed: boolean;
+  marketingAllowed: boolean;
+  status: number;
+}
+
+interface PromotionChannelCreatePayload {
+  channelName: string;
+  ownerUserId?: number;
+  targetCountry: string;
+  landingTemplateId: number;
+  themeColor?: string;
+  showAppDownload?: boolean;
+  domain: string;
+  preselectedCountry: string;
+  platform: number;
+  trackingId?: string;
+  accessToken?: string;
+  leadEventName?: string;
+  loginRequestEventName?: string;
+  loginSuccessEventName?: string;
+  inAppOpenAllowed: boolean;
+  marketingAllowed: boolean;
+}
+
+interface PromotionChannelUpdatePayload extends PromotionChannelCreatePayload {
+  status: number;
+}
+
+const promotionPlatformCodes: Record<ChannelPlatform, number> = {
+  FACEBOOK: 1,
+  TIKTOK: 2,
+  KUAISHOU: 3,
+  MGSKY: 4
+};
+
+const channelPlatformsByCode: Record<number, ChannelPlatform> = {
+  1: "FACEBOOK",
+  2: "TIKTOK",
+  3: "KUAISHOU",
+  4: "MGSKY"
+};
+
+const previewCreatorNames: Record<number, string> = {
+  1: "test",
+  2: "testuser456",
+  3: "Rahu",
+  4: "ForeverAditya",
+  5: "pingzi",
+  6: "gose-"
+};
+
+function displayCountry(
+  mixed: boolean,
+  name?: string,
+  fallback?: string
+): string {
+  if (mixed) return "混合（不限国家）";
+  return name ?? fallback ?? "-";
+}
+
+function displayPreselectedCountry(value: PromotionChannelVO): string {
+  return [value.preselectedCountryName, value.preselectedPhonePrefix]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function formatCreatedAt(timestamp: number): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "-";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+    date.getSeconds()
+  )}`;
+}
+
+function trackingStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    NOT_APPLICABLE: "-",
+    UNCONFIGURED: "-",
+    UNPROBED: "未探测",
+    PROBING: "探测中",
+    NORMAL: "正常",
+    ABNORMAL: "异常",
+    UNKNOWN: "未知"
+  };
+  return labels[status] ?? status ?? "-";
+}
+
+function toBuyerChannelRow(value: PromotionChannelVO): BuyerChannelRow {
+  return {
+    id: value.id,
+    name: value.channelName,
+    channelCode: value.channelCode,
+    targetCountry: displayCountry(
+      value.mixedTargetCountry,
+      value.targetCountryName,
+      value.targetCountryIso2 ?? value.targetCountry
+    ),
+    targetCountryIso2: value.targetCountryIso2,
+    mixedTargetCountry: value.mixedTargetCountry,
+    templateId: value.landingTemplateId,
+    templateName: value.templateName,
+    platform: channelPlatformsByCode[value.platform] ?? "FACEBOOK",
+    domainStatus: trackingStatusLabel(value.trackingStatus),
+    promotionUrl: value.promotionLink,
+    fissionUrl: value.splitLink,
+    defaultDialCode:
+      displayPreselectedCountry(value) || value.preselectedPhonePrefix || "-",
+    preselectedCountryIso2: value.preselectedCountryIso2,
+    status: value.status === 1 ? "ENABLED" : "DISABLED",
+    creatorName:
+      previewCreatorNames[value.creatorUserId] ?? String(value.creatorUserId),
+    createdAt: formatCreatedAt(value.createdAt)
+  };
+}
+
+function toBuyerChannelDetail(
+  value: PromotionChannelDetailVO
+): BuyerChannelDetail {
+  const mixedTargetCountry = value.targetCountry === "MIXED";
+  return {
+    id: value.id,
+    name: value.channelName,
+    ownerId: value.ownerUserId,
+    targetCountry: mixedTargetCountry ? "" : value.targetCountry,
+    countryMode: mixedTargetCountry ? "MIXED" : "SPECIFIC",
+    templateId: value.landingTemplateId,
+    themeColor: value.themeColor,
+    showAppDownload: value.showAppDownload,
+    domain: value.domain,
+    preselectedCountry: value.preselectedCountry,
+    defaultDialCode: "",
+    platform: channelPlatformsByCode[value.platform] ?? "FACEBOOK",
+    pixelId: value.trackingId,
+    accessTokenConfigured: value.accessTokenConfigured,
+    eventLead: value.leadEventName,
+    eventInitiateCheckout: value.loginRequestEventName,
+    eventCompleteRegistration: value.loginSuccessEventName,
+    openInApp: value.inAppOpenAllowed,
+    joinMarketing: value.marketingAllowed,
+    status: value.status === 1 ? "ENABLED" : "DISABLED"
+  };
+}
+
+function toPromotionChannelCreatePayload(
+  payload: BuyerChannelPayload
+): PromotionChannelCreatePayload {
+  const supportsCapi =
+    payload.platform === "FACEBOOK" || payload.platform === "TIKTOK";
+  return {
+    channelName: payload.name,
+    ownerUserId: payload.ownerId,
+    targetCountry:
+      payload.countryMode === "MIXED" ? "MIXED" : payload.targetCountry,
+    landingTemplateId: payload.templateId,
+    themeColor: payload.themeColor,
+    showAppDownload: payload.showAppDownload,
+    domain: payload.domain,
+    preselectedCountry: payload.preselectedCountry,
+    platform: promotionPlatformCodes[payload.platform],
+    trackingId: payload.pixelId,
+    accessToken: supportsCapi ? payload.accessToken : undefined,
+    leadEventName: supportsCapi ? payload.eventLead : undefined,
+    loginRequestEventName: supportsCapi
+      ? payload.eventInitiateCheckout
+      : undefined,
+    loginSuccessEventName: supportsCapi
+      ? payload.eventCompleteRegistration
+      : undefined,
+    inAppOpenAllowed: payload.openInApp,
+    marketingAllowed: payload.joinMarketing
+  };
+}
+
+function toPromotionChannelUpdatePayload(
+  payload: BuyerChannelPayload
+): PromotionChannelUpdatePayload {
+  return {
+    ...toPromotionChannelCreatePayload(payload),
+    status: payload.status === "ENABLED" ? 1 : 0
+  };
 }
 
 export function getBuyerChannelOptions(): Promise<BuyerChannelOptions> {
@@ -145,23 +386,35 @@ export function getBuyerChannelOptions(): Promise<BuyerChannelOptions> {
   );
 }
 
-export function listBuyerChannels(
+export async function listBuyerChannels(
   params: BuyerChannelQuery
 ): Promise<BuyerChannelPage> {
-  return armadaRequest<BuyerChannelPage>("get", "/api/buyer/channels", {
-    params: {
-      countryCode: params.targetCountry,
-      templateId: params.templateId,
-      createdBy: params.creatorId,
-      parentUserId: params.parentUserId,
-      page: params.page,
-      pageSize: params.page_size
+  const result = await armadaRequest<PromotionChannelPageResult>(
+    "get",
+    "/api/promotion-channels/query",
+    {
+      params: {
+        targetCountry: params.targetCountry,
+        landingTemplateId: params.templateId,
+        creatorUserId: params.creatorId,
+        ownerUserIds: params.parentUserId,
+        page: params.page,
+        pageSize: params.page_size
+      }
     }
-  });
+  );
+  return {
+    list: result.list.map(toBuyerChannelRow),
+    total: result.total
+  };
 }
 
-export function getBuyerChannel(id: number): Promise<BuyerChannelDetail> {
-  return armadaRequest<BuyerChannelDetail>("get", `/api/buyer/channels/${id}`);
+export async function getBuyerChannel(id: number): Promise<BuyerChannelDetail> {
+  const detail = await armadaRequest<PromotionChannelDetailVO>(
+    "get",
+    `/api/promotion-channels/detail/${id}`
+  );
+  return toBuyerChannelDetail(detail);
 }
 
 export function precheckBuyerChannelDomain(
@@ -174,47 +427,75 @@ export function precheckBuyerChannelDomain(
   );
 }
 
-export function createBuyerChannel(
+export async function createBuyerChannel(
   payload: BuyerChannelPayload
 ): Promise<BuyerChannelMutationResult> {
-  return armadaRequest<BuyerChannelMutationResult>(
+  const channel = await armadaRequest<PromotionChannelVO>(
     "post",
-    "/api/buyer/channels",
-    { data: payload }
+    "/api/promotion-channels/create",
+    { data: toPromotionChannelCreatePayload(payload) }
   );
+  return {
+    channel: {
+      id: channel.id,
+      name: channel.channelName,
+      ownerId: channel.ownerUserId,
+      targetCountry: channel.targetCountryIso2 ?? channel.targetCountry ?? "",
+      countryMode: channel.mixedTargetCountry ? "MIXED" : "SPECIFIC",
+      templateId: channel.landingTemplateId,
+      themeColor: payload.themeColor,
+      showAppDownload: payload.showAppDownload,
+      domain: payload.domain,
+      preselectedCountry:
+        channel.preselectedCountryIso2 ?? channel.preselectedCountry,
+      defaultDialCode:
+        channel.preselectedPhonePrefix ?? payload.defaultDialCode,
+      platform: channelPlatformsByCode[channel.platform] ?? payload.platform,
+      pixelId: payload.pixelId,
+      accessTokenConfigured: Boolean(payload.accessToken),
+      eventLead: payload.eventLead,
+      eventInitiateCheckout: payload.eventInitiateCheckout,
+      eventCompleteRegistration: payload.eventCompleteRegistration,
+      openInApp: channel.inAppOpenAllowed,
+      joinMarketing: channel.marketingAllowed,
+      status: channel.status === 1 ? "ENABLED" : "DISABLED"
+    },
+    runtimeVersion: "",
+    published: true
+  };
 }
 
-export function updateBuyerChannel(
+export async function updateBuyerChannel(
   id: number,
   payload: BuyerChannelPayload
-): Promise<BuyerChannelMutationResult> {
-  return armadaRequest<BuyerChannelMutationResult>(
-    "put",
-    `/api/buyer/channels/${id}`,
-    { data: payload }
-  );
+): Promise<{ published: boolean }> {
+  await armadaRequest<void>("put", `/api/promotion-channels/update/${id}`, {
+    data: toPromotionChannelUpdatePayload(payload)
+  });
+  return { published: true };
 }
 
 export function deleteBuyerChannel(id: number): Promise<void> {
-  return armadaRequest<void>("delete", `/api/buyer/channels/${id}`);
+  return armadaRequest<void>("delete", `/api/promotion-channels/delete/${id}`);
 }
 
-export function detectBuyerChannel(id: number): Promise<ChannelDetectResult> {
+export function detectBuyerChannel(
+  id: number,
+  payload: ChannelProbePayload = {}
+): Promise<ChannelDetectResult> {
+  const testEventCode = payload.testEventCode?.trim();
   return armadaRequest<ChannelDetectResult>(
     "post",
-    `/api/buyer/channels/${id}/detect`
+    `/api/promotion-channels/probe/${id}`,
+    { data: testEventCode ? { testEventCode } : undefined }
   );
 }
 
 export function getPublicBuyerChannelRuntime(
-  host: string,
   channelCode: string
 ): Promise<BuyerChannelRuntimeConfig> {
   return armadaRequest<BuyerChannelRuntimeConfig>(
     "get",
-    "/api/public/buyer/channel-runtime",
-    {
-      params: { host, channelCode }
-    }
+    `/api/public/promotion-channels/runtime/${encodeURIComponent(channelCode)}`
   );
 }

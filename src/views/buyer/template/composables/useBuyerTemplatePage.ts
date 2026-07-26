@@ -1,19 +1,19 @@
 import { ref } from "vue";
 import {
-  listBuyerTemplates,
+  queryBuyerTemplates,
   updateBuyerTemplateRemark,
   updateBuyerTemplateVisibility,
   type BuyerTemplateRow
 } from "@/api/buyer-template";
 
 export interface BuyerTemplatePageServices {
-  list: typeof listBuyerTemplates;
+  query: typeof queryBuyerTemplates;
   updateVisibility: typeof updateBuyerTemplateVisibility;
   updateRemark: typeof updateBuyerTemplateRemark;
 }
 
 const defaultServices: BuyerTemplatePageServices = {
-  list: listBuyerTemplates,
+  query: queryBuyerTemplates,
   updateVisibility: updateBuyerTemplateVisibility,
   updateRemark: updateBuyerTemplateRemark
 };
@@ -24,6 +24,10 @@ export function useBuyerTemplatePage(
   const rows = ref<BuyerTemplateRow[]>([]);
   const loading = ref(false);
   const errorMessage = ref("");
+  const page = ref(1);
+  const pageSize = ref(20);
+  const pageSizes = [20, 50, 100];
+  const total = ref(0);
   const previewVisible = ref(false);
   const previewRow = ref<BuyerTemplateRow | null>(null);
   const remarkVisible = ref(false);
@@ -46,10 +50,16 @@ export function useBuyerTemplatePage(
   async function refresh(): Promise<void> {
     loading.value = true;
     try {
-      rows.value = await services.list();
+      const result = await services.query({
+        page: page.value,
+        page_size: pageSize.value
+      });
+      rows.value = result.list;
+      total.value = result.total;
       errorMessage.value = "";
     } catch (error) {
       rows.value = [];
+      total.value = 0;
       errorMessage.value = "模板列表加载失败";
       throw error;
     } finally {
@@ -104,12 +114,16 @@ export function useBuyerTemplatePage(
     editingRemarkRow,
     errorMessage,
     loading,
+    page,
+    pageSize,
+    pageSizes,
     previewRow,
     previewVisible,
     remarkDraft,
     remarkSaving,
     remarkVisible,
     rows,
+    total,
     changeVisibility,
     openPreview,
     openRemark,

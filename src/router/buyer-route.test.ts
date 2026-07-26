@@ -1,43 +1,19 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { describe, it } from "node:test";
-import buyerRoute from "./modules/buyer";
 
-describe("buyer static navigation", () => {
-  it("contains one root, two groups and the three preview pages", () => {
-    assert.equal(buyerRoute.path, "/buyer");
-    assert.equal(buyerRoute.meta?.title, "买号上量系统");
-    assert.equal(buyerRoute.children?.length, 2);
-
-    const [promotion, data] = buyerRoute.children ?? [];
-    assert.deepEqual(
-      {
-        title: promotion.meta?.title,
-        paths: promotion.children?.map(route => route.path),
-        names: promotion.children?.map(route => route.name)
-      },
-      {
-        title: "推广管理",
-        paths: ["/buyer/promotion/template", "/buyer/promotion/channel"],
-        names: ["BuyerTemplate", "BuyerChannel"]
-      }
+describe("buyer permission navigation", () => {
+  it("does not register buyer pages as permission-free static routes", () => {
+    assert.equal(
+      existsSync(new URL("./modules/buyer.ts", import.meta.url)),
+      false
     );
-    assert.deepEqual(
-      {
-        title: data.meta?.title,
-        paths: data.children?.map(route => route.path),
-        names: data.children?.map(route => route.name)
-      },
-      {
-        title: "数据中心",
-        paths: ["/buyer/data/channel-stats"],
-        names: ["BuyerChannelStats"]
-      }
-    );
-    for (const leaf of [
-      ...(promotion.children ?? []),
-      ...(data.children ?? [])
+    for (const view of [
+      "../views/buyer/template/index.vue",
+      "../views/buyer/channel/index.vue",
+      "../views/buyer/channel-stats/index.vue"
     ]) {
-      assert.equal(typeof leaf.component, "function");
+      assert.equal(existsSync(new URL(view, import.meta.url)), true, view);
     }
   });
 });
