@@ -7,10 +7,6 @@ const drawer = readFileSync(
   new URL("./components/ChannelFormDrawer.vue", import.meta.url),
   "utf8"
 );
-const detectDialog = readFileSync(
-  new URL("./components/ChannelDetectDialog.vue", import.meta.url),
-  "utf8"
-);
 const platformFields = readFileSync(
   new URL("./components/channel-platform-fields.ts", import.meta.url),
   "utf8"
@@ -19,11 +15,7 @@ const trackingFields = readFileSync(
   new URL("./components/channel-tracking-fields.ts", import.meta.url),
   "utf8"
 );
-const previewOptions = readFileSync(
-  new URL("./components/channel-preview-options.ts", import.meta.url),
-  "utf8"
-);
-const drawerContract = `${drawer}\n${platformFields}\n${trackingFields}\n${previewOptions}`;
+const drawerContract = `${drawer}\n${platformFields}\n${trackingFields}`;
 const normalizedDrawer = drawerContract.replace(/\s+/g, " ");
 const channelForm = readFileSync(
   new URL("./domain/channel-form.ts", import.meta.url),
@@ -35,6 +27,10 @@ const countryFlag = readFileSync(
 );
 const channelApi = readFileSync(
   new URL("../../../api/buyer-channel.ts", import.meta.url),
+  "utf8"
+);
+const systemUserApi = readFileSync(
+  new URL("../../../api/system-user.ts", import.meta.url),
   "utf8"
 );
 
@@ -75,7 +71,6 @@ describe("buyer channel page contract", () => {
     for (const permission of [
       "tenant:buyer-channel:create",
       "tenant:buyer-channel:edit",
-      "tenant:buyer-channel:detect",
       "tenant:buyer-channel:delete"
     ])
       assert.ok(page.includes(permission), permission);
@@ -133,7 +128,7 @@ describe("buyer channel page contract", () => {
       "域名需要解析后才可正常访问，请联系运营人员配置！",
       "同一个域名只能在同一个模板下创建多个渠道链接，跨模板请使用新域名~",
       "决定用户打开渠道链接后，手机号输入框默认显示的区号。",
-      "仅 Facebook / TikTok 支持 CAPI 探测",
+      "Facebook 正式业务事件由后端 CAPI 异步上报",
       "用户点击广告后，可直接在"
     ])
       assert.ok(normalizedDrawer.includes(text), text);
@@ -143,27 +138,27 @@ describe("buyer channel page contract", () => {
     assert.doesNotMatch(drawer, /label="状态"|事件映射/);
   });
 
-  it("uses fixed preview owners, backend templates and platform facts", () => {
+  it("uses backend users, templates and platform facts", () => {
     assert.ok(page.includes("options.uploadFee.label"));
     assert.ok(page.includes("options.uploadFee.value"));
     assert.ok(drawer.includes("混合（不限国家）"));
     assert.ok(drawer.includes("dialCodeOptions"));
     assert.ok(drawer.includes("previewPlatformOptions"));
     assert.ok(page.includes("listBuyerTemplateOptions"));
+    assert.ok(page.includes("listSystemUserOptions"));
+    assert.ok(page.includes("toBuyerChannelUserOptions"));
+    assert.ok(page.includes("resolveBuyerChannelCreatorNames"));
+    assert.ok(systemUserApi.includes('"/api/admin/users"'));
     assert.ok(drawer.includes("options.templates"));
+    assert.ok(drawer.includes('v-for="owner in options.owners"'));
     assert.doesNotMatch(drawer, /previewTemplateOptions/);
     for (const platform of ["Facebook", "TikTok", "快手", "MGSKY Ads"])
       assert.ok(drawerContract.includes(platform), platform);
-    for (const owner of [
-      "test",
-      "testuser456",
-      "Rahu",
-      "ForeverAditya",
-      "pingzi",
-      "gose-"
-    ])
-      assert.ok(drawerContract.includes(owner), owner);
-    assert.ok(drawer.includes("reportingEventOptions"));
+    assert.doesNotMatch(
+      `${page}\n${drawer}\n${channelApi}`,
+      /previewOwnerOptions|previewCreatorNames|testuser456|ForeverAditya/
+    );
+    assert.ok(drawer.includes("options.eventOptions"));
     assert.ok(drawer.includes("countryMode"));
   });
 
@@ -186,29 +181,31 @@ describe("buyer channel page contract", () => {
     assert.ok(drawer.includes(':required="requiresAccessToken"'));
   });
 
-  it("only offers branded detection for Facebook and TikTok", () => {
-    assert.ok(page.includes("supportsDetection"));
-    assert.ok(page.includes("FacebookDetectIcon"));
-    assert.ok(page.includes("TikTokDetectIcon"));
-    assert.ok(page.includes('v-if="supportsDetection(row)"'));
-    assert.ok(page.includes("探测"));
-    assert.ok(page.includes("openDetect"));
-    assert.ok(page.includes("runDetect"));
-    assert.ok(page.includes('@probe="runDetect"'));
-    assert.ok(channelApi.includes("/api/promotion-channels/probe/${id}"));
-    assert.ok(channelApi.includes("testEventCode"));
-    for (const text of [
-      "Meta Test Event Code",
-      "trackingId",
-      "accessTokenConfigured",
-      "eventName",
-      "eventId",
-      "errorCode",
-      "errorMessage",
-      "probedAt"
+  it("loads the official event catalog and has no manual probe action", () => {
+    assert.ok(page.includes("listFacebookStandardEvents"));
+    assert.ok(page.includes("eventOptions:"));
+    assert.ok(
+      channelApi.includes("/api/promotion-channels/facebook-standard-events")
+    );
+    assert.equal(
+      drawer.match(/v-for="event in options\.eventOptions"/g)?.length,
+      3
+    );
+    for (const field of [
+      "eventLead",
+      "eventInitiateCheckout",
+      "eventCompleteRegistration"
     ]) {
-      assert.ok(detectDialog.includes(text), text);
+      assert.ok(drawer.includes(`prop="${field}"`), field);
     }
+    assert.equal(
+      drawer.match(/:disabled="options\.eventOptions\.length === 0"/g)?.length,
+      3
+    );
+    assert.ok(drawer.includes("validateReportingEvent"));
+    assert.ok(drawer.includes("请选择 Meta 官方标准事件"));
+    assert.doesNotMatch(page, /supportsDetection|openDetect|runDetect|>探测</);
+    assert.doesNotMatch(channelApi, /promotion-channels\/probe|testEventCode/);
   });
 
   it("renders country flags and the complete promotion and fission URLs", () => {

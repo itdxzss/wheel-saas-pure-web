@@ -7,6 +7,7 @@ import {
 import {
   isTerminalPublicPromotionPairingStatus,
   normalizePublicPromotionPairingPhone,
+  resolvePublicPromotionAttribution,
   validatePublicPromotionPairingPhone,
   type PublicPromotionPairingInput
 } from "../domain/public-promotion-pairing";
@@ -91,6 +92,7 @@ export function usePublicPromotionPairing() {
   }
 
   async function start(input: PublicPromotionPairingInput): Promise<void> {
+    if (isBusy.value) return;
     const version = ++requestVersion;
     resetState();
     lastInput.value = { ...input };
@@ -109,9 +111,18 @@ export function usePublicPromotionPairing() {
     }
 
     try {
+      const attribution =
+        typeof document === "undefined" || typeof window === "undefined"
+          ? {}
+          : resolvePublicPromotionAttribution(
+              document.cookie,
+              window.location.href,
+              Date.now()
+            );
       const created = await createPublicPromotionPairingSession(
         input.channelCode,
-        normalizedPhone
+        normalizedPhone,
+        attribution
       );
       if (version !== requestVersion) return;
       if (!created.sessionToken) {

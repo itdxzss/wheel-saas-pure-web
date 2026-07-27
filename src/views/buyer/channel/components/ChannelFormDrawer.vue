@@ -22,17 +22,7 @@ import {
   previewPlatformOptions
 } from "./channel-platform-fields";
 import { usePreselectedCountrySelection } from "./channel-country-selection";
-import { previewOwnerOptions } from "./channel-preview-options";
 import { useChannelTrackingFields } from "./channel-tracking-fields";
-
-const reportingEventOptions = [
-  { label: "潜在客户（留资）（Lead）", value: "Lead" },
-  { label: "发起结账 (InitiateCheckout)", value: "InitiateCheckout" },
-  {
-    label: "完成注册 (CompleteRegistration)",
-    value: "CompleteRegistration"
-  }
-];
 
 const props = defineProps<{
   modelValue: boolean;
@@ -51,7 +41,7 @@ const saving = ref(false);
 function createDrawerDefaultForm(): ChannelFormModel {
   return {
     ...createDefaultChannelForm(),
-    ownerId: previewOwnerOptions[0].id,
+    ownerId: props.options.owners[0]?.id,
     openInApp: true
   };
 }
@@ -155,6 +145,21 @@ function validateThemeColor(
   callback(new Error("请输入 #RRGGBB 格式的主题色"));
 }
 
+function validateReportingEvent(
+  _rule: unknown,
+  value: unknown,
+  callback: (error?: string | Error) => void
+): void {
+  if (!platformFieldConfig.value.showEvents) {
+    callback();
+    return;
+  }
+  const supported = props.options.eventOptions.some(
+    event => event.value === value
+  );
+  callback(supported ? undefined : new Error("请选择 Meta 官方标准事件"));
+}
+
 const rules: FormRules<ChannelFormModel> = {
   name: [{ required: true, message: "请输入渠道名称", trigger: "blur" }],
   ownerId: [{ required: true, message: "请选择归属用户", trigger: "change" }],
@@ -175,7 +180,16 @@ const rules: FormRules<ChannelFormModel> = {
   ],
   platform: [{ required: true, message: "请选择推广平台", trigger: "change" }],
   pixelId: [{ validator: validatePixelId, trigger: ["blur", "change"] }],
-  accessToken: [{ validator: validateAccessToken, trigger: ["blur", "change"] }]
+  accessToken: [
+    { validator: validateAccessToken, trigger: ["blur", "change"] }
+  ],
+  eventLead: [{ validator: validateReportingEvent, trigger: "change" }],
+  eventInitiateCheckout: [
+    { validator: validateReportingEvent, trigger: "change" }
+  ],
+  eventCompleteRegistration: [
+    { validator: validateReportingEvent, trigger: "change" }
+  ]
 };
 
 function replaceForm(next: ChannelFormModel): void {
@@ -295,7 +309,7 @@ watch(
           placeholder="请选择归属用户"
         >
           <el-option
-            v-for="owner in previewOwnerOptions"
+            v-for="owner in options.owners"
             :key="owner.id"
             :label="owner.name"
             :value="owner.id"
@@ -519,8 +533,8 @@ watch(
           </el-radio-button>
         </el-radio-group>
         <p class="field-help">
-          选择投放渠道使用的推广平台，仅 Facebook / TikTok 支持 CAPI 探测；快手
-          / MGSKY Ads 无需填写 Access Token。
+          选择投放渠道使用的推广平台。Facebook 正式业务事件由后端 CAPI
+          异步上报；快手 / MGSKY Ads 无需填写 Access Token。
         </p>
       </el-form-item>
       <el-form-item
@@ -560,9 +574,14 @@ watch(
           prop="eventLead"
           :error="fieldErrors.eventLead"
         >
-          <el-select v-model="form.eventLead">
+          <el-select
+            v-model="form.eventLead"
+            filterable
+            :disabled="options.eventOptions.length === 0"
+            placeholder="请选择官方标准事件"
+          >
             <el-option
-              v-for="event in reportingEventOptions"
+              v-for="event in options.eventOptions"
               :key="event.value"
               :label="event.label"
               :value="event.value"
@@ -574,9 +593,14 @@ watch(
           prop="eventInitiateCheckout"
           :error="fieldErrors.eventInitiateCheckout"
         >
-          <el-select v-model="form.eventInitiateCheckout">
+          <el-select
+            v-model="form.eventInitiateCheckout"
+            filterable
+            :disabled="options.eventOptions.length === 0"
+            placeholder="请选择官方标准事件"
+          >
             <el-option
-              v-for="event in reportingEventOptions"
+              v-for="event in options.eventOptions"
               :key="event.value"
               :label="event.label"
               :value="event.value"
@@ -588,9 +612,14 @@ watch(
           prop="eventCompleteRegistration"
           :error="fieldErrors.eventCompleteRegistration"
         >
-          <el-select v-model="form.eventCompleteRegistration">
+          <el-select
+            v-model="form.eventCompleteRegistration"
+            filterable
+            :disabled="options.eventOptions.length === 0"
+            placeholder="请选择官方标准事件"
+          >
             <el-option
-              v-for="event in reportingEventOptions"
+              v-for="event in options.eventOptions"
               :key="event.value"
               :label="event.label"
               :value="event.value"
