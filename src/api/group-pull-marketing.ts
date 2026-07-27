@@ -26,6 +26,7 @@ export interface CreateGroupPullMarketingConfig {
   groupNamePrefix?: string | null;
   friendRetryLimit: number;
   materialPerGroup: number;
+  materialEntryIntervalSeconds: number;
   speakPermission: GroupPullSpeakPermission;
   builderExitEnabled: boolean;
   remark?: string | null;
@@ -62,6 +63,7 @@ export interface GroupPullMarketingTaskDetail
   groupNamePrefix?: string | null;
   friendRetryLimit: number;
   materialPerGroup: number;
+  materialEntryIntervalSeconds: number;
   speakPermission: GroupPullSpeakPermission;
   builderExitEnabled: boolean;
   remark?: string | null;

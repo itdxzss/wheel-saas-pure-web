@@ -30,6 +30,7 @@ const config: CreateGroupPullMarketingConfig = {
   groupNamePrefix: "活动群",
   friendRetryLimit: 3,
   materialPerGroup: 3,
+  materialEntryIntervalSeconds: 300,
   speakPermission: 1,
   builderExitEnabled: true,
   remark: "测试任务",

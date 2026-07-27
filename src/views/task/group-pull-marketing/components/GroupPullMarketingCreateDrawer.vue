@@ -5,6 +5,7 @@ import type { AccountGroupApiRow } from "@/api/account-group";
 import type { MarketingTemplateRow } from "@/api/marketing-template";
 import { requiresMarketerAdmin, speakPermissionOptions } from "../constants";
 import type { GroupPullMarketingCreateForm } from "../composables/useGroupPullMarketingPage";
+import { materialEntryIntervalHint } from "../material-entry-interval";
 
 defineOptions({
   name: "GroupPullMarketingCreateDrawer"
@@ -182,6 +183,19 @@ function handleFileChange(uploadFile: UploadFile): void {
           <el-input-number v-model="form.materialPerGroup" :min="1" :step="1" />
         </el-form-item>
 
+        <el-form-item label="拉料间隔（分钟）" required>
+          <el-input-number
+            v-model="form.materialEntryIntervalMinutes"
+            :min="1"
+            :max="60"
+            :step="1"
+            :precision="0"
+          />
+          <span class="field-tip interval-tip">
+            {{ materialEntryIntervalHint(form.materialEntryIntervalMinutes) }}
+          </span>
+        </el-form-item>
+
         <el-form-item label="结束时间" required>
           <el-date-picker
             v-model="form.taskEndAt"
@@ -310,6 +324,12 @@ function handleFileChange(uploadFile: UploadFile): void {
 .field-tip {
   margin-left: 8px;
   color: var(--el-text-color-secondary);
+}
+
+.interval-tip {
+  display: block;
+  margin-top: 4px;
+  margin-left: 0;
 }
 
 .selected-file {

@@ -15,6 +15,12 @@ describe("group pull marketing create drawer", () => {
     assert.match(source, /群组发言权限/);
     assert.match(source, /建群账号退出群组/);
     assert.match(source, /maxlength="100"/);
+    assert.match(source, /label="拉料间隔（分钟）"/);
+    assert.match(source, /v-model="form\.materialEntryIntervalMinutes"/);
+    assert.match(source, /:min="1"/);
+    assert.match(source, /:max="60"/);
+    assert.match(source, /:precision="0"/);
+    assert.match(source, /materialEntryIntervalHint/);
     assert.doesNotMatch(source, /群头像|群描述|群公告|邀请链接权限/);
   });
 
