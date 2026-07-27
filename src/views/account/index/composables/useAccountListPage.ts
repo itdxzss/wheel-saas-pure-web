@@ -42,7 +42,7 @@ import {
   type AccountGroupMarketingOccupancy
 } from "@/api/account-group";
 import { restartProtocolProcesses } from "@/api/protocol";
-import { apiErrorMessage } from "@/utils/api-error";
+import { apiErrorMessage, isRequestTimeout } from "@/utils/api-error";
 import { downloadBlobFile } from "@/utils/download";
 import {
   buildAccountStatCards,
@@ -118,6 +118,8 @@ const ZERO_SUMMARY: TenantAccountSummary = {
 const ONLINE_COOLDOWN_MS = 30_000;
 const ONLINE_COOLDOWN_TICK_MS = 1_000;
 const ONLINE_COOLDOWN_KEY_PREFIX = "armada:account-online-cooldown:";
+// 批量上线冷却只在当前页面生效，不持久化到 localStorage。
+const BATCH_ONLINE_COOLDOWN_MS = 30_000;
 
 function routeNumber(value: unknown): "" | number {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -129,6 +131,7 @@ function routeNumber(value: unknown): "" | number {
 export interface AccountListPageState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   accountStatusOptions: string[];
+  batchOnlineCooldownRemaining: ComputedRef<number>;
   batchSubmitting: Ref<boolean>;
   accountTypeOptions: Array<{ label: string; value: AccountType }>;
   batchMoveForm: BatchMoveForm;
@@ -247,6 +250,7 @@ export function useAccountListPage(): AccountListPageState {
   const total = ref(0);
   const queryState = createAccountQueryState();
   const now = ref(Date.now());
+  const batchOnlineCooldownUntil = ref(0);
   // Set 记录正在提交的账号，Map 负责当前页面内的倒计时响应。
   const onlineSubmittingIds = ref<Set<number>>(new Set());
   const onlineCooldownUntilById = ref<Map<number, number>>(new Map());
@@ -254,6 +258,14 @@ export function useAccountListPage(): AccountListPageState {
 
   const statCards = computed(() => buildAccountStatCards(summary.value));
   const selectedCount = computed(() => selectedRows.value.length);
+  const batchOnlineCooldownRemaining = computed(() =>
+    Math.max(
+      0,
+      Math.ceil(
+        (batchOnlineCooldownUntil.value - now.value) / ONLINE_COOLDOWN_TICK_MS
+      )
+    )
+  );
   const takeoverBatchTip = computed(() =>
     takeoverBatchDisabledTip(selectedRows.value)
   );
@@ -589,6 +601,10 @@ export function useAccountListPage(): AccountListPageState {
       const result = await onlineTenantAccount(id);
       if (result.accepted) {
         ElMessage.success("上线请求已提交");
+      } else if (result.stateSource === "ALREADY_PENDING") {
+        ElMessage.warning("正在上线，请稍后");
+      } else if (result.stateSource === "ALREADY_ONLINE") {
+        ElMessage.info("账号已在线");
       } else {
         ElMessage.warning("协议层未受理上线请求");
       }
@@ -611,6 +627,12 @@ export function useAccountListPage(): AccountListPageState {
     operation: TenantAccountBatchOperation
   ): Promise<void> {
     if (batchSubmitting.value) return;
+    if (operation === "ONLINE" && batchOnlineCooldownRemaining.value > 0) {
+      ElMessage.warning(
+        `请稍后 ${batchOnlineCooldownRemaining.value} 秒再发起批量登录`
+      );
+      return;
+    }
     const ids = selectedAccountIds();
     const appliedFilters = queryState.applied();
     if (!queryState.hasApplied() || appliedFilters === null) {
@@ -623,6 +645,8 @@ export function useAccountListPage(): AccountListPageState {
       ids,
       appliedFilters
     );
+    // 预估请求超时不代表上线已发起，只有执行请求发出后才能提示“正在上线”。
+    let onlineRequestDispatched = false;
     batchSubmitting.value = true;
     try {
       const preview = await previewTenantAccountBatch(previewRequest);
@@ -652,6 +676,11 @@ export function useAccountListPage(): AccountListPageState {
         ElMessage.warning("账号列表筛选条件已更新，请重新发起批量操作");
         return;
       }
+      if (operation === "ONLINE") {
+        batchOnlineCooldownUntil.value = Date.now() + BATCH_ONLINE_COOLDOWN_MS;
+        now.value = Date.now();
+        onlineRequestDispatched = true;
+      }
       const result =
         ids.length > 0
           ? operation === "ONLINE"
@@ -665,6 +694,15 @@ export function useAccountListPage(): AccountListPageState {
       await refreshAccountList();
     } catch (error) {
       if (error === "cancel" || error === "close") return;
+      if (
+        operation === "ONLINE" &&
+        onlineRequestDispatched &&
+        isRequestTimeout(error)
+      ) {
+        ElMessage.warning("正在上线，请稍后");
+        void refreshAccountList();
+        return;
+      }
       ElMessage.error(
         apiErrorMessage(
           error,
@@ -869,6 +907,7 @@ export function useAccountListPage(): AccountListPageState {
     accountGroups,
     accountStatusOptions,
     accountTypeOptions,
+    batchOnlineCooldownRemaining,
     batchSubmitting,
     batchMoveForm,
     batchMoveModeOptions,

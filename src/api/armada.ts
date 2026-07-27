@@ -4,6 +4,8 @@ import type {
   PureHttpRequestConfig,
   RequestMethods
 } from "@/utils/http/types.d";
+import { removeToken } from "@/utils/auth";
+import { isUnauthorizedBusinessCode } from "@/router/auth-access";
 
 /** armada 统一响应信封。code=0 成功,非 0 业务错误(HTTP 仍 200)。 */
 export interface ArmadaResp<T> {
@@ -24,6 +26,12 @@ export async function armadaRequest<T>(
 ): Promise<T> {
   const resp = await http.request<ArmadaResp<T>>(method, url, opts, config);
   if (!resp || resp.code !== 0) {
+    if (isUnauthorizedBusinessCode(resp?.code)) {
+      removeToken();
+      if (window.location.hash !== "#/login") {
+        window.location.replace(`${window.location.origin}/#/login`);
+      }
+    }
     throw new Error(resp?.message ?? "请求失败");
   }
   return resp.data;

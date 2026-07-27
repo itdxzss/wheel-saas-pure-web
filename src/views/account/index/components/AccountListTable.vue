@@ -24,6 +24,7 @@ defineOptions({
 
 const props = defineProps<{
   columns: TableColumnList;
+  batchOnlineCooldownRemaining: number;
   batchSubmitting: boolean;
   loading: boolean;
   onlineActionDisabled: (row: TenantAccount) => boolean;
@@ -103,8 +104,14 @@ function occupancyTagStyle(row: TenantAccount) {
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="move-group">迁移到分组</el-dropdown-item>
-            <el-dropdown-item command="online" :disabled="batchSubmitting">
-              批量登录
+            <el-dropdown-item
+              command="online"
+              :disabled="batchSubmitting || batchOnlineCooldownRemaining > 0"
+            >
+              <span v-if="batchOnlineCooldownRemaining > 0"
+                >批量登录({{ batchOnlineCooldownRemaining }}s)</span
+              >
+              <span v-else>批量登录</span>
             </el-dropdown-item>
             <el-dropdown-item command="offline" :disabled="batchSubmitting">
               批量离线
@@ -353,8 +360,8 @@ function occupancyTagStyle(row: TenantAccount) {
 <style scoped>
 .account-phone {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
 }
 
 .account-country-flag {

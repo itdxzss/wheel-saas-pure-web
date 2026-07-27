@@ -1,60 +1,6 @@
 // 模拟后端动态生成路由
 import { defineFakeRoute } from "vite-plugin-fake-server/client";
 
-/**
- * roles：页面级别权限，这里模拟二种 "admin"、"common"
- * admin：管理员角色
- * common：普通角色
- */
-const permissionRouter = {
-  path: "/permission",
-  meta: {
-    title: "权限管理",
-    icon: "ep:lollipop",
-    rank: 10
-  },
-  children: [
-    {
-      path: "/permission/page/index",
-      name: "PermissionPage",
-      meta: {
-        title: "页面权限",
-        roles: ["admin", "common"]
-      }
-    },
-    {
-      path: "/permission/button",
-      meta: {
-        title: "按钮权限",
-        roles: ["admin", "common"]
-      },
-      children: [
-        {
-          path: "/permission/button/router",
-          component: "permission/button/index",
-          name: "PermissionButtonRouter",
-          meta: {
-            title: "路由返回按钮权限",
-            auths: [
-              "permission:btn:add",
-              "permission:btn:edit",
-              "permission:btn:delete"
-            ]
-          }
-        },
-        {
-          path: "/permission/button/login",
-          component: "permission/button/perms",
-          name: "PermissionButtonLogin",
-          meta: {
-            title: "登录接口返回按钮权限"
-          }
-        }
-      ]
-    }
-  ]
-};
-
 const accountRouter = {
   path: "/account",
   meta: {
@@ -87,19 +33,7 @@ const accountRouter = {
         module_key: "account",
         perm_key: "tenant:account-group:view"
       }
-    }
-  ]
-};
-
-const taskRouter = {
-  path: "/task",
-  meta: {
-    title: "任务中心",
-    icon: "ep:list",
-    rank: 3,
-    module_key: "pull_task"
-  },
-  children: [
+    },
     {
       path: "/account/import",
       component: "account/import/index",
@@ -111,7 +45,19 @@ const taskRouter = {
         module_key: "account",
         perm_key: "tenant:account:edit"
       }
-    },
+    }
+  ]
+};
+
+const groupRouter = {
+  path: "/group",
+  meta: {
+    title: "群组管理",
+    icon: "ep:chat-dot-round",
+    rank: 3,
+    module_key: "group_management"
+  },
+  children: [
     {
       path: "/task/group-link/imports",
       component: "group/imports/index",
@@ -147,7 +93,19 @@ const taskRouter = {
         module_key: "historical_group",
         perm_key: "tenant:historical_group:view"
       }
-    },
+    }
+  ]
+};
+
+const taskRouter = {
+  path: "/task",
+  meta: {
+    title: "任务中心",
+    icon: "ep:list",
+    rank: 4,
+    module_key: "pull_task"
+  },
+  children: [
     {
       path: "/task/pull",
       component: "task/pull-task/index",
@@ -229,7 +187,7 @@ const materialRouter = {
   meta: {
     title: "素材管理",
     icon: "ep:collection",
-    rank: 4,
+    rank: 5,
     module_key: "material_management"
   },
   children: [
@@ -248,13 +206,13 @@ const materialRouter = {
   ]
 };
 
-const operationRouter = {
-  path: "/operation",
+const resourceRouter = {
+  path: "/resource",
   meta: {
-    title: "运营管理",
-    icon: "ep:operation",
-    rank: 5,
-    module_key: "ops_management"
+    title: "资源管理",
+    icon: "ep:connection",
+    rank: 6,
+    module_key: "resource_management"
   },
   children: [
     {
@@ -284,6 +242,72 @@ const operationRouter = {
   ]
 };
 
+const systemRouter = {
+  path: "/system",
+  meta: {
+    title: "系统管理",
+    icon: "ep:setting",
+    rank: 8,
+    module_key: "system_management"
+  },
+  children: [
+    {
+      path: "/system/user",
+      component: "system/user/index",
+      name: "SystemUser",
+      meta: {
+        title: "用户管理",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "system_management",
+        perm_key: "tenant:system-user:view",
+        // 当前仍使用固定登录，按钮权限先随临时路由下发；真实登录接入后改由角色菜单接口返回。
+        auths: [
+          "tenant:system-user:create",
+          "tenant:system-user:edit",
+          "tenant:system-user:reset-password",
+          "tenant:system-user:status"
+        ]
+      }
+    },
+    {
+      path: "/system/role",
+      component: "system/role/index",
+      name: "SystemRole",
+      meta: {
+        title: "角色管理",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "system_management",
+        perm_key: "tenant:system-role:view",
+        auths: [
+          "tenant:system-role:create",
+          "tenant:system-role:edit",
+          "tenant:system-role:grant",
+          "tenant:system-role:status"
+        ]
+      }
+    },
+    {
+      path: "/system/menu",
+      component: "system/menu/index",
+      name: "SystemMenu",
+      meta: {
+        title: "菜单管理",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "system_management",
+        perm_key: "tenant:system-menu:view",
+        auths: [
+          "tenant:system-menu:create",
+          "tenant:system-menu:edit",
+          "tenant:system-menu:status"
+        ]
+      }
+    }
+  ]
+};
+
 export default defineFakeRoute([
   {
     url: "/get-async-routes",
@@ -293,10 +317,11 @@ export default defineFakeRoute([
         success: true,
         data: [
           accountRouter,
+          groupRouter,
           taskRouter,
           materialRouter,
-          operationRouter,
-          permissionRouter
+          resourceRouter,
+          systemRouter
         ]
       };
     }

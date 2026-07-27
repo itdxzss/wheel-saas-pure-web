@@ -22,6 +22,7 @@ import { userKey, type DataInfo } from "@/utils/auth";
 import { type menuType, routerArrays } from "@/layout/types";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
 import { usePermissionStoreHook } from "@/store/modules/permission";
+import { findViewModuleKey, shouldKeepMenuNode } from "./menu-tree";
 const IFrame = () => import("@/layout/frame.vue");
 // https://cn.vitejs.dev/guide/features.html#glob-import
 const modulesRoutes = import.meta.glob("/src/views/**/*.{vue,tsx}");
@@ -65,7 +66,7 @@ function filterTree(data: RouteComponent[]) {
 
 /** 过滤children长度为0的的目录，当目录下没有菜单时，会过滤此目录，目录没有赋予roles权限，当目录下只要有一个菜单有显示权限，那么此目录就会显示 */
 function filterChildrenTree(data: RouteComponent[]) {
-  const newTree = cloneDeep(data).filter((v: any) => v?.children?.length !== 0);
+  const newTree = cloneDeep(data).filter((v: any) => shouldKeepMenuNode(v));
   newTree.forEach(
     (v: { children }) => v.children && (v.children = filterTree(v.children))
   );
@@ -209,7 +210,7 @@ function initRouter() {
       });
     } else {
       return new Promise(resolve => {
-        getAsyncRoutes().then(({ data }) => {
+        getAsyncRoutes().then(data => {
           handleAsyncRoutes(cloneDeep(data));
           storageLocal().setItem(key, data);
           resolve(router);
@@ -218,7 +219,7 @@ function initRouter() {
     }
   } else {
     return new Promise(resolve => {
-      getAsyncRoutes().then(({ data }) => {
+      getAsyncRoutes().then(data => {
         handleAsyncRoutes(cloneDeep(data));
         resolve(router);
       });
@@ -322,10 +323,8 @@ function addAsyncRoutes(arrRoutes: Array<RouteRecordRaw>) {
       v.component = IFrame;
     } else {
       // 对后端传component组件路径和不传做兼容（如果后端传component组件路径，那么path可以随便写，如果不传，component组件路径会跟path保持一致）
-      const index = v?.component
-        ? modulesRoutesKeys.findIndex(ev => ev.includes(v.component as any))
-        : modulesRoutesKeys.findIndex(ev => ev.includes(v.path));
-      v.component = modulesRoutes[modulesRoutesKeys[index]];
+      const moduleKey = findViewModuleKey(v, modulesRoutesKeys);
+      v.component = moduleKey ? modulesRoutes[moduleKey] : undefined;
     }
     if (v?.children && v.children.length) {
       addAsyncRoutes(v.children);

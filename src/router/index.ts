@@ -33,10 +33,12 @@ import {
 } from "vue-router";
 import {
   type DataInfo,
+  getToken,
   userKey,
   removeToken,
   multipleTabsKey
 } from "@/utils/auth";
+import { hasValidAuthSession } from "./auth-access";
 
 /** 自动导入全部静态路由，无需再手动引入！匹配 src/router/modules 目录（任何嵌套级别）中具有 .ts 扩展名的所有文件，除了 remaining.ts 文件
  * 如何匹配所有文件请看：https://github.com/mrmlnc/fast-glob#basic-syntax
@@ -127,6 +129,11 @@ router.beforeEach((to: ToRouteType, _from, next) => {
     }
   }
   const userInfo = storageLocal().getItem<DataInfo<number>>(userKey);
+  const hasValidSession = hasValidAuthSession(
+    getToken(),
+    Boolean(Cookies.get(multipleTabsKey)),
+    Boolean(userInfo)
+  );
   const externalLink = isUrl(to?.name as string);
   if (!externalLink) {
     to.matched.some(item => {
@@ -140,10 +147,16 @@ router.beforeEach((to: ToRouteType, _from, next) => {
   function toCorrectRoute() {
     authEntryPaths.includes(to.path) ? next(_from.fullPath) : next();
   }
-  if (Cookies.get(multipleTabsKey) && userInfo) {
-    // 无权限跳转403页面
-    if (to.meta?.roles && !isOneOfArray(to.meta?.roles, userInfo?.roles)) {
-      next({ path: "/error/403" });
+  if (hasValidSession) {
+    // 未注册路由或角色不匹配都视为无页面权限，清理旧身份后重新登录。
+    if (
+      to.name === "PageNotFound" ||
+      (to.meta?.roles && !isOneOfArray(to.meta?.roles, userInfo?.roles))
+    ) {
+      removeToken();
+      resetRouter();
+      next({ path: "/login", replace: true });
+      return;
     }
     // 开启隐藏首页后在浏览器地址栏手动输入首页welcome路由则跳转到404页面
     if (VITE_HIDE_HOME === "true" && to.fullPath === "/welcome") {
@@ -198,11 +211,12 @@ router.beforeEach((to: ToRouteType, _from, next) => {
       toCorrectRoute();
     }
   } else {
+    removeToken();
     if (to.path !== "/login") {
       if (whiteList.indexOf(to.path) !== -1) {
         next();
       } else {
-        removeToken();
+        resetRouter();
         next({ path: "/login" });
       }
     } else {

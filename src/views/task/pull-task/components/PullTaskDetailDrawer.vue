@@ -86,12 +86,28 @@ function phoneList(value?: string[] | null): string {
         <small>{{ selectedGroupTip }}</small>
       </div>
       <div class="detail-actions">
-        <el-button type="primary" plain @click="emit('open-supplement')">
+        <el-button
+          v-auth="'tenant:pull_task:operate'"
+          type="primary"
+          plain
+          @click="emit('open-supplement')"
+        >
           批量补充拉手
         </el-button>
-        <el-button @click="emit('export-report')">导出报表</el-button>
-        <el-button @click="emit('export-group-links')">导出群链接</el-button>
-        <el-dropdown @command="kind => emit('export-resources', kind)">
+        <el-button
+          v-auth="'tenant:pull_task:export'"
+          @click="emit('export-report')"
+          >导出报表</el-button
+        >
+        <el-button
+          v-auth="'tenant:pull_task:export'"
+          @click="emit('export-group-links')"
+          >导出群链接</el-button
+        >
+        <el-dropdown
+          v-auth="'tenant:pull_task:export'"
+          @command="kind => emit('export-resources', kind)"
+        >
           <el-button>导出任务资源</el-button>
           <template #dropdown>
             <el-dropdown-menu>
