@@ -9,6 +9,7 @@ import {
   speakPermissionLabel,
   taskStatusLabel
 } from "../constants";
+import { materialEntryIntervalHint } from "../material-entry-interval";
 
 defineOptions({
   name: "GroupPullMarketingSummary"
@@ -84,6 +85,14 @@ function templateName(id: number): string {
       <el-descriptions-item label="单群抽取数量">
         {{ detail.materialPerGroup }}
       </el-descriptions-item>
+      <el-descriptions-item label="拉料间隔">
+        {{ detail.materialEntryIntervalSeconds / 60 }} 分钟
+        <span class="interval-hint">
+          {{
+            materialEntryIntervalHint(detail.materialEntryIntervalSeconds / 60)
+          }}
+        </span>
+      </el-descriptions-item>
       <el-descriptions-item label="群组发言权限">
         {{ speakPermissionLabel(detail.speakPermission) }}
       </el-descriptions-item>
@@ -120,5 +129,10 @@ function templateName(id: number): string {
 
 .summary-header {
   justify-content: space-between;
+}
+
+.interval-hint {
+  display: block;
+  color: var(--el-text-color-secondary);
 }
 </style>

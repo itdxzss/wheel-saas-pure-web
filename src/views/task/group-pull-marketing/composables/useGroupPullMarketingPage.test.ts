@@ -40,6 +40,7 @@ describe("group pull marketing page state", () => {
     assert.equal(page.createForm.sendIntervalSeconds, 30);
     assert.equal(page.createForm.friendRetryLimit, 3);
     assert.equal(page.createForm.materialPerGroup, 3);
+    assert.equal(page.createForm.materialEntryIntervalMinutes, 5);
     assert.equal(page.createForm.speakPermission, 1);
     assert.equal(page.createForm.builderExitEnabled, true);
     assert.equal(new Date(Number(page.createForm.taskEndAt)).getHours(), 23);
@@ -52,6 +53,27 @@ describe("group pull marketing page state", () => {
     assert.deepEqual(elementPlusCalls(), [
       { type: "warning", text: "料子文件仅支持 TXT、CSV 格式" }
     ]);
+  });
+
+  it("validates material entry interval as one to sixty whole minutes", () => {
+    const page = useGroupPullMarketingPage();
+    page.accountGroups.value = [group(1), group(2)];
+    Object.assign(page.createForm, {
+      taskName: "拉群任务",
+      builderGroupId: 1,
+      marketingGroupId: 2,
+      marketingTemplateId: 9,
+      taskEndAt: Date.now() + 60_000
+    });
+
+    page.createForm.materialEntryIntervalMinutes = 0;
+    assert.equal(page.createBlockReason.value, "拉料间隔必须是1到60的整数分钟");
+    page.createForm.materialEntryIntervalMinutes = 61;
+    assert.equal(page.createBlockReason.value, "拉料间隔必须是1到60的整数分钟");
+    page.createForm.materialEntryIntervalMinutes = 1.5;
+    assert.equal(page.createBlockReason.value, "拉料间隔必须是1到60的整数分钟");
+    page.createForm.materialEntryIntervalMinutes = 5;
+    assert.equal(page.createBlockReason.value, "请选择TXT或CSV料子文件");
   });
 
   it("validates group relationships, usable accounts and integer settings", () => {
@@ -113,6 +135,13 @@ describe("group pull marketing page state", () => {
     );
     assert.equal(page.createDrawerOpen.value, false);
     assert.equal(page.materialFile.value, null);
+    const createFormData = (armadaCalls()[0].opts as { data: FormData }).data;
+    const configPart = createFormData.get("config");
+    assert.ok(configPart instanceof Blob);
+    assert.equal(
+      JSON.parse(await configPart.text()).materialEntryIntervalSeconds,
+      300
+    );
     assert.deepEqual(elementPlusCalls(), [
       { type: "success", text: "拉群营销任务已保存，当前为待启动" }
     ]);

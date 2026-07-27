@@ -45,6 +45,7 @@ export interface GroupPullMarketingCreateForm {
   groupNamePrefix: string;
   friendRetryLimit: number;
   materialPerGroup: number;
+  materialEntryIntervalMinutes: number;
   speakPermission: GroupPullSpeakPermission;
   builderExitEnabled: boolean;
   remark: string;
@@ -101,6 +102,7 @@ function emptyCreateForm(): GroupPullMarketingCreateForm {
     groupNamePrefix: "",
     friendRetryLimit: 3,
     materialPerGroup: 3,
+    materialEntryIntervalMinutes: 5,
     speakPermission: 1,
     builderExitEnabled: true,
     remark: "",
@@ -190,6 +192,13 @@ export function useGroupPullMarketingPage(): GroupPullMarketingPageState {
     }
     if (!isPositiveInteger(createForm.materialPerGroup)) {
       return "单群抽取数量必须是大于等于1的整数";
+    }
+    if (
+      !Number.isInteger(createForm.materialEntryIntervalMinutes) ||
+      createForm.materialEntryIntervalMinutes < 1 ||
+      createForm.materialEntryIntervalMinutes > 60
+    ) {
+      return "拉料间隔必须是1到60的整数分钟";
     }
     if (!materialFile.value) return "请选择TXT或CSV料子文件";
     if (createForm.remark.length > 512) return "备注不能超过512个字符";
@@ -294,6 +303,8 @@ export function useGroupPullMarketingPage(): GroupPullMarketingPageState {
       groupNamePrefix: createForm.groupNamePrefix.trim() || null,
       friendRetryLimit: createForm.friendRetryLimit,
       materialPerGroup: createForm.materialPerGroup,
+      materialEntryIntervalSeconds:
+        createForm.materialEntryIntervalMinutes * 60,
       speakPermission: createForm.speakPermission,
       builderExitEnabled: createForm.builderExitEnabled,
       remark: createForm.remark.trim() || null,
