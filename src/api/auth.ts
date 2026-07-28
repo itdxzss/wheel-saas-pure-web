@@ -31,6 +31,11 @@ export interface UserLoginRequest {
   captchaCode: string;
 }
 
+export interface PasswordChangeRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export const getCaptcha = () =>
   armadaRequest<CaptchaResult>("get", "/api/public/auth/captcha");
 
@@ -38,3 +43,6 @@ export const loginUser = (data: UserLoginRequest) =>
   armadaRequest<UserLoginResult>("post", "/api/public/auth/login", { data });
 
 export const logoutUser = () => armadaRequest<void>("post", "/api/auth/logout");
+
+export const changeOwnPassword = (data: PasswordChangeRequest) =>
+  armadaRequest<void>("post", "/api/auth/change-password", { data });

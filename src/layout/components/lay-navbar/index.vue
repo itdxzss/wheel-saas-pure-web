@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useNav } from "@/layout/hooks/useNav";
+import ChangePasswordDialog from "../ChangePasswordDialog.vue";
 import LaySearch from "../lay-search/index.vue";
 import LayNotice from "../lay-notice/index.vue";
 import LayNavMix from "../lay-sidebar/NavMix.vue";
@@ -8,6 +10,7 @@ import LaySidebarBreadCrumb from "../lay-sidebar/components/SidebarBreadCrumb.vu
 import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.vue";
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
+import LockPasswordLine from "~icons/ri/lock-password-line";
 import Setting from "~icons/ri/settings-3-line";
 
 const {
@@ -21,6 +24,8 @@ const {
   avatarsStyle,
   toggleSideBar
 } = useNav();
+const changePasswordDialogRef =
+  ref<InstanceType<typeof ChangePasswordDialog>>();
 </script>
 
 <template>
@@ -54,6 +59,13 @@ const {
         </span>
         <template #dropdown>
           <el-dropdown-menu class="logout">
+            <el-dropdown-item @click="changePasswordDialogRef?.open()">
+              <IconifyIconOffline
+                :icon="LockPasswordLine"
+                style="margin: 5px"
+              />
+              修改密码
+            </el-dropdown-item>
             <el-dropdown-item @click="logout">
               <IconifyIconOffline
                 :icon="LogoutCircleRLine"
@@ -72,6 +84,7 @@ const {
         <IconifyIconOffline :icon="Setting" />
       </span>
     </div>
+    <ChangePasswordDialog ref="changePasswordDialogRef" />
   </div>
 </template>
 

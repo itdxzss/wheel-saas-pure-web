@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { isAllEmpty } from "@pureadmin/utils";
 import { useNav } from "@/layout/hooks/useNav";
+import ChangePasswordDialog from "../ChangePasswordDialog.vue";
 import LaySearch from "../lay-search/index.vue";
 import LayNotice from "../lay-notice/index.vue";
 import { ref, toRaw, watch, onMounted, nextTick } from "vue";
@@ -11,9 +12,12 @@ import LaySidebarExtraIcon from "../lay-sidebar/components/SidebarExtraIcon.vue"
 import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vue";
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
+import LockPasswordLine from "~icons/ri/lock-password-line";
 import Setting from "~icons/ri/settings-3-line";
 
 const menuRef = ref();
+const changePasswordDialogRef =
+  ref<InstanceType<typeof ChangePasswordDialog>>();
 const defaultActive = ref(null);
 
 const {
@@ -105,6 +109,13 @@ watch(
         </span>
         <template #dropdown>
           <el-dropdown-menu class="logout">
+            <el-dropdown-item @click="changePasswordDialogRef?.open()">
+              <IconifyIconOffline
+                :icon="LockPasswordLine"
+                style="margin: 5px"
+              />
+              修改密码
+            </el-dropdown-item>
             <el-dropdown-item @click="logout">
               <IconifyIconOffline
                 :icon="LogoutCircleRLine"
@@ -123,6 +134,7 @@ watch(
         <IconifyIconOffline :icon="Setting" />
       </span>
     </div>
+    <ChangePasswordDialog ref="changePasswordDialogRef" />
   </div>
 </template>
 
