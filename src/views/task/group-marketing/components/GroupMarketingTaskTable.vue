@@ -11,6 +11,7 @@ import {
   taskStatusTagType
 } from "../constants";
 import Delete from "~icons/ep/delete";
+import Download from "~icons/ep/download";
 import Plus from "~icons/ep/plus";
 import GroupMarketingTemplatePreviewDialog from "./GroupMarketingTemplatePreviewDialog.vue";
 import {
@@ -25,6 +26,7 @@ defineOptions({
 
 const props = defineProps<{
   columns: TableColumnList;
+  exporting: boolean;
   loading: boolean;
   page: number;
   pageSize: number;
@@ -36,6 +38,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: "create"): void;
   (event: "delete-selected"): void;
+  (event: "export"): void;
   (event: "refresh"): void;
   (event: "row-action", row: MarketingTaskRow, action: string): void;
   (event: "selection-change", rows: MarketingTaskRow[]): void;
@@ -88,6 +91,19 @@ function taskLifecycleType(
 <template>
   <PureTableBar title="营销任务" :columns="columns" @refresh="emit('refresh')">
     <template #buttons>
+      <span class="export-status" role="status" aria-live="polite">
+        {{ exporting ? "营销任务数据正在后台生成" : "" }}
+      </span>
+      <el-button
+        v-auth="'tenant:marketing_task:export'"
+        plain
+        :loading="exporting"
+        :disabled="exporting"
+        :icon="useRenderIcon(Download)"
+        @click="emit('export')"
+      >
+        导出
+      </el-button>
       <el-button
         type="primary"
         :icon="useRenderIcon(Plus)"
@@ -351,5 +367,17 @@ function taskLifecycleType(
   text-overflow: ellipsis;
   vertical-align: middle;
   white-space: nowrap;
+}
+
+.export-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
 }
 </style>
