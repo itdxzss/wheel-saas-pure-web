@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from "vue";
+import { ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import Search from "~icons/ri/search-line";
@@ -8,8 +8,10 @@ import GroupMarketingCreateDrawer from "./components/GroupMarketingCreateDrawer.
 import GroupMarketingDetailDrawer from "./components/GroupMarketingDetailDrawer.vue";
 import GroupMarketingMaterialDrawer from "./components/GroupMarketingMaterialDrawer.vue";
 import GroupMarketingTaskTable from "./components/GroupMarketingTaskTable.vue";
+import MarketingTaskExportDialog from "./components/MarketingTaskExportDialog.vue";
 import { taskColumns, taskStatusOptions } from "./constants";
 import { useGroupMarketingTaskPage } from "./composables/useGroupMarketingTaskPage";
+import { useMarketingTaskExport } from "./composables/useMarketingTaskExport";
 import type { MarketingTaskRow } from "@/api/marketing-task";
 
 defineOptions({
@@ -60,6 +62,17 @@ const {
   treeLoading
 } = useGroupMarketingTaskPage();
 
+const exportSelectedRows = ref<MarketingTaskRow[]>([]);
+const {
+  countries: exportCountries,
+  countriesLoading: exportCountriesLoading,
+  exportDialogOpen,
+  exporting,
+  openExportDialog,
+  selectedTaskCount: exportSelectedTaskCount,
+  submitExport
+} = useMarketingTaskExport(exportSelectedRows);
+
 let lastOpenedTaskId: number | null = null;
 
 /** 账号占用弹窗通过 taskId 查询参数复用当前菜单的明细抽屉。 */
@@ -101,6 +114,15 @@ function onTaskAction(row: MarketingTaskRow, action: string): void {
     void openMaterialDrawer(row);
   }
 }
+
+function handleSelectionChange(selection: MarketingTaskRow[]): void {
+  exportSelectedRows.value = [...selection];
+  onSelectionChange(selection);
+}
+
+watch(selectedCount, count => {
+  if (count === 0) exportSelectedRows.value = [];
+});
 </script>
 
 <template>
@@ -187,15 +209,26 @@ function onTaskAction(row: MarketingTaskRow, action: string): void {
       v-model:page="page"
       v-model:page-size="pageSize"
       :columns="taskColumns"
+      :exporting="exporting"
       :loading="loading"
       :rows="rows"
       :selected-count="selectedCount"
       :total="total"
       @create="openCreateDrawer"
       @delete-selected="deleteSelected"
+      @export="openExportDialog"
       @refresh="refreshTasks"
       @row-action="onTaskAction"
-      @selection-change="onSelectionChange"
+      @selection-change="handleSelectionChange"
+    />
+
+    <MarketingTaskExportDialog
+      v-model="exportDialogOpen"
+      :countries="exportCountries"
+      :countries-loading="exportCountriesLoading"
+      :selected-task-count="exportSelectedTaskCount"
+      :submitting="exporting"
+      @submit="submitExport"
     />
 
     <GroupMarketingCreateDrawer
