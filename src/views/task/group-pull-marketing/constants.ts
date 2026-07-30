@@ -131,6 +131,22 @@ export function formatEpoch(value?: number | null): string {
   return formatEpochMillis(value);
 }
 
+/** V16 一级列表的执行阶段缺失时不从旧状态字段推断。 */
+export function taskStatusDetail(
+  primaryStage?: string | null,
+  blockReason?: GroupPullBlockReason | null
+): string {
+  if (blockReason != null && blockReason !== 0) {
+    return blockReasonLabel(blockReason);
+  }
+  return primaryStage?.trim() || "--";
+}
+
+/** V16 一级列表统一使用双横线表达缺失的最近执行时间。 */
+export function lastExecutedAtLabel(value?: number | null): string {
+  return formatEpochMillis(value, "--");
+}
+
 /** 返回任务主状态对应的 Element Plus 标签类型。 */
 export function taskStatusTagType(status?: number | null) {
   if (status === 2) return "primary";

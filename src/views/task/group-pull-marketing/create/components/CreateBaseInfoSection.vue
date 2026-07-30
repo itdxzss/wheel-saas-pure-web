@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { UploadFile } from "element-plus";
+import { ElMessage, type UploadFile } from "element-plus";
 import type {
   GroupPullMarketingCreateDraft,
   TargetDataMetrics
 } from "../create-draft";
+import { resolveTargetFileSelection } from "../create-interactions";
 
 defineOptions({ name: "GroupPullMarketingCreateBaseInfoSection" });
 
@@ -39,7 +40,12 @@ function metricLabel(value: number | null): string {
 }
 
 function selectTargetFile(file: UploadFile): void {
-  if (file.raw) draft.value.targetFile = file.raw;
+  const result = resolveTargetFileSelection(
+    draft.value.targetFile,
+    file.raw ?? null
+  );
+  draft.value.targetFile = result.file;
+  if (result.warning) ElMessage.warning(result.warning);
 }
 </script>
 

@@ -5,10 +5,9 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import type { GroupPullMarketingTaskRow } from "@/api/group-pull-marketing";
 import {
-  blockReasonLabel,
-  formatEpoch,
   groupPullTaskActions,
-  resourceStatusLabel,
+  lastExecutedAtLabel,
+  taskStatusDetail,
   taskStatusLabel,
   taskStatusTagType,
   type GroupPullTaskAction
@@ -84,9 +83,7 @@ function actionType(action: GroupPullTaskAction) {
 }
 
 function statusDetail(row: GroupPullMarketingTaskRow): string {
-  if (row.primaryStage?.trim()) return row.primaryStage;
-  if (row.blockReason !== 0) return blockReasonLabel(row.blockReason);
-  return resourceStatusLabel(row.resourceStatus);
+  return taskStatusDetail(row.primaryStage, row.blockReason);
 }
 
 function progress(row: GroupPullMarketingTaskRow): number | null {
@@ -193,9 +190,14 @@ function hasNoExceptions(row: GroupPullMarketingTaskRow): boolean {
                   displayMetric(row.plannedTargetCount)
                 }}
               </strong>
-              <span class="secondary-line">
-                有效成功率 {{ displayRate(row.effectiveSuccessRate) }}
-              </span>
+              <el-tooltip
+                content="有效成功率按本次新增成功入群人数 ÷ 有效目标数据计算"
+                placement="top"
+              >
+                <span class="secondary-line">
+                  有效成功率 {{ displayRate(row.effectiveSuccessRate) }}
+                </span>
+              </el-tooltip>
             </div>
           </template>
         </el-table-column>
@@ -250,9 +252,11 @@ function hasNoExceptions(row: GroupPullMarketingTaskRow): boolean {
             </el-tag>
             <div v-else class="metric-cell">
               <span>异常群组 {{ displayMetric(row.abnormalGroupCount) }}</span>
-              <span>
-                待补位 {{ displayMetric(row.replacementPendingGroupCount) }}
-              </span>
+              <el-tooltip content="需要补充或替换资源的群组数" placement="top">
+                <span>
+                  待补位 {{ displayMetric(row.replacementPendingGroupCount) }}
+                </span>
+              </el-tooltip>
               <span>封禁账号 {{ displayMetric(row.bannedAccountCount) }}</span>
             </div>
           </template>
@@ -294,7 +298,7 @@ function hasNoExceptions(row: GroupPullMarketingTaskRow): boolean {
         >
           <template #default="{ row }">
             <div class="operation-cell">
-              <span>{{ formatEpoch(row.lastExecutedAt) }}</span>
+              <span>{{ lastExecutedAtLabel(row.lastExecutedAt) }}</span>
               <div class="action-row">
                 <el-button
                   v-for="action in taskActions(row)"

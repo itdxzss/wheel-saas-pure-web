@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import {
   showSendRounds,
   type GroupPullMarketingCreateDraft,
   type UnmetAction
 } from "../create-draft";
+import { normalizeThreshold, thresholdMaximum } from "../create-interactions";
 
 defineOptions({ name: "GroupPullMarketingCreateMarketingSection" });
 
@@ -20,6 +22,26 @@ const unmetActionOptions: Array<{ label: string; value: UnmetAction }> = [
   { label: "转人工", value: "MANUAL" },
   { label: "放弃当前群", value: "ABANDON_GROUP" }
 ];
+
+watch(
+  () => draft.value.waterArmyThresholdMode,
+  mode => {
+    draft.value.waterArmyThreshold = normalizeThreshold(
+      draft.value.waterArmyThreshold,
+      mode
+    );
+  }
+);
+
+watch(
+  () => draft.value.targetThresholdMode,
+  mode => {
+    draft.value.targetThreshold = normalizeThreshold(
+      draft.value.targetThreshold,
+      mode
+    );
+  }
+);
 </script>
 
 <template>
@@ -120,7 +142,11 @@ const unmetActionOptions: Array<{ label: string; value: UnmetAction }> = [
           <el-radio-button value="COUNT">人数</el-radio-button>
           <el-radio-button value="RATE">成功率</el-radio-button>
         </el-radio-group>
-        <el-input-number v-model="draft.waterArmyThreshold" :min="0" />
+        <el-input-number
+          v-model="draft.waterArmyThreshold"
+          :min="0"
+          :max="thresholdMaximum(draft.waterArmyThresholdMode)"
+        />
         <span class="field-unit">
           {{ draft.waterArmyThresholdMode === "COUNT" ? "人" : "%" }}
         </span>
@@ -131,7 +157,11 @@ const unmetActionOptions: Array<{ label: string; value: UnmetAction }> = [
           <el-radio-button value="COUNT">人数</el-radio-button>
           <el-radio-button value="RATE">成功率</el-radio-button>
         </el-radio-group>
-        <el-input-number v-model="draft.targetThreshold" :min="0" />
+        <el-input-number
+          v-model="draft.targetThreshold"
+          :min="0"
+          :max="thresholdMaximum(draft.targetThresholdMode)"
+        />
         <span class="field-unit">
           {{ draft.targetThresholdMode === "COUNT" ? "人" : "%" }}
         </span>

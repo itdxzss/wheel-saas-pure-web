@@ -48,6 +48,8 @@ describe("group pull marketing task table", () => {
     assert.match(source, /displayMetric/);
     assert.match(source, /displayRate/);
     assert.match(source, /resourceShortageLabel/);
+    assert.match(source, /有效成功率按本次新增成功入群人数 ÷ 有效目标数据计算/);
+    assert.match(source, /需要补充或替换资源的群组数/);
   });
 
   it("uses the centralized action matrix instead of duplicating status checks", () => {

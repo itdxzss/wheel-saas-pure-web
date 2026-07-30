@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { ElMessage, type UploadFile } from "element-plus";
 import type { GroupPullMarketingCreateDraft } from "../create-draft";
+import { reconcileSelectedGroupIds } from "../create-interactions";
 
 defineOptions({ name: "GroupPullMarketingCreateTargetGroupSection" });
 
@@ -29,7 +30,11 @@ function selectAvatar(file: UploadFile): void {
 }
 
 function updateSelection(rows: CandidateGroupRow[]): void {
-  draft.value.selectedGroupIds = rows.map(row => row.id);
+  draft.value.selectedGroupIds = reconcileSelectedGroupIds(
+    draft.value.selectedGroupIds,
+    candidateGroups.value.map(row => row.id),
+    rows.map(row => row.id)
+  );
 }
 
 function unavailableGroupAction(): void {
@@ -256,7 +261,7 @@ function unavailableGroupAction(): void {
           border
           @selection-change="updateSelection"
         >
-          <el-table-column type="selection" width="52" />
+          <el-table-column type="selection" width="52" reserve-selection />
           <el-table-column prop="name" label="群组信息" min-width="180" />
           <el-table-column prop="jid" label="群组 JID" min-width="180" />
           <el-table-column

@@ -12,6 +12,10 @@ import {
   emptyTargetDataMetrics,
   type GroupPullMarketingCreateDraft
 } from "./create-draft";
+import {
+  GROUP_PULL_MARKETING_LIST_PATH,
+  notifyUnconfirmedCreateAction
+} from "./create-interactions";
 
 defineOptions({
   name: "TaskGroupPullMarketingCreate"
@@ -22,11 +26,11 @@ const draft = ref<GroupPullMarketingCreateDraft>(createEmptyGroupPullDraft());
 const targetDataMetrics = emptyTargetDataMetrics();
 
 async function backToList(): Promise<void> {
-  await router.push("/task/group-pull-marketing");
+  await router.push(GROUP_PULL_MARKETING_LIST_PATH);
 }
 
 function unavailableAction(action: string): void {
-  ElMessage.info(`${action}接口契约待确认，当前仅完成前端配置`);
+  notifyUnconfirmedCreateAction(action, message => ElMessage.info(message));
 }
 </script>
 

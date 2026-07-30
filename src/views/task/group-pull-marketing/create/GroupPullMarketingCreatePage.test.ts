@@ -170,8 +170,9 @@ describe("group pull marketing create page", () => {
     ]) {
       assert.match(source, new RegExp(action));
     }
-    assert.match(source, /接口契约待确认，当前仅完成前端配置/);
-    assert.match(source, /router\.push\("\/task\/group-pull-marketing"\)/);
+    assert.match(source, /notifyUnconfirmedCreateAction/);
+    assert.match(source, /router\.push\(GROUP_PULL_MARKETING_LIST_PATH\)/);
+    assert.doesNotMatch(source, /from "@\/api\//);
   });
 
   it("routes the list create action to the page and removes drawer state", () => {
