@@ -27,6 +27,11 @@ const state = useHistoricalGroupDetail({
   operationAccountId: () => props.operationAccountId,
   group: () => props.group
 });
+const isAdministrator = computed(
+  () =>
+    state.detail.value?.selfRole === "OWNER" ||
+    state.detail.value?.selfRole === "ADMIN"
+);
 
 watch(
   [
@@ -50,15 +55,6 @@ watch(
     title="历史群详情与成员管理"
   >
     <div v-loading="state.detailLoading.value" class="detail-drawer-content">
-      <el-alert
-        v-if="!state.linkGateOpen.value"
-        type="error"
-        :closable="false"
-        show-icon
-        title="群链接硬门禁未通过"
-        :description="state.linkGateReason.value"
-      />
-
       <el-descriptions v-if="state.detail.value" :column="2" border>
         <el-descriptions-item label="群名称">
           {{ state.detail.value.subject || "-" }}
@@ -98,21 +94,19 @@ watch(
         class="member-table"
         :action-error="state.actionError.value"
         :action-loading="state.actionLoading.value"
-        :demote-jids="state.eligibleParticipantJids('demote')"
         :detail="state.detail.value"
         :disabled="state.memberManagementDisabled.value"
         :disabled-reason="state.memberManagementReason.value"
         :last-action="state.lastAction.value"
         :last-action-result="state.lastActionResult.value"
         :promote-jids="state.eligibleParticipantJids('promote')"
-        :remove-jids="state.eligibleParticipantJids('remove')"
         :selected-jids="state.selectedJids.value"
         @run-action="state.runParticipantAction"
         @select-members="state.selectMembers"
       />
 
       <HistoricalGroupPullPanel
-        v-if="state.detail.value"
+        v-if="state.detail.value && isAdministrator"
         :active="modelValue"
         :detail="state.detail.value"
       />
@@ -130,7 +124,7 @@ watch(
 }
 
 .full-value {
-  white-space: pre-wrap;
   word-break: break-all;
+  white-space: pre-wrap;
 }
 </style>

@@ -55,7 +55,7 @@ onBeforeUnmount(() => state.close());
       type="error"
       :closable="false"
       show-icon
-      title="群链接硬门禁未通过"
+      title="群链接获取失败，仅影响拉群/营销"
       :description="state.gateReason.value"
     />
 

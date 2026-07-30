@@ -82,17 +82,26 @@ function defaultIdempotencyKey(): string {
     .slice(2)}`;
 }
 
+function isAdministrator(detail: HistoricalGroupDetail | null): boolean {
+  return detail?.selfRole === "OWNER" || detail?.selfRole === "ADMIN";
+}
+
 function hasUsableLink(detail: HistoricalGroupDetail | null): boolean {
-  return detail?.linkAvailable === true && Boolean(detail.inviteUrl?.trim());
+  return (
+    isAdministrator(detail) &&
+    detail?.linkAvailable === true &&
+    Boolean(detail.inviteUrl?.trim())
+  );
 }
 
 function completeGateReason(detail: HistoricalGroupDetail | null): string {
   if (!detail) return "详情尚未加载，拉人和营销均已禁用";
-  const reasons = [
-    detail.errorCode,
-    detail.errorMessage,
-    detail.operationDisabledReason
-  ].filter((value): value is string => Boolean(value?.trim()));
+  if (!isAdministrator(detail)) {
+    return "当前账号不是管理员，仅支持查看群详情";
+  }
+  const reasons = [detail.errorCode, detail.errorMessage].filter(
+    (value): value is string => Boolean(value?.trim())
+  );
   return reasons.length > 0
     ? reasons.join(" / ")
     : "未取得可用群邀请链接，拉人和营销均已禁用";

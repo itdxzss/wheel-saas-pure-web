@@ -1,10 +1,8 @@
 import { computed, ref, type ComputedRef, type Ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
-  demoteHistoricalGroupParticipants,
   getHistoricalGroupDetail,
   promoteHistoricalGroupParticipants,
-  removeHistoricalGroupParticipants,
   type HistoricalGroupDetail,
   type HistoricalGroupItem,
   type HistoricalGroupParticipantActionResult,
@@ -12,7 +10,7 @@ import {
 } from "@/api/historical-group";
 import { apiErrorMessage } from "@/utils/api-error";
 
-export type HistoricalGroupParticipantAction = "promote" | "demote" | "remove";
+export type HistoricalGroupParticipantAction = "promote";
 
 export interface HistoricalGroupDetailOptions {
   operationAccountId: () => number | null;
@@ -44,9 +42,7 @@ export interface HistoricalGroupDetailState {
 }
 
 const actionLabels: Record<HistoricalGroupParticipantAction, string> = {
-  promote: "批量提升",
-  demote: "批量降级",
-  remove: "批量移除"
+  promote: "设为管理员"
 };
 
 function nonblank(value: string | null | undefined): value is string {
@@ -55,24 +51,15 @@ function nonblank(value: string | null | undefined): value is string {
 
 function linkFailureReason(detail: HistoricalGroupDetail | null): string {
   if (!detail) return "详情尚未加载，所有操作均已禁用";
-  const parts = [
-    detail.errorCode,
-    detail.errorMessage,
-    detail.operationDisabledReason
-  ].filter(nonblank);
+  const parts = [detail.errorCode, detail.errorMessage].filter(nonblank);
   return parts.length > 0
     ? parts.join(" / ")
-    : "未取得可用群邀请链接，所有操作均已禁用";
+    : "未取得可用群邀请链接，仅影响拉群/营销";
 }
 
-function memberEligibleForAction(
-  member: HistoricalGroupMember,
-  action: HistoricalGroupParticipantAction
-): boolean {
+function memberEligibleForPromotion(member: HistoricalGroupMember): boolean {
   if (!member.operationAllowed || member.self || member.owner) return false;
-  if (action === "promote") return !member.admin;
-  if (action === "demote") return member.admin;
-  return true;
+  return !member.admin;
 }
 
 /** 管理固定操作账号下单个历史群的按需详情及成员操作。 */
@@ -101,10 +88,9 @@ export function useHistoricalGroupDetail(
     return linkGateOpen.value ? "" : linkFailureReason(detail.value);
   });
   const memberManagementDisabled = computed(
-    () => !linkGateOpen.value || detail.value?.operationAllowed !== true
+    () => detail.value?.operationAllowed !== true
   );
   const memberManagementReason = computed(() => {
-    if (!linkGateOpen.value) return linkGateReason.value;
     if (detail.value?.operationAllowed === true) return "";
     return (
       detail.value?.operationDisabledReason ||
@@ -183,7 +169,7 @@ export function useHistoricalGroupDetail(
   }
 
   function eligibleParticipantJids(
-    action: HistoricalGroupParticipantAction
+    _action: HistoricalGroupParticipantAction
   ): string[] {
     if (memberManagementDisabled.value || !detail.value) return [];
     const members = new Map(
@@ -191,7 +177,7 @@ export function useHistoricalGroupDetail(
     );
     return selectedJids.value.filter(jid => {
       const member = members.get(jid);
-      return member ? memberEligibleForAction(member, action) : false;
+      return member ? memberEligibleForPromotion(member) : false;
     });
   }
 
@@ -206,7 +192,7 @@ export function useHistoricalGroupDetail(
         {
           confirmButtonText: "确认执行",
           cancelButtonText: "取消",
-          type: action === "remove" ? "warning" : "info"
+          type: "info"
         }
       );
       return true;
@@ -236,12 +222,7 @@ export function useHistoricalGroupDetail(
       participantJids
     };
     try {
-      const request = {
-        promote: promoteHistoricalGroupParticipants,
-        demote: demoteHistoricalGroupParticipants,
-        remove: removeHistoricalGroupParticipants
-      }[action];
-      const result = await request(input);
+      const result = await promoteHistoricalGroupParticipants(input);
       if (sessionId !== detailSessionId) return;
       lastAction.value = action;
       lastActionResult.value = result;

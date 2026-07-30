@@ -14,14 +14,12 @@ defineOptions({
 const props = defineProps<{
   actionError: string;
   actionLoading: boolean;
-  demoteJids: string[];
   detail: HistoricalGroupDetail;
   disabled: boolean;
   disabledReason: string;
   lastAction: HistoricalGroupParticipantAction | null;
   lastActionResult: HistoricalGroupParticipantActionResult | null;
   promoteJids: string[];
-  removeJids: string[];
   selectedJids: string[];
 }>();
 
@@ -37,9 +35,7 @@ const roleLabels: Record<HistoricalGroupSelfRole, string> = {
 };
 
 const actionLabels: Record<HistoricalGroupParticipantAction, string> = {
-  promote: "批量提升",
-  demote: "批量降级",
-  remove: "批量移除"
+  promote: "设为管理员"
 };
 
 function memberFromRow(row: unknown): HistoricalGroupMember | null {
@@ -51,7 +47,8 @@ function memberFromRow(row: unknown): HistoricalGroupMember | null {
 
 function toggleMember(row: unknown, checked: unknown): void {
   const member = memberFromRow(row);
-  if (!member || props.disabled || !member.operationAllowed) return;
+  if (!member || props.disabled || !member.operationAllowed || member.admin)
+    return;
   const next = new Set(props.selectedJids);
   if (checked === true) next.add(member.participantJid);
   else next.delete(member.participantJid);
@@ -82,22 +79,7 @@ function protectionReason(row: unknown): string {
           :loading="actionLoading"
           @click="emit('run-action', 'promote')"
         >
-          批量提升（{{ promoteJids.length }}）
-        </el-button>
-        <el-button
-          :disabled="disabled || demoteJids.length === 0"
-          :loading="actionLoading"
-          @click="emit('run-action', 'demote')"
-        >
-          批量降级（{{ demoteJids.length }}）
-        </el-button>
-        <el-button
-          type="danger"
-          :disabled="disabled || removeJids.length === 0"
-          :loading="actionLoading"
-          @click="emit('run-action', 'remove')"
-        >
-          批量移除（{{ removeJids.length }}）
+          设为管理员（{{ promoteJids.length }}）
         </el-button>
       </el-space>
     </div>
@@ -120,6 +102,7 @@ function protectionReason(row: unknown): string {
               !row.operationAllowed ||
               row.self ||
               row.owner ||
+              row.admin ||
               actionLoading
             "
             @change="toggleMember(row, $event)"
@@ -208,9 +191,9 @@ function protectionReason(row: unknown): string {
 .member-toolbar,
 .member-toolbar > div {
   display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
 }
 
 .member-toolbar {
@@ -222,7 +205,7 @@ function protectionReason(row: unknown): string {
 }
 
 .full-value {
-  white-space: pre-wrap;
   word-break: break-all;
+  white-space: pre-wrap;
 }
 </style>

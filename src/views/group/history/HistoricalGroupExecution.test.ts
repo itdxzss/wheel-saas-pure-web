@@ -33,15 +33,15 @@ const detail: HistoricalGroupDetail = {
   groupJid: "120363execution@g.us",
   subject: "执行目标群",
   membershipState: "CURRENT_IN_GROUP",
-  roleCategory: "MEMBER",
-  selfRole: "MEMBER",
+  roleCategory: "ADMIN",
+  selfRole: "ADMIN",
   speechState: "NORMAL",
   memberSize: 20,
   announceOnly: false,
   inviteUrl: "https://chat.whatsapp.com/ExecutionInvite",
   linkAvailable: true,
-  operationAllowed: false,
-  operationDisabledReason: "普通成员不能管理群成员",
+  operationAllowed: true,
+  operationDisabledReason: null,
   errorCode: null,
   errorMessage: null,
   members: []
@@ -172,7 +172,7 @@ function fakeScheduler(): HistoricalGroupExecutionScheduler & {
 }
 
 describe("historical group pull execution state", () => {
-  it("opens pulling for an ordinary member when the usable link exists", async () => {
+  it("opens pulling for an administrator when the usable link exists", async () => {
     resetArmadaMockQueue(optionResponses(null));
     const state = useHistoricalGroupExecution({ detail: () => detail });
 
@@ -196,12 +196,37 @@ describe("historical group pull execution state", () => {
         ...detail,
         inviteUrl: null,
         linkAvailable: false,
-        operationDisabledReason: "完整原因：没有邀请链接"
+        operationDisabledReason: "成员管理不依赖群链接",
+        errorCode: "GROUP_INVITE_LINK_UNAVAILABLE",
+        errorMessage: "完整原因：没有邀请链接"
       })
     });
     await blocked.open();
     assert.equal(blocked.linkGateOpen.value, false);
     assert.match(blocked.gateReason.value, /完整原因：没有邀请链接/);
+    assert.doesNotMatch(blocked.gateReason.value, /成员管理不依赖群链接/);
+    assert.deepEqual(armadaCalls(), []);
+  });
+
+  it("blocks an ordinary member even when an unexpected usable link exists", async () => {
+    resetArmadaMockQueue([]);
+    const state = useHistoricalGroupExecution({
+      detail: () => ({
+        ...detail,
+        roleCategory: "MEMBER",
+        selfRole: "MEMBER",
+        operationAllowed: false,
+        operationDisabledReason: "当前账号不是管理员"
+      })
+    });
+
+    await state.open();
+
+    assert.equal(state.linkGateOpen.value, false);
+    assert.match(
+      state.gateReason.value,
+      /当前账号不是管理员，仅支持查看群详情/
+    );
     assert.deepEqual(armadaCalls(), []);
   });
 
@@ -416,6 +441,9 @@ describe("historical group pull execution state", () => {
 describe("historical group pull execution template", () => {
   it("uses a link-gated form with no editable invite link or account subset", () => {
     assert.match(drawerSource, /HistoricalGroupPullPanel/);
+    assert.match(drawerSource, /isAdministrator/);
+    assert.doesNotMatch(drawerSource, /群链接硬门禁未通过/);
+    assert.match(panelSource, /群链接获取失败，仅影响拉群\/营销/);
     assert.match(panelSource, /拉手账号分组/);
     assert.match(panelSource, /TXT,CSV,XLS,XLSX|TXT、CSV、XLS、XLSX/);
     assert.match(panelSource, /单次添加人数/);

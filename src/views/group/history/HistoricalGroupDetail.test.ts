@@ -142,14 +142,13 @@ describe("historical group detail state", () => {
     ]);
   });
 
-  it("hard-disables every entry and preserves the complete link failure reason", async () => {
+  it("keeps administrator member promotion enabled when the link lookup fails", async () => {
     const failedDetail: HistoricalGroupDetail = {
       ...detail,
       inviteUrl: null,
       linkAvailable: false,
-      operationAllowed: false,
-      operationDisabledReason:
-        "协议账号无法取得邀请链接，成员管理、拉人及营销均不可执行",
+      operationAllowed: true,
+      operationDisabledReason: "成员管理不依赖群链接",
       errorCode: "GROUP_INVITE_LINK_UNAVAILABLE",
       errorMessage: "完整协议错误：Connection Terminated 428"
     };
@@ -159,13 +158,13 @@ describe("historical group detail state", () => {
     await state.open();
 
     assert.equal(state.linkGateOpen.value, false);
-    assert.equal(state.memberManagementDisabled.value, true);
+    assert.equal(state.memberManagementDisabled.value, false);
     assert.match(state.linkGateReason.value, /GROUP_INVITE_LINK_UNAVAILABLE/);
     assert.match(state.linkGateReason.value, /Connection Terminated 428/);
-    assert.match(state.linkGateReason.value, /成员管理、拉人及营销均不可执行/);
+    assert.doesNotMatch(state.linkGateReason.value, /成员管理不依赖群链接/);
   });
 
-  it("treats a blank invite URL as a failed hard gate", async () => {
+  it("keeps administrator member promotion enabled for a blank invite URL", async () => {
     resetArmadaMockQueue([
       {
         ...detail,
@@ -179,11 +178,11 @@ describe("historical group detail state", () => {
     await state.open();
 
     assert.equal(state.linkGateOpen.value, false);
-    assert.equal(state.memberManagementDisabled.value, true);
+    assert.equal(state.memberManagementDisabled.value, false);
     assert.match(state.linkGateReason.value, /协议返回空邀请链接/);
   });
 
-  it("allows only role-safe mutations and exposes protection reasons", async () => {
+  it("allows only role-safe promotion and exposes protection reasons", async () => {
     resetArmadaMockQueue([detail]);
     const state = createDetailState();
     await state.open();
@@ -191,13 +190,6 @@ describe("historical group detail state", () => {
 
     assert.deepEqual(state.eligibleParticipantJids("promote"), [
       "8613000000003@s.whatsapp.net"
-    ]);
-    assert.deepEqual(state.eligibleParticipantJids("demote"), [
-      "8613000000004@s.whatsapp.net"
-    ]);
-    assert.deepEqual(state.eligibleParticipantJids("remove"), [
-      "8613000000003@s.whatsapp.net",
-      "8613000000004@s.whatsapp.net"
     ]);
     assert.match(detail.members[0].operationDisabledReason ?? "", /自身/);
     assert.match(detail.members[1].operationDisabledReason ?? "", /群主/);
@@ -208,15 +200,21 @@ describe("historical group detail state", () => {
     nonAdminState.selectMembers(
       detail.members.map(member => member.participantJid)
     );
-    for (const action of ["promote", "demote", "remove"] as const) {
-      assert.deepEqual(nonAdminState.eligibleParticipantJids(action), []);
-    }
+    assert.deepEqual(nonAdminState.eligibleParticipantJids("promote"), []);
     assert.equal(nonAdminState.linkGateOpen.value, true);
     assert.equal(nonAdminState.linkGateReason.value, "");
     assert.equal(nonAdminState.memberManagementDisabled.value, true);
   });
 
   it("keeps every item result, calls a mutation once and reloads detail once", async () => {
+    const promotableDetail: HistoricalGroupDetail = {
+      ...detail,
+      members: detail.members.map(member =>
+        member.participantJid === "8613000000004@s.whatsapp.net"
+          ? { ...member, admin: false, selfRole: "MEMBER" }
+          : member
+      )
+    };
     const actionResult = {
       ok: false,
       partial: true,
@@ -237,7 +235,7 @@ describe("historical group detail state", () => {
         }
       ]
     };
-    resetArmadaMockQueue([detail, actionResult, detail]);
+    resetArmadaMockQueue([promotableDetail, actionResult, detail]);
     const state = createDetailState();
     await state.open();
     state.selectMembers([
@@ -245,7 +243,7 @@ describe("historical group detail state", () => {
       "8613000000004@s.whatsapp.net"
     ]);
 
-    await state.runParticipantAction("remove");
+    await state.runParticipantAction("promote");
 
     assert.equal(state.lastActionResult.value?.results.length, 2);
     assert.equal(
@@ -256,12 +254,12 @@ describe("historical group detail state", () => {
       armadaCalls().map(call => call.url),
       [
         "/api/historical-groups/detail",
-        "/api/historical-groups/participants/remove",
+        "/api/historical-groups/participants/promote",
         "/api/historical-groups/detail"
       ]
     );
     assert.equal(
-      armadaCalls().filter(call => call.url.endsWith("/remove")).length,
+      armadaCalls().filter(call => call.url.endsWith("/promote")).length,
       1
     );
     assert.deepEqual(armadaCalls()[1].opts, {
@@ -303,7 +301,7 @@ describe("historical group detail state", () => {
     await state.open();
     state.selectMembers(["8613000000003@s.whatsapp.net"]);
 
-    const actionPromise = state.runParticipantAction("remove");
+    const actionPromise = state.runParticipantAction("promote");
     await new Promise<void>(resolve => setImmediate(resolve));
     assert.equal(state.actionLoading.value, true);
     assert.equal(armadaCalls().length, 2);
@@ -331,7 +329,7 @@ describe("historical group detail state", () => {
       armadaCalls().map(call => call.url),
       [
         "/api/historical-groups/detail",
-        "/api/historical-groups/participants/remove"
+        "/api/historical-groups/participants/promote"
       ]
     );
   });
@@ -342,10 +340,11 @@ describe("historical group detail template", () => {
     assert.match(pageSource, /HistoricalGroupDetailDrawer/);
     assert.match(drawerSource, /el-drawer/);
     assert.match(drawerSource, /inviteUrl/);
-    assert.match(drawerSource, /linkGateReason/);
     assert.match(drawerSource, /errorCode/);
     assert.match(drawerSource, /errorMessage/);
     assert.match(drawerSource, /readonly/);
+    assert.match(drawerSource, /isAdministrator/);
+    assert.doesNotMatch(drawerSource, /群链接硬门禁未通过/);
     assert.doesNotMatch(drawerSource, /mask|ellipsis/);
   });
 
@@ -360,9 +359,9 @@ describe("historical group detail template", () => {
     ]) {
       assert.match(memberTableSource, new RegExp(value.replace(".", "\\.")));
     }
-    assert.match(memberTableSource, /批量提升/);
-    assert.match(memberTableSource, /批量降级/);
-    assert.match(memberTableSource, /批量移除/);
+    assert.match(memberTableSource, /设为管理员/);
+    assert.doesNotMatch(memberTableSource, /批量降级/);
+    assert.doesNotMatch(memberTableSource, /批量移除/);
     assert.match(composableSource, /ElMessageBox\.confirm/);
     assert.match(drawerSource, /HistoricalGroupPullPanel/);
   });
