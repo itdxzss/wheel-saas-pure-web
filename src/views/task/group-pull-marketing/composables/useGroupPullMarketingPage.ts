@@ -231,8 +231,6 @@ export function useGroupPullMarketingPage(): GroupPullMarketingPageState {
       rows.value = result.list ?? [];
       total.value = result.total ?? 0;
     } catch (error) {
-      rows.value = [];
-      total.value = 0;
       ElMessage.error(apiErrorMessage(error, "拉群营销任务加载失败"));
     } finally {
       loading.value = false;

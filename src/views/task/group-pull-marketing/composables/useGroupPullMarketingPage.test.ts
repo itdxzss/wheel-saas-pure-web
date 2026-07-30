@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   armadaCalls,
+  resetArmadaMock,
+  resetArmadaMockFailure,
   resetArmadaMockQueue
 } from "@/api/__tests__/armada-test-double";
 import {
@@ -155,6 +157,8 @@ describe("group pull marketing page state", () => {
     page.searchForm.id = "8";
     page.searchForm.keyword = "  七月  ";
     page.searchForm.status = 2;
+    page.searchForm.blockReason = 4;
+    page.searchForm.resourceStatus = 2;
 
     page.searchTasks();
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -171,8 +175,8 @@ describe("group pull marketing page state", () => {
           id: 8,
           keyword: "七月",
           status: 2,
-          blockReason: undefined,
-          resourceStatus: undefined
+          blockReason: 4,
+          resourceStatus: 2
         }
       }
     });
@@ -185,5 +189,32 @@ describe("group pull marketing page state", () => {
         ["get", "/api/group-pull-marketing-tasks"]
       ]
     );
+  });
+
+  it("keeps the last successful rows when a refresh fails", async () => {
+    resetElementPlusMock();
+    resetArmadaMock({
+      list: [
+        {
+          id: 8,
+          taskName: "已加载任务",
+          status: 2,
+          blockReason: 0,
+          resourceStatus: 2
+        }
+      ],
+      total: 1
+    });
+    const page = useGroupPullMarketingPage();
+    await page.loadTasks();
+
+    resetArmadaMockFailure(new Error("network down"));
+    await page.loadTasks();
+
+    assert.equal(page.rows.value[0]?.taskName, "已加载任务");
+    assert.equal(page.total.value, 1);
+    assert.deepEqual(elementPlusCalls(), [
+      { type: "error", text: "network down" }
+    ]);
   });
 });

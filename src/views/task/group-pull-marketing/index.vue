@@ -6,6 +6,8 @@ import type { GroupPullMarketingTaskRow } from "@/api/group-pull-marketing";
 import GroupPullMarketingCreateDrawer from "./components/GroupPullMarketingCreateDrawer.vue";
 import GroupPullMarketingTaskTable from "./components/GroupPullMarketingTaskTable.vue";
 import {
+  blockReasonOptions,
+  resourceStatusOptions,
   taskColumns,
   taskStatusOptions,
   type GroupPullTaskAction
@@ -72,6 +74,36 @@ onMounted(() => {
           >
             <el-option
               v-for="option in taskStatusOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="阻塞原因">
+          <el-select
+            v-model="pageState.searchForm.blockReason"
+            clearable
+            class="search-select"
+            placeholder="全部原因"
+          >
+            <el-option
+              v-for="option in blockReasonOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="资源状态">
+          <el-select
+            v-model="pageState.searchForm.resourceStatus"
+            clearable
+            class="search-select"
+            placeholder="全部状态"
+          >
+            <el-option
+              v-for="option in resourceStatusOptions"
               :key="option.value"
               :label="option.label"
               :value="option.value"
