@@ -149,4 +149,50 @@ describe("group pull marketing create page", () => {
     assert.match(source, /showScheduledStart/);
     assert.match(source, /type="datetime"/);
   });
+
+  it("assembles five sections and safely blocks unconfirmed actions", () => {
+    const source = componentSource("./index.vue");
+    for (const component of [
+      "CreateBaseInfoSection",
+      "CreateTargetGroupSection",
+      "CreateRoleConfigSection",
+      "CreateMarketingSection",
+      "CreateLaunchSection"
+    ]) {
+      assert.match(source, new RegExp(component));
+    }
+    for (const action of [
+      "保存草稿",
+      "校验配置",
+      "预览任务",
+      "取消",
+      "创建并启动"
+    ]) {
+      assert.match(source, new RegExp(action));
+    }
+    assert.match(source, /接口契约待确认，当前仅完成前端配置/);
+    assert.match(source, /router\.push\("\/task\/group-pull-marketing"\)/);
+  });
+
+  it("routes the list create action to the page and removes drawer state", () => {
+    const listSource = componentSource("../index.vue");
+    const stateSource = componentSource(
+      "../composables/useGroupPullMarketingPage.ts"
+    );
+    const drawerUrl = new URL(
+      "../components/GroupPullMarketingCreateDrawer.vue",
+      import.meta.url
+    );
+
+    assert.match(
+      listSource,
+      /router\.push\("\/task\/group-pull-marketing\/create"\)/
+    );
+    assert.doesNotMatch(listSource, /GroupPullMarketingCreateDrawer/);
+    assert.doesNotMatch(
+      stateSource,
+      /createForm|submitCreate|openCreateDrawer/
+    );
+    assert.equal(existsSync(fileURLToPath(drawerUrl)), false);
+  });
 });

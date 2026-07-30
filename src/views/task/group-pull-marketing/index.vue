@@ -3,7 +3,6 @@ import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { GroupPullMarketingTaskRow } from "@/api/group-pull-marketing";
-import GroupPullMarketingCreateDrawer from "./components/GroupPullMarketingCreateDrawer.vue";
 import GroupPullMarketingTaskTable from "./components/GroupPullMarketingTaskTable.vue";
 import {
   blockReasonOptions,
@@ -22,6 +21,10 @@ defineOptions({
 
 const router = useRouter();
 const pageState = useGroupPullMarketingPage();
+
+async function openCreatePage(): Promise<void> {
+  await router.push("/task/group-pull-marketing/create");
+}
 
 async function handleTaskAction(
   action: GroupPullTaskAction,
@@ -136,21 +139,8 @@ onMounted(() => {
       :rows="pageState.rows.value"
       :total="pageState.total.value"
       @action="handleTaskAction"
-      @create="pageState.openCreateDrawer"
+      @create="openCreatePage"
       @refresh="pageState.loadTasks"
-    />
-
-    <GroupPullMarketingCreateDrawer
-      v-model="pageState.createDrawerOpen.value"
-      v-model:form="pageState.createForm"
-      :account-groups="pageState.accountGroups.value"
-      :create-block-reason="pageState.createBlockReason.value"
-      :marketing-templates="pageState.marketingTemplates.value"
-      :material-file="pageState.materialFile.value"
-      :submitting="pageState.submitting.value"
-      @clear-file="pageState.clearMaterialFile"
-      @file-select="pageState.selectMaterialFile"
-      @submit="pageState.submitCreate"
     />
   </div>
 </template>
