@@ -146,15 +146,33 @@ function previewTask(): void {
 <style scoped>
 .pull-task-create-page {
   min-height: 100%;
-  padding-bottom: 76px;
+  padding-bottom: 60px;
+  font-size: 13px;
+  --el-font-size-base: 13px;
+  --el-font-size-small: 12px;
+  --el-component-size: 30px;
+  --el-component-size-small: 26px;
 }
 
 .page-header-card {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+}
+
+.page-header-card :deep(.el-card__body) {
+  padding: 12px 14px;
+}
+
+.page-header-card :deep(.el-page-header__title) {
+  font-size: 13px;
+}
+
+.page-header-card :deep(.el-page-header__content),
+.page-title {
+  font-size: 14px;
 }
 
 .flow-alert {
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 .page-title {
@@ -163,15 +181,130 @@ function previewTask(): void {
   align-items: center;
 }
 
+.pull-task-create-page :deep(.el-alert) {
+  padding: 8px 12px;
+}
+
+.pull-task-create-page :deep(.el-alert__title) {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.pull-task-create-page :deep(.create-section) {
+  margin-bottom: 10px;
+}
+
+.pull-task-create-page :deep(.create-section > .el-card__header) {
+  padding: 9px 14px;
+}
+
+.pull-task-create-page :deep(.create-section > .el-card__body) {
+  padding: 12px 14px;
+}
+
+.pull-task-create-page :deep(.section-header) {
+  gap: 8px;
+}
+
+.pull-task-create-page :deep(.section-header strong),
+.pull-task-create-page :deep(.resource-card strong) {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.pull-task-create-page :deep(.section-header p) {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.pull-task-create-page :deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+.pull-task-create-page :deep(.el-form-item__label) {
+  height: auto;
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.pull-task-create-page :deep(.field-hint),
+.pull-task-create-page :deep(.field-unit),
+.pull-task-create-page :deep(.action-hint) {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.pull-task-create-page :deep(.field-hint) {
+  margin-top: 3px;
+}
+
+.pull-task-create-page :deep(.metric-grid) {
+  gap: 8px;
+}
+
+.pull-task-create-page :deep(.metric-card) {
+  gap: 2px;
+  padding: 9px 10px;
+}
+
+.pull-task-create-page :deep(.metric-card strong) {
+  font-size: 15px;
+}
+
+.pull-task-create-page :deep(.resource-grid) {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.pull-task-create-page :deep(.resource-card) {
+  padding: 10px 12px;
+}
+
+.pull-task-create-page :deep(.resource-counts) {
+  margin-top: 8px;
+}
+
+.pull-task-create-page :deep(.resource-card .el-empty) {
+  padding: 8px 0 0;
+}
+
+.pull-task-create-page :deep(.resource-card .el-empty__description) {
+  margin-top: 4px;
+}
+
+.pull-task-create-page :deep(.section-alert) {
+  margin: 4px 0 10px;
+}
+
+.pull-task-create-page :deep(.candidate-summary) {
+  margin: 6px 0 10px;
+}
+
+.pull-task-create-page :deep(.target-tabs) {
+  padding-top: 0;
+}
+
+.pull-task-create-page :deep(.el-tabs__header) {
+  margin-bottom: 10px;
+}
+
+.pull-task-create-page :deep(.preview-empty) {
+  min-height: 48px;
+  padding: 8px;
+}
+
 .action-bar {
   position: sticky;
   bottom: 0;
   z-index: 10;
   display: flex;
-  gap: 16px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 8px 12px;
   border-top: 1px solid var(--el-border-color-lighter);
   box-shadow: var(--el-box-shadow-light);
 }

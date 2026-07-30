@@ -189,4 +189,24 @@ describe("pull task GROUP_MARKETING create page", () => {
     assert.doesNotMatch(source, /from "@\/api\//);
     assert.doesNotMatch(source, /子模式/);
   });
+
+  it("uses conservative compact density and keeps the two-column form", () => {
+    const pageSource = componentSource("./index.vue");
+    const baseSectionSource = componentSource(
+      "./components/CreateBaseInfoSection.vue"
+    );
+
+    assert.match(pageSource, /--el-font-size-base:\s*13px/);
+    assert.match(pageSource, /--el-component-size:\s*30px/);
+    assert.match(pageSource, /\.create-section > \.el-card__header/);
+    assert.match(
+      pageSource,
+      /\.el-form-item\)\s*\{[^}]*margin-bottom:\s*12px/s
+    );
+    assert.match(pageSource, /\.action-bar\s*\{[^}]*padding:\s*8px 12px/s);
+    assert.match(
+      baseSectionSource,
+      /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/
+    );
+  });
 });
