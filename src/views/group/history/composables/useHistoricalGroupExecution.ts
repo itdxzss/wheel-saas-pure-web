@@ -30,6 +30,7 @@ export interface HistoricalGroupExecutionOptions {
   createIdempotencyKey?: () => string;
   detail: () => HistoricalGroupDetail | null;
   scheduler?: HistoricalGroupExecutionScheduler;
+  sourceAccountGroupId: () => number | null;
 }
 
 export interface HistoricalGroupExecutionState {
@@ -245,8 +246,13 @@ export function useHistoricalGroupExecution(
     clearPoll();
     resetState();
     const currentDetail = options.detail();
+    const sourceAccountGroupId = options.sourceAccountGroupId();
     if (!hasUsableLink(currentDetail)) {
       executionError.value = completeGateReason(currentDetail);
+      return;
+    }
+    if (sourceAccountGroupId == null) {
+      executionError.value = "缺少来源账号分组，拉人和营销均已禁用";
       return;
     }
 
@@ -256,7 +262,7 @@ export function useHistoricalGroupExecution(
         listAccountGroups({ page: 1, pageSize: 500 }),
         listMarketingTemplates({ page: 1, pageSize: 500 }),
         getLatestHistoricalGroupPullExecution({
-          accountId: currentDetail.accountId,
+          sourceAccountGroupId,
           groupJid: currentDetail.groupJid
         })
       ]);
@@ -284,9 +290,16 @@ export function useHistoricalGroupExecution(
     if (submitting.value) return;
     const validationError = validatePull();
     const currentDetail = options.detail();
+    const sourceAccountGroupId = options.sourceAccountGroupId();
     const file = materialFile.value;
     const accountGroupId = pullerAccountGroupId.value;
-    if (validationError || !currentDetail || !file || accountGroupId == null) {
+    if (
+      validationError ||
+      !currentDetail ||
+      sourceAccountGroupId == null ||
+      !file ||
+      accountGroupId == null
+    ) {
       executionError.value = validationError;
       if (validationError) ElMessage.warning(validationError);
       return;
@@ -300,7 +313,7 @@ export function useHistoricalGroupExecution(
     try {
       const created = await createHistoricalGroupPullExecution({
         file,
-        operationAccountId: currentDetail.accountId,
+        sourceAccountGroupId,
         groupJid: currentDetail.groupJid,
         pullerAccountGroupId: accountGroupId,
         singleAddCount: singleAddCount.value,

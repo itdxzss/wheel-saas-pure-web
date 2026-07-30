@@ -20,26 +20,26 @@ import {
 } from "./historical-group";
 
 describe("historical group API", () => {
-  it("loads the fixed account historical group list", async () => {
-    resetArmadaMock([]);
+  it("pages every historical group under an account group", async () => {
+    resetArmadaMock({ list: [], total: 0, page: 2, pageSize: 20 });
 
-    await listHistoricalGroups(17);
+    await listHistoricalGroups({ accountGroupId: 8, page: 2, pageSize: 20 });
 
     assert.deepEqual(armadaCalls(), [
       {
         method: "get",
         url: "/api/historical-groups",
-        opts: { params: { accountId: 17 } }
+        opts: { params: { accountGroupId: 8, page: 2, pageSize: 20 } }
       }
     ]);
   });
 
-  it("refreshes the fixed account and loads one group detail", async () => {
-    resetArmadaMockQueue([[], { groupJid: "120363detail@g.us" }]);
+  it("refreshes an account group and loads one group detail", async () => {
+    resetArmadaMockQueue([undefined, { groupJid: "120363detail@g.us" }]);
 
-    await refreshHistoricalGroups(17);
+    await refreshHistoricalGroups(8);
     await getHistoricalGroupDetail({
-      accountId: 17,
+      accountGroupId: 8,
       groupJid: "120363detail@g.us"
     });
 
@@ -47,14 +47,14 @@ describe("historical group API", () => {
       {
         method: "post",
         url: "/api/historical-groups/refresh",
-        opts: { data: { accountId: 17 } },
+        opts: { data: { accountGroupId: 8 } },
         config: { timeout: 60_000 }
       },
       {
         method: "get",
         url: "/api/historical-groups/detail",
         opts: {
-          params: { accountId: 17, groupJid: "120363detail@g.us" }
+          params: { accountGroupId: 8, groupJid: "120363detail@g.us" }
         }
       }
     ]);
@@ -75,7 +75,7 @@ describe("historical group API", () => {
     };
     resetArmadaMock(response);
     const input = {
-      accountId: 17,
+      accountGroupId: 8,
       groupJid: "120363detail@g.us",
       participantJids: ["8613800000000@s.whatsapp.net"]
     };
@@ -107,7 +107,7 @@ describe("historical group API", () => {
 
     await createHistoricalGroupPullExecution({
       file,
-      operationAccountId: 17,
+      sourceAccountGroupId: 8,
       groupJid: "120363detail@g.us",
       pullerAccountGroupId: 8,
       singleAddCount: 25,
@@ -120,7 +120,8 @@ describe("historical group API", () => {
     const data = (call.opts as { data: FormData }).data;
     assert.ok(data instanceof FormData);
     assert.equal(data.get("file"), file);
-    assert.equal(data.get("operationAccountId"), "17");
+    assert.equal(data.get("sourceAccountGroupId"), "8");
+    assert.equal(data.has("operationAccountId"), false);
     assert.equal(data.get("groupJid"), "120363detail@g.us");
     assert.equal(data.get("pullerAccountGroupId"), "8");
     assert.equal(data.get("singleAddCount"), "25");
@@ -169,7 +170,7 @@ describe("historical group API", () => {
     await startHistoricalGroupPullExecution(91);
     const polled = await getHistoricalGroupPullExecution(91);
     await getLatestHistoricalGroupPullExecution({
-      accountId: 17,
+      sourceAccountGroupId: 8,
       groupJid: "120363detail@g.us"
     });
     await sendHistoricalGroupMarketing(91, 33);
@@ -192,7 +193,10 @@ describe("historical group API", () => {
         method: "get",
         url: "/api/historical-group-pull-executions/latest",
         opts: {
-          params: { accountId: 17, groupJid: "120363detail@g.us" }
+          params: {
+            sourceAccountGroupId: 8,
+            groupJid: "120363detail@g.us"
+          }
         }
       },
       {

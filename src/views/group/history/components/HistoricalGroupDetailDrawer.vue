@@ -12,7 +12,7 @@ defineOptions({
 const props = defineProps<{
   group: HistoricalGroupItem | null;
   modelValue: boolean;
-  operationAccountId: number | null;
+  accountGroupId: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -24,7 +24,7 @@ const visible = computed({
   set: value => emit("update:modelValue", value)
 });
 const state = useHistoricalGroupDetail({
-  operationAccountId: () => props.operationAccountId,
+  accountGroupId: () => props.accountGroupId,
   group: () => props.group
 });
 const isAdministrator = computed(
@@ -36,7 +36,7 @@ const isAdministrator = computed(
 watch(
   [
     () => props.modelValue,
-    () => props.operationAccountId,
+    () => props.accountGroupId,
     () => props.group?.groupJid
   ],
   ([open]) => {
@@ -56,11 +56,8 @@ watch(
   >
     <div v-loading="state.detailLoading.value" class="detail-drawer-content">
       <el-descriptions v-if="state.detail.value" :column="2" border>
-        <el-descriptions-item label="群名称">
+        <el-descriptions-item label="群名称" :span="2">
           {{ state.detail.value.subject || "-" }}
-        </el-descriptions-item>
-        <el-descriptions-item label="固定操作账号 ID">
-          {{ state.detail.value.accountId }}
         </el-descriptions-item>
         <el-descriptions-item label="完整群 JID" :span="2">
           <span class="full-value">{{ state.detail.value.groupJid }}</span>
@@ -108,6 +105,7 @@ watch(
       <HistoricalGroupPullPanel
         v-if="state.detail.value && isAdministrator"
         :active="modelValue"
+        :source-account-group-id="accountGroupId"
         :detail="state.detail.value"
       />
     </div>

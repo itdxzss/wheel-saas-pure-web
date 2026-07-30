@@ -7,6 +7,7 @@ import {
   resetArmadaMockQueue
 } from "@/api/__tests__/armada-test-double";
 import { resetElementPlusMock } from "@/api/__tests__/element-plus-test-double";
+import type { HistoricalGroupItem } from "@/api/historical-group";
 import { useHistoricalGroupPage } from "./composables/useHistoricalGroupPage";
 
 const pageSource = readFileSync(
@@ -22,340 +23,173 @@ const tableSource = readFileSync(
   "utf8"
 );
 
-const baselineRows = [
+const baselineRows: HistoricalGroupItem[] = [
   {
     groupJid: "120363admin@g.us",
     subject: "管理员群",
-    membershipState: "UNVERIFIED" as const,
+    accountPhones: ["8613800000017", "8613800000018"],
+    inviteLink: "https://chat.whatsapp.com/CompleteInviteCode",
+    countryIso2: "CN",
+    countryName: "中国",
+    countryFlag: "🇨🇳",
+    groupCreatedAt: 1_722_470_400,
+    membershipState: "UNVERIFIED",
     roleCategory: null,
     selfRole: null,
     speechState: null,
     memberSize: null,
     announceOnly: null,
-    errorMessage: null
-  },
-  {
-    groupJid: "120363left@g.us",
-    subject: "历史退出群",
-    membershipState: "UNVERIFIED" as const,
-    roleCategory: null,
-    selfRole: null,
-    speechState: null,
-    memberSize: null,
-    announceOnly: null,
+    operable: false,
+    disabledReason: "暂无在线管理员账号",
     errorMessage: null
   }
 ];
 
+function pageResult(rows = baselineRows, page = 1) {
+  return {
+    list: rows,
+    total: rows.length,
+    page,
+    pageSize: 20,
+    totalPages: 1
+  };
+}
+
 describe("historical group page state", () => {
-  it("loads group then account then baseline, and refreshes only explicitly", async () => {
+  it("selects an account group and immediately loads its historical groups", async () => {
     resetElementPlusMock();
     resetArmadaMockQueue([
-      {
-        list: [{ id: 8, name: "历史群账号", accountCount: 1 }],
-        total: 1
-      },
-      {
-        list: [
-          {
-            id: 17,
-            wsPhone: "8613800000017",
-            accountGroupId: 8,
-            groupName: "历史群账号"
-          }
-        ],
-        total: 1
-      },
-      baselineRows,
-      [
-        {
-          ...baselineRows[0],
-          membershipState: "CURRENT_IN_GROUP",
-          roleCategory: "ADMIN",
-          selfRole: "OWNER",
-          speechState: "ADMIN_CAN_SPEAK",
-          memberSize: 18,
-          announceOnly: true
-        },
-        {
-          ...baselineRows[1],
-          membershipState: "CURRENT_NOT_IN_GROUP"
-        }
-      ]
+      { list: [{ id: 8, name: "历史群账号", accountCount: 5 }], total: 1 },
+      pageResult()
     ]);
     const page = useHistoricalGroupPage();
 
     await page.loadAccountGroups();
     await page.selectAccountGroup(8);
-    assert.deepEqual((armadaCalls()[1].opts as { params: unknown }).params, {
-      accountGroupId: 8,
-      accountState: 2,
-      loginState: 1,
-      page: 1,
-      pageSize: 500
-    });
-    await page.selectOperationAccount(17);
 
-    assert.equal(page.rows.value.length, 2);
-    assert.ok(
-      page.rows.value.every(row => row.membershipState === "UNVERIFIED")
-    );
+    assert.equal(page.rows.value.length, 1);
     assert.deepEqual(
       armadaCalls().map(call => call.url),
-      ["/api/account-groups", "/api/accounts", "/api/historical-groups"]
+      ["/api/account-groups", "/api/historical-groups"]
     );
+    assert.deepEqual(armadaCalls()[1].opts, {
+      params: { accountGroupId: 8, page: 1, pageSize: 20 }
+    });
+    assert.equal(
+      armadaCalls().some(call => call.url === "/api/accounts"),
+      false
+    );
+  });
+
+  it("refreshes the whole account group only after an explicit click", async () => {
+    resetElementPlusMock();
+    const refreshed = [{ ...baselineRows[0], selfRole: "OWNER" as const }];
+    resetArmadaMockQueue([pageResult(), undefined, pageResult(refreshed)]);
+    const page = useHistoricalGroupPage();
+    await page.selectAccountGroup(8);
 
     await page.refreshHistoricalGroups();
 
+    assert.equal(page.rows.value[0].selfRole, "OWNER");
     assert.deepEqual(
-      page.sections.value.map(section => section.title),
-      ["管理员群组", "已退出"]
-    );
-    assert.equal(page.sections.value[0].rows[0].groupJid, "120363admin@g.us");
-    assert.equal(page.sections.value[1].rows[0].groupJid, "120363left@g.us");
-    assert.equal(armadaCalls().at(-1)?.url, "/api/historical-groups/refresh");
-  });
-
-  it("keeps normal online accounts visible with readable states", async () => {
-    resetElementPlusMock();
-    resetArmadaMockQueue([
-      {
-        list: [
-          {
-            id: 17,
-            wsPhone: "8613800000017",
-            accountGroupId: 8,
-            accountState: 2,
-            loginState: 1
-          }
-        ],
-        total: 1
-      },
-      baselineRows
-    ]);
-    const page = useHistoricalGroupPage();
-
-    await page.selectAccountGroup(8);
-
-    assert.deepEqual(page.accounts.value, [
-      {
-        id: 17,
-        phone: "8613800000017",
-        label: "8613800000017（ID 17｜正常｜在线）"
-      }
-    ]);
-
-    await page.selectOperationAccount(17);
-
-    assert.equal(armadaCalls().at(-1)?.url, "/api/historical-groups");
-    assert.equal(page.rows.value.length, baselineRows.length);
-  });
-
-  it("loads every account page for the selected group", async () => {
-    resetElementPlusMock();
-    resetArmadaMockQueue([
-      {
-        list: [{ id: 17, wsPhone: "8613800000017" }],
-        total: 501,
-        page: 1,
-        pageSize: 500,
-        totalPages: 2
-      },
-      {
-        list: [{ id: 18, wsPhone: "8613800000018" }],
-        total: 501,
-        page: 2,
-        pageSize: 500,
-        totalPages: 2
-      }
-    ]);
-    const page = useHistoricalGroupPage();
-
-    await page.selectAccountGroup(8);
-
-    assert.deepEqual(
-      armadaCalls().map(call => (call.opts as { params: unknown }).params),
+      armadaCalls().map(call => call.url),
       [
-        {
-          accountGroupId: 8,
-          accountState: 2,
-          loginState: 1,
-          page: 1,
-          pageSize: 500
-        },
-        {
-          accountGroupId: 8,
-          accountState: 2,
-          loginState: 1,
-          page: 2,
-          pageSize: 500
-        }
+        "/api/historical-groups",
+        "/api/historical-groups/refresh",
+        "/api/historical-groups"
       ]
     );
-    assert.deepEqual(
-      page.accounts.value.map(account => account.id),
-      [17, 18]
-    );
-  });
-
-  it("stops account loading after clearing a group during the request", async () => {
-    let resolveAccounts: (value: { list: []; total: number }) => void = () =>
-      undefined;
-    const pendingAccounts = new Promise<{ list: []; total: number }>(
-      resolve => {
-        resolveAccounts = resolve;
-      }
-    );
-    resetElementPlusMock();
-    resetArmadaMockQueue([pendingAccounts]);
-    const page = useHistoricalGroupPage();
-
-    const loading = page.selectAccountGroup(8);
-    await page.selectAccountGroup(null);
-    resolveAccounts({ list: [], total: 0 });
-    await loading;
-
-    assert.equal(page.accountsLoading.value, false);
-  });
-
-  it("stops baseline loading after clearing an account during the request", async () => {
-    let resolveBaseline: (value: typeof baselineRows) => void = () => undefined;
-    const pendingBaseline = new Promise<typeof baselineRows>(resolve => {
-      resolveBaseline = resolve;
+    assert.deepEqual(armadaCalls()[1].opts, {
+      data: { accountGroupId: 8 }
     });
-    resetElementPlusMock();
-    resetArmadaMockQueue([pendingBaseline]);
-    const page = useHistoricalGroupPage();
-
-    const loading = page.selectOperationAccount(17);
-    await page.selectOperationAccount(null);
-    resolveBaseline(baselineRows);
-    await loading;
-
-    assert.equal(page.baselineLoading.value, false);
   });
 
-  it("clears the fixed account, rows and detail target when parent group changes", async () => {
+  it("changes pages with server-side pagination", async () => {
     resetElementPlusMock();
-    resetArmadaMockQueue([
-      { list: [], total: 0 },
-      { list: [{ id: 17, wsPhone: "8613800000017" }], total: 1 },
-      baselineRows,
-      { list: [], total: 0 }
-    ]);
-    const page = useHistoricalGroupPage();
+    resetArmadaMockQueue([pageResult(), pageResult([], 2)]);
+    const state = useHistoricalGroupPage();
+    await state.selectAccountGroup(8);
 
-    await page.loadAccountGroups();
-    await page.selectAccountGroup(8);
-    await page.selectOperationAccount(17);
-    page.openGroup(page.rows.value[0]);
-    await page.selectAccountGroup(9);
+    await state.changePage(2);
 
-    assert.equal(page.selectedAccountId.value, null);
-    assert.equal(page.rows.value.length, 0);
-    assert.equal(page.activeGroup.value, null);
+    assert.equal(state.page.value, 2);
+    assert.deepEqual(armadaCalls()[1].opts, {
+      params: { accountGroupId: 8, page: 2, pageSize: 20 }
+    });
   });
 
-  it("marks every baseline row FETCH_FAILED when explicit refresh fails", async () => {
+  it("keeps cached rows when refreshing WhatsApp fails", async () => {
     resetElementPlusMock();
-    resetArmadaMockQueue([
-      { list: [{ id: 17, wsPhone: "8613800000017" }], total: 1 },
-      baselineRows
-    ]);
+    resetArmadaMockQueue([pageResult()]);
     const page = useHistoricalGroupPage();
     await page.selectAccountGroup(8);
-    await page.selectOperationAccount(17);
     resetArmadaMockFailure(new Error("protocol groups unavailable"));
 
     await page.refreshHistoricalGroups();
 
-    assert.ok(
-      page.rows.value.every(row => row.membershipState === "FETCH_FAILED")
-    );
-    assert.ok(
-      page.rows.value.every(
-        row => row.membershipState !== "CURRENT_NOT_IN_GROUP"
-      )
-    );
-    assert.match(
-      page.rows.value[0].errorMessage ?? "",
-      /protocol groups unavailable/
-    );
+    assert.deepEqual(page.rows.value, baselineRows);
   });
 
-  it("ignores a stale refresh response after the operation account changes", async () => {
-    let resolveRefresh: (rows: typeof baselineRows) => void = () => undefined;
-    const pendingRefresh = new Promise<typeof baselineRows>(resolve => {
-      resolveRefresh = resolve;
+  it("ignores a stale page response after the selected group changes", async () => {
+    let resolveOld: (value: ReturnType<typeof pageResult>) => void = () =>
+      undefined;
+    const oldPage = new Promise<ReturnType<typeof pageResult>>(resolve => {
+      resolveOld = resolve;
     });
-    const secondAccountRows = [
-      {
-        ...baselineRows[0],
-        groupJid: "120363second@g.us",
-        subject: "第二账号 baseline"
-      }
-    ];
-    resetElementPlusMock();
-    resetArmadaMockQueue([baselineRows, pendingRefresh, secondAccountRows]);
+    const secondRows = [{ ...baselineRows[0], groupJid: "120363second@g.us" }];
+    resetArmadaMockQueue([oldPage, pageResult(secondRows)]);
     const page = useHistoricalGroupPage();
-    await page.selectOperationAccount(17);
 
-    const staleRefresh = page.refreshHistoricalGroups();
-    await page.selectOperationAccount(18);
-    resolveRefresh(baselineRows);
-    await staleRefresh;
+    const staleLoad = page.selectAccountGroup(8);
+    await page.selectAccountGroup(9);
+    resolveOld(pageResult());
+    await staleLoad;
 
-    assert.equal(page.selectedAccountId.value, 18);
-    assert.deepEqual(
-      page.rows.value.map(row => row.groupJid),
-      ["120363second@g.us"]
-    );
-  });
-
-  it("opens a list row without eagerly loading detail members", async () => {
-    resetArmadaMockQueue([baselineRows]);
-    const page = useHistoricalGroupPage();
-    await page.selectOperationAccount(17);
-    const before = armadaCalls().length;
-
-    page.openGroup(page.rows.value[0]);
-
-    assert.equal(page.activeGroup.value?.groupJid, "120363admin@g.us");
-    assert.equal(armadaCalls().length, before);
-
-    page.closeGroup();
-
-    assert.equal(page.activeGroup.value, null);
-    assert.equal(armadaCalls().length, before);
+    assert.equal(page.selectedAccountGroupId.value, 9);
+    assert.equal(page.rows.value[0].groupJid, "120363second@g.us");
   });
 });
 
 describe("historical group page template", () => {
-  it("renders account-group first selection and explicit loading", () => {
+  it("contains only the account-group selector and explicit refresh", () => {
     assert.match(selectorSource, /账号分组/);
-    assert.match(selectorSource, /操作账号/);
     assert.match(selectorSource, /加载群列表/);
-    assert.match(selectorSource, /:disabled="!selectedAccountId/);
+    assert.doesNotMatch(selectorSource, /操作账号/);
+    assert.match(selectorSource, /:disabled="!selectedAccountGroupId"/);
+    assert.doesNotMatch(selectorSource, /baselineLoading/);
     assert.match(pageSource, /HistoricalGroupAccountSelector/);
-    assert.match(pageSource, /HistoricalGroupTable/);
+    assert.match(pageSource, /el-pagination/);
   });
 
-  it("shows full JIDs, errors and all membership and speech labels", () => {
-    for (const label of [
-      "在群",
-      "已退出",
-      "未校验",
-      "获取失败",
-      "正常发言",
-      "管理员可发言",
-      "禁止发言",
-      "状态异常"
-    ]) {
-      assert.match(tableSource, new RegExp(label));
+  it("renders the approved column order and linked-account tooltip", () => {
+    const labels = [
+      "群名称",
+      "关联账号",
+      "群链接",
+      "国家",
+      "群组创建时间",
+      "当前关系",
+      "自身角色",
+      "发言状态",
+      "群人数",
+      "操作",
+      "完整群 JID"
+    ];
+    let cursor = -1;
+    for (const label of labels) {
+      const position = tableSource.indexOf(`label="${label}"`);
+      assert.ok(position > cursor, `${label} 应按约定顺序展示`);
+      cursor = position;
     }
+    assert.match(tableSource, /el-tooltip/);
+    assert.match(tableSource, /row\.accountPhones/);
+    assert.match(tableSource, /row\.inviteLink/);
+    assert.match(tableSource, /row\.countryName/);
+    assert.match(tableSource, /row\.groupCreatedAt/);
+    assert.match(tableSource, /row\.operable/);
     assert.match(tableSource, /row\.groupJid/);
-    assert.match(tableSource, /row\.errorMessage/);
-    assert.match(tableSource, /word-break:\s*break-all/);
-    assert.doesNotMatch(tableSource, /mask|ellipsis/);
+    assert.doesNotMatch(tableSource, /未校验/);
+    assert.doesNotMatch(tableSource, /(?:\|\||\?\?|:) "-"/);
+    assert.doesNotMatch(tableSource, />-</);
   });
 });

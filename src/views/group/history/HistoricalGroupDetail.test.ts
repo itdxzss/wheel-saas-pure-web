@@ -34,12 +34,20 @@ const composableSource = readFileSync(
 const group: HistoricalGroupItem = {
   groupJid: "120363detail@g.us",
   subject: "历史群详情",
+  accountPhones: ["8613800000017"],
+  inviteLink: "https://chat.whatsapp.com/CompleteInviteCode",
+  countryIso2: "CN",
+  countryName: "中国",
+  countryFlag: "🇨🇳",
+  groupCreatedAt: 1_722_470_400,
   membershipState: "CURRENT_IN_GROUP",
   roleCategory: "ADMIN",
   selfRole: "ADMIN",
   speechState: "NORMAL",
   memberSize: 5,
   announceOnly: false,
+  operable: true,
+  disabledReason: null,
   errorMessage: null
 };
 
@@ -113,15 +121,15 @@ const detail: HistoricalGroupDetail = {
   ]
 };
 
-function createDetailState(accountId: number | null = 17) {
+function createDetailState(accountGroupId: number | null = 8) {
   return useHistoricalGroupDetail({
-    operationAccountId: () => accountId,
+    accountGroupId: () => accountGroupId,
     group: () => group
   });
 }
 
 describe("historical group detail state", () => {
-  it("fetches full detail only after opening and uses the fixed operation account", async () => {
+  it("fetches full detail only after opening and lets the backend select an account", async () => {
     resetElementPlusMock();
     resetArmadaMockQueue([detail]);
     const state = createDetailState();
@@ -136,7 +144,7 @@ describe("historical group detail state", () => {
         method: "get",
         url: "/api/historical-groups/detail",
         opts: {
-          params: { accountId: 17, groupJid: "120363detail@g.us" }
+          params: { accountGroupId: 8, groupJid: "120363detail@g.us" }
         }
       }
     ]);
@@ -264,7 +272,7 @@ describe("historical group detail state", () => {
     );
     assert.deepEqual(armadaCalls()[1].opts, {
       data: {
-        accountId: 17,
+        accountGroupId: 8,
         groupJid: "120363detail@g.us",
         participantJids: [
           "8613000000003@s.whatsapp.net",

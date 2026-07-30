@@ -1,19 +1,20 @@
 import { armadaRequest } from "@/api/armada";
+import type { PageResponse } from "@/api/account";
 
-/** 操作账号相对 baseline 历史群的当前成员关系。 */
+/** 账号组相对历史群的当前成员关系。 */
 export type HistoricalGroupMembershipState =
   | "UNVERIFIED"
   | "FETCH_FAILED"
   | "CURRENT_IN_GROUP"
   | "CURRENT_NOT_IN_GROUP";
 
-/** 历史群列表使用的操作账号角色分类。 */
+/** 历史群列表使用的账号组聚合角色分类。 */
 export type HistoricalGroupRole = "ADMIN" | "MEMBER";
 
-/** 协议层确认的操作账号自身群角色。 */
+/** 协议层确认的账号组内最高自身群角色。 */
 export type HistoricalGroupSelfRole = "OWNER" | "ADMIN" | "MEMBER";
 
-/** 操作账号在目标群中的当前发言状态。 */
+/** 账号组在目标群中的当前发言状态。 */
 export type HistoricalGroupSpeechState =
   | "NORMAL"
   | "ADMIN_CAN_SPEAK"
@@ -58,12 +59,20 @@ export type HistoricalGroupSendStatus =
 export interface HistoricalGroupItem {
   groupJid: string;
   subject: string | null;
+  accountPhones: string[];
+  inviteLink: string | null;
+  countryIso2: string | null;
+  countryName: string | null;
+  countryFlag: string | null;
+  groupCreatedAt: number | null;
   membershipState: HistoricalGroupMembershipState;
   roleCategory: HistoricalGroupRole | null;
   selfRole: HistoricalGroupSelfRole | null;
   speechState: HistoricalGroupSpeechState | null;
   memberSize: number | null;
   announceOnly: boolean | null;
+  operable: boolean;
+  disabledReason: string | null;
   errorCode?: string | null;
   errorMessage: string | null;
 }
@@ -80,7 +89,7 @@ export interface HistoricalGroupMember {
   operationDisabledReason: string | null;
 }
 
-/** 固定操作账号读取的历史群详情。 */
+/** 后端自动选择当前在线群主或管理员读取的历史群详情。 */
 export interface HistoricalGroupDetail {
   accountId: number;
   groupJid: string;
@@ -102,13 +111,13 @@ export interface HistoricalGroupDetail {
 
 /** 历史群详情查询参数。 */
 export interface HistoricalGroupDetailQuery {
-  accountId: number;
+  accountGroupId: number;
   groupJid: string;
 }
 
-/** 批量成员操作请求，始终绑定固定操作账号和单个目标群。 */
+/** 批量成员操作请求；执行账号由后端在账号组内自动选择。 */
 export interface HistoricalGroupParticipantActionInput {
-  accountId: number;
+  accountGroupId: number;
   groupJid: string;
   participantJids: string[];
 }
@@ -132,7 +141,7 @@ export interface HistoricalGroupParticipantActionResult {
 /** multipart 创建单群拉人执行的固定输入；邀请链接由后端详情固化，不接受前端填写。 */
 export interface CreateHistoricalGroupPullExecutionInput {
   file: File;
-  operationAccountId: number;
+  sourceAccountGroupId: number;
   groupJid: string;
   pullerAccountGroupId: number;
   singleAddCount: number;
@@ -165,6 +174,7 @@ export interface HistoricalGroupPullMember {
 export interface HistoricalGroupPullExecution {
   id: number;
   operationAccountId?: number;
+  sourceAccountGroupId?: number;
   groupJid?: string;
   groupSubject?: string | null;
   inviteUrl?: string | null;
@@ -196,32 +206,39 @@ export interface HistoricalGroupPullExecution {
 
 /** 最近执行查询参数。 */
 export interface LatestHistoricalGroupPullExecutionQuery {
-  accountId: number;
+  sourceAccountGroupId: number;
   groupJid: string;
 }
 
-/** 查询固定操作账号 baseline 中的全部历史群。 */
-export function listHistoricalGroups(
-  accountId: number
-): Promise<HistoricalGroupItem[]> {
-  return armadaRequest<HistoricalGroupItem[]>("get", "/api/historical-groups", {
-    params: { accountId }
-  });
+/** 历史群账号分组分页查询参数。 */
+export interface HistoricalGroupListQuery {
+  accountGroupId: number;
+  page: number;
+  pageSize: number;
 }
 
-/** 刷新固定操作账号的当前群摘要。 */
-export function refreshHistoricalGroups(
-  accountId: number
-): Promise<HistoricalGroupItem[]> {
-  return armadaRequest<HistoricalGroupItem[]>(
+/** 查询账号分组 baseline 中的全部历史群。 */
+export function listHistoricalGroups(
+  query: HistoricalGroupListQuery
+): Promise<PageResponse<HistoricalGroupItem>> {
+  return armadaRequest<PageResponse<HistoricalGroupItem>>(
+    "get",
+    "/api/historical-groups",
+    { params: query }
+  );
+}
+
+/** 刷新账号分组内在线正常账号的当前群摘要。 */
+export function refreshHistoricalGroups(accountGroupId: number): Promise<void> {
+  return armadaRequest<void>(
     "post",
     "/api/historical-groups/refresh",
-    { data: { accountId } },
+    { data: { accountGroupId } },
     { timeout: 60_000 }
   );
 }
 
-/** 加载固定操作账号下单个历史群的完整成员与邀请链接。 */
+/** 加载账号组历史范围内单个群的完整成员与邀请链接。 */
 export function getHistoricalGroupDetail(
   query: HistoricalGroupDetailQuery
 ): Promise<HistoricalGroupDetail> {
@@ -269,7 +286,7 @@ function toHistoricalGroupPullForm(
 ): FormData {
   const form = new FormData();
   form.append("file", data.file);
-  form.append("operationAccountId", String(data.operationAccountId));
+  form.append("sourceAccountGroupId", String(data.sourceAccountGroupId));
   form.append("groupJid", data.groupJid);
   form.append("pullerAccountGroupId", String(data.pullerAccountGroupId));
   form.append("singleAddCount", String(data.singleAddCount));
@@ -314,7 +331,7 @@ export function getHistoricalGroupPullExecution(
   );
 }
 
-/** 查询固定操作账号与目标群最近一次执行。 */
+/** 查询来源账号分组与目标群最近一次执行。 */
 export function getLatestHistoricalGroupPullExecution(
   query: LatestHistoricalGroupPullExecutionQuery
 ): Promise<HistoricalGroupPullExecution | null> {

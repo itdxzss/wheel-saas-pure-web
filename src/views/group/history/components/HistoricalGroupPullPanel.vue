@@ -12,10 +12,12 @@ defineOptions({
 const props = defineProps<{
   active: boolean;
   detail: HistoricalGroupDetail;
+  sourceAccountGroupId: number | null;
 }>();
 
 const state = useHistoricalGroupExecution({
-  detail: () => props.detail
+  detail: () => props.detail,
+  sourceAccountGroupId: () => props.sourceAccountGroupId
 });
 
 function updateMaterialFile(uploadFile: UploadFile): void {
@@ -30,6 +32,7 @@ watch(
   [
     () => props.active,
     () => props.detail.accountId,
+    () => props.sourceAccountGroupId,
     () => props.detail.groupJid,
     () => props.detail.linkAvailable,
     () => props.detail.inviteUrl

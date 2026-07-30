@@ -13,7 +13,7 @@ import { apiErrorMessage } from "@/utils/api-error";
 export type HistoricalGroupParticipantAction = "promote";
 
 export interface HistoricalGroupDetailOptions {
-  operationAccountId: () => number | null;
+  accountGroupId: () => number | null;
   group: () => HistoricalGroupItem | null;
 }
 
@@ -62,7 +62,7 @@ function memberEligibleForPromotion(member: HistoricalGroupMember): boolean {
   return !member.admin;
 }
 
-/** 管理固定操作账号下单个历史群的按需详情及成员操作。 */
+/** 管理账号分组下单个历史群的按需详情及成员操作。 */
 export function useHistoricalGroupDetail(
   options: HistoricalGroupDetailOptions
 ): HistoricalGroupDetailState {
@@ -94,7 +94,7 @@ export function useHistoricalGroupDetail(
     if (detail.value?.operationAllowed === true) return "";
     return (
       detail.value?.operationDisabledReason ||
-      "当前操作账号不是群管理员，成员管理已禁用"
+      "当前没有可用群主或管理员，成员管理已禁用"
     );
   });
   function resetActionState(): void {
@@ -105,7 +105,7 @@ export function useHistoricalGroupDetail(
   }
 
   async function loadDetail(
-    accountId: number,
+    accountGroupId: number,
     groupJid: string,
     preserveActionResult: boolean,
     sessionId: number
@@ -115,7 +115,10 @@ export function useHistoricalGroupDetail(
     detailError.value = "";
     if (!preserveActionResult) resetActionState();
     try {
-      const result = await getHistoricalGroupDetail({ accountId, groupJid });
+      const result = await getHistoricalGroupDetail({
+        accountGroupId,
+        groupJid
+      });
       if (requestId !== detailRequestId || sessionId !== detailSessionId)
         return;
       detail.value = result;
@@ -139,14 +142,14 @@ export function useHistoricalGroupDetail(
     detailRequestId += 1;
     actionLoading.value = false;
     detailLoading.value = false;
-    const accountId = options.operationAccountId();
+    const accountGroupId = options.accountGroupId();
     const activeGroup = options.group();
-    if (accountId == null || !activeGroup) {
+    if (accountGroupId == null || !activeGroup) {
       detail.value = null;
-      detailError.value = "缺少固定操作账号或目标群，详情操作已禁用";
+      detailError.value = "缺少账号分组或目标群，详情操作已禁用";
       return;
     }
-    await loadDetail(accountId, activeGroup.groupJid, false, sessionId);
+    await loadDetail(accountGroupId, activeGroup.groupJid, false, sessionId);
   }
 
   function close(): void {
@@ -205,11 +208,11 @@ export function useHistoricalGroupDetail(
     action: HistoricalGroupParticipantAction
   ): Promise<void> {
     if (actionLoading.value) return;
-    const accountId = options.operationAccountId();
+    const accountGroupId = options.accountGroupId();
     const activeGroup = options.group();
     const participantJids = eligibleParticipantJids(action);
     const sessionId = detailSessionId;
-    if (accountId == null || !activeGroup || participantJids.length === 0)
+    if (accountGroupId == null || !activeGroup || participantJids.length === 0)
       return;
     if (!(await confirmAction(action, participantJids.length))) return;
     if (sessionId !== detailSessionId) return;
@@ -217,7 +220,7 @@ export function useHistoricalGroupDetail(
     actionLoading.value = true;
     actionError.value = "";
     const input = {
-      accountId,
+      accountGroupId,
       groupJid: activeGroup.groupJid,
       participantJids
     };
@@ -238,7 +241,7 @@ export function useHistoricalGroupDetail(
     } finally {
       // mutation 永不重试；仅重读一次详情以反映服务端最终状态。
       if (sessionId === detailSessionId) {
-        await loadDetail(accountId, activeGroup.groupJid, true, sessionId);
+        await loadDetail(accountGroupId, activeGroup.groupJid, true, sessionId);
       }
       if (sessionId === detailSessionId) actionLoading.value = false;
     }

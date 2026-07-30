@@ -21,28 +21,34 @@ onMounted(() => {
     <HistoricalGroupAccountSelector
       :account-groups="page.accountGroups.value"
       :account-groups-loading="page.accountGroupsLoading.value"
-      :accounts="page.accounts.value"
-      :accounts-loading="page.accountsLoading.value"
-      :baseline-loading="page.baselineLoading.value"
       :refreshing="page.refreshing.value"
       :selected-account-group-id="page.selectedAccountGroupId.value"
-      :selected-account-id="page.selectedAccountId.value"
       @account-group-change="page.selectAccountGroup"
-      @account-change="page.selectOperationAccount"
       @load="page.refreshHistoricalGroups"
     />
 
     <HistoricalGroupTable
       :loading="page.baselineLoading.value || page.refreshing.value"
-      :sections="page.sections.value"
-      :selected-account-id="page.selectedAccountId.value"
+      :account-group-selected="page.selectedAccountGroupId.value != null"
+      :rows="page.rows.value"
       @open-detail="page.openGroup"
+    />
+
+    <el-pagination
+      v-if="page.selectedAccountGroupId.value != null && page.total.value > 0"
+      class="historical-group-pagination"
+      background
+      layout="total, prev, pager, next"
+      :current-page="page.page.value"
+      :page-size="page.pageSize.value"
+      :total="page.total.value"
+      @current-change="page.changePage"
     />
 
     <HistoricalGroupDetailDrawer
       :model-value="Boolean(page.activeGroup.value)"
       :group="page.activeGroup.value"
-      :operation-account-id="page.selectedAccountId.value"
+      :account-group-id="page.selectedAccountGroupId.value"
       @update:model-value="visible => !visible && page.closeGroup()"
     />
   </div>
@@ -51,5 +57,10 @@ onMounted(() => {
 <style scoped>
 .historical-group-page {
   padding: 16px;
+}
+
+.historical-group-pagination {
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

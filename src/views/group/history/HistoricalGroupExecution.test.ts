@@ -55,6 +55,7 @@ function execution(
   return {
     id,
     operationAccountId: 17,
+    sourceAccountGroupId: 8,
     groupJid: detail.groupJid,
     groupSubject: detail.subject,
     pullerAccountGroupId: 8,
@@ -174,7 +175,10 @@ function fakeScheduler(): HistoricalGroupExecutionScheduler & {
 describe("historical group pull execution state", () => {
   it("opens pulling for an administrator when the usable link exists", async () => {
     resetArmadaMockQueue(optionResponses(null));
-    const state = useHistoricalGroupExecution({ detail: () => detail });
+    const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
+      detail: () => detail
+    });
 
     await state.open();
 
@@ -192,6 +196,7 @@ describe("historical group pull execution state", () => {
 
     resetArmadaMockQueue([]);
     const blocked = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
       detail: () => ({
         ...detail,
         inviteUrl: null,
@@ -211,6 +216,7 @@ describe("historical group pull execution state", () => {
   it("blocks an ordinary member even when an unexpected usable link exists", async () => {
     resetArmadaMockQueue([]);
     const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
       detail: () => ({
         ...detail,
         roleCategory: "MEMBER",
@@ -232,7 +238,10 @@ describe("historical group pull execution state", () => {
 
   it("validates the puller group, supported file and positive integer count", async () => {
     resetArmadaMockQueue(optionResponses(null));
-    const state = useHistoricalGroupExecution({ detail: () => detail });
+    const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
+      detail: () => detail
+    });
     await state.open();
 
     assert.match(state.validatePull(), /拉手账号分组/);
@@ -261,6 +270,7 @@ describe("historical group pull execution state", () => {
     let generatedKeys = 0;
     resetArmadaMockQueue(optionResponses(null));
     const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
       detail: () => detail,
       scheduler,
       createIdempotencyKey: () => {
@@ -285,7 +295,8 @@ describe("historical group pull execution state", () => {
       ]
     );
     const createData = (armadaCalls()[0].opts as { data: FormData }).data;
-    assert.equal(createData.get("operationAccountId"), "17");
+    assert.equal(createData.get("sourceAccountGroupId"), "8");
+    assert.equal(createData.has("operationAccountId"), false);
     assert.equal(createData.get("groupJid"), detail.groupJid);
     assert.equal(createData.get("pullerAccountGroupId"), "8");
     assert.equal(createData.get("singleAddCount"), "25");
@@ -302,6 +313,7 @@ describe("historical group pull execution state", () => {
       execution(91, "PARTIAL_SUCCESS")
     ]);
     const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
       detail: () => detail,
       scheduler
     });
@@ -323,6 +335,7 @@ describe("historical group pull execution state", () => {
     const scheduler = fakeScheduler();
     resetArmadaMockQueue(optionResponses(execution(91, "RUNNING")));
     const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
       detail: () => detail,
       scheduler
     });
@@ -349,6 +362,7 @@ describe("historical group pull execution state", () => {
       ...optionResponses(execution(92, "SUCCESS"))
     ]);
     const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
       detail: () => detail,
       scheduler
     });
@@ -374,6 +388,7 @@ describe("historical group pull execution state", () => {
     const scheduler = fakeScheduler();
     resetArmadaMockQueue(optionResponses(execution(91, "SUCCESS")));
     const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
       detail: () => detail,
       scheduler
     });
@@ -396,7 +411,10 @@ describe("historical group pull execution state", () => {
 
   it("shows the complete start error without retrying create or start", async () => {
     resetArmadaMockQueue(optionResponses(null));
-    const state = useHistoricalGroupExecution({ detail: () => detail });
+    const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
+      detail: () => detail
+    });
     await state.open();
     state.pullerAccountGroupId.value = 8;
     state.materialFile.value = new File(["86138"], "members.xlsx");
@@ -424,7 +442,10 @@ describe("historical group pull execution state", () => {
 
   it("shows a complete send error and never retries marketing", async () => {
     resetArmadaMockQueue(optionResponses(execution(91, "SUCCESS")));
-    const state = useHistoricalGroupExecution({ detail: () => detail });
+    const state = useHistoricalGroupExecution({
+      sourceAccountGroupId: () => 8,
+      detail: () => detail
+    });
     await state.open();
     state.marketingTemplateId.value = 33;
     resetArmadaMockFailure(
