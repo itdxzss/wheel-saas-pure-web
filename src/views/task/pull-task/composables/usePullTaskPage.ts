@@ -9,14 +9,11 @@ import {
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   batchDeletePullTasks,
-  createPullTask,
   exportPullTaskGroupLinks,
   exportPullTaskReport,
   exportPullTaskResources,
   getPullTaskDetail,
-  listPullTaskGroupLinks,
   listPullTaskGroups,
-  listPullTaskLinkGroups,
   listPullTasks,
   pausePullTask,
   runPullTaskGroupOperation,
@@ -24,12 +21,9 @@ import {
   startPullTask,
   stopPullTask,
   supplementPullTaskRows,
-  type CreatePullTaskRequest,
   type PullTaskDetail,
   type PullTaskGroupRow,
   type PullTaskGroupStatus,
-  type PullTaskLinkGroup,
-  type PullTaskLinkOption,
   type PullTaskMode,
   type PullTaskRow,
   type PullTaskStatus,
@@ -51,59 +45,6 @@ export interface PullTaskSearchForm {
   operator: string;
 }
 
-export interface PullTaskCreateForm {
-  taskName: string;
-  subMode: "OLD_LINK" | "CREATE_NEW";
-  useAdmin: boolean;
-  wsLinkGroupId: number | "";
-  groupLinkIds: number[];
-  pastedLinks: string;
-  templateId: number;
-  adminGroupId: number | "";
-  pullerGroupId: number | "";
-  stationOneGroupId: number | "";
-  stationTwoGroupId: number | "";
-  stationThreeGroupId: number | "";
-  adminPerGroup: number;
-  pullerPerGroup: number;
-  stationOnePerGroup: number;
-  stationTwoPerGroup: number;
-  stationThreePerGroup: number;
-  autoSupplementAdminCount: number;
-  autoSupplementAdminTimes: number;
-  autoSupplementPullerCount: number;
-  autoSupplementPullerTimes: number;
-  pullerFinishGroupId: number | "";
-  adminFinishGroupId: number | "";
-  autoStart: boolean;
-  pullerEnterFirst: boolean;
-  auditMode: string;
-  noReleaseAfterPull: boolean;
-  pullerSyncMode: string;
-  waitBeforePullSeconds: number;
-  concurrentTaskCount: number;
-  firstPullCount: number;
-  pullCountMin: number;
-  pullCountMax: number;
-  pullIntervalSeconds: number;
-  pullerMaxTotal: number;
-  pullerThreadCount: number;
-  stationJoinMode: string;
-  pullerJoinMode: string;
-  pullerQuitMode: string;
-  adminQuitMode: string;
-  stationQuitAfterDone: boolean;
-  groupName: string;
-  mute: boolean;
-  linkPermission: string;
-  editPermission: string;
-  autoCloseInvite: boolean;
-  materialText: string;
-  waterText: string;
-  waterMode: string;
-  remark: string;
-}
-
 export interface PullTaskDetailSearchForm {
   status: "" | PullTaskGroupStatus;
   keyword: string;
@@ -119,9 +60,6 @@ export interface PullTaskPageState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   activeTask: Ref<PullTaskRow | null>;
   advancedOpen: Ref<boolean>;
-  createDrawerOpen: Ref<boolean>;
-  createForm: PullTaskCreateForm;
-  createTask: () => Promise<void>;
   deleteSelected: () => Promise<void>;
   detailDrawerOpen: Ref<boolean>;
   detailGroupRows: Ref<PullTaskGroupRow[]>;
@@ -136,20 +74,13 @@ export interface PullTaskPageState {
   exportGroupLinks: () => Promise<void>;
   exportReport: () => Promise<void>;
   exportResources: (kind: string) => Promise<void>;
-  groupLinkOptions: Ref<PullTaskLinkOption[]>;
-  groupLinksLoading: Ref<boolean>;
-  linkGroups: Ref<PullTaskLinkGroup[]>;
-  loadGroupLinks: () => Promise<void>;
   loading: Ref<boolean>;
   onDetailSelectionChange: (rows: PullTaskGroupRow[]) => void;
   onSelectionChange: (rows: PullTaskRow[]) => void;
-  openCreateDrawer: () => Promise<void>;
   openDetailDrawer: (row: PullTaskRow) => Promise<void>;
   openSupplementDrawer: () => void;
   page: Ref<number>;
   pageSize: Ref<number>;
-  readMaterialFile: (file?: File) => Promise<void>;
-  readWaterFile: (file?: File) => Promise<void>;
   refreshDetailGroups: () => Promise<void>;
   refreshTasks: () => Promise<void>;
   resetDetailSearch: () => void;
@@ -169,72 +100,6 @@ export interface PullTaskPageState {
   supplementPullers: () => Promise<void>;
   toggleAdvanced: () => void;
   total: Ref<number>;
-}
-
-function emptyCreateForm(): PullTaskCreateForm {
-  return {
-    taskName: "",
-    subMode: "OLD_LINK",
-    useAdmin: true,
-    wsLinkGroupId: "",
-    groupLinkIds: [],
-    pastedLinks: "",
-    templateId: 0,
-    adminGroupId: "",
-    pullerGroupId: "",
-    stationOneGroupId: "",
-    stationTwoGroupId: "",
-    stationThreeGroupId: "",
-    adminPerGroup: 1,
-    pullerPerGroup: 1,
-    stationOnePerGroup: 0,
-    stationTwoPerGroup: 0,
-    stationThreePerGroup: 0,
-    autoSupplementAdminCount: 0,
-    autoSupplementAdminTimes: 0,
-    autoSupplementPullerCount: 0,
-    autoSupplementPullerTimes: 0,
-    pullerFinishGroupId: "",
-    adminFinishGroupId: "",
-    autoStart: false,
-    pullerEnterFirst: true,
-    auditMode: "关闭审核模式进群",
-    noReleaseAfterPull: false,
-    pullerSyncMode: "单个同步",
-    waitBeforePullSeconds: 3,
-    concurrentTaskCount: 1,
-    firstPullCount: 1,
-    pullCountMin: 3,
-    pullCountMax: 5,
-    pullIntervalSeconds: 6,
-    pullerMaxTotal: 50,
-    pullerThreadCount: 1,
-    stationJoinMode: "快速踩群链接",
-    pullerJoinMode: "快速踩群链接",
-    pullerQuitMode: "不退拉手",
-    adminQuitMode: "不退管理员",
-    stationQuitAfterDone: false,
-    groupName: "",
-    mute: false,
-    linkPermission: "所有成员可邀请",
-    editPermission: "仅管理员可编辑",
-    autoCloseInvite: false,
-    materialText: "",
-    waterText: "",
-    waterMode: "一号多群",
-    remark: ""
-  };
-}
-
-function idOrNull(value: number | ""): number | null {
-  return typeof value === "number" && value > 0 ? value : null;
-}
-
-function linesOf(text: string): string[] {
-  return text
-    .split(/\r?\n/)
-    .map(item => item.trim())
-    .filter(Boolean);
 }
 
 function buildSummary(
@@ -272,7 +137,6 @@ export function usePullTaskPage(): PullTaskPageState {
     banState: "",
     operator: ""
   });
-  const createForm = reactive<PullTaskCreateForm>(emptyCreateForm());
   const detailSearchForm = reactive<PullTaskDetailSearchForm>({
     status: "",
     keyword: ""
@@ -286,17 +150,13 @@ export function usePullTaskPage(): PullTaskPageState {
   const rows = ref<PullTaskRow[]>([]);
   const selectedRows = ref<PullTaskRow[]>([]);
   const accountGroups = ref<AccountGroupApiRow[]>([]);
-  const linkGroups = ref<PullTaskLinkGroup[]>([]);
-  const groupLinkOptions = ref<PullTaskLinkOption[]>([]);
   const activeTask = ref<PullTaskRow | null>(null);
   const detailTask = ref<PullTaskDetail | null>(null);
   const detailGroupRows = ref<PullTaskGroupRow[]>([]);
   const selectedDetailRows = ref<PullTaskGroupRow[]>([]);
   const loading = ref(false);
   const detailLoading = ref(false);
-  const groupLinksLoading = ref(false);
   const advancedOpen = ref(false);
-  const createDrawerOpen = ref(false);
   const detailDrawerOpen = ref(false);
   const supplementDrawerOpen = ref(false);
   const page = ref(1);
@@ -345,42 +205,13 @@ export function usePullTaskPage(): PullTaskPageState {
     }
   }
 
-  async function loadOptions(): Promise<void> {
-    const [groupResult, linkGroupResult] = await Promise.allSettled([
-      listAccountGroups({ page: 1, pageSize: 500 }),
-      listPullTaskLinkGroups()
-    ]);
-    if (groupResult.status === "fulfilled") {
-      accountGroups.value = groupResult.value.list ?? [];
-    } else {
-      ElMessage.error(apiErrorMessage(groupResult.reason, "账号分组加载失败"));
-    }
-    if (linkGroupResult.status === "fulfilled") {
-      linkGroups.value = linkGroupResult.value ?? [];
-    } else {
-      linkGroups.value = [];
-      ElMessage.error(
-        apiErrorMessage(linkGroupResult.reason, "WS链接分组加载失败")
-      );
-    }
-  }
-
-  async function loadGroupLinks(): Promise<void> {
-    createForm.groupLinkIds = [];
-    groupLinkOptions.value = [];
-    if (!createForm.wsLinkGroupId) return;
-    groupLinksLoading.value = true;
+  async function loadAccountGroupOptions(): Promise<void> {
     try {
-      const result = await listPullTaskGroupLinks({
-        page: 1,
-        pageSize: 500,
-        labelId: createForm.wsLinkGroupId
-      });
-      groupLinkOptions.value = result.list ?? [];
+      const result = await listAccountGroups({ page: 1, pageSize: 500 });
+      accountGroups.value = result.list ?? [];
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "群链接加载失败"));
-    } finally {
-      groupLinksLoading.value = false;
+      accountGroups.value = [];
+      ElMessage.error(apiErrorMessage(error, "账号分组加载失败"));
     }
   }
 
@@ -402,120 +233,6 @@ export function usePullTaskPage(): PullTaskPageState {
 
   function toggleAdvanced(): void {
     advancedOpen.value = !advancedOpen.value;
-  }
-
-  async function openCreateDrawer(): Promise<void> {
-    Object.assign(createForm, emptyCreateForm());
-    groupLinkOptions.value = [];
-    await loadOptions();
-    createDrawerOpen.value = true;
-  }
-
-  function toCreatePayload(): CreatePullTaskRequest {
-    return {
-      taskName: createForm.taskName.trim(),
-      subMode: createForm.subMode,
-      useAdmin: createForm.useAdmin,
-      wsLinkGroupId: idOrNull(createForm.wsLinkGroupId),
-      groupLinkIds: createForm.groupLinkIds,
-      pastedLinks: linesOf(createForm.pastedLinks),
-      templateId: idOrNull(createForm.templateId),
-      adminGroupId: idOrNull(createForm.adminGroupId),
-      pullerGroupId: idOrNull(createForm.pullerGroupId),
-      stationOneGroupId: idOrNull(createForm.stationOneGroupId),
-      stationTwoGroupId: idOrNull(createForm.stationTwoGroupId),
-      stationThreeGroupId: idOrNull(createForm.stationThreeGroupId),
-      adminPerGroup: createForm.adminPerGroup,
-      pullerPerGroup: createForm.pullerPerGroup,
-      stationOnePerGroup: createForm.stationOnePerGroup,
-      stationTwoPerGroup: createForm.stationTwoPerGroup,
-      stationThreePerGroup: createForm.stationThreePerGroup,
-      autoSupplementAdminCount: createForm.autoSupplementAdminCount,
-      autoSupplementAdminTimes: createForm.autoSupplementAdminTimes,
-      autoSupplementPullerCount: createForm.autoSupplementPullerCount,
-      autoSupplementPullerTimes: createForm.autoSupplementPullerTimes,
-      pullerFinishGroupId: idOrNull(createForm.pullerFinishGroupId),
-      adminFinishGroupId: idOrNull(createForm.adminFinishGroupId),
-      autoStart: createForm.autoStart,
-      pullerEnterFirst: createForm.pullerEnterFirst,
-      auditMode: createForm.auditMode,
-      noReleaseAfterPull: createForm.noReleaseAfterPull,
-      pullerSyncMode: createForm.pullerSyncMode,
-      waitBeforePullSeconds: createForm.waitBeforePullSeconds,
-      concurrentTaskCount: createForm.concurrentTaskCount,
-      firstPullCount: createForm.firstPullCount,
-      pullCountMin: createForm.pullCountMin,
-      pullCountMax: createForm.pullCountMax,
-      pullIntervalSeconds: createForm.pullIntervalSeconds,
-      pullerMaxTotal: createForm.pullerMaxTotal,
-      pullerThreadCount: createForm.pullerThreadCount,
-      stationJoinMode: createForm.stationJoinMode,
-      pullerJoinMode: createForm.pullerJoinMode,
-      pullerQuitMode: createForm.pullerQuitMode,
-      adminQuitMode: createForm.adminQuitMode,
-      stationQuitAfterDone: createForm.stationQuitAfterDone,
-      materialText: createForm.materialText.trim(),
-      waterText: createForm.waterText.trim() || null,
-      waterMode: createForm.waterMode,
-      groupProfile: {
-        groupName: createForm.groupName.trim() || null,
-        mute: createForm.mute,
-        linkPermission: createForm.linkPermission,
-        editPermission: createForm.editPermission,
-        autoCloseInvite: createForm.autoCloseInvite
-      },
-      remark: createForm.remark.trim() || null
-    };
-  }
-
-  async function createTask(): Promise<void> {
-    if (!createForm.taskName.trim()) {
-      ElMessage.warning("请填写任务名称");
-      return;
-    }
-    if (
-      createForm.subMode === "OLD_LINK" &&
-      createForm.groupLinkIds.length === 0 &&
-      linesOf(createForm.pastedLinks).length === 0
-    ) {
-      ElMessage.warning("老群链接任务请选择或粘贴群链接");
-      return;
-    }
-    if (!createForm.pullerGroupId) {
-      ElMessage.warning("请选择拉手分组");
-      return;
-    }
-    if (!createForm.materialText.trim()) {
-      ElMessage.warning("请粘贴或上传料子数据");
-      return;
-    }
-    try {
-      await createPullTask(toCreatePayload());
-      ElMessage.success("拉群任务已创建");
-      createDrawerOpen.value = false;
-      await refreshTasks();
-    } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "拉群任务创建失败"));
-    }
-  }
-
-  async function readFileText(file?: File): Promise<string> {
-    if (!file) return "";
-    return file.text();
-  }
-
-  async function readMaterialFile(file?: File): Promise<void> {
-    const text = await readFileText(file);
-    if (!text) return;
-    createForm.materialText = text;
-    ElMessage.success("料子文件已读取");
-  }
-
-  async function readWaterFile(file?: File): Promise<void> {
-    const text = await readFileText(file);
-    if (!text) return;
-    createForm.waterText = text;
-    ElMessage.success("水军文件已读取");
   }
 
   async function refreshDetailGroups(): Promise<void> {
@@ -741,15 +458,13 @@ export function usePullTaskPage(): PullTaskPageState {
 
   onMounted(() => {
     void refreshTasks();
+    void loadAccountGroupOptions();
   });
 
   return {
     accountGroups,
     activeTask,
     advancedOpen,
-    createDrawerOpen,
-    createForm,
-    createTask,
     deleteSelected,
     detailDrawerOpen,
     detailGroupRows,
@@ -764,20 +479,13 @@ export function usePullTaskPage(): PullTaskPageState {
     exportGroupLinks,
     exportReport,
     exportResources,
-    groupLinkOptions,
-    groupLinksLoading,
-    linkGroups,
-    loadGroupLinks,
     loading,
     onDetailSelectionChange,
     onSelectionChange,
-    openCreateDrawer,
     openDetailDrawer,
     openSupplementDrawer,
     page,
     pageSize,
-    readMaterialFile,
-    readWaterFile,
     refreshDetailGroups,
     refreshTasks,
     resetDetailSearch,
