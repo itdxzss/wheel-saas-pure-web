@@ -11,6 +11,25 @@ export type PullTaskStatus =
 
 export type PullTaskMode = "OLD_LINK" | "CREATE_NEW" | string;
 
+export type PullTaskType = "GROUP_MARKETING";
+
+export type PullTaskGroupSource =
+  | "HISTORICAL"
+  | "SELF_COLLECTED"
+  | "MIXED";
+
+export type PullTaskResourceShortageType =
+  | "TARGET_DATA"
+  | "PULLER"
+  | "WATER_ARMY"
+  | "ADMIN"
+  | "MARKETING_ADMIN";
+
+export interface PullTaskResourceShortage {
+  type: PullTaskResourceShortageType;
+  shortageCount?: number | null;
+}
+
 export type PullTaskGroupStatus =
   | "WAIT_START"
   | "INITIALIZING"
@@ -44,6 +63,26 @@ export interface PullTaskRow {
   createdAt?: number | null;
   updatedAt?: number | null;
   remark?: string | null;
+  taskType?: PullTaskType | null;
+  groupSource?: PullTaskGroupSource | null;
+  primaryStage?: string | null;
+  processedGroupCount?: number | null;
+  targetGroupCount?: number | null;
+  joinedSuccessCount?: number | null;
+  plannedTargetCount?: number | null;
+  effectiveSuccessRate?: number | null;
+  marketingRunningGroupCount?: number | null;
+  marketingCompletedGroupCount?: number | null;
+  messageSuccessCount?: number | null;
+  messageFailedCount?: number | null;
+  messageUnknownCount?: number | null;
+  abnormalGroupCount?: number | null;
+  replacementPendingGroupCount?: number | null;
+  bannedAccountCount?: number | null;
+  remainingTargetCount?: number | null;
+  availablePullerCount?: number | null;
+  resourceShortages?: PullTaskResourceShortage[] | null;
+  lastExecutedAt?: number | null;
 }
 
 export interface PullTaskGroupRow {

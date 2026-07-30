@@ -1,18 +1,25 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import PullTaskCreateDrawer from "./components/PullTaskCreateDrawer.vue";
 import PullTaskDetailDrawer from "./components/PullTaskDetailDrawer.vue";
 import {
   formatEpoch,
   pullTaskColumns,
-  pullTaskModeLabel,
   pullTaskStatusLabel,
   pullTaskStatusOptions,
   pullTaskStatusTagType
 } from "./constants";
 import { usePullTaskPage } from "./composables/usePullTaskPage";
+import {
+  displayMetric,
+  displayRate,
+  groupSourceLabel,
+  progressPercentage,
+  resourceShortageLabel,
+  taskTypeLabel
+} from "./task-list-display";
 import type { PullTaskRow } from "@/api/pull-task";
 import Delete from "~icons/ep/delete";
 import Plus from "~icons/ep/plus";
@@ -23,13 +30,12 @@ defineOptions({
   name: "TaskPull"
 });
 
+const router = useRouter();
+
 const {
   accountGroups,
   activeTask,
   advancedOpen,
-  createDrawerOpen,
-  createForm,
-  createTask,
   deleteSelected,
   detailDrawerOpen,
   detailGroupRows,
@@ -43,20 +49,13 @@ const {
   exportGroupLinks,
   exportReport,
   exportResources,
-  groupLinkOptions,
-  groupLinksLoading,
-  linkGroups,
-  loadGroupLinks,
   loading,
   onDetailSelectionChange,
   onSelectionChange,
-  openCreateDrawer,
   openDetailDrawer,
   openSupplementDrawer,
   page,
   pageSize,
-  readMaterialFile,
-  readWaterFile,
   refreshDetailGroups,
   refreshTasks,
   resetDetailSearch,
@@ -75,15 +74,24 @@ const {
   total
 } = usePullTaskPage();
 
-function progressPercent(row: unknown): number {
-  const task = row as PullTaskRow;
-  if (!task.expectedPullCount) return 0;
-  return Math.min(
-    100,
-    Math.floor(
-      ((task.joinedCount + task.failedCount) / task.expectedPullCount) * 100
-    )
+function openCreatePage(): void {
+  void router.push("/task/pull-task/create");
+}
+
+function groupProgress(row: PullTaskRow): number | null {
+  return progressPercentage(row.processedGroupCount, row.targetGroupCount);
+}
+
+function hasNoExceptions(row: PullTaskRow): boolean {
+  return (
+    row.abnormalGroupCount === 0 &&
+    row.replacementPendingGroupCount === 0 &&
+    row.bannedAccountCount === 0
   );
+}
+
+function timestampLabel(value?: number | null): string {
+  return value == null ? "--" : formatEpoch(value);
 }
 
 function asPullTaskRow(row: unknown): PullTaskRow {
@@ -192,7 +200,7 @@ function asPullTaskRow(row: unknown): PullTaskRow {
           v-auth="'tenant:pull_task:create'"
           type="primary"
           :icon="useRenderIcon(Plus)"
-          @click="openCreateDrawer"
+          @click="openCreatePage"
         >
           新增拉群任务
         </el-button>
@@ -220,114 +228,196 @@ function asPullTaskRow(row: unknown): PullTaskRow {
           <el-table-column type="selection" width="48" />
           <el-table-column
             v-if="!dynamicColumns[0].hide"
-            prop="id"
-            label="ID"
-            width="90"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[1].hide"
-            label="任务名称"
-            min-width="220"
-            show-overflow-tooltip
+            label="任务信息"
+            fixed="left"
+            min-width="260"
           >
             <template #default="{ row }">
-              <div class="name-cell">
-                <strong>{{ row.taskName }}</strong>
-                <small>{{ row.groupName || "老群链接拉群" }}</small>
+              <div class="primary-cell">
+                <strong>{{ row.taskName || "--" }}</strong>
+                <span class="secondary-line">#{{ row.id }}</span>
+                <div class="tag-row">
+                  <el-tag size="small" effect="plain" type="success">
+                    {{ taskTypeLabel(row.taskType) }}
+                  </el-tag>
+                  <el-tag size="small" effect="plain" type="info">
+                    {{ groupSourceLabel(row.groupSource) }}
+                  </el-tag>
+                </div>
+                <span class="secondary-line">
+                  创建人：{{ row.operator || "--" }}
+                </span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[1].hide"
+            label="任务状态"
+            min-width="180"
+          >
+            <template #default="{ row }">
+              <div class="primary-cell">
+                <el-tag
+                  size="small"
+                  :type="pullTaskStatusTagType(row.status)"
+                  effect="plain"
+                >
+                  {{ pullTaskStatusLabel(row.status) }}
+                </el-tag>
+                <span class="secondary-line">
+                  {{ row.primaryStage?.trim() || "--" }}
+                </span>
               </div>
             </template>
           </el-table-column>
           <el-table-column
             v-if="!dynamicColumns[2].hide"
-            label="拉群模式"
-            width="120"
+            label="群组处理进度"
+            min-width="190"
           >
             <template #default="{ row }">
-              {{ pullTaskModeLabel(row.mode) }}
+              <div
+                v-if="groupProgress(asPullTaskRow(row)) != null"
+                class="metric-cell"
+              >
+                <strong>
+                  {{ displayMetric(row.processedGroupCount) }}/{{
+                    displayMetric(row.targetGroupCount)
+                  }}
+                </strong>
+                <el-progress
+                  :percentage="groupProgress(asPullTaskRow(row)) || 0"
+                  :stroke-width="8"
+                  :show-text="false"
+                />
+              </div>
+              <span v-else>--</span>
             </template>
           </el-table-column>
           <el-table-column
             v-if="!dynamicColumns[3].hide"
-            prop="groupCount"
-            label="群组数量"
-            width="110"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[4].hide"
-            label="任务状态"
-            width="120"
+            label="拉人结果"
+            min-width="190"
           >
             <template #default="{ row }">
-              <el-tag
-                size="small"
-                :type="pullTaskStatusTagType(row.status)"
-                effect="plain"
-              >
-                {{ pullTaskStatusLabel(row.status) }}
-              </el-tag>
+              <div class="metric-cell">
+                <strong>
+                  {{ displayMetric(row.joinedSuccessCount) }}/{{
+                    displayMetric(row.plannedTargetCount)
+                  }}
+                </strong>
+                <span class="secondary-line">
+                  有效成功率 {{ displayRate(row.effectiveSuccessRate) }}
+                </span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[4].hide"
+            label="营销进度"
+            min-width="150"
+          >
+            <template #default="{ row }">
+              <div class="metric-cell">
+                <span>
+                  进行中 {{ displayMetric(row.marketingRunningGroupCount) }}
+                </span>
+                <span>
+                  已完成 {{ displayMetric(row.marketingCompletedGroupCount) }}
+                </span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column
             v-if="!dynamicColumns[5].hide"
-            label="进度"
-            width="140"
+            label="消息发送"
+            min-width="170"
           >
             <template #default="{ row }">
-              <el-progress
-                :percentage="progressPercent(row)"
-                :stroke-width="8"
-                :show-text="false"
-              />
-              <small>{{ row.joinedCount }} / {{ row.expectedPullCount }}</small>
+              <div class="metric-cell">
+                <span class="success-text">
+                  成功 {{ displayMetric(row.messageSuccessCount) }}
+                </span>
+                <span class="danger-text">
+                  失败 {{ displayMetric(row.messageFailedCount) }}
+                </span>
+                <span>未知 {{ displayMetric(row.messageUnknownCount) }}</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column
             v-if="!dynamicColumns[6].hide"
-            prop="pullerCount"
-            label="拉手数"
-            width="100"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[7].hide"
-            prop="joinedCount"
-            label="成功进群"
-            width="110"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[8].hide"
-            prop="failedCount"
-            label="异常数"
-            width="100"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[9].hide"
-            prop="bannedCount"
-            label="封禁数"
-            width="100"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[10].hide"
-            prop="unusedCount"
-            label="未使用"
-            width="100"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[11].hide"
-            label="操作员"
-            width="130"
-          >
-            <template #default="{ row }">{{ row.operator || "-" }}</template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[12].hide"
-            label="创建时间"
-            width="180"
+            label="异常情况"
+            min-width="180"
           >
             <template #default="{ row }">
-              {{ formatEpoch(row.createdAt) }}
+              <el-tag
+                v-if="hasNoExceptions(asPullTaskRow(row))"
+                size="small"
+                type="success"
+              >
+                无异常
+              </el-tag>
+              <div v-else class="metric-cell">
+                <span>
+                  异常群组 {{ displayMetric(row.abnormalGroupCount) }}
+                </span>
+                <span>
+                  待补位 {{ displayMetric(row.replacementPendingGroupCount) }}
+                </span>
+                <span>
+                  封禁账号 {{ displayMetric(row.bannedAccountCount) }}
+                </span>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="230">
+          <el-table-column
+            v-if="!dynamicColumns[7].hide"
+            label="剩余资源"
+            min-width="220"
+          >
+            <template #default="{ row }">
+              <div class="metric-cell">
+                <span>
+                  目标数据 {{ displayMetric(row.remainingTargetCount) }}
+                </span>
+                <span>
+                  可用拉手 {{ displayMetric(row.availablePullerCount) }}
+                </span>
+                <div v-if="row.resourceShortages?.length" class="tag-row">
+                  <el-tag
+                    v-for="shortage in row.resourceShortages"
+                    :key="shortage.type"
+                    size="small"
+                    type="danger"
+                    effect="plain"
+                  >
+                    {{ resourceShortageLabel(shortage) }}
+                  </el-tag>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[8].hide"
+            label="时间"
+            min-width="190"
+          >
+            <template #default="{ row }">
+              <div class="metric-cell">
+                <span>创建 {{ timestampLabel(row.createdAt) }}</span>
+                <span>
+                  最近执行 {{ timestampLabel(row.lastExecutedAt) }}
+                </span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="!dynamicColumns[9].hide"
+            label="操作"
+            fixed="right"
+            width="230"
+          >
             <template #default="{ row }">
               <el-button
                 link
@@ -378,19 +468,6 @@ function asPullTaskRow(row: unknown): PullTaskRow {
         />
       </template>
     </PureTableBar>
-
-    <PullTaskCreateDrawer
-      v-model="createDrawerOpen"
-      v-model:form="createForm"
-      :account-groups="accountGroups"
-      :group-link-options="groupLinkOptions"
-      :group-links-loading="groupLinksLoading"
-      :link-groups="linkGroups"
-      @create="createTask"
-      @load-group-links="loadGroupLinks"
-      @read-material-file="readMaterialFile"
-      @read-water-file="readWaterFile"
-    />
 
     <PullTaskDetailDrawer
       v-model="detailDrawerOpen"
@@ -447,13 +524,34 @@ function asPullTaskRow(row: unknown): PullTaskRow {
   width: 150px;
 }
 
-.name-cell strong,
-.name-cell small {
-  display: block;
+.primary-cell,
+.metric-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
 }
 
-.name-cell small {
-  margin-top: 4px;
+.secondary-line {
   color: var(--el-text-color-secondary);
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.metric-cell :deep(.el-progress) {
+  width: 150px;
+}
+
+.success-text {
+  color: var(--el-color-success);
+}
+
+.danger-text {
+  color: var(--el-color-danger);
 }
 </style>
