@@ -9,34 +9,14 @@ import {
   groupStatusLabel,
   groupStatusTagType,
   groupPullTaskActions,
-  lastExecutedAtLabel,
   marketerAdminStatusLabel,
   marketingSendStatusLabel,
   requiresMarketerAdmin,
   resourceStatusLabel,
-  taskStatusDetail,
-  taskColumns,
   taskStatusLabel
 } from "./constants";
 
 describe("group pull marketing constants", () => {
-  it("keeps the nine merged task-list columns in prototype order", () => {
-    assert.deepEqual(
-      taskColumns.map(column => column.label),
-      [
-        "任务信息",
-        "任务状态",
-        "群组处理进度",
-        "拉人结果",
-        "营销进度",
-        "消息发送",
-        "异常情况",
-        "剩余资源",
-        "时间/操作"
-      ]
-    );
-  });
-
   it("maps the three independent task status dimensions", () => {
     assert.deepEqual([1, 2, 5, 7, 8].map(taskStatusLabel), [
       "待启动",
@@ -62,16 +42,6 @@ describe("group pull marketing constants", () => {
     assert.equal(taskStatusLabel(99), "-");
     assert.equal(blockReasonLabel(99), "-");
     assert.equal(resourceStatusLabel(99), "-");
-  });
-
-  it("does not infer missing V16 details from legacy fields", () => {
-    assert.equal(taskStatusDetail("执行阶段", 0), "执行阶段");
-    assert.equal(taskStatusDetail("", 0), "--");
-    assert.equal(taskStatusDetail(undefined, 0), "--");
-    assert.equal(taskStatusDetail("执行阶段", 2), "等待营销账号");
-    assert.equal(lastExecutedAtLabel(undefined), "--");
-    assert.equal(lastExecutedAtLabel(null), "--");
-    assert.equal(lastExecutedAtLabel(0), "1970-01-01 08:00:00");
   });
 
   it("returns only lifecycle actions allowed by task and resource status", () => {

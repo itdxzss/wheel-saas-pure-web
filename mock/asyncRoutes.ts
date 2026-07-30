@@ -155,19 +155,6 @@ const taskRouter = {
       }
     },
     {
-      path: "/task/group-pull-marketing/create",
-      component: "task/group-pull-marketing/create/index",
-      name: "TaskGroupPullMarketingCreate",
-      meta: {
-        title: "新建拉群营销任务",
-        showLink: false,
-        activePath: "/task/group-pull-marketing",
-        roles: ["admin", "common"],
-        module_key: "group_pull_marketing",
-        perm_key: "tenant:group_pull_marketing:view"
-      }
-    },
-    {
       path: "/task/group-pull-marketing/:id",
       component: "task/group-pull-marketing/detail/index",
       name: "TaskGroupPullMarketingDetail",

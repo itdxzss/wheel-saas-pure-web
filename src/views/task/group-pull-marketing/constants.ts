@@ -59,19 +59,15 @@ export const speakPermissionOptions: Array<{
 
 /** 一级任务表只声明通用列，复杂状态与统计单元格由表格组件具名插槽渲染。 */
 export const taskColumns: TableColumnList = [
-  { label: "任务信息", prop: "taskName", minWidth: 260 },
-  { label: "任务状态", prop: "status", minWidth: 190 },
-  { label: "群组处理进度", prop: "processedGroupCount", minWidth: 190 },
-  { label: "拉人结果", prop: "joinedSuccessCount", minWidth: 190 },
-  {
-    label: "营销进度",
-    prop: "marketingRunningGroupCount",
-    minWidth: 150
-  },
-  { label: "消息发送", prop: "messageSuccessCount", minWidth: 170 },
-  { label: "异常情况", prop: "abnormalGroupCount", minWidth: 180 },
-  { label: "剩余资源", prop: "remainingTargetCount", minWidth: 220 },
-  { label: "时间/操作", prop: "lastExecutedAt", minWidth: 250 }
+  { label: "任务ID", prop: "id", width: 90 },
+  { label: "任务名称", prop: "taskName", minWidth: 180 },
+  { label: "任务状态", prop: "status", minWidth: 170 },
+  { label: "数据", prop: "totalDataCount", minWidth: 130 },
+  { label: "建群数量", prop: "successGroupCount", width: 110 },
+  { label: "失败数量", prop: "failedGroupCount", width: 110 },
+  { label: "营销号", prop: "marketingAccountTotalCount", minWidth: 130 },
+  { label: "创建时间", prop: "createdAt", minWidth: 175 },
+  { label: "结束时间", prop: "taskEndAt", minWidth: 175 }
 ];
 
 function optionLabel<T extends number>(
@@ -129,22 +125,6 @@ export function requiresMarketerAdmin(
 /** 将后端 epoch 毫秒转换成页面统一时间格式。 */
 export function formatEpoch(value?: number | null): string {
   return formatEpochMillis(value);
-}
-
-/** V16 一级列表的执行阶段缺失时不从旧状态字段推断。 */
-export function taskStatusDetail(
-  primaryStage?: string | null,
-  blockReason?: GroupPullBlockReason | null
-): string {
-  if (blockReason != null && blockReason !== 0) {
-    return blockReasonLabel(blockReason);
-  }
-  return primaryStage?.trim() || "--";
-}
-
-/** V16 一级列表统一使用双横线表达缺失的最近执行时间。 */
-export function lastExecutedAtLabel(value?: number | null): string {
-  return formatEpochMillis(value, "--");
 }
 
 /** 返回任务主状态对应的 Element Plus 标签类型。 */

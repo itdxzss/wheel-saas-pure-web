@@ -15,8 +15,7 @@ import {
   releaseGroupPullMarketingTask,
   resumeGroupPullMarketingTask,
   startGroupPullMarketingTask,
-  type CreateGroupPullMarketingConfig,
-  type GroupPullMarketingTaskRow
+  type CreateGroupPullMarketingConfig
 } from "./group-pull-marketing";
 
 const config: CreateGroupPullMarketingConfig = {
@@ -39,47 +38,6 @@ const config: CreateGroupPullMarketingConfig = {
 };
 
 describe("group pull marketing API", () => {
-  it("exposes the merged task-list metrics without reshaping them", () => {
-    const row = {
-      id: 8,
-      taskName: "印度老群营销",
-      status: 2,
-      blockReason: 0,
-      resourceStatus: 2,
-      totalDataCount: 44040,
-      completedDataCount: 29886,
-      successGroupCount: 68,
-      failedGroupCount: 3,
-      marketingAccountTotalCount: 20,
-      usedMarketingAccountCount: 12,
-      createdAt: 1785250000000,
-      taskEndAt: 1785337199000,
-      taskType: "GROUP_MARKETING",
-      groupSource: "HISTORICAL",
-      processedGroupCount: 68,
-      targetGroupCount: 100,
-      joinedSuccessCount: 29886,
-      plannedTargetCount: 44040,
-      effectiveSuccessRate: 72.6,
-      marketingRunningGroupCount: 3,
-      marketingCompletedGroupCount: 65,
-      messageSuccessCount: 2240,
-      messageFailedCount: 32,
-      messageUnknownCount: 2,
-      abnormalGroupCount: 1,
-      replacementPendingGroupCount: 0,
-      bannedAccountCount: 2,
-      remainingTargetCount: 14154,
-      availablePullerCount: 8,
-      resourceShortages: [{ type: "MARKETING_ADMIN", shortageCount: 2 }],
-      lastExecutedAt: 1785250000000
-    } satisfies GroupPullMarketingTaskRow;
-
-    assert.equal(row.groupSource, "HISTORICAL");
-    assert.equal(row.resourceShortages[0].shortageCount, 2);
-    assert.equal(row.messageUnknownCount, 2);
-  });
-
   it("creates task with one JSON config part and one material file", async () => {
     resetArmadaMock({ id: 1 });
     const file = new File(["8613900000000"], "materials.txt", {
