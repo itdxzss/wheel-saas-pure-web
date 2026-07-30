@@ -69,4 +69,36 @@ describe("group pull marketing create page", () => {
     assert.match(source, /<el-empty/);
     assert.doesNotMatch(source, /Indonesia Game Squad|120363401003/);
   });
+
+  it("aligns role resources and puller parameters", () => {
+    const source = componentSource("./components/CreateRoleConfigSection.vue");
+    for (const label of [
+      "管理员账号",
+      "拉手账号",
+      "水军账号",
+      "营销账号",
+      "每群计划使用拉手数量",
+      "每个拉手最多拉多少人",
+      "单个拉手每次最多拉多少人",
+      "两次拉人之间等待时间",
+      "最大使用拉手总数",
+      "最大使用群组数",
+      "连续异常群组上限",
+      "拉手最大重试次数",
+      "拉手熔断次数",
+      "拉手完成后是否退出群组",
+      "到达执行上限后的处理方式",
+      "每群计划水军人数",
+      "水军单任务入群上限",
+      "水军每日入群上限",
+      "允许跨任务复用",
+      "水军资源不足处理",
+      "允许降低计划数量",
+      "允许替换水军"
+    ]) {
+      assert.match(source, new RegExp(label));
+    }
+    assert.match(source, /resourceCards/);
+    assert.match(source, /账号筛选接口待确认/);
+  });
 });
