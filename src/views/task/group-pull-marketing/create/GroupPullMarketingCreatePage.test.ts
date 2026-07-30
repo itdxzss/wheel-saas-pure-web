@@ -101,4 +101,52 @@ describe("group pull marketing create page", () => {
     assert.match(source, /resourceCards/);
     assert.match(source, /账号筛选接口待确认/);
   });
+
+  it("aligns marketing messages, thresholds and unmet actions", () => {
+    const source = componentSource("./components/CreateMarketingSection.vue");
+    for (const label of [
+      "营销发送间隔",
+      "营销模板",
+      "模板版本",
+      "推广链接",
+      "模板内容预览",
+      "立即发送第一条",
+      "发送方式",
+      "固定发送轮次",
+      "消息发送总上限",
+      "失败重试次数",
+      "群组异常处理方式",
+      "营销开始方式",
+      "水军最低成功标准",
+      "目标数据最低成功标准",
+      "未达标处理方式",
+      "继续补充",
+      "更换拉手",
+      "更换水军",
+      "补充目标数据",
+      "重试",
+      "暂停当前群",
+      "允许部分完成",
+      "转人工",
+      "放弃当前群"
+    ]) {
+      assert.match(source, new RegExp(label));
+    }
+    assert.match(source, /showSendRounds/);
+  });
+
+  it("aligns immediate and scheduled launch modes", () => {
+    const source = componentSource("./components/CreateLaunchSection.vue");
+    for (const label of [
+      "任务启动时机",
+      "任务什么时候开始",
+      "创建后立即开始",
+      "指定时间开始",
+      "邀请链接重置能力待后端确认"
+    ]) {
+      assert.match(source, new RegExp(label));
+    }
+    assert.match(source, /showScheduledStart/);
+    assert.match(source, /type="datetime"/);
+  });
 });
