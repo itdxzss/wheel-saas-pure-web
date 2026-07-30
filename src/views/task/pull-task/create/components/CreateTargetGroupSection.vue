@@ -92,6 +92,32 @@ function unavailableGroupAction(): void {
         </el-radio-group>
       </el-form-item>
 
+      <el-form-item
+        v-if="draft.groupNameMode === 'UNIFIED'"
+        label="统一群名称"
+        required
+      >
+        <el-input
+          v-model="draft.unifiedGroupName"
+          maxlength="100"
+          show-word-limit
+          placeholder="请输入所有目标群统一使用的名称"
+        />
+      </el-form-item>
+
+      <el-form-item
+        v-else-if="draft.groupNameMode === 'TEMPLATE_SEQUENCE'"
+        label="群名称模板"
+        required
+      >
+        <el-input
+          v-model="draft.groupNameTemplate"
+          maxlength="100"
+          show-word-limit
+          placeholder="例如：活动群-{序号}"
+        />
+      </el-form-item>
+
       <el-form-item label="群头像">
         <div class="upload-row">
           <el-upload
@@ -111,6 +137,21 @@ function unavailableGroupAction(): void {
           <el-radio-button value="KEEP">不修改</el-radio-button>
           <el-radio-button value="UNIFIED">使用统一描述</el-radio-button>
         </el-radio-group>
+      </el-form-item>
+
+      <el-form-item
+        v-if="draft.groupDescriptionMode === 'UNIFIED'"
+        label="统一群描述"
+        required
+      >
+        <el-input
+          v-model="draft.unifiedGroupDescription"
+          type="textarea"
+          :rows="3"
+          maxlength="512"
+          show-word-limit
+          placeholder="请输入所有目标群统一使用的描述"
+        />
       </el-form-item>
 
       <el-form-item label="群资料修改权限">

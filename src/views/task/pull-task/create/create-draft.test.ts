@@ -23,6 +23,17 @@ describe("pull task GROUP_MARKETING create draft", () => {
     assert.equal(first.groupMaxMembers, 300);
     assert.equal(first.pullerCountPerGroup, 2);
     assert.equal(first.marketingIntervalMinutes, 10);
+    assert.equal(first.unifiedGroupName, "");
+    assert.equal(first.groupNameTemplate, "");
+    assert.equal(first.unifiedGroupDescription, "");
+    assert.deepEqual(Object.keys(first.roleAccounts), [
+      "ADMIN",
+      "PULLER",
+      "WATER_ARMY",
+      "MARKETER"
+    ]);
+    first.roleAccounts.ADMIN.keyword = "admin-filter";
+    assert.equal(second.roleAccounts.ADMIN.keyword, "");
     first.unmetActions.push("MANUAL");
     assert.deepEqual(second.unmetActions, []);
   });

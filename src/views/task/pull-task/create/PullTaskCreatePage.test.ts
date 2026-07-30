@@ -5,10 +5,7 @@ import { describe, it } from "node:test";
 
 function componentSource(relativePath: string): string {
   const url = new URL(relativePath, import.meta.url);
-  assert.ok(
-    existsSync(fileURLToPath(url)),
-    relativePath + " should exist"
-  );
+  assert.ok(existsSync(fileURLToPath(url)), relativePath + " should exist");
   return readFileSync(url, "utf8");
 }
 
@@ -45,8 +42,11 @@ describe("pull task GROUP_MARKETING create page", () => {
       "是否禁言",
       "群最大人数",
       "群名称修改方式",
+      "统一群名称",
+      "群名称模板",
       "群头像",
       "群描述",
+      "统一群描述",
       "群资料修改权限",
       "入群审批",
       "成员邀请权限",
@@ -70,6 +70,8 @@ describe("pull task GROUP_MARKETING create page", () => {
     }
     assert.match(source, /<el-table/);
     assert.match(source, /<el-empty/);
+    assert.match(source, /draft\.groupNameMode/);
+    assert.match(source, /draft\.groupDescriptionMode/);
     assert.doesNotMatch(source, /Indonesia Game Squad|120363401003/);
   });
 
@@ -102,6 +104,9 @@ describe("pull task GROUP_MARKETING create page", () => {
       assert.match(source, new RegExp(label));
     }
     assert.match(source, /账号筛选接口待确认/);
+    assert.match(source, /draft\.roleAccounts/);
+    assert.match(source, /clearRoleAccount/);
+    assert.match(source, /roleDialogVisible/);
   });
 
   it("aligns marketing messages, thresholds and unmet actions", () => {
@@ -173,8 +178,14 @@ describe("pull task GROUP_MARKETING create page", () => {
       assert.match(source, new RegExp(action));
     }
     assert.match(source, /GROUP_MARKETING/);
+    assert.match(source, /validateCreateDraft/);
+    assert.match(source, /previewVisible/);
+    assert.match(source, /<el-dialog/);
     assert.match(source, /notifyUnconfirmedCreateAction/);
-    assert.match(source, /router.push\(PULL_TASK_LIST_PATH\)/);
+    assert.match(
+      source,
+      /router.push\(\{ name: PULL_TASK_LIST_ROUTE_NAME \}\)/
+    );
     assert.doesNotMatch(source, /from "@\/api\//);
     assert.doesNotMatch(source, /子模式/);
   });

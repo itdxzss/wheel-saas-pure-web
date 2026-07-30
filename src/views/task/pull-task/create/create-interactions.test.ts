@@ -18,10 +18,7 @@ describe("pull task GROUP_MARKETING create interactions", () => {
       [8, 2, 3]
     );
     assert.deepEqual(reconcileSelectedGroupIds([8, 2, 3], [1, 2, 3], []), [8]);
-    assert.deepEqual(reconcileSelectedGroupIds([8, 8], [1, 2], [2, 2]), [
-      8,
-      2
-    ]);
+    assert.deepEqual(reconcileSelectedGroupIds([8, 8], [1, 2], [2, 2]), [8, 2]);
   });
 
   it("caps rates without limiting count thresholds", async () => {
@@ -60,9 +57,8 @@ describe("pull task GROUP_MARKETING create interactions", () => {
 
   it("blocks unconfirmed actions and returns to the pull task list", async () => {
     assert.ok(existsSync(fileURLToPath(moduleUrl)));
-    const { PULL_TASK_LIST_PATH, notifyUnconfirmedCreateAction } = await import(
-      moduleUrl.href
-    );
+    const { PULL_TASK_LIST_ROUTE_NAME, notifyUnconfirmedCreateAction } =
+      await import(moduleUrl.href);
     const notifications: string[] = [];
 
     notifyUnconfirmedCreateAction("创建并启动", message => {
@@ -72,6 +68,37 @@ describe("pull task GROUP_MARKETING create interactions", () => {
     assert.deepEqual(notifications, [
       "创建并启动接口契约待确认，当前仅完成前端配置"
     ]);
-    assert.equal(PULL_TASK_LIST_PATH, "/task/pull-task");
+    assert.equal(PULL_TASK_LIST_ROUTE_NAME, "TaskPull");
+  });
+
+  it("validates required and conditional frontend-only fields", async () => {
+    assert.ok(existsSync(fileURLToPath(moduleUrl)));
+    const { validateCreateDraft } = await import(moduleUrl.href);
+    const { createEmptyPullTaskMarketingDraft } = await import(
+      new URL("./create-draft.ts", import.meta.url).href
+    );
+    const draft = createEmptyPullTaskMarketingDraft();
+
+    assert.deepEqual(validateCreateDraft(draft), [
+      "请填写任务名称",
+      "请选择目标数据包或上传 TXT",
+      "请选择至少一个目标群组",
+      "请选择营销模板"
+    ]);
+
+    draft.taskName = "测试任务";
+    draft.targetPackageId = 1;
+    draft.selectedGroupIds = [9];
+    draft.marketingTemplateId = 2;
+    assert.deepEqual(validateCreateDraft(draft), []);
+
+    draft.groupNameMode = "UNIFIED";
+    assert.deepEqual(validateCreateDraft(draft), ["请填写统一群名称"]);
+    draft.unifiedGroupName = "统一名称";
+    draft.groupDescriptionMode = "UNIFIED";
+    assert.deepEqual(validateCreateDraft(draft), ["请填写统一群描述"]);
+    draft.unifiedGroupDescription = "统一描述";
+    draft.startMode = "SCHEDULED";
+    assert.deepEqual(validateCreateDraft(draft), ["请选择定时启动时间"]);
   });
 });

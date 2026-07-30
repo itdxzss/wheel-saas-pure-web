@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { ElMessage } from "element-plus";
-import type { PullTaskMarketingCreateDraft } from "../create-draft";
+import {
+  createEmptyRoleAccountConfig,
+  type PullTaskMarketingCreateDraft,
+  type RoleResourceKey
+} from "../create-draft";
 
 defineOptions({ name: "PullTaskMarketingCreateRoleConfigSection" });
 
@@ -13,8 +18,38 @@ const resourceCards = [
   { key: "MARKETER", title: "营销账号" }
 ] as const;
 
-function unavailableAccountAction(): void {
-  ElMessage.info("账号筛选接口待确认");
+const activeRoleKey = ref<RoleResourceKey>("ADMIN");
+const roleDialogVisible = ref(false);
+
+function roleTitle(key: RoleResourceKey): string {
+  return resourceCards.find(card => card.key === key)?.title ?? "角色账号";
+}
+
+function roleFilterSummary(key: RoleResourceKey): string {
+  const config = draft.value.roleAccounts[key];
+  const parts = [
+    config.keyword.trim() ? "关键词：" + config.keyword.trim() : "",
+    config.accountGroupId ? "分组：" + config.accountGroupId : "",
+    config.selectedAccountIds.length
+      ? "已选：" + config.selectedAccountIds.length + " 个"
+      : ""
+  ].filter(Boolean);
+  return parts.join("；") || "未设置本地筛选条件";
+}
+
+function openRoleDialog(key: RoleResourceKey): void {
+  activeRoleKey.value = key;
+  roleDialogVisible.value = true;
+}
+
+function clearRoleAccount(key: RoleResourceKey): void {
+  draft.value.roleAccounts[key] = createEmptyRoleAccountConfig();
+  ElMessage.success(roleTitle(key) + "配置已清空");
+}
+
+function saveRoleFilter(): void {
+  roleDialogVisible.value = false;
+  ElMessage.success(roleTitle(activeRoleKey.value) + "本地筛选条件已保存");
 }
 </script>
 
@@ -35,22 +70,35 @@ function unavailableAccountAction(): void {
         <div class="resource-header">
           <div>
             <strong>{{ card.title }}</strong>
-            <span>筛选条件接口待确认</span>
+            <span>{{ roleFilterSummary(card.key) }}</span>
           </div>
           <div class="resource-actions">
-            <el-button size="small" @click="unavailableAccountAction">
+            <el-button size="small" @click="openRoleDialog(card.key)">
               修改筛选条件
             </el-button>
-            <el-button size="small" @click="unavailableAccountAction">
+            <el-button size="small" @click="clearRoleAccount(card.key)">
               清空
             </el-button>
           </div>
         </div>
         <div class="resource-counts">
-          <span>当前可用 <strong>--</strong></span>
-          <span>已占用 <strong>--</strong></span>
+          <span>
+            当前可用
+            <strong>{{
+              draft.roleAccounts[card.key].availableCount ?? "--"
+            }}</strong>
+          </span>
+          <span>
+            已占用
+            <strong>{{
+              draft.roleAccounts[card.key].occupiedCount ?? "--"
+            }}</strong>
+          </span>
         </div>
-        <el-empty :image-size="36" description="账号资源接口待确认" />
+        <el-empty
+          :image-size="36"
+          description="账号筛选接口待确认，当前保留本地筛选状态"
+        />
       </div>
     </div>
 
@@ -155,6 +203,42 @@ function unavailableAccountAction(): void {
       type="info"
       :closable="false"
     />
+
+    <el-dialog
+      v-model="roleDialogVisible"
+      :title="roleTitle(activeRoleKey) + '筛选条件'"
+      width="520px"
+      append-to-body
+    >
+      <el-alert
+        title="账号筛选接口待确认；以下条件仅保存在当前前端草稿中"
+        type="info"
+        :closable="false"
+        class="role-dialog-alert"
+      />
+      <el-form label-position="top">
+        <el-form-item label="账号关键词">
+          <el-input
+            v-model="draft.roleAccounts[activeRoleKey].keyword"
+            clearable
+            placeholder="手机号、备注或账号标识"
+          />
+        </el-form-item>
+        <el-form-item label="账号分组 ID">
+          <el-input-number
+            v-model="draft.roleAccounts[activeRoleKey].accountGroupId"
+            :min="1"
+            controls-position="right"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="roleDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveRoleFilter"
+          >保存本地条件</el-button
+        >
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -212,6 +296,10 @@ function unavailableAccountAction(): void {
 .resource-header span,
 .field-unit {
   color: var(--el-text-color-secondary);
+}
+
+.role-dialog-alert {
+  margin-bottom: 16px;
 }
 
 .resource-counts {

@@ -13,6 +13,18 @@ export type UnmetAction =
   | "MANUAL"
   | "ABANDON_GROUP";
 
+export type RoleResourceKey = "ADMIN" | "PULLER" | "WATER_ARMY" | "MARKETER";
+
+export interface RoleAccountConfig {
+  keyword: string;
+  accountGroupId: number | "";
+  selectedAccountIds: number[];
+  availableCount: number | null;
+  occupiedCount: number | null;
+}
+
+export type RoleAccountConfigs = Record<RoleResourceKey, RoleAccountConfig>;
+
 export interface TargetDataMetrics {
   raw: number | null;
   valid: number | null;
@@ -37,8 +49,11 @@ export interface PullTaskMarketingCreateDraft {
   muted: boolean;
   groupMaxMembers: number;
   groupNameMode: "KEEP" | "UNIFIED" | "TEMPLATE_SEQUENCE";
+  unifiedGroupName: string;
+  groupNameTemplate: string;
   groupAvatarFile: File | null;
   groupDescriptionMode: "KEEP" | "UNIFIED";
+  unifiedGroupDescription: string;
   groupInfoPermission: string;
   joinApproval: string;
   memberInvitePermission: string;
@@ -58,6 +73,7 @@ export interface PullTaskMarketingCreateDraft {
   groupAgeRange: [number, number];
   memberCountRange: [number, number];
   selectedGroupIds: number[];
+  roleAccounts: RoleAccountConfigs;
   pullerCountPerGroup: number;
   maxPeoplePerPuller: number;
   maxPeoplePerPull: number;
@@ -109,6 +125,25 @@ export function emptyTargetDataMetrics(): TargetDataMetrics {
   };
 }
 
+export function createEmptyRoleAccountConfig(): RoleAccountConfig {
+  return {
+    keyword: "",
+    accountGroupId: "",
+    selectedAccountIds: [],
+    availableCount: null,
+    occupiedCount: null
+  };
+}
+
+export function createEmptyRoleAccounts(): RoleAccountConfigs {
+  return {
+    ADMIN: createEmptyRoleAccountConfig(),
+    PULLER: createEmptyRoleAccountConfig(),
+    WATER_ARMY: createEmptyRoleAccountConfig(),
+    MARKETER: createEmptyRoleAccountConfig()
+  };
+}
+
 export function createEmptyPullTaskMarketingDraft(): PullTaskMarketingCreateDraft {
   return {
     taskType: "GROUP_MARKETING",
@@ -122,8 +157,11 @@ export function createEmptyPullTaskMarketingDraft(): PullTaskMarketingCreateDraf
     muted: false,
     groupMaxMembers: 300,
     groupNameMode: "KEEP",
+    unifiedGroupName: "",
+    groupNameTemplate: "",
     groupAvatarFile: null,
     groupDescriptionMode: "KEEP",
+    unifiedGroupDescription: "",
     groupInfoPermission: "ADMIN_ONLY",
     joinApproval: "ENABLED",
     memberInvitePermission: "ADMIN_ONLY",
@@ -143,6 +181,7 @@ export function createEmptyPullTaskMarketingDraft(): PullTaskMarketingCreateDraf
     groupAgeRange: [0, 3650],
     memberCountRange: [0, 1024],
     selectedGroupIds: [],
+    roleAccounts: createEmptyRoleAccounts(),
     pullerCountPerGroup: 2,
     maxPeoplePerPuller: 60,
     maxPeoplePerPull: 20,

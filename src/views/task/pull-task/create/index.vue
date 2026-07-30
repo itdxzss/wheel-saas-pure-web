@@ -13,8 +13,9 @@ import {
   type PullTaskMarketingCreateDraft
 } from "./create-draft";
 import {
-  PULL_TASK_LIST_PATH,
-  notifyUnconfirmedCreateAction
+  PULL_TASK_LIST_ROUTE_NAME,
+  notifyUnconfirmedCreateAction,
+  validateCreateDraft
 } from "./create-interactions";
 
 defineOptions({
@@ -26,13 +27,32 @@ const draft = ref<PullTaskMarketingCreateDraft>(
   createEmptyPullTaskMarketingDraft()
 );
 const targetDataMetrics = emptyTargetDataMetrics();
+const previewVisible = ref(false);
 
 async function backToList(): Promise<void> {
-  await router.push(PULL_TASK_LIST_PATH);
+  await router.push({ name: PULL_TASK_LIST_ROUTE_NAME });
 }
 
 function unavailableAction(action: string): void {
   notifyUnconfirmedCreateAction(action, message => ElMessage.info(message));
+}
+
+function checkConfiguration(): void {
+  const errors = validateCreateDraft(draft.value);
+  if (errors.length > 0) {
+    ElMessage.warning(errors[0]);
+    return;
+  }
+  ElMessage.success("配置校验通过");
+}
+
+function previewTask(): void {
+  const errors = validateCreateDraft(draft.value);
+  if (errors.length > 0) {
+    ElMessage.warning(errors[0]);
+    return;
+  }
+  previewVisible.value = true;
 }
 </script>
 
@@ -71,14 +91,55 @@ function unavailableAction(action: string): void {
       >
       <div class="action-buttons">
         <el-button @click="unavailableAction('保存草稿')">保存草稿</el-button>
-        <el-button @click="unavailableAction('校验配置')">校验配置</el-button>
-        <el-button @click="unavailableAction('预览任务')">预览任务</el-button>
+        <el-button @click="checkConfiguration">校验配置</el-button>
+        <el-button @click="previewTask">预览任务</el-button>
         <el-button @click="backToList">取消</el-button>
         <el-button type="primary" @click="unavailableAction('创建并启动')">
           创建并启动
         </el-button>
       </div>
     </div>
+
+    <el-dialog v-model="previewVisible" title="任务配置预览" width="680px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="任务类型">
+          GROUP_MARKETING
+        </el-descriptions-item>
+        <el-descriptions-item label="任务名称">
+          {{ draft.taskName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="群组来源">
+          {{ draft.groupSource }}
+        </el-descriptions-item>
+        <el-descriptions-item label="目标数据">
+          {{
+            draft.targetPackageId
+              ? `数据包 #${draft.targetPackageId}`
+              : draft.targetFile?.name
+          }}
+        </el-descriptions-item>
+        <el-descriptions-item label="目标群组">
+          已选择 {{ draft.selectedGroupIds.length }} 个
+        </el-descriptions-item>
+        <el-descriptions-item label="营销模板">
+          模板 #{{ draft.marketingTemplateId }}
+        </el-descriptions-item>
+        <el-descriptions-item label="启动方式">
+          {{ draft.startMode === "IMMEDIATE" ? "立即启动" : "定时启动" }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="draft.startMode === 'SCHEDULED'"
+          label="启动时间"
+        >
+          {{ draft.scheduledAt }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button type="primary" @click="previewVisible = false">
+          知道了
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

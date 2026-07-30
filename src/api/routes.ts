@@ -28,7 +28,7 @@ export const appendAuthorizedCompanionRoutes = (
           ...route.meta,
           title: "新建拉群任务",
           showLink: false,
-          activePath: "/task/pull-task"
+          activePath: route.path
         }
       } as unknown as RouteRecordRaw;
       return [normalizedRoute, createRoute];
