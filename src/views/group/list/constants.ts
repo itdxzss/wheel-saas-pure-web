@@ -43,6 +43,7 @@ export const groupListColumns: TableColumnList = [
   { label: "群状态", prop: "status", width: 120 },
   { label: "群人数", prop: "memberCount", width: 110 },
   { label: "管理员", prop: "admin", minWidth: 170 },
+  { label: "同步协议", prop: "syncProtocolMask", width: 150 },
   { label: "来源", prop: "source", width: 120 },
   { label: "时间", prop: "createdAt", width: 180 },
   { label: "操作", prop: "operation", fixed: "right", width: 220 }

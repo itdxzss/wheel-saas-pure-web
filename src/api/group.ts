@@ -14,6 +14,7 @@ export interface GroupListRow {
   banned?: boolean | null;
   memberCount?: number | null;
   admin?: string | null;
+  syncProtocolMask?: number | null;
   origin?: number | null;
   source?: string | null;
   membershipState?: number | null;
