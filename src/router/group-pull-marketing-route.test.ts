@@ -37,6 +37,24 @@ describe("group pull marketing navigation", () => {
     );
   });
 
+  it("derives a hidden create route before the dynamic detail route", () => {
+    const createIndex = routeSource.indexOf(
+      'path: "/task/group-pull-marketing/create"'
+    );
+    const detailIndex = routeSource.indexOf(
+      'path: "/task/group-pull-marketing/:id"'
+    );
+
+    assert.ok(createIndex >= 0);
+    assert.ok(detailIndex > createIndex);
+    assert.match(routeSource, /TaskGroupPullMarketingCreate/);
+    assert.match(
+      routeSource,
+      /component: "task\/group-pull-marketing\/create\/index"/
+    );
+    assert.match(routeSource, /title: "新建拉群营销任务"/);
+  });
+
   it("opens an existing simple marketing detail from the taskId query", () => {
     assert.match(marketingPageSource, /useRoute/);
     assert.match(marketingPageSource, /route\.query\.taskId/);

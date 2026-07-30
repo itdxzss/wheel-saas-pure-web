@@ -21,6 +21,17 @@ export const appendAuthorizedCompanionRoutes = (
       return [normalizedRoute];
     }
     // 后端动态路由的 component 是组件路径字符串，后续由路由装配器解析为 Vue 组件。
+    const createRoute = {
+      path: "/task/group-pull-marketing/create",
+      component: "task/group-pull-marketing/create/index",
+      name: "TaskGroupPullMarketingCreate",
+      meta: {
+        ...route.meta,
+        title: "新建拉群营销任务",
+        showLink: false,
+        activePath: "/task/group-pull-marketing"
+      }
+    } as unknown as RouteRecordRaw;
     const detailRoute = {
       path: "/task/group-pull-marketing/:id",
       component: "task/group-pull-marketing/detail/index",
@@ -32,7 +43,7 @@ export const appendAuthorizedCompanionRoutes = (
         activePath: "/task/group-pull-marketing"
       }
     } as unknown as RouteRecordRaw;
-    return [normalizedRoute, detailRoute];
+    return [normalizedRoute, createRoute, detailRoute];
   });
 
 /** 当前登录用户的真实租户动态菜单。 */
