@@ -30,19 +30,20 @@ export const groupRowStatusOptions: Array<{
 ];
 
 export const pullTaskColumns: TableColumnList = [
-  { label: "ID", prop: "id", width: 90 },
-  { label: "任务名称", prop: "taskName", minWidth: 220 },
-  { label: "拉群模式", prop: "mode", width: 130 },
-  { label: "群组数量", prop: "groupCount", width: 110 },
-  { label: "任务状态", prop: "status", width: 120 },
-  { label: "进度", prop: "joinedCount", width: 130 },
-  { label: "拉手数", prop: "pullerCount", width: 100 },
-  { label: "成功进群", prop: "joinedCount", width: 120 },
-  { label: "异常数", prop: "failedCount", width: 100 },
-  { label: "封禁数", prop: "bannedCount", width: 100 },
-  { label: "未使用", prop: "unusedCount", width: 100 },
-  { label: "操作员", prop: "operator", width: 130 },
-  { label: "创建时间", prop: "createdAt", width: 180 }
+  { label: "任务信息", prop: "taskName", minWidth: 260 },
+  { label: "任务状态", prop: "status", minWidth: 180 },
+  { label: "群组处理进度", prop: "processedGroupCount", minWidth: 190 },
+  { label: "拉人结果", prop: "joinedSuccessCount", minWidth: 190 },
+  {
+    label: "营销进度",
+    prop: "marketingRunningGroupCount",
+    minWidth: 150
+  },
+  { label: "消息发送", prop: "messageSuccessCount", minWidth: 170 },
+  { label: "异常情况", prop: "abnormalGroupCount", minWidth: 180 },
+  { label: "剩余资源", prop: "remainingTargetCount", minWidth: 220 },
+  { label: "时间", prop: "lastExecutedAt", minWidth: 190 },
+  { label: "操作", prop: "id", minWidth: 230 }
 ];
 
 export function pullTaskStatusLabel(
