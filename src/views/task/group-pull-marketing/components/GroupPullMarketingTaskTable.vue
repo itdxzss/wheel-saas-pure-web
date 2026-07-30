@@ -6,15 +6,21 @@ import WheelPagination from "@/components/WheelPagination/index.vue";
 import type { GroupPullMarketingTaskRow } from "@/api/group-pull-marketing";
 import {
   blockReasonLabel,
-  blockReasonTagType,
   formatEpoch,
   groupPullTaskActions,
   resourceStatusLabel,
-  resourceStatusTagType,
   taskStatusLabel,
   taskStatusTagType,
   type GroupPullTaskAction
 } from "../constants";
+import {
+  displayMetric,
+  displayRate,
+  groupSourceLabel,
+  progressPercentage,
+  resourceShortageLabel,
+  taskTypeLabel
+} from "../task-list-display";
 import Plus from "~icons/ep/plus";
 
 defineOptions({
@@ -66,7 +72,7 @@ function actionLabel(action: GroupPullTaskAction): string {
     pause: "暂停",
     resume: "恢复",
     release: "释放账号",
-    detail: "明细",
+    detail: "查看详情",
     delete: "删除"
   }[action];
 }
@@ -75,6 +81,24 @@ function actionType(action: GroupPullTaskAction) {
   if (action === "delete") return "danger";
   if (action === "release" || action === "pause") return "warning";
   return "primary";
+}
+
+function statusDetail(row: GroupPullMarketingTaskRow): string {
+  if (row.primaryStage?.trim()) return row.primaryStage;
+  if (row.blockReason !== 0) return blockReasonLabel(row.blockReason);
+  return resourceStatusLabel(row.resourceStatus);
+}
+
+function progress(row: GroupPullMarketingTaskRow): number | null {
+  return progressPercentage(row.processedGroupCount, row.targetGroupCount);
+}
+
+function hasNoExceptions(row: GroupPullMarketingTaskRow): boolean {
+  return (
+    row.abnormalGroupCount === 0 &&
+    row.replacementPendingGroupCount === 0 &&
+    row.bannedAccountCount === 0
+  );
 }
 </script>
 
@@ -94,24 +118,33 @@ function actionType(action: GroupPullTaskAction) {
       <el-table v-loading="loading" :data="rows" row-key="id" border>
         <el-table-column
           v-if="!dynamicColumns[0].hide"
-          prop="id"
-          label="任务ID"
-          width="90"
-        />
-        <el-table-column
-          v-if="!dynamicColumns[1].hide"
-          prop="taskName"
-          label="任务名称"
-          min-width="180"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          v-if="!dynamicColumns[2].hide"
-          label="任务状态"
-          min-width="170"
+          label="任务信息"
+          fixed="left"
+          min-width="260"
         >
           <template #default="{ row }">
-            <div class="status-cell">
+            <div class="primary-cell">
+              <strong>{{ row.taskName || "--" }}</strong>
+              <span class="secondary-line">#{{ row.id }}</span>
+              <div class="tag-row">
+                <el-tag size="small" effect="plain" type="success">
+                  {{ taskTypeLabel(row.taskType) }}
+                </el-tag>
+                <el-tag size="small" effect="plain" type="info">
+                  {{ groupSourceLabel(row.groupSource) }}
+                </el-tag>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          v-if="!dynamicColumns[1].hide"
+          label="任务状态"
+          min-width="190"
+        >
+          <template #default="{ row }">
+            <div class="primary-cell">
               <el-tag
                 size="small"
                 effect="plain"
@@ -119,88 +152,164 @@ function actionType(action: GroupPullTaskAction) {
               >
                 {{ taskStatusLabel(row.status) }}
               </el-tag>
-              <el-tag
-                size="small"
-                effect="plain"
-                :type="blockReasonTagType(row.blockReason)"
-              >
-                {{ blockReasonLabel(row.blockReason) }}
-              </el-tag>
-              <el-tag
-                size="small"
-                effect="plain"
-                :type="resourceStatusTagType(row.resourceStatus)"
-              >
-                {{ resourceStatusLabel(row.resourceStatus) }}
-              </el-tag>
+              <span class="secondary-line">{{ statusDetail(row) }}</span>
             </div>
           </template>
         </el-table-column>
+
+        <el-table-column
+          v-if="!dynamicColumns[2].hide"
+          label="群组处理进度"
+          min-width="190"
+        >
+          <template #default="{ row }">
+            <div v-if="progress(row) != null" class="metric-cell">
+              <el-tooltip content="已处理群组数 / 目标群组数" placement="top">
+                <strong>
+                  {{ displayMetric(row.processedGroupCount) }}/{{
+                    displayMetric(row.targetGroupCount)
+                  }}
+                </strong>
+              </el-tooltip>
+              <el-progress
+                :percentage="progress(row) || 0"
+                :show-text="false"
+                :stroke-width="8"
+              />
+            </div>
+            <span v-else>--</span>
+          </template>
+        </el-table-column>
+
         <el-table-column
           v-if="!dynamicColumns[3].hide"
-          label="数据"
-          min-width="130"
+          label="拉人结果"
+          min-width="190"
         >
           <template #default="{ row }">
-            {{ row.totalDataCount ?? 0 }}/{{ row.completedDataCount ?? 0 }}
+            <div class="metric-cell">
+              <strong>
+                {{ displayMetric(row.joinedSuccessCount) }}/{{
+                  displayMetric(row.plannedTargetCount)
+                }}
+              </strong>
+              <span class="secondary-line">
+                有效成功率 {{ displayRate(row.effectiveSuccessRate) }}
+              </span>
+            </div>
           </template>
         </el-table-column>
+
         <el-table-column
           v-if="!dynamicColumns[4].hide"
-          prop="successGroupCount"
-          label="建群数量"
-          width="110"
-        />
+          label="营销进度"
+          min-width="150"
+        >
+          <template #default="{ row }">
+            <div class="metric-cell">
+              <span
+                >进行中
+                {{ displayMetric(row.marketingRunningGroupCount) }}</span
+              >
+              <span
+                >已完成
+                {{ displayMetric(row.marketingCompletedGroupCount) }}</span
+              >
+            </div>
+          </template>
+        </el-table-column>
+
         <el-table-column
           v-if="!dynamicColumns[5].hide"
-          prop="failedGroupCount"
-          label="失败数量"
-          width="110"
-        />
+          label="消息发送"
+          min-width="170"
+        >
+          <template #default="{ row }">
+            <div class="metric-cell">
+              <span class="success-text">
+                成功 {{ displayMetric(row.messageSuccessCount) }}
+              </span>
+              <span class="danger-text">
+                失败 {{ displayMetric(row.messageFailedCount) }}
+              </span>
+              <span v-if="row.messageUnknownCount !== 0">
+                未知 {{ displayMetric(row.messageUnknownCount) }}
+              </span>
+            </div>
+          </template>
+        </el-table-column>
+
         <el-table-column
           v-if="!dynamicColumns[6].hide"
-          label="营销号"
-          min-width="130"
+          label="异常情况"
+          min-width="180"
         >
           <template #default="{ row }">
-            {{
-              row.marketingAccountTotalCount == null
-                ? "-"
-                : row.marketingAccountTotalCount
-            }}/{{ row.usedMarketingAccountCount ?? 0 }}
+            <el-tag v-if="hasNoExceptions(row)" size="small" type="success">
+              无异常
+            </el-tag>
+            <div v-else class="metric-cell">
+              <span>异常群组 {{ displayMetric(row.abnormalGroupCount) }}</span>
+              <span>
+                待补位 {{ displayMetric(row.replacementPendingGroupCount) }}
+              </span>
+              <span>封禁账号 {{ displayMetric(row.bannedAccountCount) }}</span>
+            </div>
           </template>
         </el-table-column>
+
         <el-table-column
           v-if="!dynamicColumns[7].hide"
-          label="创建时间"
-          min-width="175"
+          label="剩余资源"
+          min-width="220"
         >
           <template #default="{ row }">
-            {{ formatEpoch(row.createdAt) }}
+            <div class="metric-cell">
+              <span
+                >目标数据 {{ displayMetric(row.remainingTargetCount) }}</span
+              >
+              <span
+                >可用拉手 {{ displayMetric(row.availablePullerCount) }}</span
+              >
+              <div v-if="row.resourceShortages?.length" class="tag-row">
+                <el-tag
+                  v-for="shortage in row.resourceShortages"
+                  :key="shortage.type"
+                  size="small"
+                  type="danger"
+                  effect="plain"
+                >
+                  {{ resourceShortageLabel(shortage) }}
+                </el-tag>
+              </div>
+            </div>
           </template>
         </el-table-column>
+
         <el-table-column
           v-if="!dynamicColumns[8].hide"
-          label="结束时间"
-          min-width="175"
+          label="时间/操作"
+          fixed="right"
+          min-width="250"
         >
           <template #default="{ row }">
-            {{ formatEpoch(row.taskEndAt) }}
+            <div class="operation-cell">
+              <span>{{ formatEpoch(row.lastExecutedAt) }}</span>
+              <div class="action-row">
+                <el-button
+                  v-for="action in taskActions(row)"
+                  :key="action"
+                  link
+                  :type="actionType(action)"
+                  @click="emit('action', action, asTaskRow(row))"
+                >
+                  {{ actionLabel(action) }}
+                </el-button>
+              </div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" min-width="210">
-          <template #default="{ row }">
-            <el-button
-              v-for="action in taskActions(row)"
-              :key="action"
-              link
-              :type="actionType(action)"
-              @click="emit('action', action, asTaskRow(row))"
-            >
-              {{ actionLabel(action) }}
-            </el-button>
-          </template>
-        </el-table-column>
+
         <template #empty>
           <el-empty description="暂无拉群营销任务" />
         </template>
@@ -217,10 +326,40 @@ function actionType(action: GroupPullTaskAction) {
 </template>
 
 <style scoped>
-.status-cell {
+.primary-cell,
+.metric-cell,
+.operation-cell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   align-items: flex-start;
+}
+
+.secondary-line {
+  color: var(--el-text-color-secondary);
+}
+
+.tag-row,
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.action-row :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.metric-cell :deep(.el-progress) {
+  width: 150px;
+}
+
+.success-text {
+  color: var(--el-color-success);
+}
+
+.danger-text {
+  color: var(--el-color-danger);
 }
 </style>
