@@ -4,7 +4,7 @@
 - 需求来源: `拉群列表原型.jpg`、`拉群详情.jpg`
 - 设计: `docs/superpowers/specs/2026-07-30-group-pull-marketing-prototype-frontend-design.md`
 - 计划: `docs/superpowers/plans/2026-07-29-group-pull-marketing-task-list-v16.md`、`docs/superpowers/plans/2026-07-30-group-pull-marketing-create-page.md`
-- 状态: 前端完成，待接口契约确认和目标环境联调
+- 状态: 前端已部署第一套测试环境，待接口契约确认和人工验收
 
 ## 目标
 
@@ -50,7 +50,14 @@
 - [ ] 后端确认保存草稿、校验、预览、创建并启动的数据契约。
 - [ ] 在目标环境人工检查桌面与窄屏布局、横向表格滚动和全部条件字段显隐。
 
+## 部署
+
+- 2026-07-30 将前端提交 `718a580f` 通过隔离的干净 worktree 部署到 `test1 / 第一套环境`。
+- 部署范围仅为前端/nginx；后端、Baileys Protocol、Zhuan、数据库均未变更。
+- 部署脚本退出码为 0，`armada-nginx` 已重建并保持运行；内置检查确认首页可访问且环境标识为“第一套环境”。
+- 访问入口：`http://armada.65.2.123.53.nip.io/`。
+
 ## 安全与回滚
 
-- 本次未修改远程环境、部署配置、数据库或凭据。
+- 远程变更仅限第一套测试环境的前端静态资源与 nginx 容器重建；未修改部署配置、后端、协议层、数据库或凭据。
 - 回滚时移除创建路由与 `create/` 目录，恢复旧创建抽屉和列表入口，并回退一级列表的新增统计契约与九列布局。
