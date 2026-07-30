@@ -13,6 +13,28 @@ export type GroupPullResourceStatus = 1 | 2 | 3 | 4;
 /** 群组发言权限：不操作、禁言、不禁言。 */
 export type GroupPullSpeakPermission = 1 | 2 | 3;
 
+/** 一级列表展示的任务类型。 */
+export type GroupPullMarketingTaskType = "GROUP_MARKETING";
+
+/** 一级列表展示的群组来源。 */
+export type GroupPullMarketingGroupSource =
+  | "HISTORICAL"
+  | "SELF_COLLECTED"
+  | "MIXED";
+
+/** 一级列表资源不足类型。 */
+export type GroupPullMarketingResourceShortageType =
+  | "TARGET_DATA"
+  | "PULLER"
+  | "WATER_ARMY"
+  | "ADMIN"
+  | "MARKETING_ADMIN";
+
+export interface GroupPullMarketingResourceShortage {
+  type: GroupPullMarketingResourceShortageType;
+  shortageCount?: number | null;
+}
+
 /** 创建拉群营销任务时随料子文件一起提交的配置。 */
 export interface CreateGroupPullMarketingConfig {
   taskName: string;
@@ -48,6 +70,26 @@ export interface GroupPullMarketingTaskRow {
   usedMarketingAccountCount: number;
   createdAt: number;
   taskEndAt: number;
+  taskType?: GroupPullMarketingTaskType | null;
+  groupSource?: GroupPullMarketingGroupSource | null;
+  primaryStage?: string | null;
+  processedGroupCount?: number | null;
+  targetGroupCount?: number | null;
+  joinedSuccessCount?: number | null;
+  plannedTargetCount?: number | null;
+  effectiveSuccessRate?: number | null;
+  marketingRunningGroupCount?: number | null;
+  marketingCompletedGroupCount?: number | null;
+  messageSuccessCount?: number | null;
+  messageFailedCount?: number | null;
+  messageUnknownCount?: number | null;
+  abnormalGroupCount?: number | null;
+  replacementPendingGroupCount?: number | null;
+  bannedAccountCount?: number | null;
+  remainingTargetCount?: number | null;
+  availablePullerCount?: number | null;
+  resourceShortages?: GroupPullMarketingResourceShortage[] | null;
+  lastExecutedAt?: number | null;
 }
 
 /** 拉群营销任务配置及聚合统计详情。 */
