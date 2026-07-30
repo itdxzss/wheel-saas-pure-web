@@ -59,6 +59,10 @@ function statusLabel(row: GroupListRow): string {
 function avatarText(row: GroupListRow): string {
   return displayGroupName(row).slice(0, 1) || "群";
 }
+
+function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
+  return ((mask ?? 0) & bit) !== 0;
+}
 </script>
 
 <template>
@@ -175,6 +179,31 @@ function avatarText(row: GroupListRow): string {
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[6].hide"
+          label="同步协议"
+          width="150"
+        >
+          <template #default="{ row }">
+            <div v-if="row.syncProtocolMask" class="group-protocol-tags">
+              <el-tag
+                v-if="hasSyncProtocol(row.syncProtocolMask, 1)"
+                size="small"
+                type="success"
+              >
+                JSON号
+              </el-tag>
+              <el-tag
+                v-if="hasSyncProtocol(row.syncProtocolMask, 2)"
+                size="small"
+                type="warning"
+              >
+                六段号
+              </el-tag>
+            </div>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[7].hide"
           label="来源"
           width="120"
         >
@@ -183,7 +212,7 @@ function avatarText(row: GroupListRow): string {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[7].hide"
+          v-if="!dynamicColumns[8].hide"
           label="时间"
           width="180"
         >
@@ -192,7 +221,7 @@ function avatarText(row: GroupListRow): string {
           }}</template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[8].hide"
+          v-if="!dynamicColumns[9].hide"
           label="操作"
           fixed="right"
           width="220"
@@ -253,5 +282,10 @@ function avatarText(row: GroupListRow): string {
 
 .group-detail {
   margin: 8px 16px;
+}
+
+.group-protocol-tags {
+  display: flex;
+  gap: 6px;
 }
 </style>
