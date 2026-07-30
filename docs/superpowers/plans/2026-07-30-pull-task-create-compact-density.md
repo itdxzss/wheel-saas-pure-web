@@ -17,7 +17,7 @@
 - Modify: `src/views/task/pull-task/create/PullTaskCreatePage.test.ts`
 - Modify: `src/views/task/pull-task/create/index.vue`
 
-- [ ] **Step 1: Write the failing density test**
+- [x] **Step 1: Write the failing density test**
 
 Append this test inside the existing `describe("pull task GROUP_MARKETING create page", ...)` block in `src/views/task/pull-task/create/PullTaskCreatePage.test.ts`:
 
@@ -40,7 +40,7 @@ it("uses conservative compact density and keeps the two-column form", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
@@ -50,7 +50,7 @@ node --test --experimental-strip-types --loader ./src/api/__tests__/node-test-lo
 
 Expected: FAIL because `index.vue` does not yet define the compact font, component size, card padding, form-item margin, or action-bar padding.
 
-- [ ] **Step 3: Add page-scoped compact styles**
+- [x] **Step 3: Add page-scoped compact styles**
 
 Update the existing `<style scoped>` block in `src/views/task/pull-task/create/index.vue`. Preserve the current responsive layout and replace or extend the relevant rules with these density values:
 
@@ -217,7 +217,7 @@ Update the existing `<style scoped>` block in `src/views/task/pull-task/create/i
 
 Keep the existing `.page-title`, `.action-hint`, `.action-buttons`, button-margin fix, and `@media (width <= 900px)` rules. Do not add three-column form rules or collapse behavior.
 
-- [ ] **Step 4: Format and run the focused test**
+- [x] **Step 4: Format and run the focused test**
 
 Run:
 
@@ -228,7 +228,7 @@ node --test --experimental-strip-types --loader ./src/api/__tests__/node-test-lo
 
 Expected: all create-page tests PASS.
 
-- [ ] **Step 5: Run regression and compile verification**
+- [x] **Step 5: Run regression and compile verification**
 
 Run:
 
@@ -248,7 +248,7 @@ git diff --check
 
 Expected: all tests and type checks PASS, the Vite build completes successfully, and `git diff --check` reports no whitespace errors.
 
-- [ ] **Step 6: Commit the implementation**
+- [x] **Step 6: Commit the implementation**
 
 ```bash
 git add src/views/task/pull-task/create/index.vue \
