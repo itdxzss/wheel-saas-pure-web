@@ -80,6 +80,7 @@ describe("pull task GROUP_MARKETING create interactions", () => {
     const draft = createEmptyPullTaskMarketingDraft();
 
     assert.deepEqual(validateCreateDraft(draft), [
+      "请先在拉群任务列表完成全局设置",
       "请填写任务名称",
       "请选择目标数据包或上传 TXT",
       "请选择至少一个目标群组",
@@ -90,6 +91,14 @@ describe("pull task GROUP_MARKETING create interactions", () => {
     draft.targetPackageId = 1;
     draft.selectedGroupIds = [9];
     draft.marketingTemplateId = 2;
+    assert.deepEqual(validateCreateDraft(draft), [
+      "请先在拉群任务列表完成全局设置"
+    ]);
+
+    draft.marketingSilenceMinutes = 30;
+    draft.groupLockdownMinutes = 60;
+    draft.globalMaxMarketingAccountsPerGroup = 2;
+    draft.maxMarketingAccountsPerGroup = 2;
     assert.deepEqual(validateCreateDraft(draft), []);
 
     draft.groupNameMode = "UNIFIED";
@@ -100,5 +109,34 @@ describe("pull task GROUP_MARKETING create interactions", () => {
     draft.unifiedGroupDescription = "统一描述";
     draft.startMode = "SCHEDULED";
     assert.deepEqual(validateCreateDraft(draft), ["请选择定时启动时间"]);
+  });
+
+  it("keeps the task marketing-account limit within the global maximum", async () => {
+    const { validateCreateSetting } = await import(moduleUrl.href);
+    const { createEmptyPullTaskMarketingDraft } = await import(
+      new URL("./create-draft.ts", import.meta.url).href
+    );
+    const draft = createEmptyPullTaskMarketingDraft();
+
+    assert.equal(
+      validateCreateSetting(draft),
+      "请先在拉群任务列表完成全局设置"
+    );
+
+    draft.marketingSilenceMinutes = 30;
+    draft.groupLockdownMinutes = 60;
+    draft.globalMaxMarketingAccountsPerGroup = 2;
+    draft.maxMarketingAccountsPerGroup = 0;
+    assert.equal(
+      validateCreateSetting(draft),
+      "单群营销账号上限必须在1到全局上限之间"
+    );
+    draft.maxMarketingAccountsPerGroup = 3;
+    assert.equal(
+      validateCreateSetting(draft),
+      "单群营销账号上限必须在1到全局上限之间"
+    );
+    draft.maxMarketingAccountsPerGroup = 2;
+    assert.equal(validateCreateSetting(draft), null);
   });
 });

@@ -23,6 +23,10 @@ describe("pull task GROUP_MARKETING create draft", () => {
     assert.equal(first.groupMaxMembers, 300);
     assert.equal(first.pullerCountPerGroup, 2);
     assert.equal(first.marketingIntervalMinutes, 10);
+    assert.equal(first.marketingSilenceMinutes, null);
+    assert.equal(first.groupLockdownMinutes, null);
+    assert.equal(first.maxMarketingAccountsPerGroup, null);
+    assert.equal(first.globalMaxMarketingAccountsPerGroup, null);
     assert.equal(first.unifiedGroupName, "");
     assert.equal(first.groupNameTemplate, "");
     assert.equal(first.unifiedGroupDescription, "");

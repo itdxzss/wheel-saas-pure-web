@@ -39,12 +39,10 @@ describe("pull task list display", () => {
 
   it("maps confirmed task metadata and resource shortages", async () => {
     assert.ok(existsSync(fileURLToPath(displayModuleUrl)));
-    const {
-      groupSourceLabel,
-      resourceShortageLabel,
-      taskTypeLabel
-    } = await import(displayModuleUrl.href);
+    const { groupSourceLabel, resourceShortageLabel, taskTypeLabel } =
+      await import(displayModuleUrl.href);
 
+    assert.equal(taskTypeLabel("STANDARD"), "普通拉群");
     assert.equal(taskTypeLabel("GROUP_MARKETING"), "拉群营销");
     assert.equal(taskTypeLabel(undefined), "--");
     assert.equal(groupSourceLabel("HISTORICAL"), "历史老群");
@@ -52,16 +50,22 @@ describe("pull task list display", () => {
     assert.equal(groupSourceLabel("MIXED"), "混合来源");
     assert.equal(groupSourceLabel(undefined), "--");
     assert.equal(
-      resourceShortageLabel({ type: "MARKETING_ADMIN", shortageCount: 2 }),
-      "缺营销管理员2个"
+      resourceShortageLabel({ type: "MARKETING_ADMIN" }),
+      "营销管理员不足"
     );
-    assert.equal(
-      resourceShortageLabel({ type: "PULLER", shortageCount: null }),
-      "拉手不足"
-    );
+    assert.equal(resourceShortageLabel({ type: "PULLER" }), "拉手不足");
   });
 
-  it("declares the ten prototype column groups", () => {
+  it("shows unknown messages only when their count is positive", async () => {
+    const { shouldShowUnknownMessage } = await import(displayModuleUrl.href);
+
+    assert.equal(shouldShowUnknownMessage(undefined), false);
+    assert.equal(shouldShowUnknownMessage(null), false);
+    assert.equal(shouldShowUnknownMessage(0), false);
+    assert.equal(shouldShowUnknownMessage(9), true);
+  });
+
+  it("declares the nine confirmed column groups", () => {
     for (const label of [
       "任务信息",
       "任务状态",
@@ -71,10 +75,11 @@ describe("pull task list display", () => {
       "消息发送",
       "异常情况",
       "剩余资源",
-      "时间",
-      "操作"
+      "时间/操作"
     ]) {
       assert.match(constantsSource, new RegExp(`label: "${label}"`));
     }
+    assert.doesNotMatch(constantsSource, /\{ label: "时间",/);
+    assert.doesNotMatch(constantsSource, /\{ label: "操作",/);
   });
 });

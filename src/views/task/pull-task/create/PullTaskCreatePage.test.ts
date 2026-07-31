@@ -113,6 +113,9 @@ describe("pull task GROUP_MARKETING create page", () => {
     const source = componentSource("./components/CreateMarketingSection.vue");
     for (const label of [
       "营销发送间隔",
+      "营销静默时间",
+      "群组封控时间",
+      "单群营销账号上限",
       "营销模板",
       "模板版本",
       "推广链接",
@@ -140,6 +143,8 @@ describe("pull task GROUP_MARKETING create page", () => {
       assert.match(source, new RegExp(label));
     }
     assert.match(source, /showSendRounds/);
+    assert.match(source, /draft\.globalMaxMarketingAccountsPerGroup/);
+    assert.match(source, /请先在拉群任务列表完成全局设置/);
   });
 
   it("aligns immediate and scheduled launch modes", () => {
@@ -182,6 +187,9 @@ describe("pull task GROUP_MARKETING create page", () => {
     assert.match(source, /previewVisible/);
     assert.match(source, /<el-dialog/);
     assert.match(source, /notifyUnconfirmedCreateAction/);
+    assert.match(source, /usePullTaskCreateSetting/);
+    assert.match(source, /onMounted/);
+    assert.match(source, /:disabled="!createSettingConfigured"/);
     assert.match(
       source,
       /router.push\(\{ name: PULL_TASK_LIST_ROUTE_NAME \}\)/

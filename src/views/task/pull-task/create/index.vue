@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
 import CreateBaseInfoSection from "./components/CreateBaseInfoSection.vue";
@@ -17,6 +17,7 @@ import {
   notifyUnconfirmedCreateAction,
   validateCreateDraft
 } from "./create-interactions";
+import { usePullTaskCreateSetting } from "./usePullTaskCreateSetting";
 
 defineOptions({
   name: "TaskPullCreate"
@@ -28,17 +29,37 @@ const draft = ref<PullTaskMarketingCreateDraft>(
 );
 const targetDataMetrics = emptyTargetDataMetrics();
 const previewVisible = ref(false);
+const {
+  configured: createSettingConfigured,
+  load: loadCreateSetting,
+  loading: createSettingLoading,
+  validate: validateSetting
+} = usePullTaskCreateSetting(draft);
+
+onMounted(() => {
+  void loadCreateSetting();
+});
 
 async function backToList(): Promise<void> {
   await router.push({ name: PULL_TASK_LIST_ROUTE_NAME });
 }
 
 function unavailableAction(action: string): void {
+  const settingError = validateSetting();
+  if (settingError) {
+    ElMessage.warning(settingError);
+    return;
+  }
   notifyUnconfirmedCreateAction(action, message => ElMessage.info(message));
 }
 
+function configurationErrors(): string[] {
+  const settingError = validateSetting();
+  return settingError ? [settingError] : validateCreateDraft(draft.value);
+}
+
 function checkConfiguration(): void {
-  const errors = validateCreateDraft(draft.value);
+  const errors = configurationErrors();
   if (errors.length > 0) {
     ElMessage.warning(errors[0]);
     return;
@@ -47,7 +68,7 @@ function checkConfiguration(): void {
 }
 
 function previewTask(): void {
-  const errors = validateCreateDraft(draft.value);
+  const errors = configurationErrors();
   if (errors.length > 0) {
     ElMessage.warning(errors[0]);
     return;
@@ -57,7 +78,11 @@ function previewTask(): void {
 </script>
 
 <template>
-  <div class="pull-task-create-page" aria-label="新建拉群营销任务">
+  <div
+    v-loading="createSettingLoading"
+    class="pull-task-create-page"
+    aria-label="新建拉群营销任务"
+  >
     <el-card shadow="never" class="page-header-card">
       <el-page-header title="返回拉群任务" @back="backToList">
         <template #content>
@@ -94,7 +119,11 @@ function previewTask(): void {
         <el-button @click="checkConfiguration">校验配置</el-button>
         <el-button @click="previewTask">预览任务</el-button>
         <el-button @click="backToList">取消</el-button>
-        <el-button type="primary" @click="unavailableAction('创建并启动')">
+        <el-button
+          type="primary"
+          :disabled="!createSettingConfigured"
+          @click="unavailableAction('创建并启动')"
+        >
           创建并启动
         </el-button>
       </div>
@@ -145,13 +174,14 @@ function previewTask(): void {
 
 <style scoped>
 .pull-task-create-page {
-  min-height: 100%;
-  padding-bottom: 60px;
-  font-size: 13px;
   --el-font-size-base: 13px;
   --el-font-size-small: 12px;
   --el-component-size: 30px;
   --el-component-size-small: 26px;
+
+  min-height: 100%;
+  padding-bottom: 60px;
+  font-size: 13px;
 }
 
 .page-header-card {

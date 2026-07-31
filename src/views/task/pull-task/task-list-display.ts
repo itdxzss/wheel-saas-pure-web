@@ -34,12 +34,11 @@ export function progressPercentage(
 }
 
 export function taskTypeLabel(type?: PullTaskType | null): string {
+  if (type === "STANDARD") return "普通拉群";
   return type === "GROUP_MARKETING" ? "拉群营销" : "--";
 }
 
-export function groupSourceLabel(
-  source?: PullTaskGroupSource | null
-): string {
+export function groupSourceLabel(source?: PullTaskGroupSource | null): string {
   if (source === "HISTORICAL") return "历史老群";
   if (source === "SELF_COLLECTED") return "自收群";
   if (source === "MIXED") return "混合来源";
@@ -50,7 +49,9 @@ export function resourceShortageLabel(
   shortage: PullTaskResourceShortage
 ): string {
   const name = shortageNames[shortage.type];
-  return shortage.shortageCount == null
-    ? `${name}不足`
-    : `缺${name}${displayMetric(shortage.shortageCount)}个`;
+  return `${name}不足`;
+}
+
+export function shouldShowUnknownMessage(value?: number | null): boolean {
+  return value != null && value > 0;
 }

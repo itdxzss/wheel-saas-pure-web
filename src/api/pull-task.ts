@@ -1,7 +1,7 @@
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
 
-export type PullTaskStatus =
+export type PullTaskStandardStatus =
   | "WAIT_START"
   | "EXECUTING"
   | "PAUSED"
@@ -9,14 +9,25 @@ export type PullTaskStatus =
   | "COMPLETED"
   | "ENDED";
 
+export type PullTaskMarketingStatus =
+  | "DRAFT"
+  | "WAIT_START"
+  | "VALIDATING"
+  | "WAITING_RESOURCE"
+  | "EXECUTING"
+  | "PARTIAL_COMPLETED"
+  | "PAUSED"
+  | "STOPPED"
+  | "COMPLETED"
+  | "FAILED";
+
+export type PullTaskStatus = PullTaskStandardStatus | PullTaskMarketingStatus;
+
 export type PullTaskMode = "OLD_LINK" | "CREATE_NEW" | string;
 
-export type PullTaskType = "GROUP_MARKETING";
+export type PullTaskType = "STANDARD" | "GROUP_MARKETING";
 
-export type PullTaskGroupSource =
-  | "HISTORICAL"
-  | "SELF_COLLECTED"
-  | "MIXED";
+export type PullTaskGroupSource = "HISTORICAL" | "SELF_COLLECTED" | "MIXED";
 
 export type PullTaskResourceShortageType =
   | "TARGET_DATA"
@@ -27,7 +38,63 @@ export type PullTaskResourceShortageType =
 
 export interface PullTaskResourceShortage {
   type: PullTaskResourceShortageType;
-  shortageCount?: number | null;
+}
+
+export type PullTaskListAction =
+  | "DETAIL"
+  | "START"
+  | "PAUSE"
+  | "STOP"
+  | "DELETE";
+
+export interface PullTaskGroupProgress {
+  processedGroupCount: number;
+  targetGroupCount: number;
+  transferSuccessCount: number;
+  transferPendingCloseCount: number;
+  transferPartialCount: number;
+  transferFailedCount: number;
+  transferRunningCount: number;
+  transferWaitingCount: number;
+}
+
+export interface PullTaskPullResult {
+  plannedTargetCount: number;
+  effectiveTargetCount: number;
+  joinedSuccessCount: number;
+  alreadyInGroupCount: number;
+  privacyRestrictedCount: number;
+  invalidNumberCount: number;
+  unregisteredCount: number;
+  unknownCount: number;
+  remainingTargetCount: number;
+  effectiveSuccessRate: number | null;
+}
+
+export interface PullTaskMarketingProgress {
+  waitingCount: number;
+  runningCount: number;
+  pausedCount: number;
+  completedCount: number;
+  abnormalStoppedCount: number;
+}
+
+export interface PullTaskMessageStats {
+  successCount: number;
+  failedCount: number;
+  unknownCount: number;
+}
+
+export interface PullTaskExceptionStats {
+  abnormalGroupCount: number;
+  pullerShortageGroupCount: number;
+  bannedAccountCount: number;
+}
+
+export interface PullTaskResourceStats {
+  remainingTargetCount: number;
+  availablePullerCount: number;
+  shortages: PullTaskResourceShortage[];
 }
 
 export type PullTaskGroupStatus =
@@ -50,39 +117,22 @@ export interface PullTaskRow {
   groupName?: string | null;
   mode: PullTaskMode;
   status: PullTaskStatus;
+  taskType: PullTaskType;
+  groupSource: PullTaskGroupSource | null;
+  primaryStage: string | null;
+  blockingReason: string | null;
   groupCount: number;
-  totalMembers?: number | null;
   expectedPullCount: number;
-  joinedCount: number;
-  failedCount: number;
-  bannedCount: number;
-  unusedCount: number;
-  pullerCount: number;
-  operator?: string | null;
-  submitted?: boolean | null;
-  createdAt?: number | null;
-  updatedAt?: number | null;
+  operatorName: string | null;
   remark?: string | null;
-  taskType?: PullTaskType | null;
-  groupSource?: PullTaskGroupSource | null;
-  primaryStage?: string | null;
-  processedGroupCount?: number | null;
-  targetGroupCount?: number | null;
-  joinedSuccessCount?: number | null;
-  plannedTargetCount?: number | null;
-  effectiveSuccessRate?: number | null;
-  marketingRunningGroupCount?: number | null;
-  marketingCompletedGroupCount?: number | null;
-  messageSuccessCount?: number | null;
-  messageFailedCount?: number | null;
-  messageUnknownCount?: number | null;
-  abnormalGroupCount?: number | null;
-  replacementPendingGroupCount?: number | null;
-  bannedAccountCount?: number | null;
-  remainingTargetCount?: number | null;
-  availablePullerCount?: number | null;
-  resourceShortages?: PullTaskResourceShortage[] | null;
-  lastExecutedAt?: number | null;
+  groupProgress: PullTaskGroupProgress | null;
+  pullResult: PullTaskPullResult | null;
+  marketingProgress: PullTaskMarketingProgress | null;
+  messageStats: PullTaskMessageStats | null;
+  exceptionStats: PullTaskExceptionStats | null;
+  resourceStats: PullTaskResourceStats | null;
+  lastExecutedAt: number | null;
+  allowedActions: PullTaskListAction[];
 }
 
 export interface PullTaskGroupRow {
@@ -147,10 +197,22 @@ export interface PullTaskQuery {
   id?: number;
   keyword?: string;
   status?: PullTaskStatus | "";
-  mode?: PullTaskMode | "";
-  orderState?: "SUBMITTED" | "UNSUBMITTED" | "";
-  banState?: "NORMAL" | "BANNED" | "";
+  taskType?: PullTaskType | "";
+  groupSource?: PullTaskGroupSource | "";
   operator?: string;
+}
+
+export interface PullTaskGroupMarketingSetting {
+  configured: boolean;
+  marketingSilenceMinutes: number | null;
+  groupLockdownMinutes: number | null;
+  maxMarketingAccountsPerGroup: number | null;
+}
+
+export interface UpdatePullTaskGroupMarketingSettingRequest {
+  marketingSilenceMinutes: number;
+  groupLockdownMinutes: number;
+  maxMarketingAccountsPerGroup: number;
 }
 
 export interface PullTaskGroupQuery {
@@ -241,12 +303,11 @@ function toListParams(query: PullTaskQuery) {
     page: query.page,
     pageSize: query.pageSize,
     id: query.id,
-    keyword: query.keyword,
+    keyword: query.keyword?.trim() || undefined,
     status: query.status || undefined,
-    mode: query.mode || undefined,
-    orderState: query.orderState || undefined,
-    banState: query.banState || undefined,
-    operator: query.operator || undefined
+    taskType: query.taskType || undefined,
+    groupSource: query.groupSource || undefined,
+    operator: query.operator?.trim() || undefined
   };
 }
 
@@ -256,6 +317,23 @@ export function listPullTasks(
   return armadaRequest<PageResponse<PullTaskRow>>("get", "/api/pull-tasks", {
     params: toListParams(query)
   });
+}
+
+export function getPullTaskGroupMarketingSetting(): Promise<PullTaskGroupMarketingSetting> {
+  return armadaRequest<PullTaskGroupMarketingSetting>(
+    "get",
+    "/api/pull-tasks/group-marketing-setting"
+  );
+}
+
+export function updatePullTaskGroupMarketingSetting(
+  data: UpdatePullTaskGroupMarketingSettingRequest
+): Promise<PullTaskGroupMarketingSetting> {
+  return armadaRequest<PullTaskGroupMarketingSetting>(
+    "put",
+    "/api/pull-tasks/group-marketing-setting",
+    { data }
+  );
 }
 
 export function createPullTask(

@@ -1,29 +1,32 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import PullTaskDetailDrawer from "./components/PullTaskDetailDrawer.vue";
+import PullTaskCreateDrawer from "./components/PullTaskCreateDrawer.vue";
+import PullTaskGlobalSettingDialog from "./components/PullTaskGlobalSettingDialog.vue";
+import PullTaskTable from "./components/PullTaskTable.vue";
+import PullTaskTypeDialog from "./components/PullTaskTypeDialog.vue";
 import {
-  formatEpoch,
   pullTaskColumns,
-  pullTaskStatusLabel,
+  pullTaskGroupSourceOptions,
   pullTaskStatusOptions,
-  pullTaskStatusTagType
+  pullTaskTypeOptions
 } from "./constants";
 import { usePullTaskPage } from "./composables/usePullTaskPage";
-import {
-  displayMetric,
-  displayRate,
-  groupSourceLabel,
-  progressPercentage,
-  resourceShortageLabel,
-  taskTypeLabel
-} from "./task-list-display";
-import type { PullTaskRow } from "@/api/pull-task";
+import { usePullTaskGlobalSetting } from "./composables/usePullTaskGlobalSetting";
+import { useStandardPullTaskCreate } from "./composables/useStandardPullTaskCreate";
+import type {
+  PullTaskListAction,
+  PullTaskRow,
+  PullTaskType
+} from "@/api/pull-task";
 import Delete from "~icons/ep/delete";
 import Plus from "~icons/ep/plus";
 import RefreshRight from "~icons/ep/refresh-right";
+import Setting from "~icons/ep/setting";
 import Search from "~icons/ri/search-line";
 
 defineOptions({
@@ -31,12 +34,23 @@ defineOptions({
 });
 
 const router = useRouter();
+const taskTypeDialogVisible = ref(false);
+const {
+  cancel: cancelGlobalSetting,
+  form: globalSettingForm,
+  loading: globalSettingLoading,
+  open: openGlobalSetting,
+  save: saveGlobalSetting,
+  saving: globalSettingSaving,
+  visible: globalSettingVisible
+} = usePullTaskGlobalSetting();
 
 const {
   accountGroups,
   activeTask,
   advancedOpen,
   deleteSelected,
+  deleteTask,
   detailDrawerOpen,
   detailGroupRows,
   detailLoading,
@@ -74,28 +88,62 @@ const {
   total
 } = usePullTaskPage();
 
-function openCreatePage(): void {
-  void router.push("/task/pull-task/create");
+const {
+  accountGroups: createAccountGroups,
+  create: createStandardTask,
+  creating: standardCreating,
+  form: standardCreateForm,
+  groupLinkOptions: standardGroupLinkOptions,
+  groupLinksLoading: standardGroupLinksLoading,
+  linkGroups: standardLinkGroups,
+  loadGroupLinks: loadStandardGroupLinks,
+  loading: standardCreateLoading,
+  open: openStandardCreate,
+  readMaterialFile: readStandardMaterialFile,
+  readWaterFile: readStandardWaterFile,
+  visible: standardCreateVisible
+} = useStandardPullTaskCreate({ onCreated: refreshTasks });
+
+function updateGlobalSettingForm(value: typeof globalSettingForm): void {
+  Object.assign(globalSettingForm, value);
 }
 
-function groupProgress(row: PullTaskRow): number | null {
-  return progressPercentage(row.processedGroupCount, row.targetGroupCount);
+function openTaskTypeDialog(): void {
+  taskTypeDialogVisible.value = true;
 }
 
-function hasNoExceptions(row: PullTaskRow): boolean {
-  return (
-    row.abnormalGroupCount === 0 &&
-    row.replacementPendingGroupCount === 0 &&
-    row.bannedAccountCount === 0
-  );
+async function handleTaskTypeSelect(type: PullTaskType): Promise<void> {
+  taskTypeDialogVisible.value = false;
+  if (type === "STANDARD") {
+    await openStandardCreate();
+    return;
+  }
+  await router.push("/task/pull-task/create");
 }
 
-function timestampLabel(value?: number | null): string {
-  return value == null ? "--" : formatEpoch(value);
-}
-
-function asPullTaskRow(row: unknown): PullTaskRow {
-  return row as PullTaskRow;
+async function handleTableAction(
+  row: PullTaskRow,
+  action: PullTaskListAction
+): Promise<void> {
+  if (action === "DETAIL") {
+    await openDetailDrawer(row);
+    return;
+  }
+  if (action === "DELETE") {
+    await deleteTask(row);
+    return;
+  }
+  if (action === "START") {
+    await runTaskAction(row, "start");
+    return;
+  }
+  if (action === "PAUSE") {
+    await runTaskAction(row, "pause");
+    return;
+  }
+  if (action === "STOP") {
+    await runTaskAction(row, "stop");
+  }
 }
 </script>
 
@@ -136,29 +184,31 @@ function asPullTaskRow(row: unknown): PullTaskRow {
           </el-select>
         </el-form-item>
         <el-form-item v-show="advancedOpen" label="任务类型">
-          <el-select v-model="searchForm.mode" clearable class="search-select">
-            <el-option label="老群链接" value="OLD_LINK" />
-            <el-option label="自建群" value="CREATE_NEW" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-show="advancedOpen" label="是否交单">
           <el-select
-            v-model="searchForm.orderState"
+            v-model="searchForm.taskType"
             clearable
             class="search-select"
           >
-            <el-option label="交单" value="SUBMITTED" />
-            <el-option label="未交单" value="UNSUBMITTED" />
+            <el-option
+              v-for="item in pullTaskTypeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item v-show="advancedOpen" label="群组是否封禁">
+        <el-form-item v-show="advancedOpen" label="群组来源">
           <el-select
-            v-model="searchForm.banState"
+            v-model="searchForm.groupSource"
             clearable
             class="search-select"
           >
-            <el-option label="正常" value="NORMAL" />
-            <el-option label="封禁" value="BANNED" />
+            <el-option
+              v-for="item in pullTaskGroupSourceOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item v-show="advancedOpen" label="操作员">
@@ -167,6 +217,7 @@ function asPullTaskRow(row: unknown): PullTaskRow {
             clearable
             class="search-operator"
             placeholder="创建人"
+            @keyup.enter="searchTasks"
           />
         </el-form-item>
         <el-form-item>
@@ -197,12 +248,19 @@ function asPullTaskRow(row: unknown): PullTaskRow {
     >
       <template #buttons>
         <el-button
+          v-auth="'tenant:pull_task:settings'"
+          :icon="useRenderIcon(Setting)"
+          @click="openGlobalSetting"
+        >
+          全局设置
+        </el-button>
+        <el-button
           v-auth="'tenant:pull_task:create'"
           type="primary"
           :icon="useRenderIcon(Plus)"
-          @click="openCreatePage"
+          @click="openTaskTypeDialog"
         >
-          新增拉群任务
+          新建拉群任务
         </el-button>
         <el-button
           v-auth="'tenant:pull_task:delete'"
@@ -218,247 +276,14 @@ function asPullTaskRow(row: unknown): PullTaskRow {
       </template>
 
       <template #default="{ dynamicColumns }">
-        <el-table
-          v-loading="loading"
-          :data="rows"
-          row-key="id"
-          border
+        <PullTaskTable
+          :columns="dynamicColumns"
+          :loading="loading"
+          :rows="rows"
+          @action="handleTableAction"
+          @refresh="refreshTasks"
           @selection-change="onSelectionChange"
-        >
-          <el-table-column type="selection" width="48" />
-          <el-table-column
-            v-if="!dynamicColumns[0].hide"
-            label="任务信息"
-            fixed="left"
-            min-width="260"
-          >
-            <template #default="{ row }">
-              <div class="primary-cell">
-                <strong>{{ row.taskName || "--" }}</strong>
-                <span class="secondary-line">#{{ row.id }}</span>
-                <div class="tag-row">
-                  <el-tag size="small" effect="plain" type="success">
-                    {{ taskTypeLabel(row.taskType) }}
-                  </el-tag>
-                  <el-tag size="small" effect="plain" type="info">
-                    {{ groupSourceLabel(row.groupSource) }}
-                  </el-tag>
-                </div>
-                <span class="secondary-line">
-                  创建人：{{ row.operator || "--" }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[1].hide"
-            label="任务状态"
-            min-width="180"
-          >
-            <template #default="{ row }">
-              <div class="primary-cell">
-                <el-tag
-                  size="small"
-                  :type="pullTaskStatusTagType(row.status)"
-                  effect="plain"
-                >
-                  {{ pullTaskStatusLabel(row.status) }}
-                </el-tag>
-                <span class="secondary-line">
-                  {{ row.primaryStage?.trim() || "--" }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[2].hide"
-            label="群组处理进度"
-            min-width="190"
-          >
-            <template #default="{ row }">
-              <div
-                v-if="groupProgress(asPullTaskRow(row)) != null"
-                class="metric-cell"
-              >
-                <strong>
-                  {{ displayMetric(row.processedGroupCount) }}/{{
-                    displayMetric(row.targetGroupCount)
-                  }}
-                </strong>
-                <el-progress
-                  :percentage="groupProgress(asPullTaskRow(row)) || 0"
-                  :stroke-width="8"
-                  :show-text="false"
-                />
-              </div>
-              <span v-else>--</span>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[3].hide"
-            label="拉人结果"
-            min-width="190"
-          >
-            <template #default="{ row }">
-              <div class="metric-cell">
-                <strong>
-                  {{ displayMetric(row.joinedSuccessCount) }}/{{
-                    displayMetric(row.plannedTargetCount)
-                  }}
-                </strong>
-                <span class="secondary-line">
-                  有效成功率 {{ displayRate(row.effectiveSuccessRate) }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[4].hide"
-            label="营销进度"
-            min-width="150"
-          >
-            <template #default="{ row }">
-              <div class="metric-cell">
-                <span>
-                  进行中 {{ displayMetric(row.marketingRunningGroupCount) }}
-                </span>
-                <span>
-                  已完成 {{ displayMetric(row.marketingCompletedGroupCount) }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[5].hide"
-            label="消息发送"
-            min-width="170"
-          >
-            <template #default="{ row }">
-              <div class="metric-cell">
-                <span class="success-text">
-                  成功 {{ displayMetric(row.messageSuccessCount) }}
-                </span>
-                <span class="danger-text">
-                  失败 {{ displayMetric(row.messageFailedCount) }}
-                </span>
-                <span>未知 {{ displayMetric(row.messageUnknownCount) }}</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[6].hide"
-            label="异常情况"
-            min-width="180"
-          >
-            <template #default="{ row }">
-              <el-tag
-                v-if="hasNoExceptions(asPullTaskRow(row))"
-                size="small"
-                type="success"
-              >
-                无异常
-              </el-tag>
-              <div v-else class="metric-cell">
-                <span>
-                  异常群组 {{ displayMetric(row.abnormalGroupCount) }}
-                </span>
-                <span>
-                  待补位 {{ displayMetric(row.replacementPendingGroupCount) }}
-                </span>
-                <span>
-                  封禁账号 {{ displayMetric(row.bannedAccountCount) }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[7].hide"
-            label="剩余资源"
-            min-width="220"
-          >
-            <template #default="{ row }">
-              <div class="metric-cell">
-                <span>
-                  目标数据 {{ displayMetric(row.remainingTargetCount) }}
-                </span>
-                <span>
-                  可用拉手 {{ displayMetric(row.availablePullerCount) }}
-                </span>
-                <div v-if="row.resourceShortages?.length" class="tag-row">
-                  <el-tag
-                    v-for="shortage in row.resourceShortages"
-                    :key="shortage.type"
-                    size="small"
-                    type="danger"
-                    effect="plain"
-                  >
-                    {{ resourceShortageLabel(shortage) }}
-                  </el-tag>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[8].hide"
-            label="时间"
-            min-width="190"
-          >
-            <template #default="{ row }">
-              <div class="metric-cell">
-                <span>创建 {{ timestampLabel(row.createdAt) }}</span>
-                <span>
-                  最近执行 {{ timestampLabel(row.lastExecutedAt) }}
-                </span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column
-            v-if="!dynamicColumns[9].hide"
-            label="操作"
-            fixed="right"
-            width="230"
-          >
-            <template #default="{ row }">
-              <el-button
-                link
-                type="primary"
-                @click="openDetailDrawer(asPullTaskRow(row))"
-              >
-                查看详情
-              </el-button>
-              <el-button
-                v-auth="'tenant:pull_task:operate'"
-                link
-                type="success"
-                :disabled="row.status !== 'WAIT_START'"
-                @click="runTaskAction(asPullTaskRow(row), 'start')"
-              >
-                启动
-              </el-button>
-              <el-button
-                v-auth="'tenant:pull_task:operate'"
-                link
-                type="warning"
-                :disabled="row.status !== 'EXECUTING'"
-                @click="runTaskAction(asPullTaskRow(row), 'pause')"
-              >
-                暂停
-              </el-button>
-              <el-button
-                v-auth="'tenant:pull_task:operate'"
-                link
-                type="danger"
-                :disabled="row.status === 'COMPLETED' || row.status === 'ENDED'"
-                @click="runTaskAction(asPullTaskRow(row), 'stop')"
-              >
-                关闭
-              </el-button>
-            </template>
-          </el-table-column>
-          <template #empty>
-            <el-empty description="暂无拉群任务" />
-          </template>
-        </el-table>
+        />
 
         <WheelPagination
           v-model:current-page="page"
@@ -468,6 +293,36 @@ function asPullTaskRow(row: unknown): PullTaskRow {
         />
       </template>
     </PureTableBar>
+
+    <PullTaskTypeDialog
+      v-model="taskTypeDialogVisible"
+      @select="handleTaskTypeSelect"
+    />
+
+    <PullTaskCreateDrawer
+      v-model="standardCreateVisible"
+      v-model:form="standardCreateForm"
+      :account-groups="createAccountGroups"
+      :creating="standardCreating"
+      :group-link-options="standardGroupLinkOptions"
+      :group-links-loading="standardGroupLinksLoading"
+      :link-groups="standardLinkGroups"
+      :loading="standardCreateLoading"
+      @create="createStandardTask"
+      @load-group-links="loadStandardGroupLinks"
+      @read-material-file="readStandardMaterialFile"
+      @read-water-file="readStandardWaterFile"
+    />
+
+    <PullTaskGlobalSettingDialog
+      v-model="globalSettingVisible"
+      :form="globalSettingForm"
+      :loading="globalSettingLoading"
+      :saving="globalSettingSaving"
+      @cancel="cancelGlobalSetting"
+      @save="saveGlobalSetting"
+      @update:form="updateGlobalSettingForm"
+    />
 
     <PullTaskDetailDrawer
       v-model="detailDrawerOpen"
@@ -522,36 +377,5 @@ function asPullTaskRow(row: unknown): PullTaskRow {
 .search-operator,
 .search-select {
   width: 150px;
-}
-
-.primary-cell,
-.metric-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-}
-
-.secondary-line {
-  color: var(--el-text-color-secondary);
-}
-
-.tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.metric-cell :deep(.el-progress) {
-  width: 150px;
-}
-
-.success-text {
-  color: var(--el-color-success);
-}
-
-.danger-text {
-  color: var(--el-color-danger);
 }
 </style>

@@ -55,6 +55,8 @@ export function validateCreateDraft(
   draft: PullTaskMarketingCreateDraft
 ): string[] {
   const errors: string[] = [];
+  const settingError = validateCreateSetting(draft);
+  if (settingError) errors.push(settingError);
   if (!draft.taskName.trim()) errors.push("请填写任务名称");
   if (!draft.targetPackageId && !draft.targetFile) {
     errors.push("请选择目标数据包或上传 TXT");
@@ -82,4 +84,25 @@ export function validateCreateDraft(
     errors.push("请选择定时启动时间");
   }
   return errors;
+}
+
+export function validateCreateSetting(
+  draft: PullTaskMarketingCreateDraft
+): string | null {
+  if (
+    draft.marketingSilenceMinutes == null ||
+    draft.groupLockdownMinutes == null ||
+    draft.globalMaxMarketingAccountsPerGroup == null
+  ) {
+    return "请先在拉群任务列表完成全局设置";
+  }
+  if (
+    !Number.isInteger(draft.maxMarketingAccountsPerGroup) ||
+    (draft.maxMarketingAccountsPerGroup ?? 0) < 1 ||
+    (draft.maxMarketingAccountsPerGroup ?? 0) >
+      draft.globalMaxMarketingAccountsPerGroup
+  ) {
+    return "单群营销账号上限必须在1到全局上限之间";
+  }
+  return null;
 }

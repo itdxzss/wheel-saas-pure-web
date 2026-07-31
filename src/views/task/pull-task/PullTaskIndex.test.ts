@@ -14,37 +14,28 @@ const indexSource = source("./index.vue");
 const pageStateSource = source("./composables/usePullTaskPage.ts");
 
 describe("pull task list prototype", () => {
-  it("renders the ten prototype information groups", () => {
-    for (const label of [
-      "任务信息",
-      "任务状态",
-      "群组处理进度",
-      "拉人结果",
-      "营销进度",
-      "消息发送",
-      "异常情况",
-      "剩余资源",
-      "时间",
-      "操作"
-    ]) {
-      assert.match(indexSource, new RegExp(`label="${label}"`));
-    }
-    assert.match(indexSource, /displayMetric/);
-    assert.match(indexSource, /displayRate/);
-    assert.match(indexSource, /progressPercentage/);
+  it("delegates the nine-column markup to PullTaskTable", () => {
+    assert.match(indexSource, /import PullTaskTable/);
+    assert.match(indexSource, /<PullTaskTable/);
+    assert.doesNotMatch(indexSource, /<el-table-column/);
+    assert.doesNotMatch(indexSource, /label="时间"/);
+    assert.doesNotMatch(indexSource, /label="操作"/);
   });
 
-  it("opens the correct create page and removes the legacy drawer", () => {
+  it("opens a task-type selector and mounts the standard drawer", () => {
     assert.match(indexSource, /useRouter/);
+    assert.match(indexSource, /PullTaskTypeDialog/);
+    assert.match(indexSource, /PullTaskCreateDrawer/);
+    assert.match(indexSource, /openTaskTypeDialog/);
+    assert.match(indexSource, /handleTaskTypeSelect/);
     assert.match(indexSource, /router\.push\("\/task\/pull-task\/create"\)/);
-    assert.doesNotMatch(indexSource, /PullTaskCreateDrawer|openCreateDrawer/);
     assert.equal(
       existsSync(
         fileURLToPath(
           new URL("./components/PullTaskCreateDrawer.vue", import.meta.url)
         )
       ),
-      false
+      true
     );
   });
 
@@ -53,7 +44,7 @@ describe("pull task list prototype", () => {
     assert.match(indexSource, /tenant:pull_task:delete/);
     assert.match(indexSource, /openDetailDrawer/);
     for (const action of ["start", "pause", "stop"]) {
-      assert.match(indexSource, new RegExp(`'${action}'`));
+      assert.match(indexSource, new RegExp(`["']${action}["']`));
     }
     assert.match(indexSource, /PullTaskDetailDrawer/);
   });
@@ -71,5 +62,17 @@ describe("pull task list prototype", () => {
     assert.match(pageStateSource, /listPullTasks/);
     assert.match(pageStateSource, /getPullTaskDetail/);
     assert.match(pageStateSource, /listAccountGroups/);
+  });
+
+  it("keeps only the confirmed unified-list search fields", () => {
+    assert.match(pageStateSource, /taskType: "" \| PullTaskType/);
+    assert.match(pageStateSource, /groupSource: "" \| PullTaskGroupSource/);
+    assert.match(pageStateSource, /taskType: searchForm\.taskType/);
+    assert.match(pageStateSource, /groupSource: searchForm\.groupSource/);
+    for (const obsolete of ["orderState", "banState"]) {
+      assert.doesNotMatch(pageStateSource, new RegExp(obsolete));
+      assert.doesNotMatch(indexSource, new RegExp(obsolete));
+    }
+    assert.doesNotMatch(pageStateSource, /mode: searchForm\.mode/);
   });
 });

@@ -56,6 +56,14 @@ watch(
       </div>
     </template>
 
+    <el-alert
+      v-if="draft.globalMaxMarketingAccountsPerGroup == null"
+      title="请先在拉群任务列表完成全局设置"
+      type="error"
+      :closable="false"
+      class="section-alert"
+    />
+
     <div class="form-grid">
       <el-form-item label="营销发送间隔" required>
         <el-input-number
@@ -64,6 +72,29 @@ watch(
           :step="5"
         />
         <span class="field-unit">分钟/次</span>
+      </el-form-item>
+
+      <el-form-item label="营销静默时间">
+        <el-input-number v-model="draft.marketingSilenceMinutes" disabled />
+        <span class="field-unit">分钟（全局）</span>
+      </el-form-item>
+
+      <el-form-item label="群组封控时间">
+        <el-input-number v-model="draft.groupLockdownMinutes" disabled />
+        <span class="field-unit">分钟（全局）</span>
+      </el-form-item>
+
+      <el-form-item label="单群营销账号上限" required>
+        <el-input-number
+          v-model="draft.maxMarketingAccountsPerGroup"
+          :min="1"
+          :max="draft.globalMaxMarketingAccountsPerGroup ?? undefined"
+          :disabled="draft.globalMaxMarketingAccountsPerGroup == null"
+        />
+        <span class="field-unit">
+          个（全局上限
+          {{ draft.globalMaxMarketingAccountsPerGroup ?? "--" }}）
+        </span>
       </el-form-item>
 
       <el-form-item label="营销模板" required>

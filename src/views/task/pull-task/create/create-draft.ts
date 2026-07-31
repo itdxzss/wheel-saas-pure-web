@@ -93,6 +93,10 @@ export interface PullTaskMarketingCreateDraft {
   allowReducePlan: boolean;
   allowWaterArmyReplacement: boolean;
   marketingIntervalMinutes: number;
+  marketingSilenceMinutes: number | null;
+  groupLockdownMinutes: number | null;
+  maxMarketingAccountsPerGroup: number | null;
+  globalMaxMarketingAccountsPerGroup: number | null;
   marketingTemplateId: number | "";
   sendFirstImmediately: boolean;
   sendMode: SendMode;
@@ -201,6 +205,10 @@ export function createEmptyPullTaskMarketingDraft(): PullTaskMarketingCreateDraf
     allowReducePlan: false,
     allowWaterArmyReplacement: true,
     marketingIntervalMinutes: 10,
+    marketingSilenceMinutes: null,
+    groupLockdownMinutes: null,
+    maxMarketingAccountsPerGroup: null,
+    globalMaxMarketingAccountsPerGroup: null,
     marketingTemplateId: "",
     sendFirstImmediately: true,
     sendMode: "ROUNDS",

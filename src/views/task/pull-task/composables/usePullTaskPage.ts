@@ -22,12 +22,13 @@ import {
   stopPullTask,
   supplementPullTaskRows,
   type PullTaskDetail,
+  type PullTaskGroupSource,
   type PullTaskGroupRow,
   type PullTaskGroupStatus,
-  type PullTaskMode,
   type PullTaskRow,
   type PullTaskStatus,
-  type PullTaskSummary
+  type PullTaskSummary,
+  type PullTaskType
 } from "@/api/pull-task";
 import {
   listAccountGroups,
@@ -39,9 +40,8 @@ export interface PullTaskSearchForm {
   id: string;
   keyword: string;
   status: "" | PullTaskStatus;
-  mode: "" | PullTaskMode;
-  orderState: "" | "SUBMITTED" | "UNSUBMITTED";
-  banState: "" | "NORMAL" | "BANNED";
+  taskType: "" | PullTaskType;
+  groupSource: "" | PullTaskGroupSource;
   operator: string;
 }
 
@@ -61,6 +61,7 @@ export interface PullTaskPageState {
   activeTask: Ref<PullTaskRow | null>;
   advancedOpen: Ref<boolean>;
   deleteSelected: () => Promise<void>;
+  deleteTask: (row: PullTaskRow) => Promise<void>;
   detailDrawerOpen: Ref<boolean>;
   detailGroupRows: Ref<PullTaskGroupRow[]>;
   detailLoading: Ref<boolean>;
@@ -109,10 +110,10 @@ function buildSummary(
     status: task?.status ?? "WAIT_START",
     mode: task?.mode ?? "OLD_LINK",
     groupCount: task?.groupCount ?? 0,
-    totalMembers: task?.totalMembers ?? 0,
-    abnormalCount: task?.failedCount ?? 0,
-    joinedCount: task?.joinedCount ?? 0,
-    unusedCount: task?.unusedCount ?? 0,
+    totalMembers: 0,
+    abnormalCount: task?.exceptionStats?.abnormalGroupCount ?? 0,
+    joinedCount: task?.pullResult?.joinedSuccessCount ?? 0,
+    unusedCount: task?.pullResult?.remainingTargetCount ?? 0,
     expectedPullCount: task?.expectedPullCount ?? 0
   };
 }
@@ -132,9 +133,8 @@ export function usePullTaskPage(): PullTaskPageState {
     id: "",
     keyword: "",
     status: "",
-    mode: "",
-    orderState: "",
-    banState: "",
+    taskType: "",
+    groupSource: "",
     operator: ""
   });
   const detailSearchForm = reactive<PullTaskDetailSearchForm>({
@@ -182,9 +182,8 @@ export function usePullTaskPage(): PullTaskPageState {
       id: searchForm.id.trim() && Number.isFinite(id) ? id : undefined,
       keyword: searchForm.keyword.trim() || undefined,
       status: searchForm.status,
-      mode: searchForm.mode,
-      orderState: searchForm.orderState,
-      banState: searchForm.banState,
+      taskType: searchForm.taskType,
+      groupSource: searchForm.groupSource,
       operator: searchForm.operator.trim() || undefined
     };
   }
@@ -224,9 +223,8 @@ export function usePullTaskPage(): PullTaskPageState {
     searchForm.id = "";
     searchForm.keyword = "";
     searchForm.status = "";
-    searchForm.mode = "";
-    searchForm.orderState = "";
-    searchForm.banState = "";
+    searchForm.taskType = "";
+    searchForm.groupSource = "";
     searchForm.operator = "";
     searchTasks();
   }
@@ -314,8 +312,10 @@ export function usePullTaskPage(): PullTaskPageState {
 
   async function deleteSelected(): Promise<void> {
     if (selectedRows.value.length === 0) return;
-    if (selectedRows.value.some(row => row.status !== "COMPLETED")) {
-      ElMessage.warning("请手动结束任务后再删除，仅已完成任务可删");
+    if (
+      selectedRows.value.some(row => !row.allowedActions.includes("DELETE"))
+    ) {
+      ElMessage.warning("所选任务中包含当前不可删除的状态");
       return;
     }
     try {
@@ -338,6 +338,11 @@ export function usePullTaskPage(): PullTaskPageState {
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "批量删除拉群任务失败"));
     }
+  }
+
+  async function deleteTask(row: PullTaskRow): Promise<void> {
+    selectedRows.value = [row];
+    await deleteSelected();
   }
 
   function selectedDetailIds(): number[] {
@@ -466,6 +471,7 @@ export function usePullTaskPage(): PullTaskPageState {
     activeTask,
     advancedOpen,
     deleteSelected,
+    deleteTask,
     detailDrawerOpen,
     detailGroupRows,
     detailLoading,
