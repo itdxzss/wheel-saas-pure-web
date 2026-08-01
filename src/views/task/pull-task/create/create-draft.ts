@@ -72,7 +72,8 @@ export interface PullTaskMarketingCreateDraft {
   filterInvitePermission: string;
   groupAgeRange: [number, number];
   memberCountRange: [number, number];
-  selectedGroupIds: number[];
+  selectedGroupJids: string[];
+  waitingPoolToken: string;
   roleAccounts: RoleAccountConfigs;
   pullerCountPerGroup: number;
   maxPeoplePerPuller: number;
@@ -184,7 +185,8 @@ export function createEmptyPullTaskMarketingDraft(): PullTaskMarketingCreateDraf
     filterInvitePermission: "",
     groupAgeRange: [0, 3650],
     memberCountRange: [0, 1024],
-    selectedGroupIds: [],
+    selectedGroupJids: [],
+    waitingPoolToken: "",
     roleAccounts: createEmptyRoleAccounts(),
     pullerCountPerGroup: 2,
     maxPeoplePerPuller: 60,

@@ -22,3 +22,6 @@ tests/**/coverage/
 *.sln
 tsconfig.tsbuildinfo
 .superpowers/
+playwright-report/
+test-results/
+.e2e-artifacts/

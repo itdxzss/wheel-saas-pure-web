@@ -215,6 +215,92 @@ export interface UpdatePullTaskGroupMarketingSettingRequest {
   maxMarketingAccountsPerGroup: number;
 }
 
+export type PullTaskGroupCandidateStatus =
+  | "NORMAL"
+  | "WAITING_ACCOUNT_ONLINE"
+  | "NO_ADMIN_PERMISSION"
+  | "NO_ELIGIBLE_ACCOUNT"
+  | "GROUP_BANNED"
+  | "LINK_INVALID"
+  | "GROUP_UNAVAILABLE"
+  | "UNKNOWN"
+  | "OCCUPIED";
+
+export interface PullTaskGroupCandidateAccount {
+  accountId: number;
+  accountPhone: string;
+  groupRole: "CREATOR" | "ADMIN";
+  loginState: number | null;
+  lastSeenAt: number | null;
+}
+
+export interface PullTaskGroupCandidateRow {
+  groupLinkId: number;
+  groupJid: string;
+  groupName: string | null;
+  source: Exclude<PullTaskGroupSource, "MIXED">;
+  ownerPhone: string | null;
+  countryIso2: string | null;
+  countryName: string | null;
+  countryFlag: string | null;
+  groupCreatedAt: number | null;
+  memberSize: number | null;
+  announceOnly: boolean | null;
+  avatarUrl: string | null;
+  lastSyncedAt: number | null;
+  sourceJoinTaskId: number | null;
+  sourceJoinTaskName: string | null;
+  sourceJoinedAt: number | null;
+  sourcePromotedAt: number | null;
+  operableAccounts: PullTaskGroupCandidateAccount[];
+  eligibleAccountCount: number;
+  onlineAccountCount: number;
+  status: PullTaskGroupCandidateStatus;
+  selectable: boolean;
+  inCurrentWaitingPool: boolean;
+  occupiedTaskName: string | null;
+  disabledReason: string | null;
+  lastValidatedAt: number | null;
+}
+
+export interface PullTaskGroupCandidateQuery {
+  page?: number;
+  pageSize?: number;
+  source?: PullTaskGroupSource;
+  keyword?: string;
+  groupJid?: string;
+  managerPhone?: string;
+  accountGroupId?: number;
+  showRegularGroups?: boolean;
+  minMemberCount?: number;
+  maxMemberCount?: number;
+  announceOnly?: boolean;
+  reservationToken?: string;
+}
+
+export interface PullTaskGroupWaitingPoolRejected {
+  groupJid: string;
+  reason: string;
+}
+
+export interface PullTaskGroupWaitingPool {
+  reservationToken: string;
+  groups: PullTaskGroupCandidateRow[];
+  rejected: PullTaskGroupWaitingPoolRejected[];
+}
+
+export interface AddPullTaskGroupWaitingRequest {
+  reservationToken: string | null;
+  taskName: string;
+  plannedStartAt: number | null;
+  groupJids: string[];
+}
+
+export interface RemovePullTaskGroupWaitingRequest {
+  reservationToken: string;
+  groupJid: string;
+}
+
 export interface PullTaskGroupQuery {
   page?: number;
   pageSize?: number;
@@ -333,6 +419,71 @@ export function updatePullTaskGroupMarketingSetting(
     "put",
     "/api/pull-tasks/group-marketing-setting",
     { data }
+  );
+}
+
+export function listPullTaskGroupMarketingCandidates(
+  query: PullTaskGroupCandidateQuery = {}
+): Promise<PageResponse<PullTaskGroupCandidateRow>> {
+  return armadaRequest<PageResponse<PullTaskGroupCandidateRow>>(
+    "get",
+    "/api/pull-tasks/group-marketing/candidate-groups",
+    {
+      params: {
+        page: query.page,
+        pageSize: query.pageSize,
+        source: query.source,
+        keyword: query.keyword?.trim() || undefined,
+        groupJid: query.groupJid?.trim() || undefined,
+        managerPhone: query.managerPhone?.trim() || undefined,
+        accountGroupId: query.accountGroupId,
+        showRegularGroups: query.showRegularGroups,
+        minMemberCount: query.minMemberCount,
+        maxMemberCount: query.maxMemberCount,
+        announceOnly: query.announceOnly,
+        reservationToken: query.reservationToken?.trim() || undefined
+      }
+    }
+  );
+}
+
+export function addPullTaskGroupMarketingWaiting(
+  data: AddPullTaskGroupWaitingRequest
+): Promise<PullTaskGroupWaitingPool> {
+  return armadaRequest<PullTaskGroupWaitingPool>(
+    "post",
+    "/api/pull-tasks/group-marketing/waiting-pool",
+    { data }
+  );
+}
+
+export function getPullTaskGroupMarketingWaiting(
+  reservationToken: string
+): Promise<PullTaskGroupWaitingPool> {
+  return armadaRequest<PullTaskGroupWaitingPool>(
+    "get",
+    "/api/pull-tasks/group-marketing/waiting-pool",
+    { params: { reservationToken } }
+  );
+}
+
+export function removePullTaskGroupMarketingWaiting(
+  data: RemovePullTaskGroupWaitingRequest
+): Promise<PullTaskGroupWaitingPool> {
+  return armadaRequest<PullTaskGroupWaitingPool>(
+    "post",
+    "/api/pull-tasks/group-marketing/waiting-pool/remove",
+    { data }
+  );
+}
+
+export function releasePullTaskGroupMarketingWaiting(
+  reservationToken: string
+): Promise<void> {
+  return armadaRequest<void>(
+    "delete",
+    "/api/pull-tasks/group-marketing/waiting-pool",
+    { params: { reservationToken } }
   );
 }
 

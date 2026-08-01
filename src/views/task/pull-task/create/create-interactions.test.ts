@@ -6,19 +6,29 @@ import { describe, it } from "node:test";
 const moduleUrl = new URL("./create-interactions.ts", import.meta.url);
 
 describe("pull task GROUP_MARKETING create interactions", () => {
-  it("preserves other-page selections and deduplicates ids", async () => {
+  it("preserves other-page selections and deduplicates JIDs", async () => {
     assert.ok(
       existsSync(fileURLToPath(moduleUrl)),
       "create-interactions.ts should exist"
     );
-    const { reconcileSelectedGroupIds } = await import(moduleUrl.href);
+    const { reconcileSelectedGroupJids } = await import(moduleUrl.href);
 
     assert.deepEqual(
-      reconcileSelectedGroupIds([1, 2, 8], [1, 2, 3], [2, 3]),
-      [8, 2, 3]
+      reconcileSelectedGroupJids(
+        ["g1", "g2", "g8"],
+        ["g1", "g2", "g3"],
+        ["g2", "g3"]
+      ),
+      ["g8", "g2", "g3"]
     );
-    assert.deepEqual(reconcileSelectedGroupIds([8, 2, 3], [1, 2, 3], []), [8]);
-    assert.deepEqual(reconcileSelectedGroupIds([8, 8], [1, 2], [2, 2]), [8, 2]);
+    assert.deepEqual(
+      reconcileSelectedGroupJids(["g8", "g2", "g3"], ["g1", "g2", "g3"], []),
+      ["g8"]
+    );
+    assert.deepEqual(
+      reconcileSelectedGroupJids(["g8", "g8"], ["g1", "g2"], ["g2", "g2"]),
+      ["g8", "g2"]
+    );
   });
 
   it("caps rates without limiting count thresholds", async () => {
@@ -89,7 +99,7 @@ describe("pull task GROUP_MARKETING create interactions", () => {
 
     draft.taskName = "测试任务";
     draft.targetPackageId = 1;
-    draft.selectedGroupIds = [9];
+    draft.selectedGroupJids = ["group-9@g.us"];
     draft.marketingTemplateId = 2;
     assert.deepEqual(validateCreateDraft(draft), [
       "请先在拉群任务列表完成全局设置"
