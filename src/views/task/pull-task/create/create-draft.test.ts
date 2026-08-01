@@ -30,6 +30,8 @@ describe("pull task GROUP_MARKETING create draft", () => {
     assert.equal(first.unifiedGroupName, "");
     assert.equal(first.groupNameTemplate, "");
     assert.equal(first.unifiedGroupDescription, "");
+    assert.deepEqual(first.selectedGroupJids, []);
+    assert.equal(first.waitingPoolToken, "");
     assert.deepEqual(Object.keys(first.roleAccounts), [
       "ADMIN",
       "PULLER",

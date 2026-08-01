@@ -34,8 +34,9 @@ describe("pull task GROUP_MARKETING create page", () => {
     assert.doesNotMatch(source, /子模式/);
   });
 
-  it("aligns target group settings and the empty candidate table", () => {
+  it("connects target groups to candidate paging and the waiting pool", () => {
     const source = componentSource("./components/CreateTargetGroupSection.vue");
+    const composable = componentSource("./usePullTaskGroupCandidates.ts");
     for (const label of [
       "群资源使用方式",
       "是否清空当前群成员",
@@ -69,9 +70,24 @@ describe("pull task GROUP_MARKETING create page", () => {
       assert.match(source, new RegExp(label));
     }
     assert.match(source, /<el-table/);
-    assert.match(source, /<el-empty/);
+    assert.match(
+      source,
+      /import WheelPagination from "@\/components\/WheelPagination\/index\.vue";/
+    );
+    assert.match(source, /<WheelPagination/);
+    assert.match(source, /加入等待任务池/);
+    assert.match(source, /移出/);
+    assert.match(source, /usePullTaskGroupCandidates/);
+    assert.match(source, /refreshCandidates/);
+    assert.match(source, /reserve-selection/);
     assert.match(source, /draft\.groupNameMode/);
     assert.match(source, /draft\.groupDescriptionMode/);
+    assert.match(composable, /listPullTaskGroupMarketingCandidates/);
+    assert.match(composable, /addPullTaskGroupMarketingWaiting/);
+    assert.match(composable, /removePullTaskGroupMarketingWaiting/);
+    assert.match(composable, /row\.groupJid/);
+    assert.doesNotMatch(source, /群组筛选接口待确认/);
+    assert.doesNotMatch(source, /等待任务池接口待确认/);
     assert.doesNotMatch(source, /Indonesia Game Squad|120363401003/);
   });
 
