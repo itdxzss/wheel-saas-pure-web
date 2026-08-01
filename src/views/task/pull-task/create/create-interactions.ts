@@ -14,14 +14,14 @@ export interface TargetFileSelection<T extends TargetFileLike> {
   warning: string | null;
 }
 
-export function reconcileSelectedGroupIds(
-  previousIds: number[],
-  currentPageIds: number[],
-  currentPageSelectedIds: number[]
-): number[] {
-  const currentPageIdSet = new Set(currentPageIds);
-  const retainedIds = previousIds.filter(id => !currentPageIdSet.has(id));
-  return [...new Set([...retainedIds, ...currentPageSelectedIds])];
+export function reconcileSelectedGroupJids(
+  previousJids: string[],
+  currentPageJids: string[],
+  currentPageSelectedJids: string[]
+): string[] {
+  const currentPageJidSet = new Set(currentPageJids);
+  const retainedJids = previousJids.filter(jid => !currentPageJidSet.has(jid));
+  return [...new Set([...retainedJids, ...currentPageSelectedJids])];
 }
 
 export function thresholdMaximum(mode: ThresholdMode): number | undefined {
@@ -61,7 +61,7 @@ export function validateCreateDraft(
   if (!draft.targetPackageId && !draft.targetFile) {
     errors.push("请选择目标数据包或上传 TXT");
   }
-  if (draft.selectedGroupIds.length === 0) {
+  if (draft.selectedGroupJids.length === 0) {
     errors.push("请选择至少一个目标群组");
   }
   if (!draft.marketingTemplateId) errors.push("请选择营销模板");

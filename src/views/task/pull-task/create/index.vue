@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { useRouter } from "vue-router";
+import { onBeforeRouteLeave, useRouter } from "vue-router";
 import CreateBaseInfoSection from "./components/CreateBaseInfoSection.vue";
 import CreateLaunchSection from "./components/CreateLaunchSection.vue";
 import CreateMarketingSection from "./components/CreateMarketingSection.vue";
@@ -24,6 +24,9 @@ defineOptions({
 });
 
 const router = useRouter();
+const targetGroupSection = ref<{
+  releaseWaitingPool: () => Promise<void>;
+}>();
 const draft = ref<PullTaskMarketingCreateDraft>(
   createEmptyPullTaskMarketingDraft()
 );
@@ -41,8 +44,22 @@ onMounted(() => {
 });
 
 async function backToList(): Promise<void> {
+  try {
+    await targetGroupSection.value?.releaseWaitingPool();
+  } catch {
+    return;
+  }
   await router.push({ name: PULL_TASK_LIST_ROUTE_NAME });
 }
+
+onBeforeRouteLeave(async () => {
+  try {
+    await targetGroupSection.value?.releaseWaitingPool();
+    return true;
+  } catch {
+    return false;
+  }
+});
 
 function unavailableAction(action: string): void {
   const settingError = validateSetting();
@@ -82,6 +99,7 @@ function previewTask(): void {
     v-loading="createSettingLoading"
     class="pull-task-create-page"
     aria-label="新建拉群营销任务"
+    data-testid="pull-task-create-page"
   >
     <el-card shadow="never" class="page-header-card">
       <el-page-header title="返回拉群任务" @back="backToList">
@@ -104,7 +122,7 @@ function previewTask(): void {
 
     <el-form :model="draft" label-position="top">
       <CreateBaseInfoSection v-model="draft" :metrics="targetDataMetrics" />
-      <CreateTargetGroupSection v-model="draft" />
+      <CreateTargetGroupSection ref="targetGroupSection" v-model="draft" />
       <CreateRoleConfigSection v-model="draft" />
       <CreateMarketingSection v-model="draft" />
       <CreateLaunchSection v-model="draft" />
@@ -118,7 +136,9 @@ function previewTask(): void {
         <el-button @click="unavailableAction('保存草稿')">保存草稿</el-button>
         <el-button @click="checkConfiguration">校验配置</el-button>
         <el-button @click="previewTask">预览任务</el-button>
-        <el-button @click="backToList">取消</el-button>
+        <el-button data-testid="cancel-create" @click="backToList">
+          取消
+        </el-button>
         <el-button
           type="primary"
           :disabled="!createSettingConfigured"
@@ -148,7 +168,7 @@ function previewTask(): void {
           }}
         </el-descriptions-item>
         <el-descriptions-item label="目标群组">
-          已选择 {{ draft.selectedGroupIds.length }} 个
+          已选择 {{ draft.selectedGroupJids.length }} 个
         </el-descriptions-item>
         <el-descriptions-item label="营销模板">
           模板 #{{ draft.marketingTemplateId }}

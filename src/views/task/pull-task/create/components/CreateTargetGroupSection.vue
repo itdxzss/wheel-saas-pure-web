@@ -1,44 +1,152 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { ElMessage, type UploadFile } from "element-plus";
+import { nextTick, onMounted, ref } from "vue";
+import type { UploadFile } from "element-plus";
+import type {
+  PullTaskGroupCandidateRow,
+  PullTaskGroupCandidateStatus,
+  PullTaskGroupSource
+} from "@/api/pull-task";
+import WheelPagination from "@/components/WheelPagination/index.vue";
 import type { PullTaskMarketingCreateDraft } from "../create-draft";
-import { reconcileSelectedGroupIds } from "../create-interactions";
+import { usePullTaskGroupCandidates } from "../usePullTaskGroupCandidates";
 
 defineOptions({ name: "PullTaskMarketingCreateTargetGroupSection" });
 
-interface CandidateGroupRow {
-  id: number;
-  name: string;
-  jid: string;
-  managerPhone: string;
-  role: string;
-  source: string;
-  status: string;
+interface CandidateTableRef {
+  clearSelection: () => void;
+  toggleRowSelection: (
+    row: PullTaskGroupCandidateRow,
+    selected: boolean
+  ) => void;
 }
 
-const draft = defineModel<PullTaskMarketingCreateDraft>({ required: true });
-const candidateGroups = ref<CandidateGroupRow[]>([]);
+const sourceLabels: Record<PullTaskGroupSource, string> = {
+  HISTORICAL: "历史老群",
+  SELF_COLLECTED: "自收群",
+  MIXED: "混合来源"
+};
 
-const unlimitedOptions = [
-  { label: "不限", value: "" },
-  { label: "是", value: "YES" },
-  { label: "否", value: "NO" }
-];
+const statusLabels: Record<PullTaskGroupCandidateStatus, string> = {
+  NORMAL: "正常",
+  WAITING_ACCOUNT_ONLINE: "等待账号上线",
+  NO_ADMIN_PERMISSION: "无管理权限",
+  NO_ELIGIBLE_ACCOUNT: "无可用账号",
+  GROUP_BANNED: "群已封禁",
+  LINK_INVALID: "链接失效",
+  GROUP_UNAVAILABLE: "群不可用",
+  UNKNOWN: "待确认",
+  OCCUPIED: "已占用"
+};
+
+const draft = defineModel<PullTaskMarketingCreateDraft>({ required: true });
+const candidateTable = ref<CandidateTableRef>();
+const {
+  candidateGroups,
+  waitingGroups,
+  candidateLoading,
+  waitingPoolLoading,
+  selectedCandidateJids,
+  page,
+  pageSize,
+  total,
+  loadCandidates,
+  restoreWaitingPool,
+  updateCandidateSelection,
+  selectAllCurrentPage,
+  addSelectedToWaitingPool,
+  removeFromWaitingPool,
+  releaseWaitingPool
+} = usePullTaskGroupCandidates(draft);
+
+onMounted(() => {
+  void initializeGroups();
+});
+
+defineExpose({ releaseWaitingPool });
+
+async function initializeGroups(): Promise<void> {
+  await restoreWaitingPool();
+  await refreshCandidates();
+}
 
 function selectAvatar(file: UploadFile): void {
   if (file.raw) draft.value.groupAvatarFile = file.raw;
 }
 
-function updateSelection(rows: CandidateGroupRow[]): void {
-  draft.value.selectedGroupIds = reconcileSelectedGroupIds(
-    draft.value.selectedGroupIds,
-    candidateGroups.value.map(row => row.id),
-    rows.map(row => row.id)
-  );
+function rowSelectable(row: PullTaskGroupCandidateRow): boolean {
+  return row.selectable && !row.inCurrentWaitingPool;
 }
 
-function unavailableGroupAction(): void {
-  ElMessage.info("群组筛选接口待确认");
+async function searchCandidates(): Promise<void> {
+  page.value = 1;
+  selectedCandidateJids.value = [];
+  candidateTable.value?.clearSelection();
+  await refreshCandidates();
+}
+
+async function refreshCandidates(): Promise<void> {
+  const selected = new Set(selectedCandidateJids.value);
+  await loadCandidates();
+  await nextTick();
+  candidateTable.value?.clearSelection();
+  for (const row of candidateGroups.value) {
+    if (selected.has(row.groupJid)) {
+      candidateTable.value?.toggleRowSelection(row, true);
+    }
+  }
+}
+
+async function selectAllExecutable(): Promise<void> {
+  const rows = selectAllCurrentPage();
+  await nextTick();
+  candidateTable.value?.clearSelection();
+  for (const row of rows) {
+    candidateTable.value?.toggleRowSelection(row, true);
+  }
+}
+
+async function addToWaitingPool(): Promise<void> {
+  await addSelectedToWaitingPool();
+  candidateTable.value?.clearSelection();
+  if (waitingGroups.value.length > 0)
+    draft.value.targetGroupTab = "WAITING_POOL";
+}
+
+function sourceLabel(source: PullTaskGroupSource): string {
+  return sourceLabels[source];
+}
+
+function accountLabel(row: PullTaskGroupCandidateRow): string {
+  if (row.operableAccounts.length === 0) return "--";
+  return row.operableAccounts
+    .map(account => {
+      const role = account.groupRole === "CREATOR" ? "群主" : "管理员";
+      const online = account.loginState === 1 ? "在线" : "离线";
+      return `${account.accountPhone}（${role}/${online}）`;
+    })
+    .join("、");
+}
+
+function countryLabel(row: PullTaskGroupCandidateRow): string {
+  return [row.countryFlag, row.countryName].filter(Boolean).join(" ") || "--";
+}
+
+function statusTagType(
+  row: PullTaskGroupCandidateRow
+): "success" | "warning" | "info" | "danger" {
+  if (row.inCurrentWaitingPool || row.status === "OCCUPIED") return "info";
+  if (row.status === "NORMAL") return "success";
+  if (row.status === "WAITING_ACCOUNT_ONLINE" || row.status === "UNKNOWN") {
+    return "warning";
+  }
+  return "danger";
+}
+
+function formatTime(timestamp: number | null): string {
+  if (!timestamp) return "--";
+  const milliseconds =
+    timestamp < 1_000_000_000_000 ? timestamp * 1000 : timestamp;
+  return new Date(milliseconds).toLocaleString("zh-CN", { hour12: false });
 }
 </script>
 
@@ -86,9 +194,9 @@ function unavailableGroupAction(): void {
         <el-radio-group v-model="draft.groupNameMode">
           <el-radio-button value="KEEP">不修改</el-radio-button>
           <el-radio-button value="UNIFIED">使用统一名称</el-radio-button>
-          <el-radio-button value="TEMPLATE_SEQUENCE">
-            名称模板加序号
-          </el-radio-button>
+          <el-radio-button value="TEMPLATE_SEQUENCE"
+            >名称模板加序号</el-radio-button
+          >
         </el-radio-group>
       </el-form-item>
 
@@ -193,85 +301,39 @@ function unavailableGroupAction(): void {
               <el-option label="混合来源" value="MIXED" />
             </el-select>
           </el-form-item>
-          <el-form-item label="群所属大洲">
-            <el-select v-model="draft.continent" clearable placeholder="不限" />
-          </el-form-item>
-          <el-form-item label="群所属国家">
-            <el-select
-              v-model="draft.countries"
-              multiple
-              filterable
-              clearable
-              placeholder="不限"
-            />
-          </el-form-item>
-          <el-form-item label="当前账号角色">
-            <el-select
-              v-model="draft.currentRole"
-              clearable
-              placeholder="不限"
-            />
-          </el-form-item>
           <el-form-item label="群名称">
-            <el-input v-model="draft.groupNameKeyword" placeholder="模糊匹配" />
-          </el-form-item>
-          <el-form-item label="群组状态">
-            <el-select
-              v-model="draft.groupStatus"
+            <el-input
+              v-model="draft.groupNameKeyword"
               clearable
-              placeholder="不限"
+              placeholder="模糊匹配"
+            />
+          </el-form-item>
+          <el-form-item label="群组 JID">
+            <el-input
+              v-model="draft.groupJid"
+              clearable
+              placeholder="精确匹配"
             />
           </el-form-item>
           <el-form-item label="当前管理账号">
             <el-input
               v-model="draft.managerPhone"
+              clearable
               placeholder="手机号模糊匹配"
             />
           </el-form-item>
-          <el-form-item label="群组 JID">
-            <el-input v-model="draft.groupJid" placeholder="精确匹配" />
-          </el-form-item>
           <el-form-item label="显示普通成员群组">
             <el-switch v-model="draft.showRegularGroups" />
-          </el-form-item>
-          <el-form-item label="是否被其他任务占用">
-            <el-select v-model="draft.occupancy">
-              <el-option
-                v-for="option in unlimitedOptions"
-                :key="option.value || 'ALL'"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
           </el-form-item>
           <el-form-item label="发言权限">
             <el-select
               v-model="draft.speakPermission"
               clearable
               placeholder="不限"
-            />
-          </el-form-item>
-          <el-form-item label="入群审批">
-            <el-select
-              v-model="draft.filterJoinApproval"
-              clearable
-              placeholder="不限"
-            />
-          </el-form-item>
-          <el-form-item label="成员邀请权限">
-            <el-select
-              v-model="draft.filterInvitePermission"
-              clearable
-              placeholder="不限"
-            />
-          </el-form-item>
-          <el-form-item label="群存续天数" class="range-field">
-            <el-slider
-              v-model="draft.groupAgeRange"
-              range
-              :min="0"
-              :max="3650"
-            />
+            >
+              <el-option label="仅管理员" value="ADMIN_ONLY" />
+              <el-option label="所有成员" value="ALL_MEMBERS" />
+            </el-select>
           </el-form-item>
           <el-form-item label="群当前人数" class="range-field">
             <el-slider
@@ -281,48 +343,202 @@ function unavailableGroupAction(): void {
               :max="1024"
             />
           </el-form-item>
+          <el-form-item label="群所属大洲">
+            <el-select
+              v-model="draft.continent"
+              disabled
+              placeholder="元数据同步后开放"
+            />
+          </el-form-item>
+          <el-form-item label="群所属国家">
+            <el-select
+              v-model="draft.countries"
+              multiple
+              disabled
+              placeholder="元数据同步后开放"
+            />
+          </el-form-item>
+          <el-form-item label="当前账号角色">
+            <el-select
+              v-model="draft.currentRole"
+              disabled
+              placeholder="元数据同步后开放"
+            />
+          </el-form-item>
+          <el-form-item label="群组状态">
+            <el-select
+              v-model="draft.groupStatus"
+              disabled
+              placeholder="后续筛选项"
+            />
+          </el-form-item>
+          <el-form-item label="是否被其他任务占用">
+            <el-select
+              v-model="draft.occupancy"
+              disabled
+              placeholder="列表直接展示占用状态"
+            />
+          </el-form-item>
+          <el-form-item label="入群审批">
+            <el-select
+              v-model="draft.filterJoinApproval"
+              disabled
+              placeholder="元数据同步后开放"
+            />
+          </el-form-item>
+          <el-form-item label="成员邀请权限">
+            <el-select
+              v-model="draft.filterInvitePermission"
+              disabled
+              placeholder="元数据同步后开放"
+            />
+          </el-form-item>
+          <el-form-item label="群存续天数" class="range-field">
+            <el-slider
+              v-model="draft.groupAgeRange"
+              range
+              disabled
+              :min="0"
+              :max="3650"
+            />
+          </el-form-item>
         </div>
 
-        <div class="candidate-summary">
-          <span>当前筛选条件下可用群组：-- · 符合展示 --</span>
+        <div class="candidate-summary" data-testid="candidate-summary">
+          <span
+            >当前筛选 {{ total }} 个 · 已勾选
+            {{ selectedCandidateJids.length }} 个</span
+          >
           <div>
-            <el-button @click="unavailableGroupAction">全选可执行</el-button>
-            <el-button type="primary" @click="unavailableGroupAction">
+            <el-button @click="searchCandidates">查询</el-button>
+            <el-button
+              data-testid="select-current-page"
+              @click="selectAllExecutable"
+            >
+              全选本页可执行
+            </el-button>
+            <el-button
+              type="primary"
+              :loading="waitingPoolLoading"
+              data-testid="add-to-waiting-pool"
+              @click="addToWaitingPool"
+            >
               加入等待任务池
             </el-button>
           </div>
-          <span
-            >已选择 {{ draft.selectedGroupIds.length }} 个 · 支持跨页选择</span
-          >
         </div>
 
         <el-table
+          ref="candidateTable"
+          v-loading="candidateLoading"
+          data-testid="candidate-table"
           :data="candidateGroups"
-          row-key="id"
+          row-key="groupJid"
           border
-          @selection-change="updateSelection"
+          @selection-change="updateCandidateSelection"
         >
-          <el-table-column type="selection" width="52" reserve-selection />
-          <el-table-column prop="name" label="群组信息" min-width="180" />
-          <el-table-column prop="jid" label="群组 JID" min-width="180" />
           <el-table-column
-            prop="managerPhone"
-            label="当前管理账号"
-            min-width="150"
+            type="selection"
+            width="52"
+            reserve-selection
+            :selectable="rowSelectable"
           />
-          <el-table-column label="角色/来源" min-width="130">
-            <template #default="{ row }"
-              >{{ row.role }}/{{ row.source }}</template
-            >
+          <el-table-column prop="groupName" label="群组信息" min-width="180">
+            <template #default="{ row }">
+              <strong>{{ row.groupName || "未命名群组" }}</strong>
+              <div class="muted-text">{{ row.groupJid }}</div>
+            </template>
           </el-table-column>
-          <el-table-column prop="status" label="状态" width="100" />
+          <el-table-column label="来源/国家" min-width="130">
+            <template #default="{ row }">
+              <div>{{ sourceLabel(row.source) }}</div>
+              <div class="muted-text">{{ countryLabel(row) }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="可操作管理账号" min-width="260">
+            <template #default="{ row }">{{ accountLabel(row) }}</template>
+          </el-table-column>
+          <el-table-column prop="memberSize" label="人数" width="78" />
+          <el-table-column label="最近同步" width="170">
+            <template #default="{ row }">{{
+              formatTime(row.lastSyncedAt)
+            }}</template>
+          </el-table-column>
+          <el-table-column label="状态" min-width="170">
+            <template #default="{ row }">
+              <el-tooltip
+                :content="row.disabledReason || ''"
+                :disabled="!row.disabledReason"
+              >
+                <el-tag :type="statusTagType(row)">
+                  {{ statusLabels[row.status] }}
+                </el-tag>
+              </el-tooltip>
+              <div v-if="row.inCurrentWaitingPool" class="muted-text">
+                已在当前等待池
+              </div>
+            </template>
+          </el-table-column>
           <template #empty>
-            <el-empty description="群组筛选接口待确认" />
+            <el-empty description="暂无符合筛选条件的群组" />
           </template>
         </el-table>
+
+        <WheelPagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          @change="refreshCandidates"
+        />
       </el-tab-pane>
-      <el-tab-pane label="等待任务池" name="WAITING_POOL">
-        <el-empty description="等待任务池接口待确认" />
+
+      <el-tab-pane
+        :label="`等待任务池 (${waitingGroups.length})`"
+        name="WAITING_POOL"
+      >
+        <div class="waiting-actions">
+          <el-button :loading="waitingPoolLoading" @click="restoreWaitingPool">
+            刷新等待任务池
+          </el-button>
+        </div>
+        <el-table
+          v-loading="waitingPoolLoading"
+          data-testid="waiting-pool-table"
+          :data="waitingGroups"
+          row-key="groupJid"
+          border
+        >
+          <el-table-column prop="groupName" label="群组" min-width="180" />
+          <el-table-column prop="groupJid" label="群组 JID" min-width="200" />
+          <el-table-column label="来源" width="110">
+            <template #default="{ row }">{{
+              sourceLabel(row.source)
+            }}</template>
+          </el-table-column>
+          <el-table-column label="管理账号" min-width="260">
+            <template #default="{ row }">{{ accountLabel(row) }}</template>
+          </el-table-column>
+          <el-table-column label="最近校验" width="170">
+            <template #default="{ row }">{{
+              formatTime(row.lastValidatedAt)
+            }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="90" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                link
+                type="danger"
+                :data-testid="`remove-waiting-${row.groupJid}`"
+                @click="removeFromWaitingPool(row.groupJid)"
+              >
+                移出
+              </el-button>
+            </template>
+          </el-table-column>
+          <template #empty>
+            <el-empty description="尚未加入群组" />
+          </template>
+        </el-table>
       </el-tab-pane>
     </el-tabs>
   </el-card>
@@ -388,6 +604,18 @@ function unavailableGroupAction(): void {
   justify-content: space-between;
   margin: 8px 0 16px;
   color: var(--el-text-color-regular);
+}
+
+.muted-text {
+  margin-top: 3px;
+  color: var(--el-text-color-secondary);
+  overflow-wrap: anywhere;
+}
+
+.waiting-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
 @media (width <= 900px) {
