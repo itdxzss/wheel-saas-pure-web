@@ -97,11 +97,13 @@ function phoneList(value?: string[] | null): string {
         <el-button
           v-auth="'tenant:pull_task:export'"
           @click="emit('export-report')"
-        >导出报表</el-button>
+          >导出报表</el-button
+        >
         <el-button
           v-auth="'tenant:pull_task:export'"
           @click="emit('export-group-links')"
-        >导出群链接</el-button>
+          >导出群链接</el-button
+        >
         <el-dropdown
           v-auth="'tenant:pull_task:export'"
           @command="kind => emit('export-resources', kind)"

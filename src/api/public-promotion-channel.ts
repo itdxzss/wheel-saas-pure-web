@@ -16,6 +16,12 @@ export interface PublicPromotionPairingCreated {
   expiresAt: number;
 }
 
+export interface PublicPromotionPairingAttribution {
+  fbp?: string;
+  fbc?: string;
+  sourceUrl?: string;
+}
+
 export interface PublicPromotionPairingState {
   status: PublicPromotionPairingStatus;
   pairingCode: string | null;
@@ -50,13 +56,14 @@ export async function getPublicPromotionChannelRuntime(
 /** 创建 WhatsApp 配对会话。sessionToken 只保存在落地页内存中。 */
 export async function createPublicPromotionPairingSession(
   channelCode: string,
-  phone: string
+  phone: string,
+  attribution: PublicPromotionPairingAttribution = {}
 ): Promise<PublicPromotionPairingCreated> {
   const response = await publicClient.post<
     ArmadaResp<PublicPromotionPairingCreated>
   >(
     `/api/public/promotion-channels/${encodeURIComponent(channelCode)}/pairing-sessions`,
-    { phone }
+    { ...attribution, phone }
   );
   if (!response.data || response.data.code !== 0) {
     throw new Error(response.data?.message ?? "创建配对会话失败");

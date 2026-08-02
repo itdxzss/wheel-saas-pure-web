@@ -3,16 +3,17 @@ import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { getPublicPromotionChannelRuntime } from "@/api/public-promotion-channel";
 import type { BuyerChannelRuntimeConfig } from "@/api/buyer-channel";
-import {
-  dateV2MockCountries,
-  dateV2MockProfiles
-} from "../../../../mock/date-v2-preview";
+import { dateV2MockProfiles } from "../../../../mock/date-v2-preview";
 import DateV2Chat from "./components/DateV2Chat.vue";
 import DateV2Landing from "./components/DateV2Landing.vue";
 import DateV2LoginDialog from "./components/DateV2LoginDialog.vue";
 import DateV2PairingDialog from "./components/DateV2PairingDialog.vue";
 import DateV2WhatsAppGuideDialog from "./components/DateV2WhatsAppGuideDialog.vue";
 import { usePublicPromotionPairing } from "../public-promotion/composables/usePublicPromotionPairing";
+import {
+  publicPromotionCountries,
+  resolvePublicPromotionCountries
+} from "../public-promotion/domain/public-promotion-countries";
 import {
   normalizeDateV2ThemeColor,
   resolveDateV2PromotionCode,
@@ -35,7 +36,7 @@ const stage = ref<"landing" | "chat">("landing");
 const loginVisible = ref(false);
 const pairingVisible = ref(false);
 const guideVisible = ref(false);
-const loggedCountry = ref<DateV2Country>(dateV2MockCountries[0]);
+const loggedCountry = ref<DateV2Country>(publicPromotionCountries[0]);
 const loggedPhone = ref("");
 const pairing = usePublicPromotionPairing();
 const resolvedRuntimeConfig = ref<BuyerChannelRuntimeConfig>();
@@ -67,12 +68,9 @@ const showAppDownload = computed(() => {
 });
 
 const availableCountries = computed(() => {
-  const targetCountry = resolvedRuntimeConfig.value?.targetCountry;
-  if (!targetCountry || targetCountry === "MIXED") return dateV2MockCountries;
-  const country = dateV2MockCountries.find(
-    item => item.code === targetCountry.toUpperCase()
+  return resolvePublicPromotionCountries(
+    resolvedRuntimeConfig.value?.targetCountry
   );
-  return country ? [country] : dateV2MockCountries;
 });
 
 const initialCountryCode = computed(() => {

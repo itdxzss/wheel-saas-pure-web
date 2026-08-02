@@ -37,6 +37,7 @@ export interface BuyerChannelRow {
   defaultDialCode: string;
   preselectedCountryIso2?: string;
   status: ChannelStatus;
+  creatorId: number;
   creatorName: string;
   createdAt: string;
 }
@@ -109,22 +110,6 @@ export interface DomainBindingParams {
 export interface DomainBindingResult {
   available: boolean;
   templateId?: number;
-}
-
-export interface ChannelProbePayload {
-  testEventCode?: string;
-}
-
-export interface ChannelDetectResult {
-  success: boolean;
-  status: "NORMAL" | "ABNORMAL" | string;
-  trackingId?: string;
-  accessTokenConfigured: boolean;
-  eventName?: string;
-  eventId?: string;
-  errorCode?: string;
-  errorMessage?: string;
-  probedAt: number;
 }
 
 export interface BuyerChannelRuntimeConfig {
@@ -222,6 +207,12 @@ interface PromotionChannelUpdatePayload extends PromotionChannelCreatePayload {
   status: number;
 }
 
+interface FacebookStandardEventVO {
+  code: string;
+  nameZh: string;
+  nameEn: string;
+}
+
 const promotionPlatformCodes: Record<ChannelPlatform, number> = {
   FACEBOOK: 1,
   TIKTOK: 2,
@@ -234,15 +225,6 @@ const channelPlatformsByCode: Record<number, ChannelPlatform> = {
   2: "TIKTOK",
   3: "KUAISHOU",
   4: "MGSKY"
-};
-
-const previewCreatorNames: Record<number, string> = {
-  1: "test",
-  2: "testuser456",
-  3: "Rahu",
-  4: "ForeverAditya",
-  5: "pingzi",
-  6: "gose-"
 };
 
 function displayCountry(
@@ -306,8 +288,8 @@ function toBuyerChannelRow(value: PromotionChannelVO): BuyerChannelRow {
       displayPreselectedCountry(value) || value.preselectedPhonePrefix || "-",
     preselectedCountryIso2: value.preselectedCountryIso2,
     status: value.status === 1 ? "ENABLED" : "DISABLED",
-    creatorName:
-      previewCreatorNames[value.creatorUserId] ?? String(value.creatorUserId),
+    creatorId: value.creatorUserId,
+    creatorName: String(value.creatorUserId),
     createdAt: formatCreatedAt(value.createdAt)
   };
 }
@@ -343,8 +325,9 @@ function toBuyerChannelDetail(
 function toPromotionChannelCreatePayload(
   payload: BuyerChannelPayload
 ): PromotionChannelCreatePayload {
-  const supportsCapi =
+  const supportsAccessToken =
     payload.platform === "FACEBOOK" || payload.platform === "TIKTOK";
+  const supportsMetaEvents = payload.platform === "FACEBOOK";
   return {
     channelName: payload.name,
     ownerUserId: payload.ownerId,
@@ -357,12 +340,12 @@ function toPromotionChannelCreatePayload(
     preselectedCountry: payload.preselectedCountry,
     platform: promotionPlatformCodes[payload.platform],
     trackingId: payload.pixelId,
-    accessToken: supportsCapi ? payload.accessToken : undefined,
-    leadEventName: supportsCapi ? payload.eventLead : undefined,
-    loginRequestEventName: supportsCapi
+    accessToken: supportsAccessToken ? payload.accessToken : undefined,
+    leadEventName: supportsMetaEvents ? payload.eventLead : undefined,
+    loginRequestEventName: supportsMetaEvents
       ? payload.eventInitiateCheckout
       : undefined,
-    loginSuccessEventName: supportsCapi
+    loginSuccessEventName: supportsMetaEvents
       ? payload.eventCompleteRegistration
       : undefined,
     inAppOpenAllowed: payload.openInApp,
@@ -384,6 +367,19 @@ export function getBuyerChannelOptions(): Promise<BuyerChannelOptions> {
     "get",
     "/api/buyer/channels/options"
   );
+}
+
+export async function listFacebookStandardEvents(): Promise<
+  BuyerChannelOptions["eventOptions"]
+> {
+  const events = await armadaRequest<FacebookStandardEventVO[]>(
+    "get",
+    "/api/promotion-channels/facebook-standard-events"
+  );
+  return events.map(event => ({
+    label: `${event.nameZh} (${event.code})`,
+    value: event.code
+  }));
 }
 
 export async function listBuyerChannels(
@@ -477,18 +473,6 @@ export async function updateBuyerChannel(
 
 export function deleteBuyerChannel(id: number): Promise<void> {
   return armadaRequest<void>("delete", `/api/promotion-channels/delete/${id}`);
-}
-
-export function detectBuyerChannel(
-  id: number,
-  payload: ChannelProbePayload = {}
-): Promise<ChannelDetectResult> {
-  const testEventCode = payload.testEventCode?.trim();
-  return armadaRequest<ChannelDetectResult>(
-    "post",
-    `/api/promotion-channels/probe/${id}`,
-    { data: testEventCode ? { testEventCode } : undefined }
-  );
 }
 
 export function getPublicBuyerChannelRuntime(

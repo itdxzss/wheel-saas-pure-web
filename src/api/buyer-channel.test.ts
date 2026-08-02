@@ -7,10 +7,10 @@ import {
 import {
   createBuyerChannel,
   deleteBuyerChannel,
-  detectBuyerChannel,
   getBuyerChannel,
   getBuyerChannelOptions,
   getPublicBuyerChannelRuntime,
+  listFacebookStandardEvents,
   listBuyerChannels,
   precheckBuyerChannelDomain,
   updateBuyerChannel,
@@ -61,21 +61,24 @@ describe("buyer channel API contract", () => {
       trackingId: "pixel-7",
       accessTokenConfigured: true,
       leadEventName: "Lead",
-      loginRequestEventName: "Checkout",
-      loginSuccessEventName: "Complete",
+      loginRequestEventName: "InitiateCheckout",
+      loginSuccessEventName: "CompleteRegistration",
       inAppOpenAllowed: false,
       marketingAllowed: true,
       status: 1
     };
     resetArmadaMockQueue([
       {},
+      [
+        { code: "PageView", nameZh: "浏览页面", nameEn: "PageView" },
+        { code: "Lead", nameZh: "潜在客户", nameEn: "Lead" }
+      ],
       { list: [channelResponse], page: 2, pageSize: 60, total: 1 },
       detailResponse,
       {},
       channelResponse,
       {},
       undefined,
-      {},
       {}
     ]);
     const payload: BuyerChannelPayload = {
@@ -91,14 +94,15 @@ describe("buyer channel API contract", () => {
       defaultDialCode: "+1",
       platform: "FACEBOOK",
       eventLead: "Lead",
-      eventInitiateCheckout: "Checkout",
-      eventCompleteRegistration: "Complete",
+      eventInitiateCheckout: "InitiateCheckout",
+      eventCompleteRegistration: "CompleteRegistration",
       openInApp: false,
       joinMarketing: true,
       status: "ENABLED"
     };
     await getBuyerChannelOptions();
-    await listBuyerChannels({
+    const eventOptions = await listFacebookStandardEvents();
+    const channelPage = await listBuyerChannels({
       page: 2,
       page_size: 60,
       targetCountry: "US",
@@ -115,11 +119,15 @@ describe("buyer channel API contract", () => {
     await createBuyerChannel(payload);
     await updateBuyerChannel(7, payload);
     await deleteBuyerChannel(7);
-    await detectBuyerChannel(7);
     await getPublicBuyerChannelRuntime("CH007");
 
     assert.deepEqual(armadaCalls(), [
       { method: "get", url: "/api/buyer/channels/options", opts: undefined },
+      {
+        method: "get",
+        url: "/api/promotion-channels/facebook-standard-events",
+        opts: undefined
+      },
       {
         method: "get",
         url: "/api/promotion-channels/query",
@@ -167,8 +175,8 @@ describe("buyer channel API contract", () => {
             trackingId: undefined,
             accessToken: undefined,
             leadEventName: "Lead",
-            loginRequestEventName: "Checkout",
-            loginSuccessEventName: "Complete",
+            loginRequestEventName: "InitiateCheckout",
+            loginSuccessEventName: "CompleteRegistration",
             inAppOpenAllowed: false,
             marketingAllowed: true
           }
@@ -191,8 +199,8 @@ describe("buyer channel API contract", () => {
             trackingId: undefined,
             accessToken: undefined,
             leadEventName: "Lead",
-            loginRequestEventName: "Checkout",
-            loginSuccessEventName: "Complete",
+            loginRequestEventName: "InitiateCheckout",
+            loginSuccessEventName: "CompleteRegistration",
             inAppOpenAllowed: false,
             marketingAllowed: true,
             status: 1
@@ -205,16 +213,17 @@ describe("buyer channel API contract", () => {
         opts: undefined
       },
       {
-        method: "post",
-        url: "/api/promotion-channels/probe/7",
-        opts: { data: undefined }
-      },
-      {
         method: "get",
         url: "/api/public/promotion-channels/runtime/CH007",
         opts: undefined
       }
     ]);
+    assert.deepEqual(eventOptions, [
+      { label: "浏览页面 (PageView)", value: "PageView" },
+      { label: "潜在客户 (Lead)", value: "Lead" }
+    ]);
+    assert.equal(channelPage.list[0].creatorId, 1);
+    assert.equal(channelPage.list[0].creatorName, "1");
     assert.deepEqual(detail, {
       id: 7,
       name: "A",
@@ -231,11 +240,55 @@ describe("buyer channel API contract", () => {
       pixelId: "pixel-7",
       accessTokenConfigured: true,
       eventLead: "Lead",
-      eventInitiateCheckout: "Checkout",
-      eventCompleteRegistration: "Complete",
+      eventInitiateCheckout: "InitiateCheckout",
+      eventCompleteRegistration: "CompleteRegistration",
       openInApp: false,
       joinMarketing: true,
       status: "ENABLED"
     });
+  });
+
+  it("does not serialize Meta standard events for TikTok channels", async () => {
+    resetArmadaMockQueue([
+      {
+        id: 8,
+        channelName: "TikTok A",
+        ownerUserId: 1,
+        targetCountry: "US",
+        landingTemplateId: 2,
+        platform: 2,
+        status: 1,
+        inAppOpenAllowed: true,
+        marketingAllowed: true
+      }
+    ]);
+    await createBuyerChannel({
+      name: "TikTok A",
+      ownerId: 1,
+      targetCountry: "US",
+      countryMode: "SPECIFIC",
+      templateId: 2,
+      domain: "go.example.com",
+      preselectedCountry: "US",
+      defaultDialCode: "+1",
+      platform: "TIKTOK",
+      pixelId: "tt-pixel",
+      accessToken: "tt-token",
+      eventLead: "Lead",
+      eventInitiateCheckout: "InitiateCheckout",
+      eventCompleteRegistration: "CompleteRegistration",
+      openInApp: true,
+      joinMarketing: true,
+      status: "ENABLED"
+    });
+
+    const opts = armadaCalls()[0]?.opts as
+      | { data?: Record<string, unknown> }
+      | undefined;
+    const data = opts?.data ?? {};
+    assert.equal(data.accessToken, "tt-token");
+    assert.equal(data.leadEventName, undefined);
+    assert.equal(data.loginRequestEventName, undefined);
+    assert.equal(data.loginSuccessEventName, undefined);
   });
 });

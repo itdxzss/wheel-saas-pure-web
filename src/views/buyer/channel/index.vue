@@ -3,26 +3,26 @@ import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Icon } from "@iconify/vue/offline";
 import { PureTableBar } from "@/components/RePureTableBar";
-import FacebookDetectIcon from "~icons/logos/facebook";
-import TikTokDetectIcon from "~icons/logos/tiktok-icon";
 import {
   deleteBuyerChannel,
-  detectBuyerChannel,
+  listFacebookStandardEvents,
   listBuyerChannels,
   type BuyerChannelOptions,
   type BuyerChannelRow,
-  type ChannelPlatform,
-  type ChannelDetectResult
+  type ChannelPlatform
 } from "@/api/buyer-channel";
 import { listBuyerTemplateOptions } from "@/api/buyer-template";
 import { listIpCountryOptions } from "@/api/resource-ip";
-import ChannelDetectDialog from "./components/ChannelDetectDialog.vue";
+import { listSystemUserOptions } from "@/api/system-user";
 import ChannelFormDrawer from "./components/ChannelFormDrawer.vue";
 import FacebookEventGuideDialog from "./components/FacebookEventGuideDialog.vue";
 import { previewPlatformOptions } from "./components/channel-platform-fields";
-import { previewOwnerOptions } from "./components/channel-preview-options";
 import { toBuyerChannelCountries } from "./domain/channel-country-options";
 import { countryFlagIcon } from "./domain/channel-country-flag";
+import {
+  resolveBuyerChannelCreatorNames,
+  toBuyerChannelUserOptions
+} from "./domain/channel-user-options";
 import { apiErrorMessage } from "@/utils/api-error";
 
 defineOptions({ name: "BuyerChannel" });
@@ -33,9 +33,9 @@ const previewOptions: BuyerChannelOptions = {
   eventOptions: [],
   countries: [],
   templates: [],
-  owners: previewOwnerOptions,
-  creators: previewOwnerOptions,
-  parentUsers: previewOwnerOptions
+  owners: [],
+  creators: [],
+  parentUsers: []
 };
 const filters = reactive<{
   targetCountry?: string;
@@ -54,11 +54,6 @@ const total = ref(0);
 const drawerVisible = ref(false);
 const editingId = ref<number>();
 const guideVisible = ref(false);
-const detectVisible = ref(false);
-const detectChannel = ref<BuyerChannelRow | null>(null);
-const detectLoading = ref(false);
-const detectErrorMessage = ref("");
-const detectResult = ref<ChannelDetectResult | null>(null);
 
 const columns = [
   { label: "渠道名称", prop: "name" },
@@ -83,7 +78,10 @@ async function refresh(): Promise<void> {
       page_size: pageSize.value,
       ...filters
     });
-    rows.value = result.list;
+    rows.value = resolveBuyerChannelCreatorNames(
+      result.list,
+      options.value.creators
+    );
     total.value = result.total;
     errorMessage.value = "";
   } catch (error) {
@@ -132,44 +130,11 @@ async function copyChannelLink(url: string): Promise<void> {
   }
 }
 
-function supportsDetection(row: BuyerChannelRow): boolean {
-  return row.platform === "FACEBOOK" || row.platform === "TIKTOK";
-}
-
-function detectionIcon(platform: ChannelPlatform) {
-  return platform === "TIKTOK" ? TikTokDetectIcon : FacebookDetectIcon;
-}
-
 function platformLabel(platform: ChannelPlatform): string {
   return (
     previewOptions.platforms.find(option => option.value === platform)?.label ??
     platform
   );
-}
-
-function openDetect(row: BuyerChannelRow): void {
-  if (!supportsDetection(row)) return;
-  detectChannel.value = row;
-  detectResult.value = null;
-  detectErrorMessage.value = "";
-  detectVisible.value = true;
-}
-
-async function runDetect(testEventCode?: string): Promise<void> {
-  if (!detectChannel.value || detectLoading.value) return;
-  detectLoading.value = true;
-  detectErrorMessage.value = "";
-  try {
-    detectResult.value = await detectBuyerChannel(detectChannel.value.id, {
-      testEventCode
-    });
-    await refresh();
-  } catch (error) {
-    detectErrorMessage.value = apiErrorMessage(error, "渠道探测失败");
-    ElMessage.error(detectErrorMessage.value);
-  } finally {
-    detectLoading.value = false;
-  }
 }
 
 async function remove(row: BuyerChannelRow): Promise<void> {
@@ -196,23 +161,39 @@ async function handleSaved(): Promise<void> {
 }
 
 onMounted(async () => {
-  const [countryResult, templateResult] = await Promise.allSettled([
-    listIpCountryOptions(),
-    listBuyerTemplateOptions()
-  ]);
+  const [countryResult, templateResult, eventResult, userResult] =
+    await Promise.allSettled([
+      listIpCountryOptions(),
+      listBuyerTemplateOptions(),
+      listFacebookStandardEvents(),
+      listSystemUserOptions()
+    ]);
+  const userOptions =
+    userResult.status === "fulfilled"
+      ? toBuyerChannelUserOptions(userResult.value)
+      : { owners: [], creators: [], parentUsers: [] };
   options.value = {
     ...previewOptions,
+    ...userOptions,
     countries:
       countryResult.status === "fulfilled"
         ? toBuyerChannelCountries(countryResult.value)
         : [],
-    templates: templateResult.status === "fulfilled" ? templateResult.value : []
+    templates:
+      templateResult.status === "fulfilled" ? templateResult.value : [],
+    eventOptions: eventResult.status === "fulfilled" ? eventResult.value : []
   };
   if (countryResult.status === "rejected") {
     ElMessage.error("目标国家加载失败");
   }
   if (templateResult.status === "rejected") {
     ElMessage.error("模板选项加载失败");
+  }
+  if (eventResult.status === "rejected") {
+    ElMessage.error("Facebook 官方事件加载失败，暂时无法保存渠道");
+  }
+  if (userResult.status === "rejected") {
+    ElMessage.error("用户选项加载失败");
   }
   await refresh();
 });
@@ -370,7 +351,7 @@ onMounted(async () => {
               ><el-tag type="info">{{ platformLabel(row.platform) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="210">
+          <el-table-column label="操作" fixed="right" width="150">
             <template #default="{ row }">
               <el-button
                 v-auth="'tenant:buyer-channel:edit'"
@@ -378,15 +359,6 @@ onMounted(async () => {
                 type="primary"
                 @click="edit(row)"
                 >编辑</el-button
-              >
-              <el-button
-                v-if="supportsDetection(row)"
-                v-auth="'tenant:buyer-channel:detect'"
-                link
-                type="primary"
-                :icon="detectionIcon(row.platform)"
-                @click="openDetect(row)"
-                >探测</el-button
               >
               <el-button
                 v-auth="'tenant:buyer-channel:delete'"
@@ -418,14 +390,6 @@ onMounted(async () => {
       @saved="handleSaved"
     />
     <FacebookEventGuideDialog v-model="guideVisible" />
-    <ChannelDetectDialog
-      v-model="detectVisible"
-      :channel="detectChannel"
-      :loading="detectLoading"
-      :result="detectResult"
-      :error-message="detectErrorMessage"
-      @probe="runDetect"
-    />
   </div>
 </template>
 

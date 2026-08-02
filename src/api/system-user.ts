@@ -5,11 +5,17 @@ export type SystemStatus = 0 | 1;
 export interface SystemUser {
   id: number;
   username: string;
-  nickname?: string;
+  nickname?: string | null;
   status: SystemStatus;
   roleIds: number[];
   createdAt: number;
   updatedAt: number;
+}
+
+export interface SystemUserOption {
+  id: number;
+  name: string;
+  status: SystemStatus;
 }
 
 export interface SystemUserCreatePayload {
@@ -24,8 +30,25 @@ export interface SystemUserUpdatePayload {
   roleIds: number[];
 }
 
+function systemUserOptionName(user: SystemUser): string {
+  const username = user.username.trim();
+  const nickname = user.nickname?.trim();
+  return nickname && nickname !== username
+    ? `${nickname}（${username}）`
+    : username;
+}
+
 export function listSystemUsers(): Promise<SystemUser[]> {
   return armadaRequest<SystemUser[]>("get", "/api/admin/users");
+}
+
+export async function listSystemUserOptions(): Promise<SystemUserOption[]> {
+  const users = await listSystemUsers();
+  return users.map(user => ({
+    id: user.id,
+    name: systemUserOptionName(user),
+    status: user.status
+  }));
 }
 
 export function getSystemUser(id: number): Promise<SystemUser> {

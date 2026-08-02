@@ -1,4 +1,4 @@
-import { armadaRequest } from "./armada";
+import { armadaRequest } from "@/api/armada";
 import type { RouteRecordRaw } from "vue-router";
 
 const GROUP_PULL_MARKETING_ROUTE_NAME = "TaskGroupPullMarketing";

@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { BuyerTemplateRow } from "@/api/buyer-template";
 import { dateV2MockProfiles } from "../../../../../mock/date-v2-preview";
 import BasicEarnLanding from "../../basic-earn-preview/components/BasicEarnLanding.vue";
+import BasicPartyManLanding from "../../basic-party-man-preview/components/BasicPartyManLanding.vue";
 import DateV2Landing from "../../date-v2-preview/components/DateV2Landing.vue";
 import { resolveBuyerTemplatePreviewKind } from "../domain/buyer-template-preview";
 
@@ -35,7 +36,11 @@ const previewKind = computed(() =>
         :profiles="dateV2MockProfiles"
         :show-app-download="false"
       />
-      <BasicEarnLanding v-else :show-app-download="false" />
+      <BasicEarnLanding
+        v-else-if="previewKind === 'basic-earn'"
+        :show-app-download="false"
+      />
+      <BasicPartyManLanding v-else :show-app-download="false" />
     </div>
     <el-empty v-else description="该模板首页暂未开放预览" />
   </el-dialog>
@@ -45,6 +50,7 @@ const previewKind = computed(() =>
 .preview-viewport {
   --date-theme: #ff5c74;
   --earn-theme: #f5a20a;
+  --party-theme: #ec3f6d;
 
   width: 100%;
   height: min(74vh, 760px);
@@ -57,7 +63,8 @@ const previewKind = computed(() =>
 }
 
 .preview-viewport :deep(.landing),
-.preview-viewport :deep(.reward-page) {
+.preview-viewport :deep(.reward-page),
+.preview-viewport :deep(.party-landing) {
   min-height: 100%;
 }
 
