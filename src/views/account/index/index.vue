@@ -42,9 +42,7 @@ const {
   onSelectionChange,
   page,
   pageSize,
-  protocolRestarting,
   refreshAccountList,
-  restartProtocol,
   resetSearchForm,
   riskStatusOptions,
   rows,
@@ -338,7 +336,6 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
       :loading="loading"
       :online-action-disabled="isOnlineActionDisabled"
       :online-action-label="onlineActionLabel"
-      :protocol-restarting="protocolRestarting"
       :rows="rows"
       :selected-count="selectedCount"
       :takeover-batch-disabled="takeoverBatchDisabled"
@@ -348,7 +345,6 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
       @batch-command="handleBatchAction"
       @group-click="openMarketingOccupancy"
       @refresh="refreshAccountList"
-      @restart-protocol="restartProtocol"
       @row-action="handleRowAction"
       @selection-change="onSelectionChange"
     />

@@ -34,7 +34,7 @@ function assertOrdered(content: string, markers: string[]): void {
   }
 }
 
-describe("AccountListTable protocol restart button", () => {
+describe("AccountListTable business actions", () => {
   it("places group, account status and login directly after account", () => {
     const orderedLabels = ["账号", "分组", "账号状态", "登录", "IP来源"];
     assertOrdered(
@@ -55,12 +55,12 @@ describe("AccountListTable protocol restart button", () => {
     assert.doesNotMatch(source, /label="国家"/);
   });
 
-  it("exposes a loading restart button that emits restart-protocol", () => {
-    assert.match(source, /protocolRestarting: boolean/);
-    assert.match(source, /\(event: "restart-protocol"\): void/);
-    assert.match(source, /重启协议/);
-    assert.match(source, /:loading="protocolRestarting"/);
-    assert.match(source, /emit\('restart-protocol'\)/);
+  it("does not expose the removed protocol restart operation", () => {
+    assert.doesNotMatch(source, /protocolRestarting/);
+    assert.doesNotMatch(source, /restart-protocol/);
+    assert.doesNotMatch(source, /重启协议/);
+    assert.doesNotMatch(pageSource, /protocolRestarting|restartProtocol/);
+    assert.doesNotMatch(composableSource, /restartProtocolProcesses/);
   });
 
   it("names and guards the two lifecycle batch actions", () => {
