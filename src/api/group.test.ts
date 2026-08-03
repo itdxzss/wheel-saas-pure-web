@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import {
+  batchAssignGroupFolder,
   getGroupDetail,
   getGroupMembers,
   demoteGroupMembers,
   kickGroupMembers,
+  listGroups,
   promoteGroupMembers,
   updateGroupRemark,
   updateGroupSetting,
@@ -15,6 +17,46 @@ import {
 } from "./group";
 
 describe("group API", () => {
+  it("filters and assigns group folders with camelCase params", async () => {
+    resetArmadaMock({ list: [], total: 0 });
+
+    await listGroups({ folderId: 8, page: 1, pageSize: 10 });
+    await listGroups({ withoutFolder: true, page: 1, pageSize: 10 });
+    await batchAssignGroupFolder([101, 102], null);
+
+    assert.deepEqual(armadaCalls()[0]?.opts, {
+      params: {
+        page: 1,
+        pageSize: 10,
+        keyword: undefined,
+        status: undefined,
+        sourceFileName: undefined,
+        origin: undefined,
+        membershipState: undefined,
+        folderId: 8,
+        withoutFolder: undefined
+      }
+    });
+    assert.deepEqual(armadaCalls()[1]?.opts, {
+      params: {
+        page: 1,
+        pageSize: 10,
+        keyword: undefined,
+        status: undefined,
+        sourceFileName: undefined,
+        origin: undefined,
+        membershipState: undefined,
+        folderId: undefined,
+        withoutFolder: true
+      }
+    });
+    assert.deepEqual(armadaCalls()[2], {
+      method: "post",
+      url: "/api/group-links/batch-assign-folder",
+      opts: { data: { ids: [101, 102], folderId: null } }
+    });
+  });
+
   it("loads real-time group members from the armada members endpoint", async () => {
     resetArmadaMock({
       groupLinkId: 42,

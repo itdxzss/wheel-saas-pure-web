@@ -8,6 +8,8 @@ export interface GroupListRow {
   waSubject?: string | null;
   groupJid?: string | null;
   sourceFileName?: string | null;
+  folderId?: number | null;
+  folderName?: string | null;
   status?: string | null;
   statusLabel?: string | null;
   healthStatus?: number | null;
@@ -36,6 +38,8 @@ export interface GroupListQuery {
   sourceFileName?: string;
   origin?: number | "";
   membershipState?: number | "";
+  folderId?: number;
+  withoutFolder?: boolean;
 }
 
 export interface GroupMember {
@@ -129,7 +133,9 @@ function toListParams(query: GroupListQuery) {
     status: query.status,
     sourceFileName: query.sourceFileName,
     origin: query.origin || undefined,
-    membershipState: query.membershipState || undefined
+    membershipState: query.membershipState || undefined,
+    folderId: query.folderId,
+    withoutFolder: query.withoutFolder
   };
 }
 
@@ -173,6 +179,15 @@ export function listGroups(
 export function batchDeleteGroups(ids: number[]): Promise<number> {
   return armadaRequest<number>("post", "/api/group-links/batch-delete", {
     data: { ids }
+  });
+}
+
+export function batchAssignGroupFolder(
+  ids: number[],
+  folderId: number | null
+): Promise<number> {
+  return armadaRequest<number>("post", "/api/group-links/batch-assign-folder", {
+    data: { ids, folderId }
   });
 }
 

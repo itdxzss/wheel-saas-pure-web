@@ -22,7 +22,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (event: "assign-folder"): void;
   (event: "delete-selected"): void;
+  (event: "manage-folders"): void;
   (event: "refresh"): void;
   (event: "row-action", row: GroupListRow, action: string): void;
   (event: "selection-change", rows: GroupListRow[]): void;
@@ -68,6 +70,16 @@ function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
 <template>
   <PureTableBar title="群组列表" :columns="columns" @refresh="emit('refresh')">
     <template #buttons>
+      <el-button @click="emit('manage-folders')">管理群组分组</el-button>
+      <el-button
+        type="primary"
+        plain
+        :disabled="selectedCount === 0"
+        @click="emit('assign-folder')"
+      >
+        批量分组
+        <span v-if="selectedCount">({{ selectedCount }})</span>
+      </el-button>
       <el-button
         type="danger"
         plain
@@ -131,6 +143,14 @@ function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
               <div>
                 <strong>{{ displayGroupName(row as GroupListRow) }}</strong>
                 <small>{{ row.remark || "暂无备注" }}</small>
+                <el-tag
+                  v-if="row.folderName"
+                  class="group-folder-tag"
+                  size="small"
+                  type="info"
+                >
+                  {{ row.folderName }}
+                </el-tag>
               </div>
             </div>
           </template>
@@ -278,6 +298,10 @@ function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
   display: block;
   margin-top: 4px;
   color: var(--el-text-color-secondary);
+}
+
+.group-folder-tag {
+  margin-top: 6px;
 }
 
 .group-detail {

@@ -23,3 +23,12 @@ test("group list renders persisted sync protocol source mask", () => {
   assert.match(tableSource, />\s*JSON号/);
   assert.match(tableSource, />\s*六段号/);
 });
+
+test("group list exposes group folder toolbar and name tag", () => {
+  assert.match(apiSource, /folderName\?: string \| null/);
+  assert.match(tableSource, /管理群组分组/);
+  assert.match(tableSource, /批量分组/);
+  assert.match(tableSource, /emit\('manage-folders'\)/);
+  assert.match(tableSource, /emit\('assign-folder'\)/);
+  assert.match(tableSource, /row\.folderName/);
+});

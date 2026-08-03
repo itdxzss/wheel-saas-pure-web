@@ -9,11 +9,16 @@ import {
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
+  batchAssignGroupFolder,
   batchDeleteGroups,
   listGroups,
   type GroupListQuery,
   type GroupListRow
 } from "@/api/group";
+import {
+  listGroupFolderOptions,
+  type GroupFolderOption
+} from "@/api/group-folder";
 import { apiErrorMessage } from "@/utils/api-error";
 
 export interface GroupSearchForm {
@@ -22,22 +27,33 @@ export interface GroupSearchForm {
   sourceFileName: string;
   origin: "" | number;
   membershipState: "" | number;
+  folderFilter: "" | "UNASSIGNED" | number;
 }
 
 export interface GroupListPageState {
+  assignFolderDialogOpen: Ref<boolean>;
+  assigningFolder: Ref<boolean>;
+  assignSelectedFolder: (folderId: number | null) => Promise<void>;
   closeMemberDrawer: () => void;
   deleteGroup: (row: GroupListRow) => Promise<void>;
   deleteSelectedGroups: () => Promise<void>;
   drawerGroup: Ref<GroupListRow | null>;
   drawerOpen: Ref<boolean>;
+  folderOptions: Ref<GroupFolderOption[]>;
+  folderOptionsLoading: Ref<boolean>;
+  groupFolderManageOpen: Ref<boolean>;
   loading: Ref<boolean>;
+  onGroupFoldersChanged: (deletedFolderIds: number[]) => Promise<void>;
   onDrawerRefresh: () => Promise<void>;
   onSelectionChange: (selection: GroupListRow[]) => void;
+  openAssignFolder: () => void;
+  openGroupFolderManage: () => void;
   openJoinTask: (row: GroupListRow) => void;
   openMemberDrawer: (row: GroupListRow) => void;
   page: Ref<number>;
   pageSize: Ref<number>;
   refreshGroups: () => Promise<void>;
+  reloadFolderOptions: () => Promise<void>;
   resetSearchForm: () => void;
   rows: Ref<GroupListRow[]>;
   searchForm: GroupSearchForm;
@@ -64,7 +80,12 @@ function buildQuery(
     status: searchForm.status || undefined,
     sourceFileName: sourceFileName || undefined,
     origin: searchForm.origin || undefined,
-    membershipState: searchForm.membershipState || undefined
+    membershipState: searchForm.membershipState || undefined,
+    folderId:
+      typeof searchForm.folderFilter === "number"
+        ? searchForm.folderFilter
+        : undefined,
+    withoutFolder: searchForm.folderFilter === "UNASSIGNED" || undefined
   };
 }
 
@@ -75,12 +96,18 @@ export function useGroupListPage(): GroupListPageState {
     status: "",
     sourceFileName: "",
     origin: "",
-    membershipState: ""
+    membershipState: "",
+    folderFilter: ""
   });
   const rows = ref<GroupListRow[]>([]);
+  const folderOptions = ref<GroupFolderOption[]>([]);
   const selectedRows = ref<GroupListRow[]>([]);
   const drawerGroup = ref<GroupListRow | null>(null);
   const drawerOpen = ref(false);
+  const assignFolderDialogOpen = ref(false);
+  const groupFolderManageOpen = ref(false);
+  const assigningFolder = ref(false);
+  const folderOptionsLoading = ref(false);
   const loading = ref(false);
   const page = ref(1);
   const pageSize = ref(10);
@@ -116,7 +143,23 @@ export function useGroupListPage(): GroupListPageState {
     searchForm.sourceFileName = "";
     searchForm.origin = "";
     searchForm.membershipState = "";
+    searchForm.folderFilter = "";
     searchGroups();
+  }
+
+  async function loadFolderOptions(showError = true): Promise<void> {
+    folderOptionsLoading.value = true;
+    try {
+      folderOptions.value = await listGroupFolderOptions();
+    } catch (error) {
+      if (showError) {
+        ElMessage.error(
+          apiErrorMessage(error, "群组分组选项加载失败，请稍后重试")
+        );
+      }
+    } finally {
+      folderOptionsLoading.value = false;
+    }
   }
 
   function onSelectionChange(selection: GroupListRow[]): void {
@@ -166,6 +209,56 @@ export function useGroupListPage(): GroupListPageState {
     await deleteRows([row]);
   }
 
+  function openAssignFolder(): void {
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning("请先选择群组");
+      return;
+    }
+    assignFolderDialogOpen.value = true;
+    void reloadFolderOptions();
+  }
+
+  function openGroupFolderManage(): void {
+    groupFolderManageOpen.value = true;
+  }
+
+  async function assignSelectedFolder(folderId: number | null): Promise<void> {
+    const ids = selectedRows.value.map(row => row.id);
+    if (ids.length === 0) return;
+    assigningFolder.value = true;
+    try {
+      await batchAssignGroupFolder(ids, folderId);
+      ElMessage.success(
+        folderId == null ? "群组已转入未分组" : "群组分组已更新"
+      );
+      assignFolderDialogOpen.value = false;
+      await refreshGroups();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "批量分组失败，请稍后重试"));
+      await loadFolderOptions(false);
+    } finally {
+      assigningFolder.value = false;
+    }
+  }
+
+  async function onGroupFoldersChanged(
+    deletedFolderIds: number[]
+  ): Promise<void> {
+    await loadFolderOptions();
+    if (
+      typeof searchForm.folderFilter === "number" &&
+      deletedFolderIds.includes(searchForm.folderFilter)
+    ) {
+      searchForm.folderFilter = "";
+      page.value = 1;
+    }
+    await refreshGroups();
+  }
+
+  async function reloadFolderOptions(): Promise<void> {
+    await loadFolderOptions();
+  }
+
   function openMemberDrawer(row: GroupListRow): void {
     drawerGroup.value = row;
     drawerOpen.value = true;
@@ -194,22 +287,33 @@ export function useGroupListPage(): GroupListPageState {
 
   onMounted(() => {
     void refreshGroups();
+    void loadFolderOptions();
   });
 
   return {
+    assignFolderDialogOpen,
+    assigningFolder,
+    assignSelectedFolder,
     closeMemberDrawer,
     deleteGroup,
     deleteSelectedGroups,
     drawerGroup,
     drawerOpen,
+    folderOptions,
+    folderOptionsLoading,
+    groupFolderManageOpen,
     loading,
+    onGroupFoldersChanged,
     onDrawerRefresh,
     onSelectionChange,
+    openAssignFolder,
+    openGroupFolderManage,
     openJoinTask,
     openMemberDrawer,
     page,
     pageSize,
     refreshGroups,
+    reloadFolderOptions,
     resetSearchForm,
     rows,
     searchForm,

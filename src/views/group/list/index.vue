@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import BatchAssignFolderDialog from "./components/BatchAssignFolderDialog.vue";
+import GroupFolderManageDialog from "./components/GroupFolderManageDialog.vue";
 import GroupListTable from "./components/GroupListTable.vue";
 import GroupMemberDrawer from "./components/GroupMemberDrawer.vue";
 import {
@@ -17,19 +19,29 @@ defineOptions({
 });
 
 const {
+  assignFolderDialogOpen,
+  assigningFolder,
+  assignSelectedFolder,
   closeMemberDrawer,
   deleteGroup,
   deleteSelectedGroups,
   drawerGroup,
   drawerOpen,
+  folderOptions,
+  folderOptionsLoading,
+  groupFolderManageOpen,
   loading,
+  onGroupFoldersChanged,
   onDrawerRefresh,
   onSelectionChange,
+  openAssignFolder,
+  openGroupFolderManage,
   openJoinTask,
   openMemberDrawer,
   page,
   pageSize,
   refreshGroups,
+  reloadFolderOptions,
   resetSearchForm,
   rows,
   searchForm,
@@ -75,6 +87,31 @@ function handleRowAction(row, action: string): void {
               :value="item.value"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item label="群组分组">
+          <el-select
+            v-model="searchForm.folderFilter"
+            class="group-list-control"
+            placeholder="全部分组"
+            :loading="folderOptionsLoading"
+          >
+            <el-option label="全部分组" value="" />
+            <el-option label="未分组" value="UNASSIGNED" />
+            <el-option
+              v-for="item in folderOptions"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+          <el-button
+            link
+            type="primary"
+            :loading="folderOptionsLoading"
+            @click="reloadFolderOptions"
+          >
+            刷新分组
+          </el-button>
         </el-form-item>
         <el-form-item label="来源文件">
           <el-input
@@ -139,10 +176,25 @@ function handleRowAction(row, action: string): void {
       :rows="rows"
       :selected-count="selectedCount"
       :total="total"
+      @assign-folder="openAssignFolder"
       @delete-selected="deleteSelectedGroups"
+      @manage-folders="openGroupFolderManage"
       @refresh="refreshGroups"
       @row-action="handleRowAction"
       @selection-change="onSelectionChange"
+    />
+
+    <BatchAssignFolderDialog
+      v-model="assignFolderDialogOpen"
+      :loading="assigningFolder"
+      :options="folderOptions"
+      :selected-count="selectedCount"
+      @submit="assignSelectedFolder"
+    />
+
+    <GroupFolderManageDialog
+      v-model="groupFolderManageOpen"
+      @changed="onGroupFoldersChanged"
     />
 
     <GroupMemberDrawer
