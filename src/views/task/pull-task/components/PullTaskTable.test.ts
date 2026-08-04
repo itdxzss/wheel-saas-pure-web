@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
 const componentUrl = new URL("./PullTaskTable.vue", import.meta.url);
+const actionComponentUrl = new URL(
+  "./PullTaskTableActions.vue",
+  import.meta.url
+);
 
 describe("pull task unified table", () => {
   it("renders exactly the nine confirmed columns", () => {
@@ -41,7 +45,25 @@ describe("pull task unified table", () => {
       /shouldShowUnknownMessage\(row\.messageStats\?\.unknownCount\)/
     );
     assert.match(source, /row\.blockingReason\s*\|\|\s*row\.primaryStage/);
-    assert.match(source, /row\.allowedActions/);
-    assert.doesNotMatch(source, /row\.createdAt/);
+    assert.match(source, /PullTaskTableActions/);
+    const actionSource = readFileSync(
+      fileURLToPath(actionComponentUrl),
+      "utf8"
+    );
+    assert.match(actionSource, /row\.allowedActions/);
+    for (const action of [
+      "DETAIL",
+      "START",
+      "PAUSE",
+      "RESUME",
+      "END",
+      "DELETE"
+    ]) {
+      assert.match(
+        actionSource,
+        new RegExp(`hasAction\\(["']${action}["']\\)`)
+      );
+    }
+    assert.match(source, /row\.createdAt/);
   });
 });

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PullTaskTableActions from "./PullTaskTableActions.vue";
 import {
   formatEpoch,
   pullTaskStatusLabel,
@@ -33,10 +34,6 @@ const emit = defineEmits<{
 
 function timestampLabel(value?: number | null): string {
   return value == null ? "--" : formatEpoch(value);
-}
-
-function hasAction(row: PullTaskRow, action: PullTaskListAction): boolean {
-  return row.allowedActions.includes(action);
 }
 </script>
 
@@ -178,6 +175,9 @@ function hasAction(row: PullTaskRow, action: PullTaskListAction): boolean {
                 {{ displayMetric(row.pullResult.unregisteredCount) }}</span
               >
               <span
+                >明确失败 {{ displayMetric(row.pullResult.failedCount) }}</span
+              >
+              <span
                 >结果未知 {{ displayMetric(row.pullResult.unknownCount) }}</span
               >
               <span
@@ -264,7 +264,8 @@ function hasAction(row: PullTaskRow, action: PullTaskListAction): boolean {
         <el-tag
           v-else-if="
             row.exceptionStats.abnormalGroupCount === 0 &&
-            row.exceptionStats.bannedAccountCount === 0
+            (row.exceptionStats.bannedAccountCount == null ||
+              row.exceptionStats.bannedAccountCount === 0)
           "
           size="small"
           type="success"
@@ -275,8 +276,14 @@ function hasAction(row: PullTaskRow, action: PullTaskListAction): boolean {
           <span>
             异常群组{{
               displayMetric(row.exceptionStats.abnormalGroupCount)
-            }}（缺少拉手{{
+            }}（缺管理员{{
+              displayMetric(row.exceptionStats.managerShortageGroupCount)
+            }}
+            / 缺拉手{{
               displayMetric(row.exceptionStats.pullerShortageGroupCount)
+            }}
+            / 缺站台{{
+              displayMetric(row.exceptionStats.stationShortageGroupCount)
             }}）
           </span>
           <span
@@ -322,49 +329,15 @@ function hasAction(row: PullTaskRow, action: PullTaskListAction): boolean {
       <template #default="{ row }">
         <div class="time-action-cell">
           <span class="secondary-line">
+            创建时间 {{ timestampLabel(row.createdAt) }}
+          </span>
+          <span class="secondary-line">
             最近执行 {{ timestampLabel(row.lastExecutedAt) }}
           </span>
-          <div class="action-row">
-            <el-button
-              v-if="hasAction(row, 'DETAIL')"
-              link
-              type="primary"
-              @click="emit('action', row, 'DETAIL')"
-              >查看详情</el-button
-            >
-            <el-button
-              v-if="hasAction(row, 'START')"
-              v-auth="'tenant:pull_task:operate'"
-              link
-              type="success"
-              @click="emit('action', row, 'START')"
-              >启动</el-button
-            >
-            <el-button
-              v-if="hasAction(row, 'PAUSE')"
-              v-auth="'tenant:pull_task:operate'"
-              link
-              type="warning"
-              @click="emit('action', row, 'PAUSE')"
-              >暂停</el-button
-            >
-            <el-button
-              v-if="hasAction(row, 'STOP')"
-              v-auth="'tenant:pull_task:operate'"
-              link
-              type="danger"
-              @click="emit('action', row, 'STOP')"
-              >停止</el-button
-            >
-            <el-button
-              v-if="hasAction(row, 'DELETE')"
-              v-auth="'tenant:pull_task:delete'"
-              link
-              type="danger"
-              @click="emit('action', row, 'DELETE')"
-              >删除</el-button
-            >
-          </div>
+          <PullTaskTableActions
+            :row="row"
+            @action="emit('action', row, $event)"
+          />
         </div>
       </template>
     </el-table-column>
@@ -389,8 +362,7 @@ function hasAction(row: PullTaskRow, action: PullTaskListAction): boolean {
   color: var(--el-text-color-secondary);
 }
 
-.tag-row,
-.action-row {
+.tag-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;

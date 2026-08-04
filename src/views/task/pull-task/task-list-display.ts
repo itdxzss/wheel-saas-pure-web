@@ -13,7 +13,8 @@ const shortageNames: Record<PullTaskResourceShortageType, string> = {
   TARGET_DATA: "目标数据",
   PULLER: "拉手",
   WATER_ARMY: "水军",
-  ADMIN: "潜水管理员",
+  ADMIN: "管理员",
+  STATION: "站台",
   MARKETING_ADMIN: "营销管理员"
 };
 

@@ -23,7 +23,7 @@ export type PullTaskMarketingStatus =
 
 export type PullTaskStatus = PullTaskStandardStatus | PullTaskMarketingStatus;
 
-export type PullTaskMode = "OLD_LINK" | "CREATE_NEW" | string;
+export type PullTaskMode = "OLD_LINK" | "CREATE_NEW" | "NORMAL_LINK" | string;
 
 export type PullTaskType = "STANDARD" | "GROUP_MARKETING";
 
@@ -34,6 +34,7 @@ export type PullTaskResourceShortageType =
   | "PULLER"
   | "WATER_ARMY"
   | "ADMIN"
+  | "STATION"
   | "MARKETING_ADMIN";
 
 export interface PullTaskResourceShortage {
@@ -44,15 +45,16 @@ export type PullTaskListAction =
   | "DETAIL"
   | "START"
   | "PAUSE"
-  | "STOP"
+  | "RESUME"
+  | "END"
   | "DELETE";
 
 export interface PullTaskGroupProgress {
   processedGroupCount: number;
   targetGroupCount: number;
   transferSuccessCount: number;
-  transferPendingCloseCount: number;
-  transferPartialCount: number;
+  transferPendingCloseCount: number | null;
+  transferPartialCount: number | null;
   transferFailedCount: number;
   transferRunningCount: number;
   transferWaitingCount: number;
@@ -62,10 +64,11 @@ export interface PullTaskPullResult {
   plannedTargetCount: number;
   effectiveTargetCount: number;
   joinedSuccessCount: number;
-  alreadyInGroupCount: number;
-  privacyRestrictedCount: number;
-  invalidNumberCount: number;
-  unregisteredCount: number;
+  alreadyInGroupCount: number | null;
+  privacyRestrictedCount: number | null;
+  invalidNumberCount: number | null;
+  unregisteredCount: number | null;
+  failedCount: number;
   unknownCount: number;
   remainingTargetCount: number;
   effectiveSuccessRate: number | null;
@@ -87,8 +90,10 @@ export interface PullTaskMessageStats {
 
 export interface PullTaskExceptionStats {
   abnormalGroupCount: number;
+  managerShortageGroupCount: number | null;
   pullerShortageGroupCount: number;
-  bannedAccountCount: number;
+  stationShortageGroupCount: number | null;
+  bannedAccountCount: number | null;
 }
 
 export interface PullTaskResourceStats {
@@ -104,6 +109,7 @@ export type PullTaskGroupStatus =
   | "GROUP_CREATE_FAILED"
   | "GROUP_BANNED"
   | "PULLER_SHORTAGE"
+  | "STATION_SHORTAGE"
   | "PAUSED"
   | "COMPLETED"
   | "ENDED"
@@ -131,6 +137,7 @@ export interface PullTaskRow {
   messageStats: PullTaskMessageStats | null;
   exceptionStats: PullTaskExceptionStats | null;
   resourceStats: PullTaskResourceStats | null;
+  createdAt: number | null;
   lastExecutedAt: number | null;
   allowedActions: PullTaskListAction[];
 }
@@ -142,9 +149,9 @@ export interface PullTaskGroupRow {
   groupLinkUrl?: string | null;
   status: PullTaskGroupStatus;
   memberCount?: number | null;
-  joinedCount: number;
-  failedCount: number;
-  unusedCount: number;
+  joinedCount?: number | null;
+  failedCount?: number | null;
+  unusedCount?: number | null;
   expectedPullCount?: number | null;
   submitted?: boolean | null;
   blockReason?: string | null;
@@ -152,6 +159,16 @@ export interface PullTaskGroupRow {
   pullerPhones?: string[] | null;
   createdAt?: number | null;
   updatedAt?: number | null;
+  executionStatus?: number | null;
+  stage?: number | null;
+  manualPaused?: boolean | null;
+  waitResourceType?: number | null;
+  reasonCode?: string | null;
+  lastBusinessExecutedAt?: number | null;
+  materialSummary?: PullTaskStandardMaterialSummary | null;
+  managers?: PullTaskStandardResourceCount | null;
+  pullers?: PullTaskStandardResourceCount | null;
+  stations?: PullTaskStandardResourceCount | null;
 }
 
 export interface PullTaskSummary {
@@ -363,6 +380,301 @@ export interface CreatePullTaskRequest {
   remark?: string | null;
 }
 
+export type PullTaskStandardLinkLineStatus =
+  | "VALID"
+  | "INVALID_FORMAT"
+  | "DUPLICATE"
+  | "LINK_EXPIRED"
+  | "PROBE_INCOMPLETE"
+  | "OCCUPIED";
+
+export interface PullTaskStandardExecutionRow {
+  rowId: number;
+  seq: number;
+  normalizedLink: string;
+  sourceLinkLineNo: number;
+  sourceFileName: string;
+  totalLineCount: number;
+  validMemberCount: number;
+  invalidLineCount: number;
+  duplicateLineCount: number;
+}
+
+export interface PullTaskStandardLinkLine {
+  lineNo: number;
+  raw: string;
+  normalizedLink: string | null;
+  status: PullTaskStandardLinkLineStatus;
+  reason: string | null;
+}
+
+export interface PullTaskStandardMaterialLineError {
+  lineNo: number;
+  reason: string;
+}
+
+export interface PullTaskStandardFileResult {
+  fileName: string;
+  accepted: boolean;
+  validMemberCount: number;
+  invalidLineCount: number;
+  duplicateLineCount: number;
+  rejectReason: string | null;
+  lineErrors: PullTaskStandardMaterialLineError[];
+}
+
+export interface PullTaskStandardDraft {
+  draftTaskId: number | null;
+  version: number | null;
+  rows: PullTaskStandardExecutionRow[];
+  linkLines: PullTaskStandardLinkLine[];
+  fileResults: PullTaskStandardFileResult[];
+  matchedCount: number;
+  remainingLinkCount: number;
+  ignoredFileCount: number;
+}
+
+export interface PullTaskStandardCreateRequest {
+  draftTaskId: number;
+  version: number;
+  taskName: string;
+  remark: string | null;
+  autoStart: 0 | 1;
+  materialAdminTiming: 1 | 2;
+  pullCountMin: number;
+  pullCountMax: number;
+  pullIntervalSeconds: number;
+  pullerCountPerGroup: number;
+  stationCountPerCall: number;
+  concurrentGroupCount: number;
+  pullerRiskMinutes: number;
+  managerGroupId: number;
+  pullerGroupId: number;
+  stationGroupId: number;
+}
+
+export interface PullTaskStandardCreated {
+  id: number;
+  taskName: string;
+  status: "WAIT_START";
+  groupCount: number;
+  expectedPullCount: number;
+}
+
+export interface PullTaskStandardExecutionSummary {
+  executionId: number;
+  seq: number;
+  normalizedLink: string;
+  groupJid: string | null;
+  executionStatus: number;
+  stage: number;
+  manualPaused: boolean;
+  waitResourceType: number | null;
+  validMemberCount: number;
+  reasonCode: string | null;
+  reasonMessage: string | null;
+  lastBusinessExecutedAt: number | null;
+  materialSummary: PullTaskStandardMaterialSummary | null;
+  managers: PullTaskStandardResourceCount | null;
+  pullers: PullTaskStandardResourceCount | null;
+  stations: PullTaskStandardResourceCount | null;
+}
+
+export interface PullTaskStandardRole {
+  roleRowId: number;
+  accountId: number;
+  accountPhone: string;
+  roleType: number;
+  roleSeq: number;
+  membershipStatus: number;
+  availabilityStatus: number;
+  unavailableReasonCode: string | null;
+  pullCallId: number | null;
+}
+
+export interface PullTaskStandardCall {
+  callId: number;
+  callSeq: number;
+  pullerAccountId: number;
+  plannedMaterialCount: number;
+  plannedStationCount: number;
+  callStatus: number;
+  reasonCode: string | null;
+  reasonMessage: string | null;
+  submittedAt: number | null;
+  resultAt: number | null;
+}
+
+export interface PullTaskStandardAction {
+  actionId: number;
+  actionType: number;
+  actorRoleRowId: number;
+  targetRoleRowId: number;
+  actionStatus: number;
+  reasonCode: string | null;
+  reasonMessage: string | null;
+  submittedAt: number | null;
+  resultAt: number | null;
+}
+
+export interface PullTaskStandardExecutionDetail {
+  execution: PullTaskStandardExecutionSummary;
+  roles: PullTaskStandardRole[];
+  calls: PullTaskStandardCall[];
+  actions: PullTaskStandardAction[];
+}
+
+export interface PullTaskStandardMember {
+  memberId: number;
+  memberSeq: number;
+  normalizedPhone: string;
+  adminRequired: boolean;
+  pullCallId: number | null;
+  pullStatus: number;
+  pullReasonCode: string | null;
+  pullReasonMessage: string | null;
+  waJid: string | null;
+  adminStatus: number;
+  adminReasonCode: string | null;
+}
+
+export interface PullTaskStandardMaterialSummary {
+  totalCount: number;
+  successfulCount: number;
+  failedCount: number;
+  unknownCount: number;
+  remainingCount: number;
+  submittedCount: number;
+  canceledCount: number;
+}
+
+export interface PullTaskStandardResourceCount {
+  currentCount: number;
+  plannedCount: number;
+  missingCount: number;
+}
+
+export interface PullTaskStandardTaskSummary {
+  totalGroupCount: number;
+  executingGroupCount: number;
+  waitingResourceGroupCount: number;
+  completedGroupCount: number;
+  failedGroupCount: number;
+  abandonedGroupCount: number;
+  totalMemberCount: number;
+  successfulMemberCount: number;
+  failedMemberCount: number;
+  unknownMemberCount: number;
+  remainingMemberCount: number;
+}
+
+export interface PullTaskStandardTaskDetail {
+  taskId: number;
+  taskName: string;
+  status: PullTaskStandardStatus;
+  groupCount: number;
+  expectedPullCount: number;
+  startedAt: number | null;
+  finishedAt: number | null;
+  createdAt: number | null;
+  remark: string | null;
+  executions: PullTaskStandardExecutionSummary[];
+  summary: PullTaskStandardTaskSummary | null;
+}
+
+export interface PullTaskStandardExecutionQuery {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  executionStatus?: number;
+  stage?: number;
+  waitResourceType?: number;
+  manualPaused?: number;
+}
+
+export interface PullTaskManagerOptionRole {
+  roleRowId: number;
+  accountId: number;
+  accountPhone: string;
+  membershipStatus: number;
+  adminStatus: number;
+  availabilityStatus: number;
+}
+
+export interface PullTaskManagerCandidate {
+  accountId: number;
+  accountPhone: string;
+}
+
+export interface PullTaskManagerSupplementOptions {
+  currentManagerCount: number;
+  requiredManagerCount: number;
+  missingManagerCount: number;
+  managerGroupId: number;
+  managerInviteAvailable: boolean;
+  currentManagers: PullTaskManagerOptionRole[];
+  executorAccounts: PullTaskManagerOptionRole[];
+  candidates: PullTaskManagerCandidate[];
+}
+
+export interface PullTaskManagerSupplementRequest {
+  accountGroupId: number;
+  accountId: number;
+  entryMode: 1 | 2;
+  executorRoleRowId: number | null;
+}
+
+export interface PullTaskPullerOptionRole {
+  roleRowId: number;
+  accountId: number;
+  accountPhone: string;
+  membershipStatus: number;
+  availabilityStatus: number;
+  occupied: boolean;
+}
+
+export interface PullTaskPullerCandidate {
+  accountId: number;
+  accountPhone: string;
+}
+
+export interface PullTaskPullerSupplementOptions {
+  currentPullerCount: number;
+  requiredPullerCount: number;
+  missingPullerCount: number;
+  pullerGroupId: number;
+  managerInviteAvailable: boolean;
+  currentPullers: PullTaskPullerOptionRole[];
+  candidates: PullTaskPullerCandidate[];
+}
+
+export interface PullTaskPullerSupplementRequest {
+  accountGroupId: number;
+  supplementCount: number;
+  selectionMode: 1 | 2;
+  entryMode: 1 | 2;
+  accountIds: number[];
+}
+
+export interface PullTaskStationCandidate {
+  accountId: number;
+  accountPhone: string;
+}
+
+export interface PullTaskStationSupplementOptions {
+  requiredStationCount: number;
+  missingStationCount: number;
+  stationGroupId: number | null;
+  candidates: PullTaskStationCandidate[];
+}
+
+export interface PullTaskStationSupplementRequest {
+  accountGroupId: number;
+  supplementCount: number;
+  selectionMode: 1 | 2;
+  accountIds: number[];
+}
+
 export interface PullTaskIdsRequest {
   ids: number[];
 }
@@ -491,6 +803,220 @@ export function createPullTask(
   data: CreatePullTaskRequest
 ): Promise<PullTaskRow> {
   return armadaRequest<PullTaskRow>("post", "/api/pull-tasks", { data });
+}
+
+export function getPullTaskStandardDraft(): Promise<PullTaskStandardDraft> {
+  return armadaRequest<PullTaskStandardDraft>(
+    "get",
+    "/api/pull-tasks/standard/draft"
+  );
+}
+
+export function planPullTaskStandardDraft(
+  linksText: string,
+  files: File[] = []
+): Promise<PullTaskStandardDraft> {
+  const data = new FormData();
+  data.append("linksText", linksText);
+  files.forEach(file => data.append("files", file));
+  return armadaRequest<PullTaskStandardDraft>(
+    "post",
+    "/api/pull-tasks/standard/draft/plan",
+    { data }
+  );
+}
+
+export function removePullTaskStandardDraftRow(
+  rowId: number
+): Promise<PullTaskStandardDraft> {
+  return armadaRequest<PullTaskStandardDraft>(
+    "delete",
+    `/api/pull-tasks/standard/draft/rows/${rowId}`
+  );
+}
+
+export function clearPullTaskStandardDraft(): Promise<PullTaskStandardDraft> {
+  return armadaRequest<PullTaskStandardDraft>(
+    "delete",
+    "/api/pull-tasks/standard/draft"
+  );
+}
+
+export function createPullTaskStandard(
+  data: PullTaskStandardCreateRequest
+): Promise<PullTaskStandardCreated> {
+  return armadaRequest<PullTaskStandardCreated>(
+    "post",
+    "/api/pull-tasks/standard",
+    { data }
+  );
+}
+
+export function getPullTaskStandardDetail(
+  taskId: number
+): Promise<PullTaskStandardTaskDetail> {
+  return armadaRequest<PullTaskStandardTaskDetail>(
+    "get",
+    `/api/pull-tasks/standard/${taskId}`
+  );
+}
+
+export function listPullTaskStandardExecutions(
+  taskId: number,
+  query: PullTaskStandardExecutionQuery
+): Promise<PageResponse<PullTaskStandardExecutionSummary>> {
+  return armadaRequest<PageResponse<PullTaskStandardExecutionSummary>>(
+    "get",
+    `/api/pull-tasks/standard/${taskId}/executions`,
+    { params: query }
+  );
+}
+
+export function getPullTaskStandardExecutionDetail(
+  taskId: number,
+  executionId: number
+): Promise<PullTaskStandardExecutionDetail> {
+  return armadaRequest<PullTaskStandardExecutionDetail>(
+    "get",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}`
+  );
+}
+
+export function getPullTaskStandardExecutionMembers(
+  taskId: number,
+  executionId: number
+): Promise<PullTaskStandardMember[]> {
+  return armadaRequest<PullTaskStandardMember[]>(
+    "get",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/members`
+  );
+}
+
+export function startPullTaskStandard(taskId: number): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/start`
+  );
+}
+
+export function pausePullTaskStandard(taskId: number): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/pause`
+  );
+}
+
+export function resumePullTaskStandard(taskId: number): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/resume`
+  );
+}
+
+export function endPullTaskStandard(taskId: number): Promise<void> {
+  return armadaRequest<void>("post", `/api/pull-tasks/standard/${taskId}/end`);
+}
+
+export function pausePullTaskStandardExecution(
+  taskId: number,
+  executionId: number
+): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/pause`
+  );
+}
+
+export function resumePullTaskStandardExecution(
+  taskId: number,
+  executionId: number
+): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/resume`
+  );
+}
+
+export function endPullTaskStandardExecution(
+  taskId: number,
+  executionId: number
+): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/end`
+  );
+}
+
+export function getPullTaskManagerSupplementOptions(
+  taskId: number,
+  executionId: number,
+  accountGroupId?: number
+): Promise<PullTaskManagerSupplementOptions> {
+  return armadaRequest<PullTaskManagerSupplementOptions>(
+    "get",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/manager-supplement/options`,
+    { params: { accountGroupId } }
+  );
+}
+
+export function supplementPullTaskManager(
+  taskId: number,
+  executionId: number,
+  data: PullTaskManagerSupplementRequest
+): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/manager-supplement`,
+    { data }
+  );
+}
+
+export function getPullTaskPullerSupplementOptions(
+  taskId: number,
+  executionId: number,
+  accountGroupId?: number
+): Promise<PullTaskPullerSupplementOptions> {
+  return armadaRequest<PullTaskPullerSupplementOptions>(
+    "get",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/puller-supplement/options`,
+    { params: { accountGroupId } }
+  );
+}
+
+export function supplementPullTaskPuller(
+  taskId: number,
+  executionId: number,
+  data: PullTaskPullerSupplementRequest
+): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/puller-supplement`,
+    { data }
+  );
+}
+
+export function getPullTaskStationSupplementOptions(
+  taskId: number,
+  executionId: number,
+  accountGroupId?: number
+): Promise<PullTaskStationSupplementOptions> {
+  return armadaRequest<PullTaskStationSupplementOptions>(
+    "get",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/station-supplement/options`,
+    { params: { accountGroupId } }
+  );
+}
+
+export function supplementPullTaskStation(
+  taskId: number,
+  executionId: number,
+  data: PullTaskStationSupplementRequest
+): Promise<void> {
+  return armadaRequest<void>(
+    "post",
+    `/api/pull-tasks/standard/${taskId}/executions/${executionId}/station-supplement`,
+    { data }
+  );
 }
 
 export function getPullTaskDetail(id: number): Promise<PullTaskDetail> {

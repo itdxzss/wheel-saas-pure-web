@@ -5,8 +5,10 @@ import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import PullTaskDetailDrawer from "./components/PullTaskDetailDrawer.vue";
+import PullTaskExecutionDetailDrawer from "./components/PullTaskExecutionDetailDrawer.vue";
 import PullTaskCreateDrawer from "./components/PullTaskCreateDrawer.vue";
 import PullTaskGlobalSettingDialog from "./components/PullTaskGlobalSettingDialog.vue";
+import PullTaskResourceSupplementFlows from "./components/PullTaskResourceSupplementFlows.vue";
 import PullTaskTable from "./components/PullTaskTable.vue";
 import PullTaskTypeDialog from "./components/PullTaskTypeDialog.vue";
 import {
@@ -16,6 +18,7 @@ import {
   pullTaskTypeOptions
 } from "./constants";
 import { usePullTaskPage } from "./composables/usePullTaskPage";
+import { usePullTaskExecutionDetail } from "./composables/usePullTaskExecutionDetail";
 import { usePullTaskGlobalSetting } from "./composables/usePullTaskGlobalSetting";
 import { useStandardPullTaskCreate } from "./composables/useStandardPullTaskCreate";
 import type {
@@ -32,9 +35,16 @@ import Search from "~icons/ri/search-line";
 defineOptions({
   name: "TaskPull"
 });
-
 const router = useRouter();
 const taskTypeDialogVisible = ref(false);
+type SupplementFlows = InstanceType<typeof PullTaskResourceSupplementFlows>;
+const resourceSupplementFlows = ref<SupplementFlows | null>(null);
+const lifecycleActions = {
+  START: "start",
+  PAUSE: "pause",
+  RESUME: "resume",
+  END: "end"
+} as const;
 const {
   cancel: cancelGlobalSetting,
   form: globalSettingForm,
@@ -44,7 +54,6 @@ const {
   saving: globalSettingSaving,
   visible: globalSettingVisible
 } = usePullTaskGlobalSetting();
-
 const {
   accountGroups,
   activeTask,
@@ -59,6 +68,7 @@ const {
   detailSearchForm,
   detailSelectedCount,
   detailSummary,
+  standardTaskSummary,
   detailTotal,
   exportGroupLinks,
   exportReport,
@@ -75,6 +85,7 @@ const {
   resetDetailSearch,
   resetSearchForm,
   rows,
+  runExecutionAction,
   runGroupOperation,
   runRowsOperation,
   runTaskAction,
@@ -89,18 +100,31 @@ const {
 } = usePullTaskPage();
 
 const {
+  detail: executionDetail,
+  loading: executionDetailLoading,
+  members: executionMembers,
+  open: openExecutionDetail,
+  visible: executionDetailVisible
+} = usePullTaskExecutionDetail();
+
+const {
+  addFiles: addStandardFiles,
   accountGroups: createAccountGroups,
+  clear: clearStandardDraft,
+  clearing: standardClearing,
   create: createStandardTask,
   creating: standardCreating,
+  draft: standardDraft,
   form: standardCreateForm,
-  groupLinkOptions: standardGroupLinkOptions,
-  groupLinksLoading: standardGroupLinksLoading,
-  linkGroups: standardLinkGroups,
-  loadGroupLinks: loadStandardGroupLinks,
+  linksText: standardLinksText,
   loading: standardCreateLoading,
+  movePendingFile: moveStandardPendingFile,
   open: openStandardCreate,
-  readMaterialFile: readStandardMaterialFile,
-  readWaterFile: readStandardWaterFile,
+  pendingFiles: standardPendingFiles,
+  plan: planStandardDraft,
+  planning: standardPlanning,
+  removePendingFile: removeStandardPendingFile,
+  removeRow: removeStandardRow,
   visible: standardCreateVisible
 } = useStandardPullTaskCreate({ onCreated: refreshTasks });
 
@@ -133,17 +157,21 @@ async function handleTableAction(
     await deleteTask(row);
     return;
   }
-  if (action === "START") {
-    await runTaskAction(row, "start");
-    return;
-  }
-  if (action === "PAUSE") {
-    await runTaskAction(row, "pause");
-    return;
-  }
-  if (action === "STOP") {
-    await runTaskAction(row, "stop");
-  }
+  const lifecycleAction =
+    lifecycleActions[action as keyof typeof lifecycleActions];
+  if (lifecycleAction) await runTaskAction(row, lifecycleAction);
+}
+
+async function handleExecutionDetail(row: { id: number }): Promise<void> {
+  if (!activeTask.value) return;
+  await openExecutionDetail(activeTask.value.id, row.id);
+}
+
+async function handleDetailTaskAction(
+  action: "start" | "pause" | "resume" | "end"
+): Promise<void> {
+  if (!activeTask.value) return;
+  await runTaskAction(activeTask.value, action);
 }
 </script>
 
@@ -302,16 +330,21 @@ async function handleTableAction(
     <PullTaskCreateDrawer
       v-model="standardCreateVisible"
       v-model:form="standardCreateForm"
+      v-model:links-text="standardLinksText"
       :account-groups="createAccountGroups"
+      :clearing="standardClearing"
       :creating="standardCreating"
-      :group-link-options="standardGroupLinkOptions"
-      :group-links-loading="standardGroupLinksLoading"
-      :link-groups="standardLinkGroups"
+      :draft="standardDraft"
       :loading="standardCreateLoading"
+      :pending-files="standardPendingFiles"
+      :planning="standardPlanning"
+      @add-files="addStandardFiles"
+      @clear="clearStandardDraft"
       @create="createStandardTask"
-      @load-group-links="loadStandardGroupLinks"
-      @read-material-file="readStandardMaterialFile"
-      @read-water-file="readStandardWaterFile"
+      @move-pending-file="moveStandardPendingFile"
+      @plan="planStandardDraft"
+      @remove-pending-file="removeStandardPendingFile"
+      @remove-row="removeStandardRow"
     />
 
     <PullTaskGlobalSettingDialog
@@ -337,17 +370,38 @@ async function handleTableAction(
       :detail-loading="detailLoading"
       :detail-selected-count="detailSelectedCount"
       :detail-summary="detailSummary"
+      :standard-task-summary="standardTaskSummary"
       :detail-total="detailTotal"
       @export-group-links="exportGroupLinks"
       @export-report="exportReport"
       @export-resources="exportResources"
       @open-supplement="openSupplementDrawer"
+      @open-manager-supplement="resourceSupplementFlows?.openManager"
+      @open-execution-detail="handleExecutionDetail"
+      @open-puller-supplement="resourceSupplementFlows?.openPuller"
+      @open-station-supplement="resourceSupplementFlows?.openStation"
       @refresh-detail-groups="refreshDetailGroups"
       @reset-detail-search="resetDetailSearch"
+      @run-execution-operation="runExecutionAction"
       @run-group-operation="runGroupOperation"
       @run-rows-operation="runRowsOperation"
+      @run-task-operation="handleDetailTaskAction"
       @selection-change="onDetailSelectionChange"
       @supplement-pullers="supplementPullers"
+    />
+
+    <PullTaskExecutionDetailDrawer
+      v-model="executionDetailVisible"
+      :detail="executionDetail"
+      :loading="executionDetailLoading"
+      :members="executionMembers"
+    />
+
+    <PullTaskResourceSupplementFlows
+      ref="resourceSupplementFlows"
+      :account-groups="accountGroups"
+      :task-id="activeTask?.id"
+      @submitted="refreshDetailGroups"
     />
   </div>
 </template>

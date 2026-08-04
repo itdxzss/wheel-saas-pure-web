@@ -1,12 +1,13 @@
-import { reactive, ref, type Ref } from "vue";
+import { reactive, ref, watch, type Ref } from "vue";
 import { ElMessage } from "element-plus";
 import {
-  createPullTask,
-  listPullTaskGroupLinks,
-  listPullTaskLinkGroups,
-  type CreatePullTaskRequest,
-  type PullTaskLinkGroup,
-  type PullTaskLinkOption
+  clearPullTaskStandardDraft,
+  createPullTaskStandard,
+  getPullTaskStandardDraft,
+  planPullTaskStandardDraft,
+  removePullTaskStandardDraftRow,
+  type PullTaskStandardCreateRequest,
+  type PullTaskStandardDraft
 } from "@/api/pull-task";
 import {
   listAccountGroups,
@@ -14,57 +15,25 @@ import {
 } from "@/api/account-group";
 import { apiErrorMessage } from "@/utils/api-error";
 
+const LINKS_STORAGE_KEY = "pull-task-standard-normal-link-links";
+const PLANNED_LINKS_STORAGE_KEY =
+  "pull-task-standard-normal-link-planned-links";
+
 export interface StandardPullTaskCreateForm {
   taskName: string;
-  subMode: "OLD_LINK" | "CREATE_NEW";
-  useAdmin: boolean;
-  wsLinkGroupId: number | "";
-  groupLinkIds: number[];
-  pastedLinks: string;
-  templateId: number;
-  adminGroupId: number | "";
-  pullerGroupId: number | "";
-  stationOneGroupId: number | "";
-  stationTwoGroupId: number | "";
-  stationThreeGroupId: number | "";
-  adminPerGroup: number;
-  pullerPerGroup: number;
-  stationOnePerGroup: number;
-  stationTwoPerGroup: number;
-  stationThreePerGroup: number;
-  autoSupplementAdminCount: number;
-  autoSupplementAdminTimes: number;
-  autoSupplementPullerCount: number;
-  autoSupplementPullerTimes: number;
-  pullerFinishGroupId: number | "";
-  adminFinishGroupId: number | "";
+  remark: string;
   autoStart: boolean;
-  pullerEnterFirst: boolean;
-  auditMode: string;
-  noReleaseAfterPull: boolean;
-  pullerSyncMode: string;
-  waitBeforePullSeconds: number;
-  concurrentTaskCount: number;
-  firstPullCount: number;
+  materialAdminTiming: 1 | 2;
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
-  pullerMaxTotal: number;
-  pullerThreadCount: number;
-  stationJoinMode: string;
-  pullerJoinMode: string;
-  pullerQuitMode: string;
-  adminQuitMode: string;
-  stationQuitAfterDone: boolean;
-  groupName: string;
-  mute: boolean;
-  linkPermission: string;
-  editPermission: string;
-  autoCloseInvite: boolean;
-  materialText: string;
-  waterText: string;
-  waterMode: string;
-  remark: string;
+  pullerCountPerGroup: number;
+  stationCountPerCall: number;
+  concurrentGroupCount: number;
+  pullerRiskMinutes: number;
+  managerGroupId: number | "";
+  pullerGroupId: number | "";
+  stationGroupId: number | "";
 }
 
 export interface StandardPullTaskCreateOptions {
@@ -74,140 +43,101 @@ export interface StandardPullTaskCreateOptions {
 export interface StandardPullTaskCreateState {
   visible: Ref<boolean>;
   loading: Ref<boolean>;
+  planning: Ref<boolean>;
   creating: Ref<boolean>;
-  groupLinksLoading: Ref<boolean>;
+  clearing: Ref<boolean>;
   form: StandardPullTaskCreateForm;
+  linksText: Ref<string>;
+  draft: Ref<PullTaskStandardDraft>;
   accountGroups: Ref<AccountGroupApiRow[]>;
-  linkGroups: Ref<PullTaskLinkGroup[]>;
-  groupLinkOptions: Ref<PullTaskLinkOption[]>;
+  pendingFiles: Ref<File[]>;
   open: () => Promise<void>;
+  addFiles: (files: File[]) => void;
+  movePendingFile: (fileName: string, offset: -1 | 1) => void;
+  removePendingFile: (fileName: string) => void;
+  plan: () => Promise<void>;
+  removeRow: (rowId: number) => Promise<void>;
+  clear: () => Promise<void>;
   create: () => Promise<void>;
-  loadGroupLinks: () => Promise<void>;
-  readMaterialFile: (file?: File) => Promise<void>;
-  readWaterFile: (file?: File) => Promise<void>;
 }
 
 function emptyForm(): StandardPullTaskCreateForm {
   return {
     taskName: "",
-    subMode: "OLD_LINK",
-    useAdmin: true,
-    wsLinkGroupId: "",
-    groupLinkIds: [],
-    pastedLinks: "",
-    templateId: 0,
-    adminGroupId: "",
-    pullerGroupId: "",
-    stationOneGroupId: "",
-    stationTwoGroupId: "",
-    stationThreeGroupId: "",
-    adminPerGroup: 1,
-    pullerPerGroup: 1,
-    stationOnePerGroup: 0,
-    stationTwoPerGroup: 0,
-    stationThreePerGroup: 0,
-    autoSupplementAdminCount: 0,
-    autoSupplementAdminTimes: 0,
-    autoSupplementPullerCount: 0,
-    autoSupplementPullerTimes: 0,
-    pullerFinishGroupId: "",
-    adminFinishGroupId: "",
+    remark: "",
     autoStart: false,
-    pullerEnterFirst: true,
-    auditMode: "关闭审核模式进群",
-    noReleaseAfterPull: false,
-    pullerSyncMode: "单个同步",
-    waitBeforePullSeconds: 3,
-    concurrentTaskCount: 1,
-    firstPullCount: 1,
+    materialAdminTiming: 1,
     pullCountMin: 3,
     pullCountMax: 5,
     pullIntervalSeconds: 6,
-    pullerMaxTotal: 50,
-    pullerThreadCount: 1,
-    stationJoinMode: "快速踩群链接",
-    pullerJoinMode: "快速踩群链接",
-    pullerQuitMode: "不退拉手",
-    adminQuitMode: "不退管理员",
-    stationQuitAfterDone: false,
-    groupName: "",
-    mute: false,
-    linkPermission: "所有成员可邀请",
-    editPermission: "仅管理员可编辑",
-    autoCloseInvite: false,
-    materialText: "",
-    waterText: "",
-    waterMode: "一号多群",
-    remark: ""
+    pullerCountPerGroup: 1,
+    stationCountPerCall: 0,
+    concurrentGroupCount: 1,
+    pullerRiskMinutes: 0,
+    managerGroupId: "",
+    pullerGroupId: "",
+    stationGroupId: ""
   };
 }
 
-function idOrNull(value: number | ""): number | null {
-  return typeof value === "number" && value > 0 ? value : null;
-}
-
-function linesOf(text: string): string[] {
-  return text
-    .split(/\r?\n/)
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-function toPayload(form: StandardPullTaskCreateForm): CreatePullTaskRequest {
+function emptyDraft(): PullTaskStandardDraft {
   return {
-    taskName: form.taskName.trim(),
-    subMode: form.subMode,
-    useAdmin: form.useAdmin,
-    wsLinkGroupId: idOrNull(form.wsLinkGroupId),
-    groupLinkIds: [...form.groupLinkIds],
-    pastedLinks: linesOf(form.pastedLinks),
-    templateId: idOrNull(form.templateId),
-    adminGroupId: idOrNull(form.adminGroupId),
-    pullerGroupId: idOrNull(form.pullerGroupId),
-    stationOneGroupId: idOrNull(form.stationOneGroupId),
-    stationTwoGroupId: idOrNull(form.stationTwoGroupId),
-    stationThreeGroupId: idOrNull(form.stationThreeGroupId),
-    adminPerGroup: form.adminPerGroup,
-    pullerPerGroup: form.pullerPerGroup,
-    stationOnePerGroup: form.stationOnePerGroup,
-    stationTwoPerGroup: form.stationTwoPerGroup,
-    stationThreePerGroup: form.stationThreePerGroup,
-    autoSupplementAdminCount: form.autoSupplementAdminCount,
-    autoSupplementAdminTimes: form.autoSupplementAdminTimes,
-    autoSupplementPullerCount: form.autoSupplementPullerCount,
-    autoSupplementPullerTimes: form.autoSupplementPullerTimes,
-    pullerFinishGroupId: idOrNull(form.pullerFinishGroupId),
-    adminFinishGroupId: idOrNull(form.adminFinishGroupId),
-    autoStart: form.autoStart,
-    pullerEnterFirst: form.pullerEnterFirst,
-    auditMode: form.auditMode,
-    noReleaseAfterPull: form.noReleaseAfterPull,
-    pullerSyncMode: form.pullerSyncMode,
-    waitBeforePullSeconds: form.waitBeforePullSeconds,
-    concurrentTaskCount: form.concurrentTaskCount,
-    firstPullCount: form.firstPullCount,
-    pullCountMin: form.pullCountMin,
-    pullCountMax: form.pullCountMax,
-    pullIntervalSeconds: form.pullIntervalSeconds,
-    pullerMaxTotal: form.pullerMaxTotal,
-    pullerThreadCount: form.pullerThreadCount,
-    stationJoinMode: form.stationJoinMode,
-    pullerJoinMode: form.pullerJoinMode,
-    pullerQuitMode: form.pullerQuitMode,
-    adminQuitMode: form.adminQuitMode,
-    stationQuitAfterDone: form.stationQuitAfterDone,
-    materialText: form.materialText.trim(),
-    waterText: form.waterText.trim() || null,
-    waterMode: form.waterMode,
-    groupProfile: {
-      groupName: form.groupName.trim() || null,
-      mute: form.mute,
-      linkPermission: form.linkPermission,
-      editPermission: form.editPermission,
-      autoCloseInvite: form.autoCloseInvite
-    },
-    remark: form.remark.trim() || null
+    draftTaskId: null,
+    version: null,
+    rows: [],
+    linkLines: [],
+    fileResults: [],
+    matchedCount: 0,
+    remainingLinkCount: 0,
+    ignoredFileCount: 0
   };
+}
+
+function storedLinks(): string {
+  if (typeof window === "undefined") return "";
+  return window.sessionStorage.getItem(LINKS_STORAGE_KEY) ?? "";
+}
+
+function storeLinks(value: string): void {
+  if (typeof window === "undefined") return;
+  if (value) {
+    window.sessionStorage.setItem(LINKS_STORAGE_KEY, value);
+    return;
+  }
+  window.sessionStorage.removeItem(LINKS_STORAGE_KEY);
+}
+
+function storedPlannedLinks(): string {
+  if (typeof window === "undefined") return "";
+  return window.sessionStorage.getItem(PLANNED_LINKS_STORAGE_KEY) ?? "";
+}
+
+function storePlannedLinks(value: string): void {
+  if (typeof window === "undefined") return;
+  if (value) {
+    window.sessionStorage.setItem(PLANNED_LINKS_STORAGE_KEY, value);
+    return;
+  }
+  window.sessionStorage.removeItem(PLANNED_LINKS_STORAGE_KEY);
+}
+
+function withoutFrozenLink(
+  text: string,
+  lineNo: number,
+  normalizedLink: string
+): string {
+  const lines = text.split(/\r?\n/);
+  const inviteCode = normalizedLink.split("/").at(-1) ?? normalizedLink;
+  const sourceIndex = lineNo - 1;
+  const removalIndex = lines[sourceIndex]?.includes(inviteCode)
+    ? sourceIndex
+    : lines.findIndex(line => line.includes(inviteCode));
+  if (removalIndex >= 0) lines.splice(removalIndex, 1);
+  return lines.join("\n");
+}
+
+function positiveId(value: number | ""): value is number {
+  return typeof value === "number" && value > 0;
 }
 
 export function useStandardPullTaskCreate(
@@ -215,125 +145,259 @@ export function useStandardPullTaskCreate(
 ): StandardPullTaskCreateState {
   const visible = ref(false);
   const loading = ref(false);
+  const planning = ref(false);
   const creating = ref(false);
-  const groupLinksLoading = ref(false);
+  const clearing = ref(false);
   const form = reactive<StandardPullTaskCreateForm>(emptyForm());
+  const linksText = ref(storedLinks());
+  const draft = ref<PullTaskStandardDraft>(emptyDraft());
   const accountGroups = ref<AccountGroupApiRow[]>([]);
-  const linkGroups = ref<PullTaskLinkGroup[]>([]);
-  const groupLinkOptions = ref<PullTaskLinkOption[]>([]);
+  const pendingFiles = ref<File[]>([]);
+  let plannedLinksText = storedPlannedLinks();
+  let plannedPendingNames = new Set<string>();
+
+  watch(linksText, value => storeLinks(value));
 
   async function open(): Promise<void> {
-    Object.assign(form, emptyForm());
-    groupLinkOptions.value = [];
     visible.value = true;
     loading.value = true;
-    const [accountResult, linkGroupResult] = await Promise.allSettled([
-      listAccountGroups({ page: 1, pageSize: 500 }),
-      listPullTaskLinkGroups()
-    ]);
-    if (accountResult.status === "fulfilled") {
-      accountGroups.value = accountResult.value.list ?? [];
-    } else {
-      accountGroups.value = [];
-      ElMessage.error(
-        apiErrorMessage(accountResult.reason, "账号分组加载失败")
-      );
+    try {
+      const [accountResult, draftResult] = await Promise.allSettled([
+        listAccountGroups({ page: 1, pageSize: 500 }),
+        getPullTaskStandardDraft()
+      ]);
+      if (accountResult.status === "fulfilled") {
+        accountGroups.value = accountResult.value.list ?? [];
+      } else {
+        accountGroups.value = [];
+        ElMessage.error(
+          apiErrorMessage(accountResult.reason, "账号分组加载失败")
+        );
+      }
+      if (draftResult.status === "fulfilled") {
+        draft.value = draftResult.value;
+      } else {
+        ElMessage.error(apiErrorMessage(draftResult.reason, "草稿加载失败"));
+      }
+    } finally {
+      loading.value = false;
     }
-    if (linkGroupResult.status === "fulfilled") {
-      linkGroups.value = linkGroupResult.value ?? [];
-    } else {
-      linkGroups.value = [];
-      ElMessage.error(
-        apiErrorMessage(linkGroupResult.reason, "WS链接分组加载失败")
-      );
-    }
-    loading.value = false;
   }
 
-  async function loadGroupLinks(): Promise<void> {
-    form.groupLinkIds = [];
-    groupLinkOptions.value = [];
-    if (!form.wsLinkGroupId) return;
-    groupLinksLoading.value = true;
-    try {
-      const result = await listPullTaskGroupLinks({
-        page: 1,
-        pageSize: 500,
-        labelId: form.wsLinkGroupId
-      });
-      groupLinkOptions.value = result.list ?? [];
-    } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "群链接加载失败"));
-    } finally {
-      groupLinksLoading.value = false;
+  function addFiles(files: File[]): void {
+    const knownNames = new Set([
+      ...pendingFiles.value.map(file => file.name),
+      ...draft.value.rows.map(row => row.sourceFileName)
+    ]);
+    files.forEach(file => {
+      if (!file.name.toLowerCase().endsWith(".txt")) {
+        ElMessage.warning(`${file.name} 不是 TXT 文件，已忽略`);
+        return;
+      }
+      if (knownNames.has(file.name)) {
+        ElMessage.warning(`${file.name} 已添加，请勿重复上传同名文件`);
+        return;
+      }
+      knownNames.add(file.name);
+      pendingFiles.value.push(file);
+    });
+  }
+
+  function removePendingFile(fileName: string): void {
+    pendingFiles.value = pendingFiles.value.filter(
+      file => file.name !== fileName
+    );
+  }
+
+  function movePendingFile(fileName: string, offset: -1 | 1): void {
+    const sourceIndex = pendingFiles.value.findIndex(
+      file => file.name === fileName
+    );
+    const targetIndex = sourceIndex + offset;
+    if (
+      sourceIndex < 0 ||
+      targetIndex < 0 ||
+      targetIndex >= pendingFiles.value.length
+    ) {
+      return;
     }
+    const nextFiles = [...pendingFiles.value];
+    const [movingFile] = nextFiles.splice(sourceIndex, 1);
+    if (!movingFile) return;
+    nextFiles.splice(targetIndex, 0, movingFile);
+    pendingFiles.value = nextFiles;
+  }
+
+  function reconcilePendingFiles(result: PullTaskStandardDraft): void {
+    const matchedNames = new Set(result.rows.map(row => row.sourceFileName));
+    const rejectedNames = new Set(
+      result.fileResults
+        .filter(fileResult => !fileResult.accepted)
+        .map(fileResult => fileResult.fileName)
+    );
+    pendingFiles.value = pendingFiles.value.filter(
+      file => !matchedNames.has(file.name) && !rejectedNames.has(file.name)
+    );
+  }
+
+  async function plan(): Promise<void> {
+    if (!linksText.value.trim() && pendingFiles.value.length === 0) {
+      ElMessage.warning("请粘贴群链接或选择 TXT 文件");
+      return;
+    }
+    planning.value = true;
+    try {
+      const result = await planPullTaskStandardDraft(
+        linksText.value,
+        pendingFiles.value
+      );
+      draft.value = result;
+      reconcilePendingFiles(result);
+      plannedLinksText = linksText.value;
+      plannedPendingNames = new Set(pendingFiles.value.map(file => file.name));
+      storePlannedLinks(plannedLinksText);
+      ElMessage.success("链接与 TXT 预检完成");
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "链接与 TXT 预检失败"));
+    } finally {
+      planning.value = false;
+    }
+  }
+
+  async function removeRow(rowId: number): Promise<void> {
+    const removedRow = draft.value.rows.find(row => row.rowId === rowId);
+    const nextLinksText = removedRow
+      ? withoutFrozenLink(
+          linksText.value,
+          removedRow.sourceLinkLineNo,
+          removedRow.normalizedLink
+        )
+      : linksText.value;
+    try {
+      draft.value = await removePullTaskStandardDraftRow(rowId);
+      linksText.value = nextLinksText;
+      plannedLinksText = nextLinksText;
+      storePlannedLinks(plannedLinksText);
+      ElMessage.success("执行行已移除");
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "执行行移除失败"));
+    }
+  }
+
+  async function clear(): Promise<void> {
+    clearing.value = true;
+    try {
+      draft.value = await clearPullTaskStandardDraft();
+      linksText.value = "";
+      pendingFiles.value = [];
+      plannedLinksText = "";
+      plannedPendingNames = new Set();
+      storePlannedLinks("");
+      ElMessage.success("创建草稿已清空");
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "创建草稿清空失败"));
+    } finally {
+      clearing.value = false;
+    }
+  }
+
+  function createPayload(): PullTaskStandardCreateRequest | null {
+    if (!form.taskName.trim()) {
+      ElMessage.warning("请填写任务名称");
+      return null;
+    }
+    if (
+      draft.value.draftTaskId === null ||
+      draft.value.version === null ||
+      draft.value.rows.length === 0
+    ) {
+      ElMessage.warning("请先完成链接与 TXT 匹配预览");
+      return null;
+    }
+    if (draft.value.remainingLinkCount > 0) {
+      ElMessage.warning("仍有群链接未匹配 TXT，请补充文件或调整链接");
+      return null;
+    }
+    if (
+      linksText.value !== plannedLinksText ||
+      pendingFiles.value.some(file => !plannedPendingNames.has(file.name))
+    ) {
+      ElMessage.warning("资源内容已变化，请重新预检并冻结执行计划");
+      return null;
+    }
+    if (
+      !positiveId(form.managerGroupId) ||
+      !positiveId(form.pullerGroupId) ||
+      !positiveId(form.stationGroupId)
+    ) {
+      ElMessage.warning("请选择管理、拉手和站台分组");
+      return null;
+    }
+    if (form.pullCountMin < 1 || form.pullCountMax < form.pullCountMin) {
+      ElMessage.warning("单次拉人数范围配置不正确");
+      return null;
+    }
+    return {
+      draftTaskId: draft.value.draftTaskId,
+      version: draft.value.version,
+      taskName: form.taskName.trim(),
+      remark: form.remark.trim() || null,
+      autoStart: form.autoStart ? 1 : 0,
+      materialAdminTiming: form.materialAdminTiming,
+      pullCountMin: form.pullCountMin,
+      pullCountMax: form.pullCountMax,
+      pullIntervalSeconds: form.pullIntervalSeconds,
+      pullerCountPerGroup: form.pullerCountPerGroup,
+      stationCountPerCall: form.stationCountPerCall,
+      concurrentGroupCount: form.concurrentGroupCount,
+      pullerRiskMinutes: form.pullerRiskMinutes,
+      managerGroupId: form.managerGroupId,
+      pullerGroupId: form.pullerGroupId,
+      stationGroupId: form.stationGroupId
+    };
   }
 
   async function create(): Promise<void> {
-    if (!form.taskName.trim()) {
-      ElMessage.warning("请填写任务名称");
-      return;
-    }
-    if (
-      form.subMode === "OLD_LINK" &&
-      form.groupLinkIds.length === 0 &&
-      linesOf(form.pastedLinks).length === 0
-    ) {
-      ElMessage.warning("老群链接任务请选择或粘贴群链接");
-      return;
-    }
-    if (!form.pullerGroupId) {
-      ElMessage.warning("请选择拉手分组");
-      return;
-    }
-    if (!form.materialText.trim()) {
-      ElMessage.warning("请粘贴或上传料子数据");
-      return;
-    }
+    const payload = createPayload();
+    if (!payload) return;
     creating.value = true;
     try {
-      await createPullTask(toPayload(form));
+      await createPullTaskStandard(payload);
       visible.value = false;
-      ElMessage.success("拉群任务已创建");
+      draft.value = emptyDraft();
+      linksText.value = "";
+      pendingFiles.value = [];
+      plannedLinksText = "";
+      plannedPendingNames = new Set();
+      storePlannedLinks("");
+      Object.assign(form, emptyForm());
+      ElMessage.success("普通群链接任务已创建");
       await options.onCreated();
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "拉群任务创建失败"));
+      ElMessage.error(apiErrorMessage(error, "普通群链接任务创建失败"));
     } finally {
       creating.value = false;
     }
   }
 
-  async function readFileText(file?: File): Promise<string> {
-    return file ? file.text() : "";
-  }
-
-  async function readMaterialFile(file?: File): Promise<void> {
-    const text = await readFileText(file);
-    if (!text) return;
-    form.materialText = text;
-    ElMessage.success("料子文件已读取");
-  }
-
-  async function readWaterFile(file?: File): Promise<void> {
-    const text = await readFileText(file);
-    if (!text) return;
-    form.waterText = text;
-    ElMessage.success("水军文件已读取");
-  }
-
   return {
     visible,
     loading,
+    planning,
     creating,
-    groupLinksLoading,
+    clearing,
     form,
+    linksText,
+    draft,
     accountGroups,
-    linkGroups,
-    groupLinkOptions,
+    pendingFiles,
     open,
-    create,
-    loadGroupLinks,
-    readMaterialFile,
-    readWaterFile
+    addFiles,
+    movePendingFile,
+    removePendingFile,
+    plan,
+    removeRow,
+    clear,
+    create
   };
 }

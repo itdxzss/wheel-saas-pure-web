@@ -49,12 +49,30 @@ export const groupRowStatusOptions: Array<{
   { label: "初始化", value: "INITIALIZING" },
   { label: "添加执行中", value: "RUNNING" },
   { label: "群组封禁", value: "GROUP_BANNED" },
+  { label: "管理员不足", value: "MANAGER_SHORTAGE" },
   { label: "拉手不足", value: "PULLER_SHORTAGE" },
+  { label: "站台不足", value: "STATION_SHORTAGE" },
   { label: "任务暂停", value: "PAUSED" },
   { label: "建群失败", value: "GROUP_CREATE_FAILED" },
   { label: "任务完成", value: "COMPLETED" },
   { label: "任务已结束", value: "ENDED" },
   { label: "管理员无法设置", value: "ADMIN_SETUP_FAILED" }
+];
+
+export const standardStageOptions = [
+  { label: "链接校验", value: 1 },
+  { label: "管理员进群", value: 2 },
+  { label: "管理—拉手联系人", value: 3 },
+  { label: "管理员邀请拉手", value: 4 },
+  { label: "拉人执行", value: 5 },
+  { label: "料子提权", value: 6 },
+  { label: "执行收口", value: 7 }
+];
+
+export const standardWaitResourceOptions = [
+  { label: "管理员不足", value: 1 },
+  { label: "拉手不足", value: 2 },
+  { label: "站台不足", value: 3 }
 ];
 
 export const pullTaskColumns: TableColumnList = [
@@ -136,12 +154,24 @@ export function groupRowStatusTagType(
   ) {
     return "danger";
   }
-  if (status === "PULLER_SHORTAGE" || status === "PAUSED") return "warning";
+  if (
+    status === "MANAGER_SHORTAGE" ||
+    status === "PULLER_SHORTAGE" ||
+    status === "PAUSED"
+  )
+    return "warning";
   if (status === "RUNNING" || status === "INITIALIZING") return "primary";
   return "info";
 }
 
+export function standardStageLabel(stage?: number | null): string {
+  return (
+    standardStageOptions.find(option => option.value === stage)?.label ?? "-"
+  );
+}
+
 export function pullTaskModeLabel(mode?: string | null): string {
+  if (mode === "NORMAL_LINK") return "普通群链接";
   if (mode === "OLD_LINK") return "老群链接";
   if (mode === "CREATE_NEW") return "自建群";
   return mode || "-";

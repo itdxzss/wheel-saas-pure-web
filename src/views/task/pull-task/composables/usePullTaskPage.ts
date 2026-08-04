@@ -12,13 +12,22 @@ import {
   exportPullTaskGroupLinks,
   exportPullTaskReport,
   exportPullTaskResources,
+  endPullTaskStandard,
+  endPullTaskStandardExecution,
   getPullTaskDetail,
+  getPullTaskStandardDetail,
+  listPullTaskStandardExecutions,
   listPullTaskGroups,
   listPullTasks,
   pausePullTask,
+  pausePullTaskStandard,
+  pausePullTaskStandardExecution,
   runPullTaskGroupOperation,
   runPullTaskRowsOperation,
+  resumePullTaskStandard,
+  resumePullTaskStandardExecution,
   startPullTask,
+  startPullTaskStandard,
   stopPullTask,
   supplementPullTaskRows,
   type PullTaskDetail,
@@ -27,6 +36,10 @@ import {
   type PullTaskGroupStatus,
   type PullTaskRow,
   type PullTaskStatus,
+  type PullTaskStandardExecutionSummary,
+  type PullTaskStandardExecutionQuery,
+  type PullTaskStandardTaskSummary,
+  type PullTaskStandardTaskDetail,
   type PullTaskSummary,
   type PullTaskType
 } from "@/api/pull-task";
@@ -35,6 +48,7 @@ import {
   type AccountGroupApiRow
 } from "@/api/account-group";
 import { apiErrorMessage } from "@/utils/api-error";
+import { downloadBlobFile } from "@/utils/download";
 
 export interface PullTaskSearchForm {
   id: string;
@@ -48,6 +62,8 @@ export interface PullTaskSearchForm {
 export interface PullTaskDetailSearchForm {
   status: "" | PullTaskGroupStatus;
   keyword: string;
+  stage: number | "";
+  waitResourceType: number | "";
 }
 
 export interface PullTaskSupplementForm {
@@ -70,6 +86,7 @@ export interface PullTaskPageState {
   detailSearchForm: PullTaskDetailSearchForm;
   detailSelectedCount: ComputedRef<number>;
   detailSummary: ComputedRef<PullTaskSummary>;
+  standardTaskSummary: Ref<PullTaskStandardTaskSummary | null>;
   detailTask: Ref<PullTaskDetail | null>;
   detailTotal: Ref<number>;
   exportGroupLinks: () => Promise<void>;
@@ -88,10 +105,14 @@ export interface PullTaskPageState {
   resetSearchForm: () => void;
   rows: Ref<PullTaskRow[]>;
   runGroupOperation: (operation: string) => Promise<void>;
+  runExecutionAction: (
+    row: PullTaskGroupRow,
+    action: "pause" | "resume" | "end"
+  ) => Promise<void>;
   runRowsOperation: (operation: string) => Promise<void>;
   runTaskAction: (
     row: PullTaskRow,
-    action: "start" | "pause" | "stop"
+    action: "start" | "pause" | "resume" | "end"
   ) => Promise<void>;
   searchForm: PullTaskSearchForm;
   searchTasks: () => void;
@@ -119,13 +140,118 @@ function buildSummary(
 }
 
 function downloadTextFile(filename: string, content: string): void {
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadBlobFile(
+    filename,
+    new Blob([content], { type: "text/plain;charset=utf-8" })
+  );
+}
+
+function normalLink(task: PullTaskRow | null): boolean {
+  return task?.taskType === "STANDARD" && task.mode === "NORMAL_LINK";
+}
+
+function standardExecutionStatus(
+  execution: PullTaskStandardExecutionSummary
+): PullTaskGroupStatus {
+  if (execution.manualPaused) return "PAUSED";
+  if (execution.executionStatus === 1) return "WAIT_START";
+  if (execution.executionStatus === 2) return "RUNNING";
+  if (execution.executionStatus === 3 && execution.waitResourceType === 1) {
+    return "MANAGER_SHORTAGE";
+  }
+  if (execution.executionStatus === 3 && execution.waitResourceType === 2) {
+    return "PULLER_SHORTAGE";
+  }
+  if (execution.executionStatus === 3 && execution.waitResourceType === 3) {
+    return "STATION_SHORTAGE";
+  }
+  if (execution.executionStatus === 4) return "COMPLETED";
+  if (execution.executionStatus === 5) return "GROUP_INVALID";
+  if (execution.executionStatus === 6) return "ENDED";
+  return "INITIALIZING";
+}
+
+function standardGroupRow(
+  execution: PullTaskStandardExecutionSummary
+): PullTaskGroupRow {
+  return {
+    id: execution.executionId,
+    seq: execution.seq,
+    groupName: execution.groupJid,
+    groupLinkUrl: execution.normalizedLink,
+    status: standardExecutionStatus(execution),
+    memberCount: execution.validMemberCount,
+    joinedCount: execution.materialSummary?.successfulCount ?? null,
+    failedCount: execution.materialSummary?.failedCount ?? null,
+    unusedCount: execution.materialSummary?.remainingCount ?? null,
+    expectedPullCount:
+      execution.materialSummary?.totalCount ?? execution.validMemberCount,
+    blockReason: execution.reasonMessage,
+    executionStatus: execution.executionStatus,
+    stage: execution.stage,
+    manualPaused: execution.manualPaused,
+    waitResourceType: execution.waitResourceType,
+    reasonCode: execution.reasonCode,
+    lastBusinessExecutedAt: execution.lastBusinessExecutedAt,
+    materialSummary: execution.materialSummary,
+    managers: execution.managers,
+    pullers: execution.pullers,
+    stations: execution.stations
+  };
+}
+
+function standardTaskDetail(
+  row: PullTaskRow,
+  detail: PullTaskStandardTaskDetail
+): PullTaskDetail {
+  const summary = detail.summary;
+  return {
+    ...row,
+    taskName: detail.taskName,
+    status: detail.status,
+    groupCount: detail.groupCount,
+    expectedPullCount: detail.expectedPullCount,
+    remark: detail.remark,
+    summary: summary
+      ? {
+          status: detail.status,
+          mode: row.mode,
+          groupCount: summary.totalGroupCount,
+          totalMembers: summary.totalMemberCount,
+          abnormalCount:
+            summary.failedGroupCount +
+            summary.abandonedGroupCount +
+            summary.waitingResourceGroupCount,
+          joinedCount: summary.successfulMemberCount,
+          unusedCount: summary.remainingMemberCount,
+          expectedPullCount: detail.expectedPullCount
+        }
+      : null
+  };
+}
+
+function standardExecutionFilters(
+  status: PullTaskGroupStatus | ""
+): Partial<PullTaskStandardExecutionQuery> {
+  if (status === "PAUSED") return { manualPaused: 1 };
+  if (status === "MANAGER_SHORTAGE") {
+    return { executionStatus: 3, waitResourceType: 1 };
+  }
+  if (status === "PULLER_SHORTAGE") {
+    return { executionStatus: 3, waitResourceType: 2 };
+  }
+  if (status === "STATION_SHORTAGE") {
+    return { executionStatus: 3, waitResourceType: 3 };
+  }
+  const statuses: Partial<Record<PullTaskGroupStatus, number>> = {
+    WAIT_START: 1,
+    RUNNING: 2,
+    COMPLETED: 4,
+    GROUP_INVALID: 5,
+    ENDED: 6
+  };
+  const executionStatus = status ? statuses[status] : undefined;
+  return executionStatus == null ? {} : { executionStatus };
 }
 
 export function usePullTaskPage(): PullTaskPageState {
@@ -139,7 +265,9 @@ export function usePullTaskPage(): PullTaskPageState {
   });
   const detailSearchForm = reactive<PullTaskDetailSearchForm>({
     status: "",
-    keyword: ""
+    keyword: "",
+    stage: "",
+    waitResourceType: ""
   });
   const supplementForm = reactive<PullTaskSupplementForm>({
     accountGroupId: "",
@@ -152,6 +280,7 @@ export function usePullTaskPage(): PullTaskPageState {
   const accountGroups = ref<AccountGroupApiRow[]>([]);
   const activeTask = ref<PullTaskRow | null>(null);
   const detailTask = ref<PullTaskDetail | null>(null);
+  const standardTaskSummary = ref<PullTaskStandardTaskSummary | null>(null);
   const detailGroupRows = ref<PullTaskGroupRow[]>([]);
   const selectedDetailRows = ref<PullTaskGroupRow[]>([]);
   const loading = ref(false);
@@ -238,6 +367,30 @@ export function usePullTaskPage(): PullTaskPageState {
     detailLoading.value = true;
     selectedDetailRows.value = [];
     try {
+      if (normalLink(activeTask.value)) {
+        const taskId = activeTask.value.id;
+        const statusFilters = standardExecutionFilters(detailSearchForm.status);
+        const [detail, executionPage] = await Promise.all([
+          getPullTaskStandardDetail(taskId),
+          listPullTaskStandardExecutions(taskId, {
+            page: detailPage.value,
+            pageSize: detailPageSize.value,
+            keyword: detailSearchForm.keyword.trim() || undefined,
+            ...statusFilters,
+            stage: detailSearchForm.stage || undefined,
+            waitResourceType:
+              detailSearchForm.waitResourceType ||
+              statusFilters.waitResourceType
+          })
+        ]);
+        detailTask.value = standardTaskDetail(activeTask.value, detail);
+        standardTaskSummary.value = detail.summary;
+        detailGroupRows.value = (executionPage.list ?? []).map(
+          standardGroupRow
+        );
+        detailTotal.value = executionPage.total ?? 0;
+        return;
+      }
       const result = await listPullTaskGroups(activeTask.value.id, {
         page: detailPage.value,
         pageSize: detailPageSize.value,
@@ -258,18 +411,23 @@ export function usePullTaskPage(): PullTaskPageState {
   async function openDetailDrawer(row: PullTaskRow): Promise<void> {
     activeTask.value = row;
     detailTask.value = null;
+    standardTaskSummary.value = null;
     detailGroupRows.value = [];
     detailSearchForm.status = "";
     detailSearchForm.keyword = "";
+    detailSearchForm.stage = "";
+    detailSearchForm.waitResourceType = "";
     detailPage.value = 1;
     detailDrawerOpen.value = true;
-    detailLoading.value = true;
-    try {
-      detailTask.value = await getPullTaskDetail(row.id);
-    } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "拉群任务详情加载失败"));
-    } finally {
-      detailLoading.value = false;
+    if (!normalLink(row)) {
+      detailLoading.value = true;
+      try {
+        detailTask.value = await getPullTaskDetail(row.id);
+      } catch (error) {
+        ElMessage.error(apiErrorMessage(error, "拉群任务详情加载失败"));
+      } finally {
+        detailLoading.value = false;
+      }
     }
     await refreshDetailGroups();
   }
@@ -277,6 +435,8 @@ export function usePullTaskPage(): PullTaskPageState {
   function resetDetailSearch(): void {
     detailSearchForm.status = "";
     detailSearchForm.keyword = "";
+    detailSearchForm.stage = "";
+    detailSearchForm.waitResourceType = "";
     detailPage.value = 1;
     void refreshDetailGroups();
   }
@@ -291,9 +451,38 @@ export function usePullTaskPage(): PullTaskPageState {
 
   async function runTaskAction(
     row: PullTaskRow,
-    action: "start" | "pause" | "stop"
+    action: "start" | "pause" | "resume" | "end"
   ): Promise<void> {
+    if (action === "end") {
+      try {
+        await ElMessageBox.confirm(
+          "结束后任务不可恢复，未提交的动作将被取消，确认结束任务？",
+          "结束任务",
+          {
+            type: "warning",
+            confirmButtonText: "结束",
+            cancelButtonText: "取消"
+          }
+        );
+      } catch {
+        return;
+      }
+    }
     try {
+      if (normalLink(row)) {
+        if (action === "start") await startPullTaskStandard(row.id);
+        if (action === "pause") await pausePullTaskStandard(row.id);
+        if (action === "resume") await resumePullTaskStandard(row.id);
+        if (action === "end") await endPullTaskStandard(row.id);
+        await refreshTasks();
+        const refreshed = rows.value.find(item => item.id === row.id);
+        if (activeTask.value?.id === row.id && refreshed) {
+          activeTask.value = refreshed;
+          if (detailDrawerOpen.value) await refreshDetailGroups();
+        }
+        ElMessage.success("任务操作已提交");
+        return;
+      }
       const updated =
         action === "start"
           ? await startPullTask(row.id)
@@ -307,6 +496,44 @@ export function usePullTaskPage(): PullTaskPageState {
       ElMessage.success("任务操作已提交");
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "任务操作失败"));
+    }
+  }
+
+  async function runExecutionAction(
+    row: PullTaskGroupRow,
+    action: "pause" | "resume" | "end"
+  ): Promise<void> {
+    const task = activeTask.value;
+    if (!task || !normalLink(task)) return;
+    if (action === "end") {
+      try {
+        await ElMessageBox.confirm(
+          "结束后该群不可恢复，确认结束这条群执行？",
+          "结束群执行",
+          {
+            type: "warning",
+            confirmButtonText: "结束",
+            cancelButtonText: "取消"
+          }
+        );
+      } catch {
+        return;
+      }
+    }
+    try {
+      if (action === "pause") {
+        await pausePullTaskStandardExecution(task.id, row.id);
+      }
+      if (action === "resume") {
+        await resumePullTaskStandardExecution(task.id, row.id);
+      }
+      if (action === "end") {
+        await endPullTaskStandardExecution(task.id, row.id);
+      }
+      await Promise.all([refreshDetailGroups(), refreshTasks()]);
+      ElMessage.success("群执行操作已提交");
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "群执行操作失败"));
     }
   }
 
@@ -480,6 +707,7 @@ export function usePullTaskPage(): PullTaskPageState {
     detailSearchForm,
     detailSelectedCount,
     detailSummary,
+    standardTaskSummary,
     detailTask,
     detailTotal,
     exportGroupLinks,
@@ -497,6 +725,7 @@ export function usePullTaskPage(): PullTaskPageState {
     resetDetailSearch,
     resetSearchForm,
     rows,
+    runExecutionAction,
     runGroupOperation,
     runRowsOperation,
     runTaskAction,
