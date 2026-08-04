@@ -16,6 +16,7 @@ defineProps<{
   clearing: boolean;
   creating: boolean;
   draft: PullTaskStandardDraft;
+  groupAvatarFile: File | null;
   groupFolders: GroupFolderRow[];
   loading: boolean;
   pendingFiles: File[];
@@ -24,6 +25,8 @@ defineProps<{
 
 const emit = defineEmits<{
   (event: "add-files", files: File[]): void;
+  (event: "avatar-change", file: File): void;
+  (event: "avatar-clear"): void;
   (event: "clear"): void;
   (event: "create"): void;
   (event: "move-pending-file", fileName: string, offset: -1 | 1): void;
@@ -79,7 +82,10 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
         <PullTaskStandardSettings
           v-model:form="form"
           :account-groups="accountGroups"
+          :group-avatar-file="groupAvatarFile"
           :group-folders="groupFolders"
+          @avatar-change="emit('avatar-change', $event)"
+          @avatar-clear="emit('avatar-clear')"
         />
 
         <div class="resource-layout">

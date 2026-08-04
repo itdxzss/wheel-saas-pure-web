@@ -135,7 +135,7 @@ describe("standard normal-link pull task create state", () => {
     }
   });
 
-  it("requires a complete frozen plan and all three account groups", async () => {
+  it("only requires a station group when stations are used", async () => {
     resetArmadaMock({ id: 1 });
     resetElementPlusMock();
     const empty = useStandardPullTaskCreate({
@@ -154,10 +154,27 @@ describe("standard normal-link pull task create state", () => {
     resetArmadaMock({ id: 1 });
     resetElementPlusMock();
     const missingGroups = validState();
-    missingGroups.form.stationGroupId = "";
+    missingGroups.form.managerGroupId = "";
     await missingGroups.create();
     assert.equal(armadaCalls().length, 0);
-    assert.equal(elementPlusCalls().at(-1)?.text, "请选择管理、拉手和站台分组");
+    assert.equal(elementPlusCalls().at(-1)?.text, "请选择管理和拉手分组");
+
+    resetArmadaMock({ id: 1 });
+    resetElementPlusMock();
+    const optionalStation = validState();
+    optionalStation.form.stationGroupId = "";
+    optionalStation.form.stationCountPerCall = 0;
+    await optionalStation.create();
+    assert.equal(armadaCalls()[0]?.url, "/api/pull-tasks/standard");
+
+    resetArmadaMock({ id: 1 });
+    resetElementPlusMock();
+    const requiredStation = validState();
+    requiredStation.form.stationGroupId = "";
+    requiredStation.form.stationCountPerCall = 1;
+    await requiredStation.create();
+    assert.equal(armadaCalls().length, 0);
+    assert.equal(elementPlusCalls().at(-1)?.text, "请选择站台分组");
   });
 
   it("plans with full links and keeps unmatched accepted TXT for retry", async () => {
@@ -184,6 +201,7 @@ describe("standard normal-link pull task create state", () => {
     const state = useStandardPullTaskCreate({
       onCreated: async () => undefined
     });
+    state.form.groupFolderId = 21;
     state.linksText.value = "https://chat.whatsapp.com/code";
     const file = new File(["8613900000000"], "extra.txt", {
       type: "text/plain"
@@ -193,6 +211,7 @@ describe("standard normal-link pull task create state", () => {
     await state.plan();
 
     const payload = (armadaCalls()[0].opts as { data: FormData }).data;
+    assert.equal(payload.get("groupFolderId"), "21");
     assert.equal(payload.get("linksText"), state.linksText.value);
     assert.deepEqual(
       state.pendingFiles.value.map(item => item.name),
@@ -220,7 +239,7 @@ describe("standard normal-link pull task create state", () => {
     );
   });
 
-  it("posts only the approved frozen-create fields", async () => {
+  it("posts every approved execution and group-setting field", async () => {
     resetArmadaMock({
       id: 7,
       taskName: "普通群链接",
@@ -234,7 +253,6 @@ describe("standard normal-link pull task create state", () => {
       refreshes += 1;
     });
     state.visible.value = true;
-    state.form.groupFolderId = 21;
     state.form.pullerSyncMode = "BATCH";
     state.form.clearExistingMembers = true;
     state.form.managerFinishGroupId = 31;
@@ -242,7 +260,6 @@ describe("standard normal-link pull task create state", () => {
     state.form.groupSettingTiming = "BEFORE_PULL";
     state.form.groupName = "前端验收群名";
     state.form.useMaterialFileNameAsGroupName = true;
-    state.form.groupAvatarFileName = "avatar.png";
     state.form.groupDescription = "前端验收群描述";
     state.form.autoCloseMuteAfterTask = true;
     state.form.autoCloseInviteAfterTask = true;
@@ -258,16 +275,21 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(armadaCalls()[0].url, "/api/pull-tasks/standard");
     assert.deepEqual(Object.keys(payload).sort(), [
       "autoStart",
+      "clearExistingMembers",
       "concurrentGroupCount",
       "draftTaskId",
+      "groupFolderId",
+      "groupSetting",
+      "managerFinishGroupId",
       "managerGroupId",
       "materialAdminTiming",
       "pullCountMax",
       "pullCountMin",
       "pullIntervalSeconds",
       "pullerCountPerGroup",
+      "pullerFinishGroupId",
       "pullerGroupId",
-      "pullerRiskMinutes",
+      "pullerSyncMode",
       "remark",
       "stationCountPerCall",
       "stationGroupId",
@@ -277,8 +299,197 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(payload.managerGroupId, 11);
     assert.equal(payload.pullerGroupId, 12);
     assert.equal(payload.stationGroupId, 13);
+    assert.deepEqual(payload.groupSetting, {
+      settingTiming: "BEFORE_PULL",
+      groupName: null,
+      useMaterialFileNameAsGroupName: true,
+      avatarFileKey: null,
+      groupDescription: "前端验收群描述",
+      autoCloseMuteAfterTask: true,
+      autoCloseInviteAfterTask: true,
+      editPermission: "ALLOW",
+      muteMode: "MUTE",
+      linkPermission: "ALL",
+      disappearingMessage: "ONE_DAY"
+    });
     assert.equal(refreshes, 1);
     assert.equal(state.visible.value, false);
+  });
+
+  it("uploads a valid avatar once and reuses its key after create failure", async () => {
+    resetArmadaMockQueue([
+      {
+        avatarFileKey: "stored-avatar.png",
+        originalFileName: "avatar.png",
+        previewUrl: "/api/pull-tasks/standard/group-avatars/stored-avatar.png"
+      },
+      Promise.reject(new Error("create failed"))
+    ]);
+    resetElementPlusMock();
+    const state = validState();
+    const avatar = new File([new Uint8Array([1])], "avatar.PNG", {
+      type: "image/png"
+    });
+
+    await state.setGroupAvatarFile(avatar);
+    await state.create();
+
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      ["/api/pull-tasks/standard/group-avatars", "/api/pull-tasks/standard"]
+    );
+    assert.equal(state.groupAvatarFile.value, avatar);
+    assert.equal(
+      state.uploadedAvatar.value?.avatarFileKey,
+      "stored-avatar.png"
+    );
+
+    resetArmadaMock({ id: 7 });
+    await state.create();
+
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      ["/api/pull-tasks/standard"]
+    );
+    const payload = (
+      armadaCalls()[0].opts as {
+        data: { groupSetting: { avatarFileKey: string | null } };
+      }
+    ).data;
+    assert.equal(payload.groupSetting.avatarFileKey, "stored-avatar.png");
+    assert.equal(state.groupAvatarFile.value, null);
+    assert.equal(state.uploadedAvatar.value, null);
+  });
+
+  it("does not create when avatar upload fails", async () => {
+    resetArmadaMockQueue([Promise.reject(new Error("upload failed"))]);
+    resetElementPlusMock();
+    const state = validState();
+    const avatar = new File([new Uint8Array([1])], "avatar.jpg", {
+      type: "image/jpeg"
+    });
+
+    await state.setGroupAvatarFile(avatar);
+    await state.create();
+
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      ["/api/pull-tasks/standard/group-avatars"]
+    );
+    assert.equal(state.groupAvatarFile.value, avatar);
+    assert.equal(state.uploadedAvatar.value, null);
+  });
+
+  it("deletes an uploaded unbound avatar when replacing or clearing it", async () => {
+    resetArmadaMockQueue([
+      {
+        avatarFileKey: "first.png",
+        originalFileName: "first.png",
+        previewUrl: "/preview/first.png"
+      },
+      Promise.reject(new Error("create failed"))
+    ]);
+    resetElementPlusMock();
+    const state = validState();
+    const first = new File([new Uint8Array([1])], "first.png", {
+      type: "image/png"
+    });
+    const second = new File([new Uint8Array([2])], "second.jpg", {
+      type: "image/jpeg"
+    });
+    await state.setGroupAvatarFile(first);
+    await state.create();
+
+    resetArmadaMock(undefined);
+    await state.setGroupAvatarFile(second);
+
+    assert.equal(
+      armadaCalls()[0]?.url,
+      "/api/pull-tasks/standard/group-avatars/first.png"
+    );
+    assert.equal(state.groupAvatarFile.value, second);
+    assert.equal(state.uploadedAvatar.value, null);
+
+    state.uploadedAvatar.value = {
+      avatarFileKey: "second.jpg",
+      originalFileName: "second.jpg",
+      previewUrl: "/preview/second.jpg"
+    };
+    resetArmadaMock(undefined);
+    await state.clearGroupAvatar();
+    assert.equal(
+      armadaCalls()[0]?.url,
+      "/api/pull-tasks/standard/group-avatars/second.jpg"
+    );
+    assert.equal(state.groupAvatarFile.value, null);
+    assert.equal(state.uploadedAvatar.value, null);
+  });
+
+  it("blocks unsupported or oversized avatar files locally", async () => {
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    const state = validState();
+
+    await state.setGroupAvatarFile(
+      new File([new Uint8Array([1])], "avatar.gif", { type: "image/gif" })
+    );
+    await state.setGroupAvatarFile(
+      new File([new Uint8Array(512_001)], "avatar.png", {
+        type: "image/png"
+      })
+    );
+
+    assert.equal(state.groupAvatarFile.value, null);
+    assert.equal(armadaCalls().length, 0);
+    assert.equal(
+      elementPlusCalls().filter(call => call.type === "warning").length,
+      2
+    );
+  });
+
+  it("accepts JPG, JPEG and PNG avatars up to exactly 500K", async () => {
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    const state = validState();
+    const files = [
+      new File([new Uint8Array([1])], "first.JPG", { type: "image/jpeg" }),
+      new File([new Uint8Array([1])], "second.jpeg", {
+        type: "image/jpeg"
+      }),
+      new File([new Uint8Array(512_000)], "limit.png", {
+        type: "image/png"
+      })
+    ];
+
+    for (const file of files) {
+      await state.setGroupAvatarFile(file);
+      assert.equal(state.groupAvatarFile.value, file);
+    }
+
+    assert.equal(elementPlusCalls().length, 0);
+    assert.equal(armadaCalls().length, 0);
+  });
+
+  it("requires re-planning after the selected source folder changes", async () => {
+    resetArmadaMock(draft());
+    resetElementPlusMock();
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+    state.form.groupFolderId = 21;
+
+    await state.plan();
+    state.form.groupFolderId = 22;
+    state.form.taskName = "普通群链接";
+    state.form.managerGroupId = 11;
+    state.form.pullerGroupId = 12;
+    await state.create();
+
+    assert.equal(armadaCalls().length, 1);
+    assert.equal(
+      elementPlusCalls().at(-1)?.text,
+      "资源内容已变化，请重新预检并冻结执行计划"
+    );
   });
 
   it("allows creation from frozen rows when valid links remain unmatched", async () => {

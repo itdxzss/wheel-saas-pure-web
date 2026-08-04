@@ -10,15 +10,22 @@ defineOptions({
 const form = defineModel<StandardPullTaskCreateForm>("form", {
   required: true
 });
+defineProps<{
+  groupAvatarFile: File | null;
+}>();
+const emit = defineEmits<{
+  (event: "avatar-change", file: File): void;
+  (event: "avatar-clear"): void;
+}>();
 const avatarUpload = ref<UploadInstance>();
 
 function handleAvatarChange(uploadFile: UploadFile): void {
-  form.value.groupAvatarFileName = uploadFile.name;
+  if (uploadFile.raw) emit("avatar-change", uploadFile.raw);
 }
 
 function clearAvatar(): void {
   avatarUpload.value?.clearFiles();
-  form.value.groupAvatarFileName = "";
+  emit("avatar-clear");
 }
 </script>
 
@@ -52,15 +59,15 @@ function clearAvatar(): void {
             <el-upload
               ref="avatarUpload"
               :auto-upload="false"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
               :show-file-list="false"
               :on-change="handleAvatarChange"
             >
               <el-button>上传图片</el-button>
             </el-upload>
-            <div v-if="form.groupAvatarFileName" class="avatar-selection">
+            <div v-if="groupAvatarFile" class="avatar-selection">
               <span class="avatar-file-name">
-                {{ form.groupAvatarFileName }}
+                {{ groupAvatarFile.name }}
               </span>
               <el-button link type="danger" @click="clearAvatar">
                 清除

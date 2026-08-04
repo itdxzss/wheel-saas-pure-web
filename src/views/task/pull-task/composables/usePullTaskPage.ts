@@ -212,6 +212,8 @@ function standardTaskDetail(
     groupCount: detail.groupCount,
     expectedPullCount: detail.expectedPullCount,
     remark: detail.remark,
+    standardSetting: detail.standardSetting,
+    groupSetting: detail.groupSetting,
     summary: summary
       ? {
           status: detail.status,

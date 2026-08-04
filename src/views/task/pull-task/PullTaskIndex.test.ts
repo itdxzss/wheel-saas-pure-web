@@ -13,6 +13,9 @@ function source(relativePath: string): string {
 const indexSource = source("./index.vue");
 const pageStateSource = source("./composables/usePullTaskPage.ts");
 const detailDrawerSource = source("./components/PullTaskDetailDrawer.vue");
+const savedSettingsSource = source(
+  "./components/PullTaskStandardSavedSettings.vue"
+);
 const executionResourcesSource = source(
   "./components/PullTaskStandardExecutionResourceCounts.vue"
 );
@@ -87,6 +90,26 @@ describe("pull task list prototype", () => {
     assert.match(executionDetailSource, /detail\.actions/);
     assert.match(executionDetailSource, /members/);
     assert.doesNotMatch(executionDetailSource, /营销/);
+  });
+
+  it("shows normalized saved settings in normal-link task detail", () => {
+    assert.match(pageStateSource, /standardSetting: detail\.standardSetting/);
+    assert.match(pageStateSource, /groupSetting: detail\.groupSetting/);
+    assert.match(indexSource, /:detail-task="detailTask"/);
+    assert.match(detailDrawerSource, /PullTaskStandardSavedSettings/);
+    assert.match(detailDrawerSource, /detailTask\?\.standardSetting/);
+    assert.match(detailDrawerSource, /detailTask\?\.groupSetting/);
+    assert.match(savedSettingsSource, /已保存任务配置/);
+    assert.match(savedSettingsSource, /avatarPreviewUrl/);
+    assert.match(savedSettingsSource, /getPullTaskStandardGroupAvatarContent/);
+    assert.match(savedSettingsSource, /URL\.createObjectURL/);
+    assert.match(savedSettingsSource, /URL\.revokeObjectURL/);
+    assert.match(savedSettingsSource, /:src="avatarObjectUrl"/);
+    assert.doesNotMatch(
+      savedSettingsSource,
+      /:src="groupSetting\.avatarPreviewUrl"/
+    );
+    assert.doesNotMatch(savedSettingsSource, /已应用到 WhatsApp/);
   });
 
   it("removes only the obsolete create state and legacy API call", () => {

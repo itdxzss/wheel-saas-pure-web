@@ -4,15 +4,18 @@ import {
   armadaCalls,
   resetArmadaMockQueue
 } from "./__tests__/armada-test-double";
+import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   addPullTaskGroupMarketingWaiting,
   clearPullTaskStandardDraft,
   createPullTaskStandard,
+  deletePullTaskStandardGroupAvatar,
   endPullTaskStandard,
   getPullTaskManagerSupplementOptions,
   getPullTaskPullerSupplementOptions,
   getPullTaskStationSupplementOptions,
   getPullTaskStandardDraft,
+  getPullTaskStandardGroupAvatarContent,
   getPullTaskStandardDetail,
   getPullTaskStandardExecutionDetail,
   getPullTaskStandardExecutionMembers,
@@ -34,7 +37,8 @@ import {
   supplementPullTaskPuller,
   supplementPullTaskStation,
   endPullTaskStandardExecution,
-  updatePullTaskGroupMarketingSetting
+  updatePullTaskGroupMarketingSetting,
+  uploadPullTaskStandardGroupAvatar
 } from "./pull-task";
 
 describe("pull task unified API", () => {
@@ -180,35 +184,61 @@ describe("pull task unified API", () => {
   });
 
   it("uses the normal-link draft and frozen-create contracts", async () => {
-    resetArmadaMockQueue([{}, {}, {}, {}, {}]);
+    resetArmadaMockQueue([{}, {}, {}, {}, {}, {}, {}]);
     const material = new File(["8613900000000"], "material.txt", {
       type: "text/plain"
     });
+    const avatar = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47])],
+      "avatar.png",
+      {
+        type: "image/png"
+      }
+    );
 
     await getPullTaskStandardDraft();
-    await planPullTaskStandardDraft(" https://chat.whatsapp.com/code ", [
+    await planPullTaskStandardDraft(18, " https://chat.whatsapp.com/code ", [
       material
     ]);
     await removePullTaskStandardDraftRow(19);
     await clearPullTaskStandardDraft();
+    await uploadPullTaskStandardGroupAvatar(avatar);
     await createPullTaskStandard({
       draftTaskId: 7,
       version: 3,
       taskName: "普通群链接",
       remark: null,
       autoStart: 1,
+      groupFolderId: 18,
+      pullerSyncMode: "BATCH",
       materialAdminTiming: 1,
+      clearExistingMembers: true,
       pullCountMin: 3,
       pullCountMax: 5,
       pullIntervalSeconds: 6,
       pullerCountPerGroup: 1,
       stationCountPerCall: 0,
       concurrentGroupCount: 2,
-      pullerRiskMinutes: 30,
       managerGroupId: 11,
       pullerGroupId: 12,
-      stationGroupId: 13
+      stationGroupId: null,
+      managerFinishGroupId: 14,
+      pullerFinishGroupId: 15,
+      groupSetting: {
+        settingTiming: "AFTER_PULL",
+        groupName: "测试群",
+        useMaterialFileNameAsGroupName: false,
+        avatarFileKey: "avatar-key.png",
+        groupDescription: "测试描述",
+        autoCloseMuteAfterTask: true,
+        autoCloseInviteAfterTask: false,
+        editPermission: "ALLOW",
+        muteMode: "MUTE",
+        linkPermission: "ADMIN_ONLY",
+        disappearingMessage: "ONE_DAY"
+      }
     });
+    await deletePullTaskStandardGroupAvatar("avatar-key.png");
 
     assert.deepEqual(
       armadaCalls().map(call => [call.method, call.url]),
@@ -217,23 +247,86 @@ describe("pull task unified API", () => {
         ["post", "/api/pull-tasks/standard/draft/plan"],
         ["delete", "/api/pull-tasks/standard/draft/rows/19"],
         ["delete", "/api/pull-tasks/standard/draft"],
-        ["post", "/api/pull-tasks/standard"]
+        ["post", "/api/pull-tasks/standard/group-avatars"],
+        ["post", "/api/pull-tasks/standard"],
+        ["delete", "/api/pull-tasks/standard/group-avatars/avatar-key.png"]
       ]
     );
     const formData = (armadaCalls()[1].opts as { data: FormData }).data;
+    assert.equal(formData.get("groupFolderId"), "18");
     assert.equal(formData.get("linksText"), " https://chat.whatsapp.com/code ");
     assert.equal((formData.get("files") as File).name, "material.txt");
-    assert.equal(
-      (armadaCalls()[4].opts as { data: { managerGroupId: number } }).data
-        .managerGroupId,
-      11
+    const avatarData = (armadaCalls()[4].opts as { data: FormData }).data;
+    assert.equal(avatarData.get("file"), avatar);
+    const createData = (
+      armadaCalls()[5].opts as { data: Record<string, unknown> }
+    ).data;
+    assert.equal(createData.managerGroupId, 11);
+    assert.deepEqual(
+      Object.keys(createData).sort(),
+      [
+        "autoStart",
+        "clearExistingMembers",
+        "concurrentGroupCount",
+        "draftTaskId",
+        "groupFolderId",
+        "groupSetting",
+        "managerFinishGroupId",
+        "managerGroupId",
+        "materialAdminTiming",
+        "pullCountMax",
+        "pullCountMin",
+        "pullIntervalSeconds",
+        "pullerCountPerGroup",
+        "pullerFinishGroupId",
+        "pullerGroupId",
+        "pullerSyncMode",
+        "remark",
+        "stationCountPerCall",
+        "stationGroupId",
+        "taskName",
+        "version"
+      ].sort()
     );
+    assert.deepEqual(Object.keys(createData.groupSetting as object).sort(), [
+      "autoCloseInviteAfterTask",
+      "autoCloseMuteAfterTask",
+      "avatarFileKey",
+      "disappearingMessage",
+      "editPermission",
+      "groupDescription",
+      "groupName",
+      "linkPermission",
+      "muteMode",
+      "settingTiming",
+      "useMaterialFileNameAsGroupName"
+    ]);
+  });
+
+  it("downloads the saved group avatar through the authenticated HTTP client", async () => {
+    const avatar = new Blob([new Uint8Array([0x89, 0x50])], {
+      type: "image/png"
+    });
+    resetHttpMock(avatar);
+
+    const result = await getPullTaskStandardGroupAvatarContent(
+      "/api/pull-tasks/standard/group-avatars/avatar-key.png"
+    );
+
+    assert.equal(result, avatar);
+    assert.deepEqual(httpCalls(), [
+      {
+        method: "get",
+        url: "/api/pull-tasks/standard/group-avatars/avatar-key.png",
+        opts: { responseType: "blob" }
+      }
+    ]);
   });
 
   it("lets the browser generate the normal-link plan multipart boundary", async () => {
     resetArmadaMockQueue([{}]);
 
-    await planPullTaskStandardDraft("https://chat.whatsapp.com/code");
+    await planPullTaskStandardDraft(null, "https://chat.whatsapp.com/code");
 
     const config = armadaCalls()[0].config as {
       beforeRequestCallback: (config: {
@@ -250,7 +343,7 @@ describe("pull task unified API", () => {
   it("allows the backend worst-case normal-link precheck duration", async () => {
     resetArmadaMockQueue([{}]);
 
-    await planPullTaskStandardDraft("https://chat.whatsapp.com/code");
+    await planPullTaskStandardDraft(null, "https://chat.whatsapp.com/code");
 
     assert.equal(
       (armadaCalls()[0].opts as { timeout?: number }).timeout,

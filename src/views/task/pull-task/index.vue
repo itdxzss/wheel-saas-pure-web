@@ -60,6 +60,7 @@ const {
   detailSearchForm,
   detailSelectedCount,
   detailSummary,
+  detailTask,
   standardTaskSummary,
   detailTotal,
   exportGroupLinks,
@@ -103,12 +104,14 @@ const {
   addFiles: addStandardFiles,
   accountGroups: createAccountGroups,
   clear: clearStandardDraft,
+  clearGroupAvatar: clearStandardGroupAvatar,
   clearing: standardClearing,
   create: createStandardTask,
   creating: standardCreating,
   draft: standardDraft,
   form: standardCreateForm,
   groupFolders: createGroupFolders,
+  groupAvatarFile: standardGroupAvatarFile,
   linksText: standardLinksText,
   loading: standardCreateLoading,
   movePendingFile: moveStandardPendingFile,
@@ -118,6 +121,7 @@ const {
   planning: standardPlanning,
   removePendingFile: removeStandardPendingFile,
   removeRow: removeStandardRow,
+  setGroupAvatarFile: setStandardGroupAvatarFile,
   visible: standardCreateVisible
 } = useStandardPullTaskCreate({ onCreated: refreshTasks });
 
@@ -310,11 +314,14 @@ async function handleDetailTaskAction(
       :clearing="standardClearing"
       :creating="standardCreating"
       :draft="standardDraft"
+      :group-avatar-file="standardGroupAvatarFile"
       :group-folders="createGroupFolders"
       :loading="standardCreateLoading"
       :pending-files="standardPendingFiles"
       :planning="standardPlanning"
       @add-files="addStandardFiles"
+      @avatar-change="setStandardGroupAvatarFile"
+      @avatar-clear="clearStandardGroupAvatar"
       @clear="clearStandardDraft"
       @create="createStandardTask"
       @move-pending-file="moveStandardPendingFile"
@@ -346,6 +353,7 @@ async function handleDetailTaskAction(
       :detail-loading="detailLoading"
       :detail-selected-count="detailSelectedCount"
       :detail-summary="detailSummary"
+      :detail-task="detailTask"
       :standard-task-summary="standardTaskSummary"
       :detail-total="detailTotal"
       @export-group-links="exportGroupLinks"

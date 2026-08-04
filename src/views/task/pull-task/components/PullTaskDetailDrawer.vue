@@ -5,6 +5,7 @@ import PullTaskDetailSummary from "./PullTaskDetailSummary.vue";
 import PullTaskExecutionResourceActions from "./PullTaskExecutionResourceActions.vue";
 import PullTaskLegacySupplementDrawer from "./PullTaskLegacySupplementDrawer.vue";
 import PullTaskStandardExecutionResourceCounts from "./PullTaskStandardExecutionResourceCounts.vue";
+import PullTaskStandardSavedSettings from "./PullTaskStandardSavedSettings.vue";
 import PullTaskStandardTaskSummary from "./PullTaskStandardTaskSummary.vue";
 import {
   formatEpoch,
@@ -17,6 +18,7 @@ import {
 } from "../constants";
 import type {
   PullTaskGroupRow,
+  PullTaskDetail,
   PullTaskRow,
   PullTaskStandardTaskSummary as StandardTaskSummary,
   PullTaskSummary
@@ -38,6 +40,7 @@ const props = defineProps<{
   detailLoading: boolean;
   detailSelectedCount: number;
   detailSummary: PullTaskSummary;
+  detailTask: PullTaskDetail | null;
   standardTaskSummary: StandardTaskSummary | null;
   detailTotal: number;
 }>();
@@ -200,6 +203,15 @@ function countValue(value?: number | null): number | string {
       :summary="standardTaskSummary"
     />
     <PullTaskDetailSummary v-else :summary="detailSummary" />
+
+    <PullTaskStandardSavedSettings
+      v-if="
+        normalLink && detailTask?.standardSetting && detailTask?.groupSetting
+      "
+      :visible="visible"
+      :standard-setting="detailTask.standardSetting"
+      :group-setting="detailTask.groupSetting"
+    />
 
     <el-form :model="searchForm" inline class="detail-search">
       <el-form-item label="任务情况">

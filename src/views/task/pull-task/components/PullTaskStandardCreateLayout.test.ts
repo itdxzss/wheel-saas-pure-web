@@ -102,6 +102,15 @@ describe("normal-link create prototype layout", () => {
   it("allows the selected group avatar to be replaced or cleared", () => {
     assert.doesNotMatch(groupSettingsSource, /:limit="1"/);
     assert.match(groupSettingsSource, /clearAvatar/);
+    assert.match(
+      groupSettingsSource,
+      /\.jpg,\.jpeg,\.png,image\/jpeg,image\/png/
+    );
+    assert.match(groupSettingsSource, /uploadFile\.raw/);
+  });
+
+  it("does not describe approved saved fields as frontend-only", () => {
+    assert.doesNotMatch(settingsSource, /新增配置.*后端接入/);
   });
 
   it("uses paste, drag upload and execution-order panels", () => {

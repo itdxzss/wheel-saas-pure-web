@@ -3,11 +3,14 @@ import { ElMessage } from "element-plus";
 import {
   clearPullTaskStandardDraft,
   createPullTaskStandard,
+  deletePullTaskStandardGroupAvatar,
   getPullTaskStandardDraft,
   planPullTaskStandardDraft,
   removePullTaskStandardDraftRow,
   type PullTaskStandardCreateRequest,
-  type PullTaskStandardDraft
+  type PullTaskStandardDraft,
+  type PullTaskStandardGroupAvatarUpload,
+  uploadPullTaskStandardGroupAvatar
 } from "@/api/pull-task";
 import {
   listAccountGroups,
@@ -34,7 +37,6 @@ export interface StandardPullTaskCreateForm {
   pullerCountPerGroup: number;
   stationCountPerCall: number;
   concurrentGroupCount: number;
-  pullerRiskMinutes: number;
   managerGroupId: number | "";
   pullerGroupId: number | "";
   stationGroupId: number | "";
@@ -43,7 +45,6 @@ export interface StandardPullTaskCreateForm {
   groupSettingTiming: "BEFORE_PULL" | "AFTER_PULL";
   groupName: string;
   useMaterialFileNameAsGroupName: boolean;
-  groupAvatarFileName: string;
   groupDescription: string;
   autoCloseMuteAfterTask: boolean;
   autoCloseInviteAfterTask: boolean;
@@ -74,10 +75,14 @@ export interface StandardPullTaskCreateState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   groupFolders: Ref<GroupFolderRow[]>;
   pendingFiles: Ref<File[]>;
+  groupAvatarFile: Ref<File | null>;
+  uploadedAvatar: Ref<PullTaskStandardGroupAvatarUpload | null>;
   open: () => Promise<void>;
   addFiles: (files: File[]) => void;
   movePendingFile: (fileName: string, offset: -1 | 1) => void;
   removePendingFile: (fileName: string) => void;
+  setGroupAvatarFile: (file: File) => Promise<void>;
+  clearGroupAvatar: () => Promise<void>;
   plan: () => Promise<void>;
   removeRow: (rowId: number) => Promise<void>;
   clear: () => Promise<void>;
@@ -99,7 +104,6 @@ function emptyForm(): StandardPullTaskCreateForm {
     pullerCountPerGroup: 2,
     stationCountPerCall: 0,
     concurrentGroupCount: 1,
-    pullerRiskMinutes: 0,
     managerGroupId: "",
     pullerGroupId: "",
     stationGroupId: "",
@@ -108,7 +112,6 @@ function emptyForm(): StandardPullTaskCreateForm {
     groupSettingTiming: "AFTER_PULL",
     groupName: "",
     useMaterialFileNameAsGroupName: false,
-    groupAvatarFileName: "",
     groupDescription: "",
     autoCloseMuteAfterTask: false,
     autoCloseInviteAfterTask: false,
@@ -193,8 +196,11 @@ export function useStandardPullTaskCreate(
   const accountGroups = ref<AccountGroupApiRow[]>([]);
   const groupFolders = ref<GroupFolderRow[]>([]);
   const pendingFiles = ref<File[]>([]);
+  const groupAvatarFile = ref<File | null>(null);
+  const uploadedAvatar = ref<PullTaskStandardGroupAvatarUpload | null>(null);
   let plannedLinksText = storedPlannedLinks();
   let plannedPendingNames = new Set<string>();
+  let plannedGroupFolderId: number | null = null;
 
   watch(linksText, value => storeLinks(value));
 
@@ -278,6 +284,44 @@ export function useStandardPullTaskCreate(
     pendingFiles.value = nextFiles;
   }
 
+  function validAvatar(file: File): boolean {
+    const extension = file.name.toLowerCase().match(/\.(jpe?g|png)$/)?.[1];
+    const expectedType = extension === "png" ? "image/png" : "image/jpeg";
+    if (!extension || file.type.toLowerCase() !== expectedType) {
+      ElMessage.warning("群头像仅支持 JPG、JPEG、PNG 格式");
+      return false;
+    }
+    if (file.size < 1 || file.size > 512_000) {
+      ElMessage.warning("群头像大小不能超过 500K，且不能为空文件");
+      return false;
+    }
+    return true;
+  }
+
+  async function discardUploadedAvatar(): Promise<boolean> {
+    const avatar = uploadedAvatar.value;
+    if (!avatar) return true;
+    try {
+      await deletePullTaskStandardGroupAvatar(avatar.avatarFileKey);
+      uploadedAvatar.value = null;
+      return true;
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "已上传头像清理失败"));
+      return false;
+    }
+  }
+
+  async function setGroupAvatarFile(file: File): Promise<void> {
+    if (!validAvatar(file)) return;
+    if (!(await discardUploadedAvatar())) return;
+    groupAvatarFile.value = file;
+  }
+
+  async function clearGroupAvatar(): Promise<void> {
+    if (!(await discardUploadedAvatar())) return;
+    groupAvatarFile.value = null;
+  }
+
   function reconcilePendingFiles(result: PullTaskStandardDraft): void {
     const matchedNames = new Set(result.rows.map(row => row.sourceFileName));
     const rejectedNames = new Set(
@@ -291,13 +335,21 @@ export function useStandardPullTaskCreate(
   }
 
   async function plan(): Promise<void> {
-    if (!linksText.value.trim() && pendingFiles.value.length === 0) {
-      ElMessage.warning("请粘贴群链接或选择 TXT 文件");
+    const groupFolderId = positiveId(form.groupFolderId)
+      ? form.groupFolderId
+      : null;
+    if (
+      groupFolderId === null &&
+      !linksText.value.trim() &&
+      pendingFiles.value.length === 0
+    ) {
+      ElMessage.warning("请选择群组分组、粘贴群链接或选择 TXT 文件");
       return;
     }
     planning.value = true;
     try {
       const result = await planPullTaskStandardDraft(
+        groupFolderId,
         linksText.value,
         pendingFiles.value
       );
@@ -305,6 +357,7 @@ export function useStandardPullTaskCreate(
       reconcilePendingFiles(result);
       plannedLinksText = linksText.value;
       plannedPendingNames = new Set(pendingFiles.value.map(file => file.name));
+      plannedGroupFolderId = groupFolderId;
       storePlannedLinks(plannedLinksText);
       ElMessage.success("链接与 TXT 预检完成");
     } catch (error) {
@@ -342,6 +395,7 @@ export function useStandardPullTaskCreate(
       pendingFiles.value = [];
       plannedLinksText = "";
       plannedPendingNames = new Set();
+      plannedGroupFolderId = null;
       storePlannedLinks("");
       ElMessage.success("创建草稿已清空");
     } catch (error) {
@@ -351,7 +405,9 @@ export function useStandardPullTaskCreate(
     }
   }
 
-  function createPayload(): PullTaskStandardCreateRequest | null {
+  function createPayload(
+    avatarFileKey: string | null
+  ): PullTaskStandardCreateRequest | null {
     if (!form.taskName.trim()) {
       ElMessage.warning("请填写任务名称");
       return null;
@@ -366,17 +422,20 @@ export function useStandardPullTaskCreate(
     }
     if (
       linksText.value !== plannedLinksText ||
+      plannedGroupFolderId !==
+        (positiveId(form.groupFolderId) ? form.groupFolderId : null) ||
+      pendingFiles.value.length !== plannedPendingNames.size ||
       pendingFiles.value.some(file => !plannedPendingNames.has(file.name))
     ) {
       ElMessage.warning("资源内容已变化，请重新预检并冻结执行计划");
       return null;
     }
-    if (
-      !positiveId(form.managerGroupId) ||
-      !positiveId(form.pullerGroupId) ||
-      !positiveId(form.stationGroupId)
-    ) {
-      ElMessage.warning("请选择管理、拉手和站台分组");
+    if (!positiveId(form.managerGroupId) || !positiveId(form.pullerGroupId)) {
+      ElMessage.warning("请选择管理和拉手分组");
+      return null;
+    }
+    if (form.stationCountPerCall > 0 && !positiveId(form.stationGroupId)) {
+      ElMessage.warning("请选择站台分组");
       return null;
     }
     if (form.pullCountMin < 1 || form.pullCountMax < form.pullCountMin) {
@@ -389,25 +448,61 @@ export function useStandardPullTaskCreate(
       taskName: form.taskName.trim(),
       remark: form.remark.trim() || null,
       autoStart: form.autoStart ? 1 : 0,
+      groupFolderId: positiveId(form.groupFolderId) ? form.groupFolderId : null,
+      pullerSyncMode: form.pullerSyncMode,
       materialAdminTiming: form.materialAdminTiming,
+      clearExistingMembers: form.clearExistingMembers,
       pullCountMin: form.pullCountMin,
       pullCountMax: form.pullCountMax,
       pullIntervalSeconds: form.pullIntervalSeconds,
       pullerCountPerGroup: form.pullerCountPerGroup,
       stationCountPerCall: form.stationCountPerCall,
       concurrentGroupCount: form.concurrentGroupCount,
-      pullerRiskMinutes: form.pullerRiskMinutes,
       managerGroupId: form.managerGroupId,
       pullerGroupId: form.pullerGroupId,
-      stationGroupId: form.stationGroupId
+      stationGroupId: positiveId(form.stationGroupId)
+        ? form.stationGroupId
+        : null,
+      managerFinishGroupId: positiveId(form.managerFinishGroupId)
+        ? form.managerFinishGroupId
+        : null,
+      pullerFinishGroupId: positiveId(form.pullerFinishGroupId)
+        ? form.pullerFinishGroupId
+        : null,
+      groupSetting: {
+        settingTiming: form.groupSettingTiming,
+        groupName: form.useMaterialFileNameAsGroupName
+          ? null
+          : form.groupName.trim() || null,
+        useMaterialFileNameAsGroupName: form.useMaterialFileNameAsGroupName,
+        avatarFileKey,
+        groupDescription: form.groupDescription.trim() || null,
+        autoCloseMuteAfterTask: form.autoCloseMuteAfterTask,
+        autoCloseInviteAfterTask: form.autoCloseInviteAfterTask,
+        editPermission: form.editPermission,
+        muteMode: form.muteMode,
+        linkPermission: form.linkPermission,
+        disappearingMessage: form.disappearingMessage
+      }
     };
   }
 
+  async function ensureAvatarUploaded(): Promise<string | null> {
+    if (uploadedAvatar.value) return uploadedAvatar.value.avatarFileKey;
+    if (!groupAvatarFile.value) return null;
+    uploadedAvatar.value = await uploadPullTaskStandardGroupAvatar(
+      groupAvatarFile.value
+    );
+    return uploadedAvatar.value.avatarFileKey;
+  }
+
   async function create(): Promise<void> {
-    const payload = createPayload();
-    if (!payload) return;
+    if (!createPayload(uploadedAvatar.value?.avatarFileKey ?? null)) return;
     creating.value = true;
     try {
+      const avatarFileKey = await ensureAvatarUploaded();
+      const payload = createPayload(avatarFileKey);
+      if (!payload) return;
       await createPullTaskStandard(payload);
       visible.value = false;
       draft.value = emptyDraft();
@@ -415,6 +510,9 @@ export function useStandardPullTaskCreate(
       pendingFiles.value = [];
       plannedLinksText = "";
       plannedPendingNames = new Set();
+      plannedGroupFolderId = null;
+      groupAvatarFile.value = null;
+      uploadedAvatar.value = null;
       storePlannedLinks("");
       Object.assign(form, emptyForm());
       ElMessage.success("普通群链接任务已创建");
@@ -438,10 +536,14 @@ export function useStandardPullTaskCreate(
     accountGroups,
     groupFolders,
     pendingFiles,
+    groupAvatarFile,
+    uploadedAvatar,
     open,
     addFiles,
     movePendingFile,
     removePendingFile,
+    setGroupAvatarFile,
+    clearGroupAvatar,
     plan,
     removeRow,
     clear,
