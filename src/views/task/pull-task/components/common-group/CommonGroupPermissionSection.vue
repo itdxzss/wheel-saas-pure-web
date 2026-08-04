@@ -26,6 +26,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
           <el-radio-button value="CLOSED">禁言</el-radio-button>
           <el-radio-button value="DEFAULT">默认</el-radio-button>
         </el-radio-group>
+        <div class="field-help">控制新建群组是否允许普通成员发言。</div>
       </el-form-item>
       <el-form-item label="允许群编辑">
         <el-radio-group v-model="form.editPermission">
@@ -33,6 +34,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
           <el-radio-button value="CLOSED">禁止</el-radio-button>
           <el-radio-button value="DEFAULT">默认</el-radio-button>
         </el-radio-group>
+        <div class="field-help">控制普通成员是否允许编辑群组信息。</div>
       </el-form-item>
       <el-form-item label="开启审核">
         <el-radio-group v-model="form.approveMode">
@@ -40,6 +42,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
           <el-radio-button value="CLOSED">关闭</el-radio-button>
           <el-radio-button value="DEFAULT">默认</el-radio-button>
         </el-radio-group>
+        <div class="field-help">控制新成员加入群组时是否需要审核。</div>
       </el-form-item>
       <el-form-item label="限时时间">
         <el-select v-model="form.disappearingMessage" class="full-width">
@@ -49,6 +52,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
           <el-option label="关闭" value="OFF" />
           <el-option label="默认" value="DEFAULT" />
         </el-select>
+        <div class="field-help">设置群消息自动消失时间。</div>
       </el-form-item>
       <el-form-item>
         <template #label>
@@ -59,6 +63,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
           <el-radio value="ALL">所有人可获取</el-radio>
           <el-radio value="ADMIN_ONLY">仅管理员可获取</el-radio>
         </el-radio-group>
+        <div class="field-help">控制普通成员是否可以获取群邀请链接。</div>
       </el-form-item>
     </div>
   </el-card>
@@ -105,6 +110,14 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
 
 .full-width {
   width: 100%;
+}
+
+.field-help {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
 }
 
 @media (width <= 1100px) {

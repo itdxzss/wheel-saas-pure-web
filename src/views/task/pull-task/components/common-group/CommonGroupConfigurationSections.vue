@@ -11,7 +11,7 @@ import CommonGroupHelp from "./CommonGroupHelp.vue";
 
 defineOptions({ name: "CommonGroupConfigurationSections" });
 
-defineProps<{
+const props = defineProps<{
   accountGroups: AccountGroupApiRow[];
   errors: CommonGroupFormErrors;
   groupFolders: GroupFolderRow[];
@@ -19,11 +19,16 @@ defineProps<{
 
 const form = defineModel<CommonGroupForm>("form", { required: true });
 const previewNames = computed(() => commonGroupNamePreview(form.value));
+const previewFolderName = computed(
+  () =>
+    props.groupFolders.find(folder => folder.id === form.value.groupFolderId)
+      ?.name ?? "默认分组（自动）"
+);
 </script>
 
 <template>
   <div class="section-grid">
-    <el-card shadow="never" class="form-section section-wide">
+    <el-card shadow="never" class="form-section">
       <template #header>
         <div class="section-title">
           <span class="section-number">3</span>
@@ -35,11 +40,18 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
       </template>
 
       <div class="field-columns">
-        <el-form-item required label="建群速度">
+        <el-form-item required>
+          <template #label>
+            建群速度
+            <CommonGroupHelp content="普通模式按系统默认间隔依次执行建群。" />
+          </template>
           <el-radio-group v-model="form.speed">
             <el-radio-button value="NORMAL">普通</el-radio-button>
             <el-radio-button value="FAST" disabled>快速</el-radio-button>
           </el-radio-group>
+          <div class="field-help">
+            普通模式按系统默认秒级间隔依次执行；快速模式暂未开放。
+          </div>
         </el-form-item>
         <el-form-item>
           <template #label>
@@ -60,6 +72,7 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
               :value="folder.id"
             />
           </el-select>
+          <div class="field-help">未选择时，成功群组进入系统默认分组。</div>
         </el-form-item>
         <el-form-item :error="errors.groupName">
           <template #label>
@@ -75,6 +88,7 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
             show-word-limit
             placeholder="选填，例如：海外项目群"
           />
+          <div class="field-help">选填；填写后会在群名称末尾追加连续编号。</div>
         </el-form-item>
         <el-form-item required :error="errors.groupCount">
           <template #label>
@@ -89,9 +103,9 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
             :max="20"
             :step="1"
             step-strictly
-            controls-position="right"
             class="full-width"
           />
+          <div class="field-help">默认 1，本次最多创建 20 个群组。</div>
         </el-form-item>
         <el-form-item required :error="errors.startIndex">
           <template #label>
@@ -105,18 +119,23 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
             :min="1"
             :step="1"
             step-strictly
-            controls-position="right"
             class="full-width"
           />
+          <div class="field-help">默认 1，创建多个群组时逐个递增。</div>
         </el-form-item>
         <div class="name-preview">
-          <span class="preview-label">群名称预览</span>
-          <el-tag v-for="name in previewNames" :key="name" effect="plain">
-            {{ name }}
-          </el-tag>
-          <span v-if="form.groupCount > 5" class="preview-more">
-            另有 {{ form.groupCount - 5 }} 个
-          </span>
+          <div class="preview-header">
+            <strong>群名称预览</strong>
+            <span>归属：{{ previewFolderName }}</span>
+          </div>
+          <div class="preview-tags">
+            <el-tag v-for="name in previewNames" :key="name" effect="plain">
+              {{ name }}
+            </el-tag>
+            <span v-if="form.groupCount > 5" class="preview-more">
+              另有 {{ form.groupCount - 5 }} 个
+            </span>
+          </div>
         </div>
       </div>
     </el-card>
@@ -148,6 +167,7 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
               :value="group.id"
             />
           </el-select>
+          <div class="field-help">选填，仅用于成功执行项。</div>
         </el-form-item>
         <el-form-item label="失败账号迁移分组">
           <el-select
@@ -164,6 +184,7 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
               :value="group.id"
             />
           </el-select>
+          <div class="field-help">选填，失败项保留原因并支持单独重试。</div>
         </el-form-item>
       </div>
     </el-card>
@@ -173,12 +194,8 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
 <style scoped>
 .section-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
-}
-
-.section-wide {
-  grid-column: 1 / -1;
 }
 
 .form-section {
@@ -223,28 +240,45 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
   width: 100%;
 }
 
+.field-help {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
 .name-preview {
+  grid-column: 1 / -1;
+  padding: 14px 16px;
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 6px;
+}
+
+.preview-header,
+.preview-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  min-height: 32px;
 }
 
-.preview-label,
+.preview-header {
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--el-text-color-primary);
+}
+
+.preview-header span,
 .preview-more {
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }
 
-@media (width <= 1200px) {
-  .section-grid,
+@media (width <= 760px) {
   .field-columns {
     grid-template-columns: 1fr;
-  }
-
-  .section-wide {
-    grid-column: auto;
   }
 }
 </style>

@@ -46,7 +46,7 @@ defineExpose({ open });
 <template>
   <el-drawer
     v-model="visible"
-    size="calc(100% - 210px)"
+    size="min(1120px, calc(100% - 32px))"
     :before-close="requestClose"
     :with-header="false"
     class="common-group-create-drawer"
@@ -55,7 +55,7 @@ defineExpose({ open });
       <header class="create-header">
         <div>
           <strong>新建普群</strong>
-          <span>创建任务后将在后台依次执行</span>
+          <span>提交后生成后台任务，任务将在后台依次执行。</span>
         </div>
         <el-button text class="close-button" aria-label="关闭" @click="cancel">
           ×
@@ -163,11 +163,13 @@ defineExpose({ open });
 }
 
 .create-header strong {
-  margin-right: 12px;
+  display: block;
   font-size: 18px;
 }
 
 .create-header span {
+  display: block;
+  margin-top: 4px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }
@@ -182,7 +184,7 @@ defineExpose({ open });
 .create-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 16px;
+  padding: 16px 18px;
   overflow: auto;
   background: var(--el-fill-color-lighter);
 }

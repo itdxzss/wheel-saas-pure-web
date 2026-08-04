@@ -29,35 +29,46 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
         </div>
       </template>
 
-      <el-form-item required :error="errors.managerGroupId">
-        <template #label>
-          管理员分组
-          <CommonGroupHelp
-            content="从当前账号分组中选择创建群组的管理员账号。"
-          />
-        </template>
-        <el-select
-          v-model="form.managerGroupId"
-          filterable
-          placeholder="请选择管理员分组"
-          class="full-width"
-        >
-          <el-option
-            v-for="group in accountGroups"
-            :key="group.id"
-            :label="`${group.name}（在线 ${group.onlineAccounts}）`"
-            :value="group.id"
-          />
-        </el-select>
-      </el-form-item>
+      <div class="field-columns">
+        <el-form-item required :error="errors.managerGroupId">
+          <template #label>
+            管理员分组
+            <CommonGroupHelp
+              content="从当前账号分组中选择创建群组的管理员账号。"
+            />
+          </template>
+          <el-select
+            v-model="form.managerGroupId"
+            filterable
+            placeholder="请选择管理员分组"
+            class="full-width"
+          >
+            <el-option
+              v-for="group in accountGroups"
+              :key="group.id"
+              :label="`${group.name}（在线 ${group.onlineAccounts}）`"
+              :value="group.id"
+            />
+          </el-select>
+          <div class="field-help">展示当前账号分组及在线账号数量。</div>
+        </el-form-item>
 
-      <el-form-item label="创群号自动退群">
-        <el-radio-group v-model="form.creatorAutoLeave">
-          <el-radio-button :value="false">留群</el-radio-button>
-          <el-radio-button :value="true">自动退群</el-radio-button>
-        </el-radio-group>
-        <div class="field-help">任务完成后是否让创群账号自动退出群组。</div>
-      </el-form-item>
+        <el-form-item required>
+          <template #label>
+            创群号自动退群
+            <CommonGroupHelp
+              content="任务完成后，创群账号是否自动退出已创建的群组。"
+            />
+          </template>
+          <el-radio-group v-model="form.creatorAutoLeave">
+            <el-radio-button :value="false">留群</el-radio-button>
+            <el-radio-button :value="true">自动退群</el-radio-button>
+          </el-radio-group>
+          <div class="field-help">
+            默认留群；选择自动退群后，任务完成时执行退群。
+          </div>
+        </el-form-item>
+      </div>
     </el-card>
 
     <el-card shadow="never" class="form-section">
@@ -83,6 +94,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
           <el-radio-button value="CUSTOM" disabled>自定义号码</el-radio-button>
           <el-radio-button value="EMPTY">空群</el-radio-button>
         </el-radio-group>
+        <div class="field-help">选择后自动切换下方成员配置字段。</div>
       </el-form-item>
 
       <template v-if="form.memberType === 'CONTROLLED'">
@@ -105,6 +117,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
                 :value="group.id"
               />
             </el-select>
+            <div class="field-help">作为每个群组的控上成员来源分组。</div>
           </el-form-item>
           <el-form-item required :error="errors.memberCount">
             <template #label>
@@ -118,9 +131,11 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
               :min="1"
               :step="1"
               step-strictly
-              controls-position="right"
               class="full-width"
             />
+            <div class="field-help">
+              默认 1，表示每个群组计划加入的控上成员数。
+            </div>
           </el-form-item>
         </div>
       </template>
@@ -139,7 +154,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
 <style scoped>
 .section-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
@@ -192,8 +207,8 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
   color: var(--el-text-color-secondary);
 }
 
-@media (width <= 1200px) {
-  .section-grid {
+@media (width <= 760px) {
+  .field-columns {
     grid-template-columns: 1fr;
   }
 }
