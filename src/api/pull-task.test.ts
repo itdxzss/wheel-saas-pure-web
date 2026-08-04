@@ -230,6 +230,34 @@ describe("pull task unified API", () => {
     );
   });
 
+  it("lets the browser generate the normal-link plan multipart boundary", async () => {
+    resetArmadaMockQueue([{}]);
+
+    await planPullTaskStandardDraft("https://chat.whatsapp.com/code");
+
+    const config = armadaCalls()[0].config as {
+      beforeRequestCallback: (config: {
+        headers: Record<string, string>;
+      }) => void;
+    };
+    const requestConfig = {
+      headers: { "Content-Type": "application/json" }
+    };
+    config.beforeRequestCallback(requestConfig);
+    assert.equal("Content-Type" in requestConfig.headers, false);
+  });
+
+  it("allows the backend worst-case normal-link precheck duration", async () => {
+    resetArmadaMockQueue([{}]);
+
+    await planPullTaskStandardDraft("https://chat.whatsapp.com/code");
+
+    assert.equal(
+      (armadaCalls()[0].opts as { timeout?: number }).timeout,
+      45_000
+    );
+  });
+
   it("uses the immutable manager-supplement options and command contracts", async () => {
     resetArmadaMockQueue([{}, {}]);
 

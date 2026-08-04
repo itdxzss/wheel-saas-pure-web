@@ -51,8 +51,28 @@ function validState(onCreated: () => Promise<void> = async () => undefined) {
 }
 
 describe("standard normal-link pull task create state", () => {
+  it("starts with the approved prototype defaults", () => {
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+
+    assert.equal(state.form.autoStart, true);
+    assert.equal(state.form.materialAdminTiming, 2);
+    assert.equal(state.form.pullCountMin, 50);
+    assert.equal(state.form.pullCountMax, 50);
+    assert.equal(state.form.pullerCountPerGroup, 2);
+    assert.equal(state.form.pullerSyncMode, "SINGLE");
+    assert.equal(state.form.groupSettingTiming, "AFTER_PULL");
+    assert.equal(state.form.linkPermission, "ADMIN_ONLY");
+    assert.equal(state.form.disappearingMessage, "UNCHANGED");
+  });
+
   it("loads account groups and the current server draft", async () => {
-    resetArmadaMockQueue([{ list: [{ id: 11, name: "管理组" }] }, draft()]);
+    resetArmadaMockQueue([
+      { list: [{ id: 11, name: "管理组" }] },
+      { list: [{ id: 21, name: "历史群分组", groupCount: 12 }] },
+      draft()
+    ]);
     resetElementPlusMock();
     const state = useStandardPullTaskCreate({
       onCreated: async () => undefined
@@ -62,10 +82,57 @@ describe("standard normal-link pull task create state", () => {
 
     assert.deepEqual(
       armadaCalls().map(call => call.url),
-      ["/api/account-groups", "/api/pull-tasks/standard/draft"]
+      [
+        "/api/account-groups",
+        "/api/group-folders",
+        "/api/pull-tasks/standard/draft"
+      ]
     );
     assert.equal(state.accountGroups.value[0]?.name, "管理组");
+    assert.equal(state.groupFolders.value[0]?.name, "历史群分组");
     assert.equal(state.draft.value.rows[0]?.rowId, 19);
+  });
+
+  it("keeps successful create data when one initial request fails", async () => {
+    const failureMessages = [
+      "account groups unavailable",
+      "group folders unavailable",
+      "draft unavailable"
+    ];
+
+    for (const failedIndex of [0, 1, 2]) {
+      const responses: unknown[] = [
+        { list: [{ id: 11, name: "管理组" }] },
+        { list: [{ id: 21, name: "历史群分组", groupCount: 12 }] },
+        draft()
+      ];
+      responses[failedIndex] = Promise.reject(
+        new Error(failureMessages[failedIndex])
+      );
+      resetArmadaMockQueue(responses);
+      resetElementPlusMock();
+      const state = useStandardPullTaskCreate({
+        onCreated: async () => undefined
+      });
+
+      await state.open();
+
+      assert.equal(state.visible.value, true);
+      assert.equal(state.loading.value, false);
+      assert.equal(
+        state.accountGroups.value[0]?.name,
+        failedIndex === 0 ? undefined : "管理组"
+      );
+      assert.equal(
+        state.groupFolders.value[0]?.name,
+        failedIndex === 1 ? undefined : "历史群分组"
+      );
+      assert.equal(state.draft.value.draftTaskId, failedIndex === 2 ? null : 7);
+      assert.equal(
+        elementPlusCalls().at(-1)?.text,
+        failureMessages[failedIndex]
+      );
+    }
   });
 
   it("requires a complete frozen plan and all three account groups", async () => {
@@ -167,6 +234,22 @@ describe("standard normal-link pull task create state", () => {
       refreshes += 1;
     });
     state.visible.value = true;
+    state.form.groupFolderId = 21;
+    state.form.pullerSyncMode = "BATCH";
+    state.form.clearExistingMembers = true;
+    state.form.managerFinishGroupId = 31;
+    state.form.pullerFinishGroupId = 32;
+    state.form.groupSettingTiming = "BEFORE_PULL";
+    state.form.groupName = "前端验收群名";
+    state.form.useMaterialFileNameAsGroupName = true;
+    state.form.groupAvatarFileName = "avatar.png";
+    state.form.groupDescription = "前端验收群描述";
+    state.form.autoCloseMuteAfterTask = true;
+    state.form.autoCloseInviteAfterTask = true;
+    state.form.editPermission = "ALLOW";
+    state.form.muteMode = "MUTE";
+    state.form.linkPermission = "ALL";
+    state.form.disappearingMessage = "ONE_DAY";
 
     await state.create();
 
@@ -196,6 +279,23 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(payload.stationGroupId, 13);
     assert.equal(refreshes, 1);
     assert.equal(state.visible.value, false);
+  });
+
+  it("allows creation from frozen rows when valid links remain unmatched", async () => {
+    resetArmadaMock({
+      id: 7,
+      taskName: "普通群链接",
+      status: "WAIT_START",
+      groupCount: 1,
+      expectedPullCount: 1
+    });
+    resetElementPlusMock();
+    const state = validState();
+    state.draft.value = draft({ remainingLinkCount: 2 });
+
+    await state.create();
+
+    assert.equal(armadaCalls()[0]?.url, "/api/pull-tasks/standard");
   });
 
   it("requires another preview after the link text changes", async () => {

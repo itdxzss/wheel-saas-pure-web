@@ -13,6 +13,7 @@ import {
   listAccountGroups,
   type AccountGroupApiRow
 } from "@/api/account-group";
+import { listGroupFolders, type GroupFolderRow } from "@/api/group-folder";
 import { apiErrorMessage } from "@/utils/api-error";
 
 const LINKS_STORAGE_KEY = "pull-task-standard-normal-link-links";
@@ -23,7 +24,10 @@ export interface StandardPullTaskCreateForm {
   taskName: string;
   remark: string;
   autoStart: boolean;
+  groupFolderId: number | "";
   materialAdminTiming: 1 | 2;
+  pullerSyncMode: "SINGLE" | "BATCH";
+  clearExistingMembers: boolean;
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
@@ -34,6 +38,24 @@ export interface StandardPullTaskCreateForm {
   managerGroupId: number | "";
   pullerGroupId: number | "";
   stationGroupId: number | "";
+  managerFinishGroupId: number | "";
+  pullerFinishGroupId: number | "";
+  groupSettingTiming: "BEFORE_PULL" | "AFTER_PULL";
+  groupName: string;
+  useMaterialFileNameAsGroupName: boolean;
+  groupAvatarFileName: string;
+  groupDescription: string;
+  autoCloseMuteAfterTask: boolean;
+  autoCloseInviteAfterTask: boolean;
+  editPermission: "UNCHANGED" | "ALLOW" | "DISALLOW";
+  muteMode: "UNCHANGED" | "MUTE" | "UNMUTE";
+  linkPermission: "ALL" | "ADMIN_ONLY";
+  disappearingMessage:
+    | "ONE_DAY"
+    | "SEVEN_DAYS"
+    | "NINETY_DAYS"
+    | "OFF"
+    | "UNCHANGED";
 }
 
 export interface StandardPullTaskCreateOptions {
@@ -50,6 +72,7 @@ export interface StandardPullTaskCreateState {
   linksText: Ref<string>;
   draft: Ref<PullTaskStandardDraft>;
   accountGroups: Ref<AccountGroupApiRow[]>;
+  groupFolders: Ref<GroupFolderRow[]>;
   pendingFiles: Ref<File[]>;
   open: () => Promise<void>;
   addFiles: (files: File[]) => void;
@@ -63,20 +86,36 @@ export interface StandardPullTaskCreateState {
 
 function emptyForm(): StandardPullTaskCreateForm {
   return {
-    taskName: "",
+    taskName: `任务_${Date.now().toString().slice(-8)}`,
     remark: "",
-    autoStart: false,
-    materialAdminTiming: 1,
-    pullCountMin: 3,
-    pullCountMax: 5,
+    autoStart: true,
+    groupFolderId: "",
+    materialAdminTiming: 2,
+    pullerSyncMode: "SINGLE",
+    clearExistingMembers: false,
+    pullCountMin: 50,
+    pullCountMax: 50,
     pullIntervalSeconds: 6,
-    pullerCountPerGroup: 1,
+    pullerCountPerGroup: 2,
     stationCountPerCall: 0,
     concurrentGroupCount: 1,
     pullerRiskMinutes: 0,
     managerGroupId: "",
     pullerGroupId: "",
-    stationGroupId: ""
+    stationGroupId: "",
+    managerFinishGroupId: "",
+    pullerFinishGroupId: "",
+    groupSettingTiming: "AFTER_PULL",
+    groupName: "",
+    useMaterialFileNameAsGroupName: false,
+    groupAvatarFileName: "",
+    groupDescription: "",
+    autoCloseMuteAfterTask: false,
+    autoCloseInviteAfterTask: false,
+    editPermission: "UNCHANGED",
+    muteMode: "UNCHANGED",
+    linkPermission: "ADMIN_ONLY",
+    disappearingMessage: "UNCHANGED"
   };
 }
 
@@ -152,6 +191,7 @@ export function useStandardPullTaskCreate(
   const linksText = ref(storedLinks());
   const draft = ref<PullTaskStandardDraft>(emptyDraft());
   const accountGroups = ref<AccountGroupApiRow[]>([]);
+  const groupFolders = ref<GroupFolderRow[]>([]);
   const pendingFiles = ref<File[]>([]);
   let plannedLinksText = storedPlannedLinks();
   let plannedPendingNames = new Set<string>();
@@ -162,16 +202,26 @@ export function useStandardPullTaskCreate(
     visible.value = true;
     loading.value = true;
     try {
-      const [accountResult, draftResult] = await Promise.allSettled([
-        listAccountGroups({ page: 1, pageSize: 500 }),
-        getPullTaskStandardDraft()
-      ]);
+      const [accountResult, folderResult, draftResult] =
+        await Promise.allSettled([
+          listAccountGroups({ page: 1, pageSize: 500 }),
+          listGroupFolders({ page: 1, pageSize: 500 }),
+          getPullTaskStandardDraft()
+        ]);
       if (accountResult.status === "fulfilled") {
         accountGroups.value = accountResult.value.list ?? [];
       } else {
         accountGroups.value = [];
         ElMessage.error(
           apiErrorMessage(accountResult.reason, "账号分组加载失败")
+        );
+      }
+      if (folderResult.status === "fulfilled") {
+        groupFolders.value = folderResult.value.list ?? [];
+      } else {
+        groupFolders.value = [];
+        ElMessage.error(
+          apiErrorMessage(folderResult.reason, "群组分组加载失败")
         );
       }
       if (draftResult.status === "fulfilled") {
@@ -314,10 +364,6 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("请先完成链接与 TXT 匹配预览");
       return null;
     }
-    if (draft.value.remainingLinkCount > 0) {
-      ElMessage.warning("仍有群链接未匹配 TXT，请补充文件或调整链接");
-      return null;
-    }
     if (
       linksText.value !== plannedLinksText ||
       pendingFiles.value.some(file => !plannedPendingNames.has(file.name))
@@ -390,6 +436,7 @@ export function useStandardPullTaskCreate(
     linksText,
     draft,
     accountGroups,
+    groupFolders,
     pendingFiles,
     open,
     addFiles,

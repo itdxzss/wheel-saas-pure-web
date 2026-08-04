@@ -32,13 +32,12 @@ describe("pull task list prototype", () => {
     assert.doesNotMatch(indexSource, /label="操作"/);
   });
 
-  it("opens a task-type selector and mounts the standard drawer", () => {
-    assert.match(indexSource, /useRouter/);
-    assert.match(indexSource, /PullTaskTypeDialog/);
+  it("opens the normal-link create surface directly from the new-task entry", () => {
     assert.match(indexSource, /PullTaskCreateDrawer/);
-    assert.match(indexSource, /openTaskTypeDialog/);
-    assert.match(indexSource, /handleTaskTypeSelect/);
-    assert.match(indexSource, /router\.push\("\/task\/pull-task\/create"\)/);
+    assert.match(indexSource, /@click="openStandardCreate"/);
+    assert.doesNotMatch(indexSource, /PullTaskTypeDialog/);
+    assert.doesNotMatch(indexSource, /openTaskTypeDialog/);
+    assert.doesNotMatch(indexSource, /handleTaskTypeSelect/);
     assert.equal(
       existsSync(
         fileURLToPath(

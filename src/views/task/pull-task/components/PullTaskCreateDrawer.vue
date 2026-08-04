@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { AccountGroupApiRow } from "@/api/account-group";
+import type { GroupFolderRow } from "@/api/group-folder";
 import type { PullTaskStandardDraft } from "@/api/pull-task";
 import type { StandardPullTaskCreateForm } from "../composables/useStandardPullTaskCreate";
-import PullTaskStandardPlanTable from "./PullTaskStandardPlanTable.vue";
-import PullTaskStandardResources from "./PullTaskStandardResources.vue";
 import PullTaskStandardSettings from "./PullTaskStandardSettings.vue";
+import PullTaskStandardResources from "./PullTaskStandardResources.vue";
+import PullTaskStandardPlanTable from "./PullTaskStandardPlanTable.vue";
 
 defineOptions({
   name: "PullTaskCreateDrawer"
@@ -15,6 +16,7 @@ defineProps<{
   clearing: boolean;
   creating: boolean;
   draft: PullTaskStandardDraft;
+  groupFolders: GroupFolderRow[];
   loading: boolean;
   pendingFiles: File[];
   planning: boolean;
@@ -44,67 +46,153 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
 <template>
   <el-drawer
     v-model="visible"
-    size="94%"
+    size="calc(100% - 210px)"
     destroy-on-close
-    title="群链接 · 普通群链接版"
+    :with-header="false"
+    class="pull-task-create-drawer"
   >
-    <div v-loading="loading" class="create-layout">
-      <div class="create-left">
-        <PullTaskStandardResources
-          v-model:links-text="linksText"
-          :clearing="clearing"
-          :draft="draft"
-          :pending-files="pendingFiles"
-          :planning="planning"
-          @add-files="emit('add-files', $event)"
-          @clear="emit('clear')"
-          @move-pending-file="forwardPendingFileMove"
-          @plan="emit('plan')"
-          @remove-pending-file="emit('remove-pending-file', $event)"
-        />
+    <div class="create-surface">
+      <header class="create-header">
+        <div class="create-title">
+          <el-button text class="close-button" @click="visible = false">
+            ×
+          </el-button>
+          <strong>新建拉群任务</strong>
+        </div>
+        <el-button
+          type="primary"
+          :loading="creating"
+          :disabled="loading || planning"
+          @click="emit('create')"
+        >
+          保存配置
+        </el-button>
+      </header>
+
+      <el-tabs model-value="link" class="create-mode-tabs">
+        <el-tab-pane name="new" label="新群模式（后期）" disabled />
+        <el-tab-pane name="link" label="群链接模式" />
+        <el-tab-pane name="fast" label="速拉模式（后期）" disabled />
+      </el-tabs>
+
+      <main v-loading="loading" class="create-scroll">
         <PullTaskStandardSettings
           v-model:form="form"
           :account-groups="accountGroups"
+          :group-folders="groupFolders"
         />
-      </div>
-      <PullTaskStandardPlanTable
-        :draft="draft"
-        @remove-row="emit('remove-row', $event)"
-      />
-    </div>
 
-    <template #footer>
-      <el-button :disabled="creating" @click="visible = false">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="creating"
-        :disabled="loading || planning"
-        @click="emit('create')"
-      >
-        冻结并创建任务
-      </el-button>
-    </template>
+        <div class="resource-layout">
+          <PullTaskStandardResources
+            v-model:links-text="linksText"
+            :clearing="clearing"
+            :draft="draft"
+            :pending-files="pendingFiles"
+            :planning="planning"
+            @add-files="emit('add-files', $event)"
+            @clear="emit('clear')"
+            @move-pending-file="forwardPendingFileMove"
+            @plan="emit('plan')"
+            @remove-pending-file="emit('remove-pending-file', $event)"
+          />
+          <PullTaskStandardPlanTable
+            :draft="draft"
+            @remove-row="emit('remove-row', $event)"
+          />
+        </div>
+      </main>
+
+      <footer class="create-footer">
+        <el-button :disabled="creating" @click="visible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="creating"
+          :disabled="loading || planning"
+          @click="emit('create')"
+        >
+          冻结并创建任务
+        </el-button>
+      </footer>
+    </div>
   </el-drawer>
 </template>
 
 <style scoped>
-.create-layout {
+.create-surface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.create-header,
+.create-footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.create-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 16px;
+}
+
+.close-button {
+  min-width: 28px;
+  padding: 0;
+  font-size: 24px;
+  color: var(--el-text-color-secondary);
+}
+
+.create-mode-tabs {
+  flex: 0 0 auto;
+  padding: 0 16px;
+}
+
+.create-mode-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+
+.create-mode-tabs :deep(.el-tabs__content) {
+  display: none;
+}
+
+.create-scroll {
   display: grid;
-  grid-template-columns: minmax(560px, 0.9fr) minmax(620px, 1.1fr);
+  flex: 1 1 auto;
+  gap: 16px;
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+}
+
+.resource-layout {
+  display: grid;
+  grid-template-columns: minmax(520px, 0.95fr) minmax(620px, 1.05fr);
   gap: 16px;
   align-items: start;
 }
 
-.create-left {
-  display: grid;
-  gap: 16px;
+.create-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--el-border-color-light);
+  border-bottom: 0;
 }
 
 @media (width <= 1280px) {
-  .create-layout {
+  .resource-layout {
     grid-template-columns: 1fr;
   }
+}
+
+:global(.pull-task-create-drawer .el-drawer__body) {
+  padding: 0;
 }
 </style>

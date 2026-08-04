@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRouter } from "vue-router";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -10,7 +9,6 @@ import PullTaskCreateDrawer from "./components/PullTaskCreateDrawer.vue";
 import PullTaskGlobalSettingDialog from "./components/PullTaskGlobalSettingDialog.vue";
 import PullTaskResourceSupplementFlows from "./components/PullTaskResourceSupplementFlows.vue";
 import PullTaskTable from "./components/PullTaskTable.vue";
-import PullTaskTypeDialog from "./components/PullTaskTypeDialog.vue";
 import {
   pullTaskColumns,
   pullTaskGroupSourceOptions,
@@ -21,11 +19,7 @@ import { usePullTaskPage } from "./composables/usePullTaskPage";
 import { usePullTaskExecutionDetail } from "./composables/usePullTaskExecutionDetail";
 import { usePullTaskGlobalSetting } from "./composables/usePullTaskGlobalSetting";
 import { useStandardPullTaskCreate } from "./composables/useStandardPullTaskCreate";
-import type {
-  PullTaskListAction,
-  PullTaskRow,
-  PullTaskType
-} from "@/api/pull-task";
+import type { PullTaskListAction, PullTaskRow } from "@/api/pull-task";
 import Delete from "~icons/ep/delete";
 import Plus from "~icons/ep/plus";
 import RefreshRight from "~icons/ep/refresh-right";
@@ -35,8 +29,6 @@ import Search from "~icons/ri/search-line";
 defineOptions({
   name: "TaskPull"
 });
-const router = useRouter();
-const taskTypeDialogVisible = ref(false);
 type SupplementFlows = InstanceType<typeof PullTaskResourceSupplementFlows>;
 const resourceSupplementFlows = ref<SupplementFlows | null>(null);
 const lifecycleActions = {
@@ -116,6 +108,7 @@ const {
   creating: standardCreating,
   draft: standardDraft,
   form: standardCreateForm,
+  groupFolders: createGroupFolders,
   linksText: standardLinksText,
   loading: standardCreateLoading,
   movePendingFile: moveStandardPendingFile,
@@ -130,19 +123,6 @@ const {
 
 function updateGlobalSettingForm(value: typeof globalSettingForm): void {
   Object.assign(globalSettingForm, value);
-}
-
-function openTaskTypeDialog(): void {
-  taskTypeDialogVisible.value = true;
-}
-
-async function handleTaskTypeSelect(type: PullTaskType): Promise<void> {
-  taskTypeDialogVisible.value = false;
-  if (type === "STANDARD") {
-    await openStandardCreate();
-    return;
-  }
-  await router.push("/task/pull-task/create");
 }
 
 async function handleTableAction(
@@ -286,7 +266,7 @@ async function handleDetailTaskAction(
           v-auth="'tenant:pull_task:create'"
           type="primary"
           :icon="useRenderIcon(Plus)"
-          @click="openTaskTypeDialog"
+          @click="openStandardCreate"
         >
           新建拉群任务
         </el-button>
@@ -322,11 +302,6 @@ async function handleDetailTaskAction(
       </template>
     </PureTableBar>
 
-    <PullTaskTypeDialog
-      v-model="taskTypeDialogVisible"
-      @select="handleTaskTypeSelect"
-    />
-
     <PullTaskCreateDrawer
       v-model="standardCreateVisible"
       v-model:form="standardCreateForm"
@@ -335,6 +310,7 @@ async function handleDetailTaskAction(
       :clearing="standardClearing"
       :creating="standardCreating"
       :draft="standardDraft"
+      :group-folders="createGroupFolders"
       :loading="standardCreateLoading"
       :pending-files="standardPendingFiles"
       :planning="standardPlanning"

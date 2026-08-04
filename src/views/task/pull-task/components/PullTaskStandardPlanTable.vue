@@ -15,7 +15,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <el-card shadow="never" header="冻结执行顺序">
+  <el-card shadow="never" header="进群顺序展示">
     <el-alert
       v-if="draft.rows.length"
       :title="`已冻结 ${draft.rows.length} 个群，提交后按下列序号调度`"
@@ -41,11 +41,16 @@ const emit = defineEmits<{
       <el-table-column prop="sourceLinkLineNo" label="链接行" width="78" />
       <el-table-column
         prop="sourceFileName"
-        label="配对 TXT"
+        label="进群料子"
         min-width="150"
         show-overflow-tooltip
       />
       <el-table-column prop="validMemberCount" label="有效料子" width="88" />
+      <el-table-column label="状态" width="88">
+        <template #default>
+          <el-tag type="info" effect="plain">待执行</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="异常" width="94">
         <template #default="{ row }">
           {{ row.invalidLineCount }}/{{ row.duplicateLineCount }}

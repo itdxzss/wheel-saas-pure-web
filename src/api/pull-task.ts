@@ -822,7 +822,12 @@ export function planPullTaskStandardDraft(
   return armadaRequest<PullTaskStandardDraft>(
     "post",
     "/api/pull-tasks/standard/draft/plan",
-    { data }
+    { data, timeout: 45_000 },
+    {
+      beforeRequestCallback: config => {
+        delete config.headers["Content-Type"];
+      }
+    }
   );
 }
 
