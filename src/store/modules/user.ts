@@ -69,7 +69,7 @@ export const useUserStore = defineStore("pure-user", {
     SET_LOGINDAY(value: number) {
       this.loginDay = Number(value);
     },
-    /** 使用用户名、密码和一次性图片验证码登录。 */
+    /** 使用用户名和密码登录；图片验证码当前临时关闭。 */
     async loginByUsername(data: UserLoginRequest) {
       return new Promise<LoginActionResult>(resolve => {
         loginUser(data)

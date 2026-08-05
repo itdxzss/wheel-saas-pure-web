@@ -21,11 +21,12 @@ const loginRules = reactive<FormRules>({
       },
       trigger: "blur"
     }
-  ],
-  captchaCode: [
-    { required: true, message: "请输入图片验证码", trigger: "blur" },
-    { min: 4, max: 4, message: "验证码为4位", trigger: "blur" }
   ]
+  // 图片验证码暂时关闭；恢复时重新启用该规则，并同步恢复登录页与后端校验。
+  // captchaCode: [
+  //   { required: true, message: "请输入图片验证码", trigger: "blur" },
+  //   { min: 4, max: 4, message: "验证码为4位", trigger: "blur" }
+  // ]
 });
 
 export { loginRules };
