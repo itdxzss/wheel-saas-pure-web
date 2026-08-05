@@ -28,6 +28,21 @@ export interface GroupListRow {
   lastCheckAt?: number | null;
   lastHealthError?: string | null;
   createdAt?: number | null;
+  isHistorical?: boolean | null;
+  isPostControl?: boolean | null;
+  inviteUrl?: string | null;
+  adminPhones?: string[] | null;
+  availableAdmin?: boolean | null;
+  availableAdminCount?: number | null;
+  creatorPhone?: string | null;
+  creatorCountryIso2?: string | null;
+  creatorCountryName?: string | null;
+  creatorCountryFlag?: string | null;
+  creatorContinentCode?: string | null;
+  groupCreatedAt?: number | null;
+  metadataSyncStatus?: string | null;
+  metadataSyncedAt?: number | null;
+  metadataSyncError?: string | null;
 }
 
 export interface GroupListQuery {
@@ -40,6 +55,14 @@ export interface GroupListQuery {
   membershipState?: number | "";
   folderId?: number;
   withoutFolder?: boolean;
+  groupType?: "HISTORICAL" | "POST_CONTROL" | "BOTH";
+  availableAdmin?: boolean;
+  memberCountMin?: number;
+  memberCountMax?: number;
+  continentCode?: string;
+  countryIso2?: string;
+  ageDaysMin?: number;
+  ageDaysMax?: number;
 }
 
 export interface GroupMember {
@@ -99,6 +122,9 @@ export interface GroupDetail {
   membersAvailable: boolean;
   membersUnavailableReason: string | null;
   members: GroupMember[];
+  metadataSyncStatus: string | null;
+  metadataSyncedAt: number | null;
+  metadataSyncError: string | null;
 }
 
 interface BackendGroupDetail extends Omit<GroupDetail, "members"> {
@@ -125,6 +151,11 @@ export interface GroupMemberOpResult {
   results?: Array<{ jid: string; status: string; reason: string | null }>;
 }
 
+export interface GroupMetadataSyncAccepted {
+  accepted: boolean;
+  status: string;
+}
+
 function toListParams(query: GroupListQuery) {
   return {
     page: query.page,
@@ -135,7 +166,15 @@ function toListParams(query: GroupListQuery) {
     origin: query.origin || undefined,
     membershipState: query.membershipState || undefined,
     folderId: query.folderId,
-    withoutFolder: query.withoutFolder
+    withoutFolder: query.withoutFolder,
+    groupType: query.groupType,
+    availableAdmin: query.availableAdmin,
+    memberCountMin: query.memberCountMin,
+    memberCountMax: query.memberCountMax,
+    continentCode: query.continentCode,
+    countryIso2: query.countryIso2,
+    ageDaysMin: query.ageDaysMin,
+    ageDaysMax: query.ageDaysMax
   };
 }
 
@@ -208,6 +247,15 @@ export async function getGroupDetail(id: number): Promise<GroupDetail> {
     ...data,
     members: (data.members ?? []).map(toGroupMember)
   };
+}
+
+export function requestGroupMetadataSync(
+  id: number
+): Promise<GroupMetadataSyncAccepted> {
+  return armadaRequest<GroupMetadataSyncAccepted>(
+    "post",
+    `/api/group-links/${id}/metadata-sync`
+  );
 }
 
 export function updateGroupSubject(id: number, subject: string): Promise<void> {

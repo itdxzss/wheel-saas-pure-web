@@ -15,13 +15,18 @@ const tableSource = readFileSync(
   "utf8"
 );
 
-test("group list renders persisted sync protocol source mask", () => {
-  assert.match(apiSource, /syncProtocolMask\?: number/);
-  assert.match(constantsSource, /label: "同步协议", prop: "syncProtocolMask"/);
-  assert.match(tableSource, /hasSyncProtocol\(row\.syncProtocolMask, 1\)/);
-  assert.match(tableSource, /hasSyncProtocol\(row\.syncProtocolMask, 2\)/);
-  assert.match(tableSource, />\s*JSON号/);
-  assert.match(tableSource, />\s*六段号/);
+test("group list renders historical classification and metadata columns", () => {
+  assert.match(apiSource, /isHistorical\?: boolean/);
+  assert.match(apiSource, /isPostControl\?: boolean/);
+  assert.match(constantsSource, /label: "邀请链接", prop: "inviteUrl"/);
+  assert.match(constantsSource, /label: "创建信息", prop: "groupCreatedAt"/);
+  assert.match(tableSource, /row\.isHistorical/);
+  assert.match(tableSource, /row\.isPostControl/);
+  assert.match(tableSource, />\s*历史群/);
+  assert.match(tableSource, />\s*上控后群/);
+  assert.match(tableSource, /row\.adminPhones/);
+  assert.match(tableSource, /row\.availableAdmin/);
+  assert.match(tableSource, /formatGroupCreatedAt\(row\.groupCreatedAt\)/);
 });
 
 test("group list exposes group folder toolbar and name tag", () => {
@@ -30,5 +35,5 @@ test("group list exposes group folder toolbar and name tag", () => {
   assert.match(tableSource, /批量分组/);
   assert.match(tableSource, /emit\('manage-folders'\)/);
   assert.match(tableSource, /emit\('assign-folder'\)/);
-  assert.match(tableSource, /row\.folderName/);
+  assert.match(tableSource, /row\.folderName \|\| "未分组"/);
 });

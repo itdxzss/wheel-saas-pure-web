@@ -5,6 +5,7 @@ import {
   batchCheckIpProxies,
   checkIpProxy,
   importIpProxies,
+  listGroupCountryOptions,
   listIpCountryOptions,
   listTenantIpRegions,
   sampleCheckIpProxyImport
@@ -46,6 +47,39 @@ describe("resource IP API", () => {
         method: "get",
         url: "/api/admin/countries/options",
         opts: { params: { scope: "ip" } }
+      }
+    ]);
+  });
+
+  it("loads all real countries for group filtering", async () => {
+    const rows = [
+      {
+        value: "MIXED",
+        iso2: null,
+        nameZh: "混合（不限国家）",
+        phonePrefix: "",
+        flag: "🌐",
+        virtual: true
+      },
+      {
+        value: "IN",
+        iso2: "IN",
+        nameZh: "印度",
+        phonePrefix: "+91",
+        flag: "IN",
+        virtual: false
+      }
+    ];
+    resetArmadaMock({ rows });
+
+    const options = await listGroupCountryOptions();
+
+    assert.deepEqual(options, [{ ...rows[1], flag: "🇮🇳" }]);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "get",
+        url: "/api/admin/countries/options",
+        opts: { params: { scope: "marketing-export" } }
       }
     ]);
   });

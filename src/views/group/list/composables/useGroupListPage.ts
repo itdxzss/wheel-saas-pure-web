@@ -12,22 +12,30 @@ import {
   batchAssignGroupFolder,
   batchDeleteGroups,
   listGroups,
-  type GroupListQuery,
   type GroupListRow
 } from "@/api/group";
 import {
   listGroupFolderOptions,
   type GroupFolderOption
 } from "@/api/group-folder";
+import {
+  listGroupCountryOptions,
+  type IpCountryOption
+} from "@/api/resource-ip";
 import { apiErrorMessage } from "@/utils/api-error";
+import {
+  emptyHistoricalFilter,
+  toGroupListQuery,
+  type GroupType,
+  type HistoricalFilterValue
+} from "../group-list-filters";
 
 export interface GroupSearchForm {
   keyword: string;
   status: string;
-  sourceFileName: string;
-  origin: "" | number;
-  membershipState: "" | number;
   folderFilter: "" | "UNASSIGNED" | number;
+  groupType: GroupType;
+  availableAdmin: "" | "YES" | "NO";
 }
 
 export interface GroupListPageState {
@@ -41,7 +49,18 @@ export interface GroupListPageState {
   drawerOpen: Ref<boolean>;
   folderOptions: Ref<GroupFolderOption[]>;
   folderOptionsLoading: Ref<boolean>;
+  countryOptions: Ref<IpCountryOption[]>;
+  countryOptionsLoading: Ref<boolean>;
   groupFolderManageOpen: Ref<boolean>;
+  historicalApplied: HistoricalFilterValue;
+  historicalAppliedCount: ComputedRef<number>;
+  historicalDraft: HistoricalFilterValue;
+  historicalDrawerOpen: Ref<boolean>;
+  applyHistoricalFilter: () => void;
+  clearHistoricalDraft: () => void;
+  closeHistoricalFilter: () => void;
+  openHistoricalFilter: () => void;
+  queryHistoricalFilter: () => Promise<void>;
   loading: Ref<boolean>;
   onGroupFoldersChanged: (deletedFolderIds: number[]) => Promise<void>;
   onDrawerRefresh: () => Promise<void>;
@@ -66,41 +85,24 @@ function groupName(row: GroupListRow): string {
   return row.groupName || row.waSubject || `群组 ${row.id}`;
 }
 
-function buildQuery(
-  searchForm: GroupSearchForm,
-  page: number,
-  pageSize: number
-): GroupListQuery {
-  const keyword = searchForm.keyword.trim();
-  const sourceFileName = searchForm.sourceFileName.trim();
-  return {
-    page,
-    pageSize,
-    keyword: keyword || undefined,
-    status: searchForm.status || undefined,
-    sourceFileName: sourceFileName || undefined,
-    origin: searchForm.origin || undefined,
-    membershipState: searchForm.membershipState || undefined,
-    folderId:
-      typeof searchForm.folderFilter === "number"
-        ? searchForm.folderFilter
-        : undefined,
-    withoutFolder: searchForm.folderFilter === "UNASSIGNED" || undefined
-  };
-}
-
 export function useGroupListPage(): GroupListPageState {
   const router = useRouter();
   const searchForm = reactive<GroupSearchForm>({
     keyword: "",
     status: "",
-    sourceFileName: "",
-    origin: "",
-    membershipState: "",
-    folderFilter: ""
+    folderFilter: "",
+    groupType: "",
+    availableAdmin: ""
   });
+  const historicalApplied = reactive<HistoricalFilterValue>(
+    emptyHistoricalFilter()
+  );
+  const historicalDraft = reactive<HistoricalFilterValue>(
+    emptyHistoricalFilter()
+  );
   const rows = ref<GroupListRow[]>([]);
   const folderOptions = ref<GroupFolderOption[]>([]);
+  const countryOptions = ref<IpCountryOption[]>([]);
   const selectedRows = ref<GroupListRow[]>([]);
   const drawerGroup = ref<GroupListRow | null>(null);
   const drawerOpen = ref(false);
@@ -108,18 +110,31 @@ export function useGroupListPage(): GroupListPageState {
   const groupFolderManageOpen = ref(false);
   const assigningFolder = ref(false);
   const folderOptionsLoading = ref(false);
+  const countryOptionsLoading = ref(false);
+  const historicalDrawerOpen = ref(false);
   const loading = ref(false);
   const page = ref(1);
   const pageSize = ref(10);
   const total = ref(0);
   const selectedCount = computed(() => selectedRows.value.length);
+  const historicalAppliedCount = computed(
+    () =>
+      Object.values(historicalApplied).filter(
+        value => value !== "" && value !== undefined
+      ).length
+  );
 
   async function refreshGroups(): Promise<void> {
     selectedRows.value = [];
     loading.value = true;
     try {
       const response = await listGroups(
-        buildQuery(searchForm, page.value, pageSize.value)
+        toGroupListQuery(
+          searchForm,
+          historicalApplied,
+          page.value,
+          pageSize.value
+        )
       );
       rows.value = response.list ?? [];
       total.value = response.total ?? 0;
@@ -140,11 +155,51 @@ export function useGroupListPage(): GroupListPageState {
   function resetSearchForm(): void {
     searchForm.keyword = "";
     searchForm.status = "";
-    searchForm.sourceFileName = "";
-    searchForm.origin = "";
-    searchForm.membershipState = "";
     searchForm.folderFilter = "";
+    searchForm.groupType = "";
+    searchForm.availableAdmin = "";
+    Object.assign(historicalApplied, emptyHistoricalFilter());
+    Object.assign(historicalDraft, emptyHistoricalFilter());
     searchGroups();
+  }
+
+  function openHistoricalFilter(): void {
+    Object.assign(historicalDraft, historicalApplied);
+    historicalDrawerOpen.value = true;
+    if (countryOptions.value.length === 0) void loadCountryOptions();
+  }
+
+  function closeHistoricalFilter(): void {
+    historicalDrawerOpen.value = false;
+    Object.assign(historicalDraft, historicalApplied);
+  }
+
+  function clearHistoricalDraft(): void {
+    Object.assign(historicalDraft, emptyHistoricalFilter());
+  }
+
+  function applyHistoricalFilter(): void {
+    Object.assign(historicalApplied, historicalDraft);
+    historicalDrawerOpen.value = false;
+  }
+
+  async function queryHistoricalFilter(): Promise<void> {
+    Object.assign(historicalApplied, historicalDraft);
+    searchForm.groupType = "HISTORICAL";
+    page.value = 1;
+    await refreshGroups();
+    historicalDrawerOpen.value = false;
+  }
+
+  async function loadCountryOptions(): Promise<void> {
+    countryOptionsLoading.value = true;
+    try {
+      countryOptions.value = await listGroupCountryOptions();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "国家选项加载失败，请稍后重试"));
+    } finally {
+      countryOptionsLoading.value = false;
+    }
   }
 
   async function loadFolderOptions(showError = true): Promise<void> {
@@ -288,30 +343,42 @@ export function useGroupListPage(): GroupListPageState {
   onMounted(() => {
     void refreshGroups();
     void loadFolderOptions();
+    void loadCountryOptions();
   });
 
   return {
     assignFolderDialogOpen,
     assigningFolder,
     assignSelectedFolder,
+    applyHistoricalFilter,
+    clearHistoricalDraft,
+    closeHistoricalFilter,
     closeMemberDrawer,
     deleteGroup,
     deleteSelectedGroups,
     drawerGroup,
     drawerOpen,
+    countryOptions,
+    countryOptionsLoading,
     folderOptions,
     folderOptionsLoading,
     groupFolderManageOpen,
+    historicalApplied,
+    historicalAppliedCount,
+    historicalDraft,
+    historicalDrawerOpen,
     loading,
     onGroupFoldersChanged,
     onDrawerRefresh,
     onSelectionChange,
     openAssignFolder,
     openGroupFolderManage,
+    openHistoricalFilter,
     openJoinTask,
     openMemberDrawer,
     page,
     pageSize,
+    queryHistoricalFilter,
     refreshGroups,
     reloadFolderOptions,
     resetSearchForm,
