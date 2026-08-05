@@ -80,11 +80,11 @@ function statusType(
   <div
     v-loading="planning"
     class="resource-sections"
-    element-loading-text="正在校验并生成顺序"
+    element-loading-text="正在校验并生成执行计划"
   >
     <el-card shadow="never" header="群链接模式配置">
       <el-alert
-        title="本期使用自定义批量粘贴链接；每行一个群链接。"
+        title="群组分组和手工群链接任选其一；同时填写时合并使用。手工链接每行一个。"
         type="info"
         :closable="false"
         show-icon
@@ -105,7 +105,7 @@ function statusType(
       </div>
 
       <el-descriptions :column="3" border size="small" class="draft-stats">
-        <el-descriptions-item label="已冻结">
+        <el-descriptions-item label="已匹配">
           {{ draft.matchedCount }} 组
         </el-descriptions-item>
         <el-descriptions-item label="剩余链接">
@@ -153,7 +153,7 @@ function statusType(
       </template>
 
       <el-alert
-        title="可一次选择多个 TXT；A/a 标识会随料子解析。匹配和执行顺序由服务端随机冻结。"
+        title="可一次选择多个 TXT；A/a 标识会随料子解析。群与 TXT 的匹配及执行顺序由服务端自动生成。"
         type="info"
         :closable="false"
         show-icon

@@ -135,7 +135,7 @@ describe("standard normal-link pull task create state", () => {
     }
   });
 
-  it("only requires a station group when stations are used", async () => {
+  it("requires one group source and TXT material before creating", async () => {
     resetArmadaMock({ id: 1 });
     resetElementPlusMock();
     const empty = useStandardPullTaskCreate({
@@ -146,11 +146,23 @@ describe("standard normal-link pull task create state", () => {
     await empty.create();
 
     assert.equal(armadaCalls().length, 0);
-    assert.equal(
-      elementPlusCalls().at(-1)?.text,
-      "请先完成链接与 TXT 匹配预览"
-    );
+    assert.equal(elementPlusCalls().at(-1)?.text, "请选择群组分组或粘贴群链接");
 
+    resetArmadaMock({ id: 1 });
+    resetElementPlusMock();
+    const missingTxt = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+    missingTxt.form.taskName = "普通群链接";
+    missingTxt.form.groupFolderId = 21;
+
+    await missingTxt.create();
+
+    assert.equal(armadaCalls().length, 0);
+    assert.equal(elementPlusCalls().at(-1)?.text, "请上传 TXT 料子文件");
+  });
+
+  it("only requires a station group when stations are used", async () => {
     resetArmadaMock({ id: 1 });
     resetElementPlusMock();
     const missingGroups = validState();
@@ -219,12 +231,55 @@ describe("standard normal-link pull task create state", () => {
     );
   });
 
+  it("automatically plans combined folder and pasted-link sources before create", async () => {
+    resetArmadaMockQueue([
+      draft(),
+      {
+        id: 7,
+        taskName: "普通群链接",
+        status: "WAIT_START",
+        groupCount: 1,
+        expectedPullCount: 1
+      }
+    ]);
+    resetElementPlusMock();
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+    state.form.taskName = "普通群链接";
+    state.form.groupFolderId = 21;
+    state.form.managerGroupId = 11;
+    state.form.pullerGroupId = 12;
+    state.linksText.value = "https://chat.whatsapp.com/manual-code";
+    state.addFiles([
+      new File(["8613900000000"], "material.txt", { type: "text/plain" })
+    ]);
+
+    await state.create();
+
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      ["/api/pull-tasks/standard/draft/plan", "/api/pull-tasks/standard"]
+    );
+    const planPayload = (armadaCalls()[0].opts as { data: FormData }).data;
+    assert.equal(planPayload.get("groupFolderId"), "21");
+    assert.equal(
+      planPayload.get("linksText"),
+      "https://chat.whatsapp.com/manual-code"
+    );
+    assert.deepEqual(
+      planPayload.getAll("files").map(file => (file as File).name),
+      ["material.txt"]
+    );
+  });
+
   it("sends TXT files in the user-adjusted order", async () => {
     resetArmadaMock(draft({ rows: [], matchedCount: 0, ignoredFileCount: 2 }));
     resetElementPlusMock();
     const state = useStandardPullTaskCreate({
       onCreated: async () => undefined
     });
+    state.linksText.value = "https://chat.whatsapp.com/code";
     const first = new File(["8613900000000"], "first.txt");
     const second = new File(["8613900000001"], "second.txt");
     state.addFiles([first, second]);
@@ -470,8 +525,18 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(armadaCalls().length, 0);
   });
 
-  it("requires re-planning after the selected source folder changes", async () => {
-    resetArmadaMock(draft());
+  it("automatically refreshes the plan after the source folder changes", async () => {
+    resetArmadaMockQueue([
+      draft(),
+      draft(),
+      {
+        id: 7,
+        taskName: "普通群链接",
+        status: "WAIT_START",
+        groupCount: 1,
+        expectedPullCount: 1
+      }
+    ]);
     resetElementPlusMock();
     const state = useStandardPullTaskCreate({
       onCreated: async () => undefined
@@ -485,10 +550,13 @@ describe("standard normal-link pull task create state", () => {
     state.form.pullerGroupId = 12;
     await state.create();
 
-    assert.equal(armadaCalls().length, 1);
-    assert.equal(
-      elementPlusCalls().at(-1)?.text,
-      "资源内容已变化，请重新预检并冻结执行计划"
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      [
+        "/api/pull-tasks/standard/draft/plan",
+        "/api/pull-tasks/standard/draft/plan",
+        "/api/pull-tasks/standard"
+      ]
     );
   });
 
@@ -509,18 +577,26 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(armadaCalls()[0]?.url, "/api/pull-tasks/standard");
   });
 
-  it("requires another preview after the link text changes", async () => {
-    resetArmadaMock({ id: 7 });
+  it("automatically refreshes the plan after pasted links change", async () => {
+    resetArmadaMockQueue([
+      draft(),
+      {
+        id: 7,
+        taskName: "普通群链接",
+        status: "WAIT_START",
+        groupCount: 1,
+        expectedPullCount: 1
+      }
+    ]);
     resetElementPlusMock();
     const state = validState();
     state.linksText.value = "https://chat.whatsapp.com/new-code";
 
     await state.create();
 
-    assert.equal(armadaCalls().length, 0);
-    assert.equal(
-      elementPlusCalls().at(-1)?.text,
-      "资源内容已变化，请重新预检并冻结执行计划"
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      ["/api/pull-tasks/standard/draft/plan", "/api/pull-tasks/standard"]
     );
   });
 

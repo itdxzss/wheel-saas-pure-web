@@ -121,9 +121,13 @@ describe("normal-link create prototype layout", () => {
   });
 
   it("keeps link validation implicit instead of exposing a precheck action", () => {
-    assert.doesNotMatch(resourcesSource, /预检并随机匹配/);
+    assert.match(
+      resourcesSource,
+      /群组分组和手工群链接任选其一；同时填写时合并使用/
+    );
+    assert.doesNotMatch(allCreateSources, /预检|已冻结|冻结并创建任务/);
     assert.match(resourcesSource, /handlePasteSave/);
     assert.match(resourcesSource, /scheduleAutomaticPlan/);
-    assert.match(resourcesSource, /正在校验并生成顺序/);
+    assert.match(resourcesSource, /正在校验并生成执行计划/);
   });
 });

@@ -83,7 +83,7 @@ export interface StandardPullTaskCreateState {
   removePendingFile: (fileName: string) => void;
   setGroupAvatarFile: (file: File) => Promise<void>;
   clearGroupAvatar: () => Promise<void>;
-  plan: () => Promise<void>;
+  plan: () => Promise<boolean>;
   removeRow: (rowId: number) => Promise<void>;
   clear: () => Promise<void>;
   create: () => Promise<void>;
@@ -334,17 +334,28 @@ export function useStandardPullTaskCreate(
     );
   }
 
-  async function plan(): Promise<void> {
-    const groupFolderId = positiveId(form.groupFolderId)
-      ? form.groupFolderId
-      : null;
-    if (
-      groupFolderId === null &&
-      !linksText.value.trim() &&
-      pendingFiles.value.length === 0
-    ) {
-      ElMessage.warning("请选择群组分组、粘贴群链接或选择 TXT 文件");
-      return;
+  function currentGroupFolderId(): number | null {
+    return positiveId(form.groupFolderId) ? form.groupFolderId : null;
+  }
+
+  function hasGroupSource(): boolean {
+    return currentGroupFolderId() !== null || Boolean(linksText.value.trim());
+  }
+
+  function resourcePlanChanged(): boolean {
+    return (
+      linksText.value !== plannedLinksText ||
+      currentGroupFolderId() !== plannedGroupFolderId ||
+      pendingFiles.value.length !== plannedPendingNames.size ||
+      pendingFiles.value.some(file => !plannedPendingNames.has(file.name))
+    );
+  }
+
+  async function plan(): Promise<boolean> {
+    const groupFolderId = currentGroupFolderId();
+    if (!hasGroupSource()) {
+      ElMessage.warning("请选择群组分组或粘贴群链接");
+      return false;
     }
     planning.value = true;
     try {
@@ -359,9 +370,11 @@ export function useStandardPullTaskCreate(
       plannedPendingNames = new Set(pendingFiles.value.map(file => file.name));
       plannedGroupFolderId = groupFolderId;
       storePlannedLinks(plannedLinksText);
-      ElMessage.success("链接与 TXT 预检完成");
+      ElMessage.success("执行计划已生成");
+      return true;
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "链接与 TXT 预检失败"));
+      ElMessage.error(apiErrorMessage(error, "执行计划生成失败"));
+      return false;
     } finally {
       planning.value = false;
     }
@@ -417,17 +430,7 @@ export function useStandardPullTaskCreate(
       draft.value.version === null ||
       draft.value.rows.length === 0
     ) {
-      ElMessage.warning("请先完成链接与 TXT 匹配预览");
-      return null;
-    }
-    if (
-      linksText.value !== plannedLinksText ||
-      plannedGroupFolderId !==
-        (positiveId(form.groupFolderId) ? form.groupFolderId : null) ||
-      pendingFiles.value.length !== plannedPendingNames.size ||
-      pendingFiles.value.some(file => !plannedPendingNames.has(file.name))
-    ) {
-      ElMessage.warning("资源内容已变化，请重新预检并冻结执行计划");
+      ElMessage.warning("未生成可执行计划，请检查群来源和 TXT 料子");
       return null;
     }
     if (!positiveId(form.managerGroupId) || !positiveId(form.pullerGroupId)) {
@@ -448,7 +451,7 @@ export function useStandardPullTaskCreate(
       taskName: form.taskName.trim(),
       remark: form.remark.trim() || null,
       autoStart: form.autoStart ? 1 : 0,
-      groupFolderId: positiveId(form.groupFolderId) ? form.groupFolderId : null,
+      groupFolderId: currentGroupFolderId(),
       pullerSyncMode: form.pullerSyncMode,
       materialAdminTiming: form.materialAdminTiming,
       clearExistingMembers: form.clearExistingMembers,
@@ -496,7 +499,28 @@ export function useStandardPullTaskCreate(
     return uploadedAvatar.value.avatarFileKey;
   }
 
+  async function ensureExecutionPlan(): Promise<boolean> {
+    const hasExecutionRows = draft.value.rows.length > 0;
+    if (!hasExecutionRows && !hasGroupSource()) {
+      ElMessage.warning("请选择群组分组或粘贴群链接");
+      return false;
+    }
+    if (!hasExecutionRows && pendingFiles.value.length === 0) {
+      ElMessage.warning("请上传 TXT 料子文件");
+      return false;
+    }
+    if (!hasExecutionRows || resourcePlanChanged()) {
+      if (!(await plan())) return false;
+    }
+    if (draft.value.rows.length === 0) {
+      ElMessage.warning("未生成可执行计划，请检查群来源和 TXT 料子");
+      return false;
+    }
+    return true;
+  }
+
   async function create(): Promise<void> {
+    if (!(await ensureExecutionPlan())) return;
     if (!createPayload(uploadedAvatar.value?.avatarFileKey ?? null)) return;
     creating.value = true;
     try {

@@ -68,7 +68,7 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
           :disabled="loading || planning"
           @click="emit('create')"
         >
-          保存配置
+          创建任务
         </el-button>
       </header>
 
@@ -118,7 +118,7 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
           :disabled="loading || planning"
           @click="emit('create')"
         >
-          冻结并创建任务
+          创建任务
         </el-button>
       </footer>
     </div>
