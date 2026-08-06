@@ -27,8 +27,9 @@ export interface UserLoginResult {
 export interface UserLoginRequest {
   username: string;
   password: string;
-  captchaId: string;
-  captchaCode: string;
+  // 图片验证码暂时关闭；恢复时重新启用下列字段，并同步恢复登录页与后端校验。
+  // captchaId: string;
+  // captchaCode: string;
 }
 
 export interface PasswordChangeRequest {

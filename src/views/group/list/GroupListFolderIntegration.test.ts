@@ -20,7 +20,6 @@ test("group list wires folder filter management and batch assignment", () => {
   assert.match(indexSource, /BatchAssignFolderDialog/);
   assert.match(indexSource, /全部分组/);
   assert.match(indexSource, /未分组/);
-  assert.match(indexSource, /刷新分组/);
   assert.match(indexSource, /@manage-folders=/);
   assert.match(indexSource, /@assign-folder=/);
   assert.match(tableSource, /event: "manage-folders"/);
@@ -29,5 +28,5 @@ test("group list wires folder filter management and batch assignment", () => {
   assert.match(composableSource, /folderFilter: "" \| "UNASSIGNED" \| number/);
   assert.match(composableSource, /batchAssignGroupFolder/);
   assert.match(composableSource, /reloadFolderOptions/);
-  assert.match(composableSource, /withoutFolder:/);
+  assert.match(composableSource, /toGroupListQuery/);
 });

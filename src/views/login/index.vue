@@ -3,7 +3,7 @@ import Motion from "./utils/motion";
 import { useRouter } from "vue-router";
 import { message } from "@/utils/message";
 import { loginRules } from "./utils/rule";
-import { ref, reactive, toRaw, onMounted } from "vue";
+import { ref, reactive, toRaw } from "vue";
 import { debounce } from "@pureadmin/utils";
 import { useNav } from "@/layout/hooks/useNav";
 import { useEventListener } from "@vueuse/core";
@@ -14,7 +14,8 @@ import { initRouter, getTopMenu } from "@/router/utils";
 import { bg, avatar, illustration } from "./utils/static";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
-import { getCaptcha } from "@/api/auth";
+// 图片验证码暂时关闭；恢复时重新启用导入、状态、加载方法、表单和提交字段。
+// import { getCaptcha } from "@/api/auth";
 
 import dayIcon from "@/assets/svg/day.svg?component";
 import darkIcon from "@/assets/svg/dark.svg?component";
@@ -29,8 +30,8 @@ const router = useRouter();
 const loading = ref(false);
 const disabled = ref(false);
 const ruleFormRef = ref<FormInstance>();
-const captchaImage = ref("");
-const captchaLoading = ref(false);
+// const captchaImage = ref("");
+// const captchaLoading = ref(false);
 
 const { initStorage } = useLayout();
 initStorage();
@@ -41,26 +42,26 @@ const { title } = useNav();
 
 const ruleForm = reactive({
   username: "",
-  password: "",
-  captchaId: "",
-  captchaCode: ""
+  password: ""
+  // captchaId: "",
+  // captchaCode: ""
 });
 
-const refreshCaptcha = async () => {
-  captchaLoading.value = true;
-  try {
-    const captcha = await getCaptcha();
-    ruleForm.captchaId = captcha.captchaId;
-    ruleForm.captchaCode = "";
-    captchaImage.value = captcha.imageBase64;
-  } catch (error) {
-    message(error instanceof Error ? error.message : "验证码加载失败", {
-      type: "error"
-    });
-  } finally {
-    captchaLoading.value = false;
-  }
-};
+// const refreshCaptcha = async () => {
+//   captchaLoading.value = true;
+//   try {
+//     const captcha = await getCaptcha();
+//     ruleForm.captchaId = captcha.captchaId;
+//     ruleForm.captchaCode = "";
+//     captchaImage.value = captcha.imageBase64;
+//   } catch (error) {
+//     message(error instanceof Error ? error.message : "验证码加载失败", {
+//       type: "error"
+//     });
+//   } finally {
+//     captchaLoading.value = false;
+//   }
+// };
 
 const onLogin = async (formEl: FormInstance | undefined) => {
   if (!formEl) return;
@@ -70,9 +71,9 @@ const onLogin = async (formEl: FormInstance | undefined) => {
       useUserStoreHook()
         .loginByUsername({
           username: ruleForm.username,
-          password: ruleForm.password,
-          captchaId: ruleForm.captchaId,
-          captchaCode: ruleForm.captchaCode
+          password: ruleForm.password
+          // captchaId: ruleForm.captchaId,
+          // captchaCode: ruleForm.captchaCode
         })
         .then(res => {
           if (res.success) {
@@ -88,7 +89,7 @@ const onLogin = async (formEl: FormInstance | undefined) => {
             });
           } else {
             message(res.message ?? "登录失败", { type: "error" });
-            refreshCaptcha();
+            // refreshCaptcha();
           }
         })
         .finally(() => (loading.value = false));
@@ -111,7 +112,7 @@ useEventListener(document, "keydown", ({ code }) => {
     immediateDebounce(ruleFormRef.value);
 });
 
-onMounted(refreshCaptcha);
+// onMounted(refreshCaptcha);
 </script>
 
 <template>
@@ -167,6 +168,7 @@ onMounted(refreshCaptcha);
               </el-form-item>
             </Motion>
 
+            <!-- 图片验证码暂时关闭；恢复时重新启用此表单块及脚本中的配套逻辑。
             <Motion :delay="200">
               <el-form-item prop="captchaCode">
                 <div class="captcha-row">
@@ -195,6 +197,7 @@ onMounted(refreshCaptcha);
                 </div>
               </el-form-item>
             </Motion>
+            -->
 
             <Motion :delay="250">
               <el-button

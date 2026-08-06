@@ -9,6 +9,7 @@ import {
   kickGroupMembers,
   listGroups,
   promoteGroupMembers,
+  requestGroupMetadataSync,
   updateGroupRemark,
   updateGroupSetting,
   updateGroupSubject,
@@ -34,7 +35,15 @@ describe("group API", () => {
         origin: undefined,
         membershipState: undefined,
         folderId: 8,
-        withoutFolder: undefined
+        withoutFolder: undefined,
+        groupType: undefined,
+        availableAdmin: undefined,
+        memberCountMin: undefined,
+        memberCountMax: undefined,
+        continentCode: undefined,
+        countryIso2: undefined,
+        ageDaysMin: undefined,
+        ageDaysMax: undefined
       }
     });
     assert.deepEqual(armadaCalls()[1]?.opts, {
@@ -47,7 +56,15 @@ describe("group API", () => {
         origin: undefined,
         membershipState: undefined,
         folderId: undefined,
-        withoutFolder: true
+        withoutFolder: true,
+        groupType: undefined,
+        availableAdmin: undefined,
+        memberCountMin: undefined,
+        memberCountMax: undefined,
+        continentCode: undefined,
+        countryIso2: undefined,
+        ageDaysMin: undefined,
+        ageDaysMax: undefined
       }
     });
     assert.deepEqual(armadaCalls()[2], {
@@ -55,6 +72,37 @@ describe("group API", () => {
       url: "/api/group-links/batch-assign-folder",
       opts: { data: { ids: [101, 102], folderId: null } }
     });
+  });
+
+  it("submits combined history filters and requests metadata refresh", async () => {
+    resetArmadaMock({ accepted: true, status: "PENDING" });
+
+    await listGroups({
+      groupType: "HISTORICAL",
+      availableAdmin: false,
+      memberCountMin: 51,
+      continentCode: "ASIA",
+      countryIso2: "IN",
+      ageDaysMax: 365
+    });
+    const accepted = await requestGroupMetadataSync(42);
+
+    const listOptions = armadaCalls()[0]?.opts as {
+      params: Record<string, unknown>;
+    };
+    const params = listOptions.params;
+    assert.equal(params.groupType, "HISTORICAL");
+    assert.equal(params.availableAdmin, false);
+    assert.equal(params.memberCountMin, 51);
+    assert.equal(params.continentCode, "ASIA");
+    assert.equal(params.countryIso2, "IN");
+    assert.equal(params.ageDaysMax, 365);
+    assert.deepEqual(armadaCalls()[1], {
+      method: "post",
+      url: "/api/group-links/42/metadata-sync",
+      opts: undefined
+    });
+    assert.equal(accepted.status, "PENDING");
   });
 
   it("loads real-time group members from the armada members endpoint", async () => {

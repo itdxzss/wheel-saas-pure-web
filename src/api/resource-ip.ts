@@ -18,6 +18,7 @@ export interface IpCountryOption {
   phonePrefix: string;
   flag: string;
   virtual: boolean;
+  continentCode?: string | null;
 }
 
 interface IpCountryOptionsResponse {
@@ -186,15 +187,28 @@ export async function listTenantIpRegions(): Promise<string[]> {
   return armadaRequest<string[]>("get", "/api/ip-proxies/regions");
 }
 
-/** 国家主数据仍用于列表筛选,不用于导入弹窗。 */
-export async function listIpCountryOptions(): Promise<IpCountryOption[]> {
+async function listCountryOptions(
+  scope: "ip" | "marketing-export"
+): Promise<IpCountryOption[]> {
   const result = await armadaRequest<IpCountryOptionsResponse>(
     "get",
     "/api/admin/countries/options",
-    { params: { scope: "ip" } }
+    { params: { scope } }
   );
   return (result.rows ?? []).map(country => ({
     ...country,
     flag: normalizeCountryFlag(country.flag, country.iso2)
   }));
+}
+
+/** IP 页面只展示支持代理资源的国家以及混合选项。 */
+export function listIpCountryOptions(): Promise<IpCountryOption[]> {
+  return listCountryOptions("ip");
+}
+
+/** 群所属国家筛选使用全部真实国家,不受 IP 资源支持范围限制。 */
+export function listGroupCountryOptions(): Promise<IpCountryOption[]> {
+  return listCountryOptions("marketing-export").then(rows =>
+    rows.filter(row => !row.virtual && row.iso2)
+  );
 }

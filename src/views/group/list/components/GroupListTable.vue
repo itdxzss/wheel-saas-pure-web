@@ -63,8 +63,8 @@ function avatarText(row: GroupListRow): string {
   return displayGroupName(row).slice(0, 1) || "群";
 }
 
-function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
-  return ((mask ?? 0) & bit) !== 0;
+function formatGroupCreatedAt(value: number | null | undefined): string {
+  return value == null ? "-" : formatEpoch(value * 1000);
 }
 </script>
 
@@ -151,36 +151,77 @@ function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
               <div>
                 <strong>{{ displayGroupName(row as GroupListRow) }}</strong>
                 <small>{{ row.remark || "暂无备注" }}</small>
-                <el-tag
-                  v-if="row.folderName"
-                  class="group-folder-tag"
-                  size="small"
-                  type="info"
-                >
-                  {{ row.folderName }}
-                </el-tag>
+                <div class="group-type-tags">
+                  <el-tag v-if="row.isHistorical" size="small" type="warning">
+                    历史群
+                  </el-tag>
+                  <el-tag v-if="row.isPostControl" size="small" type="success">
+                    上控后群
+                  </el-tag>
+                </div>
               </div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[1].hide"
-          prop="url"
-          label="群链接"
-          min-width="260"
-          show-overflow-tooltip
-        />
+          label="群组分组"
+          min-width="130"
+        >
+          <template #default="{ row }">
+            {{ row.folderName || "未分组" }}
+          </template>
+        </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[2].hide"
-          prop="sourceFileName"
-          label="来源文件"
-          min-width="180"
-          show-overflow-tooltip
-        />
+          label="成员数"
+          width="100"
+        >
+          <template #default="{ row }">
+            {{ row.memberCount != null ? `${row.memberCount}人` : "-" }}
+          </template>
+        </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[3].hide"
-          label="群状态"
-          width="120"
+          label="邀请链接"
+          min-width="240"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            <el-link
+              v-if="row.inviteUrl"
+              :href="row.inviteUrl"
+              target="_blank"
+              type="primary"
+            >
+              {{ row.inviteUrl }}
+            </el-link>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[4].hide"
+          label="全部管理员号码"
+          min-width="190"
+        >
+          <template #default="{ row }">
+            <div v-if="row.adminPhones?.length" class="admin-phone-list">
+              <el-tag
+                v-for="phone in row.adminPhones"
+                :key="phone"
+                size="small"
+                type="info"
+              >
+                {{ phone }}
+              </el-tag>
+            </div>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[5].hide"
+          label="状态"
+          width="110"
         >
           <template #default="{ row }">
             <el-tag size="small" :type="statusType(row as GroupListRow)">
@@ -189,64 +230,47 @@ function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[4].hide"
-          label="群人数"
-          width="110"
-        >
-          <template #default="{ row }">
-            {{ row.memberCount != null ? `${row.memberCount}人` : "-" }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-if="!dynamicColumns[5].hide"
-          label="管理员"
-          min-width="170"
-          show-overflow-tooltip
-        >
-          <template #default="{ row }">{{ row.admin || "待分配" }}</template>
-        </el-table-column>
-        <el-table-column
           v-if="!dynamicColumns[6].hide"
-          label="同步协议"
-          width="150"
+          label="可用管理员"
+          width="120"
         >
           <template #default="{ row }">
-            <div v-if="row.syncProtocolMask" class="group-protocol-tags">
-              <el-tag
-                v-if="hasSyncProtocol(row.syncProtocolMask, 1)"
-                size="small"
-                type="success"
-              >
-                JSON号
-              </el-tag>
-              <el-tag
-                v-if="hasSyncProtocol(row.syncProtocolMask, 2)"
-                size="small"
-                type="warning"
-              >
-                六段号
-              </el-tag>
-            </div>
-            <span v-else>-</span>
+            <el-tag
+              size="small"
+              :type="row.availableAdmin ? 'success' : 'danger'"
+            >
+              {{
+                row.availableAdmin
+                  ? `可用 ${row.availableAdminCount || 0}`
+                  : "不可用"
+              }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[7].hide"
-          label="来源"
-          width="120"
+          label="创建信息"
+          min-width="210"
         >
           <template #default="{ row }">
-            <el-tag size="small" type="info">{{ row.source || "-" }}</el-tag>
+            <div class="creation-info">
+              <span
+                >{{ row.creatorCountryFlag || "" }}
+                {{ row.creatorCountryName || "-" }}</span
+              >
+              <span>创建者：{{ row.creatorPhone || "-" }}</span>
+              <span>建群：{{ formatGroupCreatedAt(row.groupCreatedAt) }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[8].hide"
-          label="时间"
-          width="180"
+          prop="groupJid"
+          label="群 JID"
+          min-width="210"
+          show-overflow-tooltip
         >
-          <template #default="{ row }">{{
-            formatEpoch(row.createdAt)
-          }}</template>
+          <template #default="{ row }">{{ row.groupJid || "-" }}</template>
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[9].hide"
@@ -308,16 +332,22 @@ function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
   color: var(--el-text-color-secondary);
 }
 
-.group-folder-tag {
-  margin-top: 6px;
-}
-
 .group-detail {
   margin: 8px 16px;
 }
 
-.group-protocol-tags {
+.group-type-tags,
+.admin-phone-list {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+  margin-top: 6px;
+}
+
+.creation-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
 }
 </style>

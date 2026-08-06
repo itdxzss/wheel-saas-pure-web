@@ -6,6 +6,7 @@ import {
   getGroupDetail,
   kickGroupMembers,
   promoteGroupMembers,
+  requestGroupMetadataSync,
   uploadGroupAvatar,
   type GroupDetail,
   type GroupListRow,
@@ -42,6 +43,7 @@ const detail = ref<GroupDetail | null>(null);
 const loading = ref(false);
 const savingProfile = ref(false);
 const uploadingAvatar = ref(false);
+const refreshingMetadata = ref(false);
 const memberSearch = ref("");
 const selectedJids = ref<string[]>([]);
 const avatarPreviewUrl = ref<string | null>(null);
@@ -114,7 +116,10 @@ function fallbackDetail(group: GroupListRow, reason: string): GroupDetail {
     },
     membersAvailable: false,
     membersUnavailableReason: reason,
-    members: []
+    members: [],
+    metadataSyncStatus: group.metadataSyncStatus ?? null,
+    metadataSyncedAt: group.metadataSyncedAt ?? null,
+    metadataSyncError: group.metadataSyncError ?? null
   };
 }
 
@@ -162,6 +167,22 @@ async function loadDetail(): Promise<void> {
     );
   } finally {
     loading.value = false;
+  }
+}
+
+async function refreshMetadata(): Promise<void> {
+  const group = props.group;
+  if (!group) return;
+  refreshingMetadata.value = true;
+  try {
+    await requestGroupMetadataSync(group.id);
+    ElMessage.success("已加入同步队列");
+    await loadDetail();
+    emit("refresh");
+  } catch (error) {
+    ElMessage.error(apiErrorMessage(error, "群信息刷新请求失败"));
+  } finally {
+    refreshingMetadata.value = false;
   }
 }
 
@@ -333,7 +354,31 @@ onBeforeUnmount(resetState);
             detail?.groupJid || group.groupJid || "groupJid 待回填"
           }}</span>
         </div>
+        <el-button
+          class="refresh-metadata-button"
+          :loading="refreshingMetadata"
+          @click="refreshMetadata"
+        >
+          刷新群信息
+        </el-button>
       </section>
+
+      <el-alert
+        v-if="detail"
+        class="metadata-status"
+        :type="detail.membersAvailable ? 'success' : 'warning'"
+        :closable="false"
+        show-icon
+      >
+        <template #title>
+          metadata：{{ detail.metadataSyncStatus || "未排队" }}；最后同步：{{
+            detail.metadataSyncedAt || "-"
+          }}
+        </template>
+        <template v-if="detail.metadataSyncError" #default>
+          {{ detail.metadataSyncError }}
+        </template>
+      </el-alert>
 
       <el-form class="drawer-section" :model="profileForm" label-position="top">
         <el-form-item label="群头像">
@@ -463,7 +508,9 @@ onBeforeUnmount(resetState);
           placeholder="请输入WS号，多个账号用空格/换行/逗号分隔"
         >
           <template #append>
-            <el-button :loading="loading" @click="loadDetail">刷新</el-button>
+            <el-button :loading="loading" @click="loadDetail"
+              >重新读取</el-button
+            >
           </template>
         </el-input>
         <el-alert
@@ -499,7 +546,11 @@ onBeforeUnmount(resetState);
             </template>
           </el-table-column>
           <template #empty>
-            <el-empty description="暂无成员数据" />
+            <el-empty
+              :description="
+                detail?.membersAvailable ? '暂无成员数据' : '详情待同步'
+              "
+            />
           </template>
         </el-table>
       </section>
@@ -549,6 +600,14 @@ onBeforeUnmount(resetState);
 
 .drawer-group-meta span {
   color: var(--el-text-color-secondary);
+}
+
+.refresh-metadata-button {
+  margin-left: auto;
+}
+
+.metadata-status {
+  margin-top: 4px;
 }
 
 .drawer-section {

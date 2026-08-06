@@ -1,4 +1,5 @@
 import { armadaRequest } from "@/api/armada";
+import { http } from "@/utils/http";
 import type { PageResponse } from "@/api/account";
 
 export type PullTaskStandardStatus =
@@ -185,6 +186,8 @@ export interface PullTaskSummary {
 export interface PullTaskDetail extends PullTaskRow {
   summary?: PullTaskSummary | null;
   config?: Record<string, unknown> | null;
+  standardSetting?: PullTaskStandardSetting | null;
+  groupSetting?: PullTaskStandardGroupSetting | null;
 }
 
 export interface PullTaskLinkGroup {
@@ -434,29 +437,59 @@ export interface PullTaskStandardDraft {
   ignoredFileCount: number;
 }
 
+export interface PullTaskStandardGroupSettingRequest {
+  settingTiming: "BEFORE_PULL" | "AFTER_PULL";
+  groupName: string | null;
+  useMaterialFileNameAsGroupName: boolean;
+  avatarFileKey: string | null;
+  groupDescription: string | null;
+  autoCloseMuteAfterTask: boolean;
+  autoCloseInviteAfterTask: boolean;
+  editPermission: "UNCHANGED" | "ALLOW" | "DISALLOW";
+  muteMode: "UNCHANGED" | "MUTE" | "UNMUTE";
+  linkPermission: "ALL" | "ADMIN_ONLY";
+  disappearingMessage:
+    | "UNCHANGED"
+    | "ONE_DAY"
+    | "SEVEN_DAYS"
+    | "NINETY_DAYS"
+    | "OFF";
+}
+
 export interface PullTaskStandardCreateRequest {
   draftTaskId: number;
   version: number;
   taskName: string;
   remark: string | null;
   autoStart: 0 | 1;
+  groupFolderId: number | null;
+  pullerSyncMode: "SINGLE" | "BATCH";
   materialAdminTiming: 1 | 2;
+  clearExistingMembers: boolean;
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
   pullerCountPerGroup: number;
   stationCountPerCall: number;
   concurrentGroupCount: number;
-  pullerRiskMinutes: number;
   managerGroupId: number;
   pullerGroupId: number;
-  stationGroupId: number;
+  stationGroupId: number | null;
+  managerFinishGroupId: number | null;
+  pullerFinishGroupId: number | null;
+  groupSetting: PullTaskStandardGroupSettingRequest;
+}
+
+export interface PullTaskStandardGroupAvatarUpload {
+  avatarFileKey: string;
+  originalFileName: string;
+  previewUrl: string;
 }
 
 export interface PullTaskStandardCreated {
   id: number;
   taskName: string;
-  status: "WAIT_START";
+  status: PullTaskStandardStatus;
   groupCount: number;
   expectedPullCount: number;
 }
@@ -568,6 +601,36 @@ export interface PullTaskStandardTaskSummary {
   remainingMemberCount: number;
 }
 
+export interface PullTaskStandardSetting {
+  autoStart: 0 | 1;
+  groupFolderId: number | null;
+  groupFolderName: string | null;
+  pullerSyncMode: "SINGLE" | "BATCH";
+  materialAdminTiming: 1 | 2;
+  clearExistingMembers: boolean;
+  pullCountMin: number;
+  pullCountMax: number;
+  pullIntervalSeconds: number;
+  pullerCountPerGroup: number;
+  stationCountPerCall: number;
+  concurrentGroupCount: number;
+  managerGroupId: number;
+  managerGroupName: string;
+  pullerGroupId: number;
+  pullerGroupName: string;
+  stationGroupId: number | null;
+  stationGroupName: string | null;
+  managerFinishGroupId: number | null;
+  managerFinishGroupName: string | null;
+  pullerFinishGroupId: number | null;
+  pullerFinishGroupName: string | null;
+}
+
+export interface PullTaskStandardGroupSetting
+  extends PullTaskStandardGroupSettingRequest {
+  avatarPreviewUrl: string | null;
+}
+
 export interface PullTaskStandardTaskDetail {
   taskId: number;
   taskName: string;
@@ -580,6 +643,8 @@ export interface PullTaskStandardTaskDetail {
   remark: string | null;
   executions: PullTaskStandardExecutionSummary[];
   summary: PullTaskStandardTaskSummary | null;
+  standardSetting: PullTaskStandardSetting;
+  groupSetting: PullTaskStandardGroupSetting;
 }
 
 export interface PullTaskStandardExecutionQuery {
@@ -813,10 +878,14 @@ export function getPullTaskStandardDraft(): Promise<PullTaskStandardDraft> {
 }
 
 export function planPullTaskStandardDraft(
+  groupFolderId: number | null,
   linksText: string,
   files: File[] = []
 ): Promise<PullTaskStandardDraft> {
   const data = new FormData();
+  if (groupFolderId !== null) {
+    data.append("groupFolderId", String(groupFolderId));
+  }
   data.append("linksText", linksText);
   files.forEach(file => data.append("files", file));
   return armadaRequest<PullTaskStandardDraft>(
@@ -829,6 +898,44 @@ export function planPullTaskStandardDraft(
       }
     }
   );
+}
+
+export function uploadPullTaskStandardGroupAvatar(
+  file: File
+): Promise<PullTaskStandardGroupAvatarUpload> {
+  const data = new FormData();
+  data.append("file", file);
+  return armadaRequest<PullTaskStandardGroupAvatarUpload>(
+    "post",
+    "/api/pull-tasks/standard/group-avatars",
+    { data },
+    {
+      beforeRequestCallback: config => {
+        delete config.headers["Content-Type"];
+      }
+    }
+  );
+}
+
+export function deletePullTaskStandardGroupAvatar(
+  avatarFileKey: string
+): Promise<void> {
+  return armadaRequest<void>(
+    "delete",
+    `/api/pull-tasks/standard/group-avatars/${encodeURIComponent(avatarFileKey)}`
+  );
+}
+
+export function getPullTaskStandardGroupAvatarContent(
+  avatarPreviewUrl: string
+): Promise<Blob> {
+  const prefix = "/api/pull-tasks/standard/group-avatars/";
+  if (!avatarPreviewUrl.startsWith(prefix)) {
+    return Promise.reject(new Error("群头像预览地址不合法"));
+  }
+  return http.request<Blob>("get", avatarPreviewUrl, {
+    responseType: "blob"
+  });
 }
 
 export function removePullTaskStandardDraftRow(

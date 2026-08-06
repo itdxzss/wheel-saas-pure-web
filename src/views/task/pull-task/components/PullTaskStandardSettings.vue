@@ -11,6 +11,12 @@ defineOptions({
 defineProps<{
   accountGroups: AccountGroupApiRow[];
   groupFolders: GroupFolderRow[];
+  groupAvatarFile: File | null;
+}>();
+
+const emit = defineEmits<{
+  (event: "avatar-change", file: File): void;
+  (event: "avatar-clear"): void;
 }>();
 
 const form = defineModel<StandardPullTaskCreateForm>("form", {
@@ -20,13 +26,6 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
 
 <template>
   <div class="settings-sections">
-    <el-alert
-      title="新增配置待后端接入，本次仅用于前端字段验收"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
-
     <el-card shadow="never" header="基本设置">
       <el-form :model="form" label-position="top" class="settings-form">
         <section class="setting-block mode-block">
@@ -263,7 +262,12 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
       </el-form>
     </el-card>
 
-    <PullTaskStandardGroupSettings v-model:form="form" />
+    <PullTaskStandardGroupSettings
+      v-model:form="form"
+      :group-avatar-file="groupAvatarFile"
+      @avatar-change="emit('avatar-change', $event)"
+      @avatar-clear="emit('avatar-clear')"
+    />
   </div>
 </template>
 

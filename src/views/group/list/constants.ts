@@ -7,6 +7,19 @@ export const groupStatusOptions = [
   { label: "不可用", value: "UNAVAILABLE" }
 ];
 
+export const groupTypeOptions = [
+  { label: "全部群组", value: "" },
+  { label: "历史群", value: "HISTORICAL" },
+  { label: "上控后群", value: "POST_CONTROL" },
+  { label: "同时属于两类", value: "BOTH" }
+];
+
+export const availableAdminOptions = [
+  { label: "全部", value: "" },
+  { label: "有可用管理员", value: "YES" },
+  { label: "无可用管理员", value: "NO" }
+];
+
 export const groupOriginOptions: Array<{ label: string; value: "" | number }> =
   [
     { label: "全部来源", value: "" },
@@ -37,15 +50,15 @@ export const timedMessageOptions: Array<{
 ];
 
 export const groupListColumns: TableColumnList = [
-  { label: "群名称", prop: "groupName", minWidth: 220 },
-  { label: "群链接", prop: "url", minWidth: 260 },
-  { label: "来源文件", prop: "sourceFileName", minWidth: 180 },
-  { label: "群状态", prop: "status", width: 120 },
-  { label: "群人数", prop: "memberCount", width: 110 },
-  { label: "管理员", prop: "admin", minWidth: 170 },
-  { label: "同步协议", prop: "syncProtocolMask", width: 150 },
-  { label: "来源", prop: "source", width: 120 },
-  { label: "时间", prop: "createdAt", width: 180 },
+  { label: "WS 群名称", prop: "groupName", minWidth: 230 },
+  { label: "群组分组", prop: "folderName", minWidth: 130 },
+  { label: "成员数", prop: "memberCount", width: 100 },
+  { label: "邀请链接", prop: "inviteUrl", minWidth: 240 },
+  { label: "全部管理员号码", prop: "adminPhones", minWidth: 190 },
+  { label: "状态", prop: "status", width: 110 },
+  { label: "可用管理员", prop: "availableAdmin", width: 120 },
+  { label: "创建信息", prop: "groupCreatedAt", minWidth: 210 },
+  { label: "群 JID", prop: "groupJid", minWidth: 210 },
   { label: "操作", prop: "operation", fixed: "right", width: 220 }
 ];
 import type { TimedMessageMode } from "@/api/group";

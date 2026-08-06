@@ -18,7 +18,7 @@ const emit = defineEmits<{
   <el-card shadow="never" header="进群顺序展示">
     <el-alert
       v-if="draft.rows.length"
-      :title="`已冻结 ${draft.rows.length} 个群，提交后按下列序号调度`"
+      :title="`已生成 ${draft.rows.length} 个群的执行计划，提交后按下列序号调度`"
       type="success"
       :closable="false"
       show-icon
