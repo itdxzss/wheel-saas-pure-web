@@ -125,7 +125,6 @@ function emptyForm(): StandardPullTaskCreateForm {
 function emptyDraft(): PullTaskStandardDraft {
   return {
     draftTaskId: null,
-    version: null,
     rows: [],
     linkLines: [],
     fileResults: [],
@@ -425,11 +424,7 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("请填写任务名称");
       return null;
     }
-    if (
-      draft.value.draftTaskId === null ||
-      draft.value.version === null ||
-      draft.value.rows.length === 0
-    ) {
+    if (draft.value.draftTaskId === null || draft.value.rows.length === 0) {
       ElMessage.warning("未生成可执行计划，请检查群来源和 TXT 料子");
       return null;
     }
@@ -447,7 +442,6 @@ export function useStandardPullTaskCreate(
     }
     return {
       draftTaskId: draft.value.draftTaskId,
-      version: draft.value.version,
       taskName: form.taskName.trim(),
       remark: form.remark.trim() || null,
       autoStart: form.autoStart ? 1 : 0,

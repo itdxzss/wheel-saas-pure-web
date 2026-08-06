@@ -17,7 +17,6 @@ function draft(
 ): PullTaskStandardDraft {
   return {
     draftTaskId: 7,
-    version: 3,
     rows: [
       {
         rowId: 19,
@@ -348,9 +347,9 @@ describe("standard normal-link pull task create state", () => {
       "remark",
       "stationCountPerCall",
       "stationGroupId",
-      "taskName",
-      "version"
+      "taskName"
     ]);
+    assert.equal("version" in payload, false);
     assert.equal(payload.managerGroupId, 11);
     assert.equal(payload.pullerGroupId, 12);
     assert.equal(payload.stationGroupId, 13);

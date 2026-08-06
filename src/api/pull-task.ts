@@ -428,7 +428,6 @@ export interface PullTaskStandardFileResult {
 
 export interface PullTaskStandardDraft {
   draftTaskId: number | null;
-  version: number | null;
   rows: PullTaskStandardExecutionRow[];
   linkLines: PullTaskStandardLinkLine[];
   fileResults: PullTaskStandardFileResult[];
@@ -458,7 +457,6 @@ export interface PullTaskStandardGroupSettingRequest {
 
 export interface PullTaskStandardCreateRequest {
   draftTaskId: number;
-  version: number;
   taskName: string;
   remark: string | null;
   autoStart: 0 | 1;
