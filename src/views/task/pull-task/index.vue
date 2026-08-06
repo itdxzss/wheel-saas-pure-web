@@ -9,7 +9,6 @@ import PullTaskCreateDrawer from "./components/PullTaskCreateDrawer.vue";
 import PullTaskGlobalSettingDialog from "./components/PullTaskGlobalSettingDialog.vue";
 import PullTaskResourceSupplementFlows from "./components/PullTaskResourceSupplementFlows.vue";
 import PullTaskTable from "./components/PullTaskTable.vue";
-import CommonGroupCreateFlow from "./components/common-group/CommonGroupCreateFlow.vue";
 import {
   pullTaskColumns,
   pullTaskGroupSourceOptions,
@@ -32,8 +31,6 @@ defineOptions({
 });
 type SupplementFlows = InstanceType<typeof PullTaskResourceSupplementFlows>;
 const resourceSupplementFlows = ref<SupplementFlows | null>(null);
-type CommonGroupCreateFlowInstance = InstanceType<typeof CommonGroupCreateFlow>;
-const commonGroupCreateFlow = ref<CommonGroupCreateFlowInstance | null>(null);
 const lifecycleActions = {
   START: "start",
   PAUSE: "pause",
@@ -278,13 +275,6 @@ async function handleDetailTaskAction(
           新建拉群任务
         </el-button>
         <el-button
-          v-perms="['tenant:normal_group:create', 'tenant:normal_group:view']"
-          :icon="useRenderIcon(Plus)"
-          @click="commonGroupCreateFlow?.open()"
-        >
-          新建普群
-        </el-button>
-        <el-button
           v-auth="'tenant:pull_task:delete'"
           type="danger"
           plain
@@ -339,8 +329,6 @@ async function handleDetailTaskAction(
       @remove-pending-file="removeStandardPendingFile"
       @remove-row="removeStandardRow"
     />
-
-    <CommonGroupCreateFlow ref="commonGroupCreateFlow" />
 
     <PullTaskGlobalSettingDialog
       v-model="globalSettingVisible"

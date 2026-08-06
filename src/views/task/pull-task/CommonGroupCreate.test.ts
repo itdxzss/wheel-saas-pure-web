@@ -28,16 +28,12 @@ const taskDrawerSource = source(
 const apiSource = source("../../../api/common-group-task.ts");
 
 describe("common group creation flow", () => {
-  it("places the common-group entry after the existing pull-task entry", () => {
-    assert.match(
-      indexSource,
-      /新建拉群任务[\s\S]*commonGroupCreateFlow\?\.open\(\)[\s\S]*新建普群/
-    );
-    assert.match(indexSource, /CommonGroupCreateFlow/);
-    assert.match(
-      indexSource,
-      /v-perms="\['tenant:normal_group:create', 'tenant:normal_group:view'\]"[\s\S]*新建普群/
-    );
+  it("keeps common-group creation out of the pull-task page", () => {
+    assert.match(indexSource, /@click="openStandardCreate"/);
+    assert.doesNotMatch(indexSource, /CommonGroupCreateFlow/);
+    assert.doesNotMatch(indexSource, /commonGroupCreateFlow/);
+    assert.doesNotMatch(indexSource, /新建普群/);
+    assert.doesNotMatch(indexSource, /tenant:normal_group:create/);
   });
 
   it("keeps the unconfirmed member and speed options disabled", () => {
