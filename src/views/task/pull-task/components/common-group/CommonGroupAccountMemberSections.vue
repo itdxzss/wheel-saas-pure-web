@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type {
   CommonGroupForm,
@@ -14,6 +15,13 @@ defineProps<{
 }>();
 
 const form = defineModel<CommonGroupForm>("form", { required: true });
+
+watch(
+  () => form.value.memberType,
+  memberType => {
+    if (memberType === "EMPTY") form.value.memberCount = 1;
+  }
+);
 </script>
 
 <template>
@@ -86,7 +94,7 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
         <template #label>
           群成员类型
           <CommonGroupHelp
-            content="控上号从账号分组选择成员；空群不添加初始成员。"
+            content="控上号按配置选择成员；空群固定选择 1 个成员，与建群人共同建群。"
           />
         </template>
         <el-radio-group v-model="form.memberType">
@@ -97,12 +105,12 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
         <div class="field-help">选择后自动切换下方成员配置字段。</div>
       </el-form-item>
 
-      <template v-if="form.memberType === 'CONTROLLED'">
+      <template v-if="form.memberType !== 'CUSTOM'">
         <div class="field-columns">
           <el-form-item required :error="errors.memberGroupId">
             <template #label>
               成员分组
-              <CommonGroupHelp content="作为每个群组控上成员来源的账号分组。" />
+              <CommonGroupHelp content="作为每个群组初始成员来源的账号分组。" />
             </template>
             <el-select
               v-model="form.memberGroupId"
@@ -117,7 +125,9 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
                 :value="group.id"
               />
             </el-select>
-            <div class="field-help">作为每个群组的控上成员来源分组。</div>
+            <div class="field-help">
+              空群模式也会从该分组选择 1 个真实成员。
+            </div>
           </el-form-item>
           <el-form-item required :error="errors.memberCount">
             <template #label>
@@ -129,24 +139,21 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
             <el-input-number
               v-model="form.memberCount"
               :min="1"
+              :disabled="form.memberType === 'EMPTY'"
               :step="1"
               step-strictly
               class="full-width"
             />
             <div class="field-help">
-              默认 1，表示每个群组计划加入的控上成员数。
+              {{
+                form.memberType === "EMPTY"
+                  ? "空群模式固定为 1。"
+                  : "每个群组计划加入的控上成员数。"
+              }}
             </div>
           </el-form-item>
         </div>
       </template>
-
-      <el-alert
-        v-else-if="form.memberType === 'EMPTY'"
-        title="将创建不包含初始成员的空群。"
-        type="info"
-        show-icon
-        :closable="false"
-      />
     </el-card>
   </div>
 </template>

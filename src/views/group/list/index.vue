@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import CommonGroupCreateFlow from "@/views/task/pull-task/components/common-group/CommonGroupCreateFlow.vue";
 import BatchAssignFolderDialog from "./components/BatchAssignFolderDialog.vue";
 import GroupFolderManageDialog from "./components/GroupFolderManageDialog.vue";
 import GroupListTable from "./components/GroupListTable.vue";
@@ -17,6 +19,9 @@ import RefreshRight from "~icons/ep/refresh-right";
 defineOptions({
   name: "GroupList"
 });
+
+type CommonGroupCreateFlowInstance = InstanceType<typeof CommonGroupCreateFlow>;
+const commonGroupCreateFlow = ref<CommonGroupCreateFlowInstance | null>(null);
 
 const {
   assignFolderDialogOpen,
@@ -177,6 +182,7 @@ function handleRowAction(row, action: string): void {
       :selected-count="selectedCount"
       :total="total"
       @assign-folder="openAssignFolder"
+      @create-normal-group="commonGroupCreateFlow?.open()"
       @delete-selected="deleteSelectedGroups"
       @manage-folders="openGroupFolderManage"
       @refresh="refreshGroups"
@@ -203,6 +209,8 @@ function handleRowAction(row, action: string): void {
       @refresh="onDrawerRefresh"
       @update:model-value="value => !value && closeMemberDrawer()"
     />
+
+    <CommonGroupCreateFlow ref="commonGroupCreateFlow" />
   </div>
 </template>
 

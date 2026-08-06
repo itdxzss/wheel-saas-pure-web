@@ -22,7 +22,10 @@ const configurationSource = source(
 );
 const formSource = source("./common-group/common-group-form.ts");
 const composableSource = source("./composables/useCommonGroupCreate.ts");
-const mockSource = source("../../../../mock/common-group-task.ts");
+const taskDrawerSource = source(
+  "./components/common-group/CommonGroupTaskDrawer.vue"
+);
+const apiSource = source("../../../api/common-group-task.ts");
 
 describe("common group creation flow", () => {
   it("places the common-group entry after the existing pull-task entry", () => {
@@ -31,7 +34,10 @@ describe("common group creation flow", () => {
       /新建拉群任务[\s\S]*commonGroupCreateFlow\?\.open\(\)[\s\S]*新建普群/
     );
     assert.match(indexSource, /CommonGroupCreateFlow/);
-    assert.match(indexSource, /tenant:pull_task:create/);
+    assert.match(
+      indexSource,
+      /v-perms="\['tenant:normal_group:create', 'tenant:normal_group:view'\]"[\s\S]*新建普群/
+    );
   });
 
   it("keeps the unconfirmed member and speed options disabled", () => {
@@ -43,7 +49,11 @@ describe("common group creation flow", () => {
   it("validates the required groups and numeric limits before confirmation", () => {
     assert.match(formSource, /请选择管理员分组/);
     assert.match(formSource, /请选择成员分组/);
-    assert.match(formSource, /建群数量必须为 1 至 20 的整数/);
+    assert.match(formSource, /建群数量必须为 1 至 1000 的整数/);
+    assert.match(formSource, /计划群成员快照不能超过 10000 条/);
+    assert.match(formSource, /成员数量必须为 1 至 1024 的整数/);
+    assert.match(formSource, /请输入群名称/);
+    assert.match(formSource, /生成后的群名称最多 128 个字符/);
     assert.match(formSource, /开始编号必须为大于等于 1 的整数/);
     assert.match(composableSource, /validateCommonGroupForm\(form\)/);
     assert.match(composableSource, /confirmVisible\.value = true/);
@@ -55,10 +65,62 @@ describe("common group creation flow", () => {
     assert.match(composableSource, /放弃未提交的修改/);
     assert.match(flowSource, /确认创建普群任务/);
     assert.match(flowSource, /@return-to-form="returnToForm"/);
+    assert.match(flowSource, /@refresh="refreshCurrentTask"/);
   });
 
-  it("keeps the temporary create route out of production", () => {
-    assert.match(mockSource, /process\.env\.NODE_ENV === "production"/);
-    assert.match(mockSource, /\/api\/common-group-tasks/);
+  it("uses real asynchronous task APIs and never simulates execution", () => {
+    assert.match(apiSource, /\/api\/normal-group-creation-tasks/);
+    assert.match(apiSource, /"Idempotency-Key"/);
+    assert.match(composableSource, /pendingSubmission/);
+    assert.match(composableSource, /ACTIVE_TASK_STORAGE_KEY/);
+    assert.match(composableSource, /PENDING_SUBMISSION_STORAGE_KEY/);
+    assert.match(composableSource, /PENDING_SUBMISSION_STORAGE_VERSION/);
+    assert.match(composableSource, /storedSubmissionIdentity/);
+    assert.match(composableSource, /storeSubmissionIdentity/);
+    assert.match(composableSource, /isCommonGroupTaskCreateRequest/);
+    assert.match(composableSource, /hasExactKeys/);
+    assert.match(
+      composableSource,
+      /removeItem\(PENDING_SUBMISSION_STORAGE_KEY\)/
+    );
+    assert.match(composableSource, /payload: parsed\.payload/);
+    assert.match(
+      composableSource,
+      /storedSubmissionIdentity\(\)[\s\S]*recoverStoredSubmission/
+    );
+    assert.match(
+      composableSource,
+      /recoverStoredSubmission[\s\S]*createCommonGroupTask\([\s\S]*submission\.payload,[\s\S]*submission\.idempotencyKey/
+    );
+    assert.match(
+      composableSource,
+      /enterTaskResult[\s\S]*storeTaskId\(summary\.id\);[\s\S]*if \(disposed\) return;/
+    );
+    assert.match(composableSource, /sessionStorage/);
+    assert.match(composableSource, /taskGeneration/);
+    assert.match(composableSource, /taskRequestSequence/);
+    assert.match(composableSource, /requestSequence !== taskRequestSequence/);
+    assert.match(composableSource, /disposed/);
+    assert.match(composableSource, /onBeforeUnmount\(\(\) =>/);
+    assert.match(composableSource, /activeTaskId !== taskId/);
+    assert.match(composableSource, /retryable: row\.status === "FAILED"/);
+    assert.match(
+      composableSource,
+      /stopPolling\(\);[\s\S]*activateTask\(taskId\)[\s\S]*retryCommonGroupTaskItem/
+    );
+    assert.match(composableSource, /getCommonGroupTask/);
+    assert.match(composableSource, /POLL_INTERVAL_MS/);
+    assert.doesNotMatch(composableSource, /startMockExecution|模拟执行/);
+    assert.match(taskDrawerSource, /v-perms="\['tenant:normal_group:retry'\]"/);
+    assert.doesNotMatch(taskDrawerSource, /v-auth=/);
+  });
+
+  it("maps the five confirmed settings and keeps invite-link settings out", () => {
+    assert.match(formSource, /sendMessagesAllowed/);
+    assert.match(formSource, /editGroupSettingsAllowed/);
+    assert.match(formSource, /addMembersAllowed/);
+    assert.match(formSource, /joinApprovalEnabled/);
+    assert.match(formSource, /ephemeralDurationSeconds/);
+    assert.doesNotMatch(formSource, /linkPermission/);
   });
 });

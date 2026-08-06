@@ -31,4 +31,10 @@ test("group list exposes group folder toolbar and name tag", () => {
   assert.match(tableSource, /emit\('manage-folders'\)/);
   assert.match(tableSource, /emit\('assign-folder'\)/);
   assert.match(tableSource, /row\.folderName/);
+  assert.match(tableSource, /新建普群/);
+  assert.match(tableSource, /emit\('create-normal-group'\)/);
+  assert.match(
+    tableSource,
+    /v-auth="\['tenant:normal_group:create', 'tenant:normal_group:view'\]"/
+  );
 });

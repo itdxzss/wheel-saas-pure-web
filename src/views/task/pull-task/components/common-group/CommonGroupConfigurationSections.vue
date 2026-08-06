@@ -22,7 +22,7 @@ const previewNames = computed(() => commonGroupNamePreview(form.value));
 const previewFolderName = computed(
   () =>
     props.groupFolders.find(folder => folder.id === form.value.groupFolderId)
-      ?.name ?? "默认分组（自动）"
+      ?.name ?? "未分组"
 );
 </script>
 
@@ -56,13 +56,13 @@ const previewFolderName = computed(
         <el-form-item>
           <template #label>
             群组分组
-            <CommonGroupHelp content="未选择时，成功群组进入系统默认分组。" />
+            <CommonGroupHelp content="未选择时，成功群组进入未分组。" />
           </template>
           <el-select
             v-model="form.groupFolderId"
             clearable
             filterable
-            placeholder="不选择则使用系统默认分组"
+            placeholder="不选择则进入未分组"
             class="full-width"
           >
             <el-option
@@ -72,40 +72,40 @@ const previewFolderName = computed(
               :value="folder.id"
             />
           </el-select>
-          <div class="field-help">未选择时，成功群组进入系统默认分组。</div>
+          <div class="field-help">未选择时，成功群组进入“未分组”。</div>
         </el-form-item>
         <el-form-item :error="errors.groupName">
           <template #label>
             群名称
             <CommonGroupHelp
-              content="未填写时由系统生成；填写后会在末尾追加连续编号。"
+              content="群名称必填；可使用 {no} 作为连续编号占位符。"
             />
           </template>
           <el-input
             v-model="form.groupName"
             clearable
-            maxlength="60"
+            maxlength="128"
             show-word-limit
-            placeholder="选填，例如：海外项目群"
+            placeholder="必填，例如：海外项目群-{no}"
           />
-          <div class="field-help">选填；填写后会在群名称末尾追加连续编号。</div>
+          <div class="field-help">必填；可使用 {no} 占位符生成连续编号。</div>
         </el-form-item>
         <el-form-item required :error="errors.groupCount">
           <template #label>
             建群数量
             <CommonGroupHelp
-              content="本次任务拆分的群组执行项数量，可设置 1 至 20。"
+              content="本次任务拆分的群组执行项数量，可设置 1 至 1000；总成员快照不超过 10000 条。"
             />
           </template>
           <el-input-number
             v-model="form.groupCount"
             :min="1"
-            :max="20"
+            :max="1000"
             :step="1"
             step-strictly
             class="full-width"
           />
-          <div class="field-help">默认 1，本次最多创建 20 个群组。</div>
+          <div class="field-help">默认 1，本次最多创建 1000 个群组。</div>
         </el-form-item>
         <el-form-item required :error="errors.startIndex">
           <template #label>

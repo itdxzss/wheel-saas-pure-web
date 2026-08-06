@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type {
-  CommonGroupMockTask,
+  CommonGroupTask,
   CommonGroupTaskItem
 } from "../../composables/useCommonGroupCreate";
 
@@ -9,10 +9,11 @@ defineOptions({ name: "CommonGroupTaskDrawer" });
 
 const props = defineProps<{
   progress: number;
-  task: CommonGroupMockTask | null;
+  task: CommonGroupTask | null;
 }>();
 
 const emit = defineEmits<{
+  (event: "refresh"): void;
   (event: "return-to-form"): void;
   (event: "retry", item: CommonGroupTaskItem): void;
 }>();
@@ -31,6 +32,7 @@ const statusText = computed(() => {
 
 const statusType = (status: CommonGroupTaskItem["status"]) => {
   if (status === "SUCCESS") return "success";
+  if (status === "PARTIAL" || status === "RESULT_UNKNOWN") return "warning";
   if (status === "FAILED") return "danger";
   if (status === "PROCESSING") return "primary";
   return "info";
@@ -41,6 +43,8 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
     PENDING: "等待执行",
     PROCESSING: "执行中",
     SUCCESS: "成功",
+    PARTIAL: "部分完成",
+    RESULT_UNKNOWN: "结果未知",
     FAILED: "失败"
   })[status];
 </script>
@@ -83,7 +87,8 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
         <el-table-column label="操作" width="90">
           <template #default="{ row }">
             <el-button
-              v-if="row.status === 'FAILED'"
+              v-if="row.retryable"
+              v-perms="['tenant:normal_group:retry']"
               link
               type="primary"
               @click="emit('retry', row)"
@@ -96,6 +101,7 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
     </template>
 
     <template #footer>
+      <el-button @click="emit('refresh')">刷新</el-button>
       <el-button @click="emit('return-to-form')">返回表单</el-button>
       <el-button type="primary" @click="visible = false">完成</el-button>
     </template>

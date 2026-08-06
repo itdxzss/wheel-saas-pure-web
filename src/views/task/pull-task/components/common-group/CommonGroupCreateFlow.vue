@@ -20,6 +20,7 @@ const {
   loading,
   open,
   requestClose,
+  refreshCurrentTask,
   reset,
   resultVisible,
   returnToForm,
@@ -116,10 +117,12 @@ defineExpose({ open });
         <template v-if="form.memberType === 'CONTROLLED'">
           {{ selectedMemberGroup?.name || "-" }}，每群 {{ form.memberCount }} 人
         </template>
-        <template v-else>空群</template>
+        <template v-else>
+          空群（{{ selectedMemberGroup?.name || "-" }}，固定 1 人）
+        </template>
       </el-descriptions-item>
       <el-descriptions-item label="群组分组">
-        {{ selectedFolder?.name || "系统默认分组" }}
+        {{ selectedFolder?.name || "未分组" }}
       </el-descriptions-item>
       <el-descriptions-item label="建群数量">
         {{ form.groupCount }} 个（编号从 {{ form.startIndex }} 开始）
@@ -139,6 +142,7 @@ defineExpose({ open });
     v-model="resultVisible"
     :progress="taskProgress"
     :task="task"
+    @refresh="refreshCurrentTask"
     @return-to-form="returnToForm"
     @retry="retryItem"
   />

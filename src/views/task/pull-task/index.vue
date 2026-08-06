@@ -274,7 +274,7 @@ async function handleDetailTaskAction(
           新建拉群任务
         </el-button>
         <el-button
-          v-auth="'tenant:pull_task:create'"
+          v-perms="['tenant:normal_group:create', 'tenant:normal_group:view']"
           :icon="useRenderIcon(Plus)"
           @click="commonGroupCreateFlow?.open()"
         >

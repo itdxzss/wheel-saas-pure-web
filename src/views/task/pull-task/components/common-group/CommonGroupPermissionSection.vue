@@ -54,16 +54,13 @@ const form = defineModel<CommonGroupForm>("form", { required: true });
         </el-select>
         <div class="field-help">设置群消息自动消失时间。</div>
       </el-form-item>
-      <el-form-item>
-        <template #label>
-          群链接权限
-          <CommonGroupHelp content="控制普通成员是否可以获取群邀请链接。" />
-        </template>
-        <el-radio-group v-model="form.linkPermission">
-          <el-radio value="ALL">所有人可获取</el-radio>
-          <el-radio value="ADMIN_ONLY">仅管理员可获取</el-radio>
+      <el-form-item label="添加成员权限">
+        <el-radio-group v-model="form.addMembersPermission">
+          <el-radio-button value="OPEN">允许</el-radio-button>
+          <el-radio-button value="CLOSED">禁止</el-radio-button>
+          <el-radio-button value="DEFAULT">默认</el-radio-button>
         </el-radio-group>
-        <div class="field-help">控制普通成员是否可以获取群邀请链接。</div>
+        <div class="field-help">控制普通成员是否可以直接添加新成员。</div>
       </el-form-item>
     </div>
   </el-card>

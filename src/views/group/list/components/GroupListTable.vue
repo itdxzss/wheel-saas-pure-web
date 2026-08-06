@@ -25,6 +25,7 @@ const emit = defineEmits<{
   (event: "assign-folder"): void;
   (event: "delete-selected"): void;
   (event: "manage-folders"): void;
+  (event: "create-normal-group"): void;
   (event: "refresh"): void;
   (event: "row-action", row: GroupListRow, action: string): void;
   (event: "selection-change", rows: GroupListRow[]): void;
@@ -70,6 +71,13 @@ function hasSyncProtocol(mask: number | null | undefined, bit: 1 | 2): boolean {
 <template>
   <PureTableBar title="群组列表" :columns="columns" @refresh="emit('refresh')">
     <template #buttons>
+      <el-button
+        v-auth="['tenant:normal_group:create', 'tenant:normal_group:view']"
+        type="primary"
+        @click="emit('create-normal-group')"
+      >
+        新建普群
+      </el-button>
       <el-button @click="emit('manage-folders')">管理群组分组</el-button>
       <el-button
         type="primary"
