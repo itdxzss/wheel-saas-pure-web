@@ -19,6 +19,7 @@ const {
   groupFolders,
   loading,
   open,
+  pollingError,
   requestClose,
   refreshCurrentTask,
   reset,
@@ -140,6 +141,7 @@ defineExpose({ open });
 
   <CommonGroupTaskDrawer
     v-model="resultVisible"
+    :polling-error="pollingError"
     :progress="taskProgress"
     :task="task"
     @refresh="refreshCurrentTask"

@@ -8,6 +8,7 @@ import type {
 defineOptions({ name: "CommonGroupTaskDrawer" });
 
 const props = defineProps<{
+  pollingError: string;
   progress: number;
   task: CommonGroupTask | null;
 }>();
@@ -52,6 +53,15 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
 <template>
   <el-drawer v-model="visible" title="普群任务详情" size="720px">
     <template v-if="task">
+      <el-alert
+        v-if="pollingError"
+        :title="pollingError"
+        type="error"
+        show-icon
+        :closable="false"
+        class="polling-alert"
+      />
+
       <el-descriptions :column="2" border>
         <el-descriptions-item label="任务 ID">
           {{ task.taskId }}
@@ -109,6 +119,10 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
 </template>
 
 <style scoped>
+.polling-alert {
+  margin-bottom: 16px;
+}
+
 .progress-block {
   display: grid;
   grid-template-columns: 80px 1fr;

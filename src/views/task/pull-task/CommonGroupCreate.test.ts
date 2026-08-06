@@ -111,6 +111,19 @@ describe("common group creation flow", () => {
     assert.doesNotMatch(taskDrawerSource, /v-auth=/);
   });
 
+  it("stops stalled task polling and leaves an actionable error in the drawer", () => {
+    assert.match(composableSource, /MAX_UNCHANGED_POLL_ATTEMPTS\s*=\s*120/);
+    assert.match(composableSource, /MAX_CONSECUTIVE_POLL_ERRORS\s*=\s*3/);
+    assert.match(composableSource, /taskProgressSignature/);
+    assert.match(composableSource, /unchangedPollAttempts/);
+    assert.match(composableSource, /consecutivePollErrors/);
+    assert.match(composableSource, /连续 5 分钟无进展/);
+    assert.match(composableSource, /连续 3 次读取失败/);
+    assert.match(flowSource, /:polling-error="pollingError"/);
+    assert.match(taskDrawerSource, /v-if="pollingError"/);
+    assert.match(taskDrawerSource, /type="error"/);
+  });
+
   it("maps the five confirmed settings and keeps invite-link settings out", () => {
     assert.match(formSource, /sendMessagesAllowed/);
     assert.match(formSource, /editGroupSettingsAllowed/);

@@ -31,7 +31,8 @@ import {
 } from "../common-group/common-group-form";
 
 const POLL_INTERVAL_MS = 2500;
-const MAX_POLL_ATTEMPTS = 2400;
+const MAX_UNCHANGED_POLL_ATTEMPTS = 120;
+const MAX_CONSECUTIVE_POLL_ERRORS = 3;
 const ACTIVE_TASK_STORAGE_KEY = "armada:normal-group-creation:active-task-id";
 const PENDING_SUBMISSION_STORAGE_KEY =
   "armada:normal-group-creation:pending-submission";
@@ -176,6 +177,7 @@ export interface CommonGroupCreateState {
   groupFolders: Ref<GroupFolderRow[]>;
   loading: Ref<boolean>;
   open: () => Promise<void>;
+  pollingError: Ref<string>;
   requestClose: (done: () => void) => Promise<void>;
   refreshCurrentTask: () => Promise<void>;
   reset: () => void;
@@ -199,9 +201,12 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   const accountGroups = ref<AccountGroupApiRow[]>([]);
   const groupFolders = ref<GroupFolderRow[]>([]);
   const task = ref<CommonGroupTask | null>(null);
+  const pollingError = ref("");
   let cleanSnapshot = JSON.stringify(form);
   let pollTimer: number | undefined;
-  let pollAttempts = 0;
+  let unchangedPollAttempts = 0;
+  let consecutivePollErrors = 0;
+  let lastTaskProgressSignature: string | null = null;
   let activeTaskId: number | null = null;
   let taskGeneration = 0;
   let taskRequestSequence = 0;
@@ -384,7 +389,6 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
       const generation = activateTask(activeTaskId);
       visible.value = false;
       resultVisible.value = true;
-      pollAttempts = 0;
       try {
         await refreshTask(activeTaskId, generation);
         schedulePolling(activeTaskId, generation);
@@ -438,6 +442,52 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   function stopPolling(): void {
     if (pollTimer) clearTimeout(pollTimer);
     pollTimer = undefined;
+  }
+
+  function resetPollingState(): void {
+    unchangedPollAttempts = 0;
+    consecutivePollErrors = 0;
+    lastTaskProgressSignature = null;
+    pollingError.value = "";
+  }
+
+  function taskProgressSignature(detail: CommonGroupTaskDetailResult): string {
+    return JSON.stringify({
+      status: detail.task.status,
+      successCount: detail.task.successCount,
+      failedCount: detail.task.failedCount,
+      updatedAt: detail.task.updatedAt,
+      items: detail.items.map(item => ({
+        id: item.id,
+        status: item.status,
+        currentStep: item.currentStep,
+        settingsStatus: item.settingsStatus,
+        creatorLeaveStatus: item.creatorLeaveStatus,
+        groupJid: item.groupJid,
+        lastErrorCode: item.lastErrorCode,
+        updatedAt: item.updatedAt
+      }))
+    });
+  }
+
+  function recordTaskProgress(detail: CommonGroupTaskDetailResult): void {
+    const signature = taskProgressSignature(detail);
+    if (
+      lastTaskProgressSignature === null ||
+      lastTaskProgressSignature !== signature
+    ) {
+      lastTaskProgressSignature = signature;
+      unchangedPollAttempts = 0;
+    } else {
+      unchangedPollAttempts += 1;
+    }
+    consecutivePollErrors = 0;
+  }
+
+  function stopPollingWithError(message: string): void {
+    stopPolling();
+    pollingError.value = message;
+    ElMessage.error(message);
   }
 
   function itemStatus(
@@ -502,6 +552,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     activeTaskId = taskId;
     taskGeneration += 1;
     taskRequestSequence += 1;
+    resetPollingState();
     return taskGeneration;
   }
 
@@ -518,6 +569,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
       activeTaskId !== taskId
     )
       return false;
+    recordTaskProgress(detail);
     applyTaskDetail(detail);
     return true;
   }
@@ -527,9 +579,9 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
       return;
     stopPolling();
     if (!resultVisible.value || task.value?.status !== "PROCESSING") return;
-    if (pollAttempts >= MAX_POLL_ATTEMPTS) {
-      ElMessage.warning(
-        "任务执行时间较长，已停止自动刷新，请点击刷新查看最新结果"
+    if (unchangedPollAttempts >= MAX_UNCHANGED_POLL_ATTEMPTS) {
+      stopPollingWithError(
+        "任务连续 5 分钟无进展，已停止自动刷新。请点击刷新重试，或返回表单新建任务。"
       );
       return;
     }
@@ -538,12 +590,22 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
         return;
       if (!resultVisible.value) return stopPolling();
       if (document.hidden) return schedulePolling(taskId, generation);
-      pollAttempts += 1;
       try {
         await refreshTask(taskId, generation);
-      } catch (error) {
-        if (disposed) return;
-        ElMessage.error(apiErrorMessage(error, "任务进度刷新失败"));
+      } catch {
+        if (
+          disposed ||
+          generation !== taskGeneration ||
+          activeTaskId !== taskId
+        )
+          return;
+        consecutivePollErrors += 1;
+        if (consecutivePollErrors >= MAX_CONSECUTIVE_POLL_ERRORS) {
+          stopPollingWithError(
+            "任务进度连续 3 次读取失败，已停止自动刷新。请检查网络后点击刷新重试。"
+          );
+          return;
+        }
       }
       schedulePolling(taskId, generation);
     }, POLL_INTERVAL_MS);
@@ -594,7 +656,6 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
       );
     }
     if (disposed) return;
-    pollAttempts = 0;
     schedulePolling(summary.id, generation);
     ElMessage.success(successMessage);
   }
@@ -624,9 +685,9 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     }
     const generation =
       activeTaskId === taskId ? taskGeneration : activateTask(taskId);
+    resetPollingState();
     try {
       await refreshTask(taskId, generation);
-      pollAttempts = 0;
       schedulePolling(taskId, generation);
     } catch (error) {
       if (disposed) return;
@@ -651,7 +712,6 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     }
     try {
       if (!(await refreshTask(taskId, generation))) return;
-      pollAttempts = 0;
       schedulePolling(taskId, generation);
     } catch (error) {
       if (disposed) return;
@@ -690,6 +750,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     groupFolders,
     loading,
     open,
+    pollingError,
     requestClose,
     refreshCurrentTask,
     reset,
