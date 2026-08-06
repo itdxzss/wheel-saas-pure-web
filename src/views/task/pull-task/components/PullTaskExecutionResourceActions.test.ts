@@ -16,6 +16,7 @@ describe("normal-link single execution actions", () => {
     assert.match(source, /查看明细/);
     assert.match(source, /manualPaused/);
     assert.match(source, /waitResourceType === 1/);
+    assert.match(source, /props\.row\.stage !== 3/);
     assert.match(source, /waitResourceType === 2/);
     assert.match(source, /waitResourceType === 3/);
     assert.doesNotMatch(source, /reasonCode ===/);

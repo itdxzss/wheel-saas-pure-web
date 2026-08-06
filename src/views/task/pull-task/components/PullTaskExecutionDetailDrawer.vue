@@ -4,6 +4,7 @@ import type {
   PullTaskStandardMember
 } from "@/api/pull-task";
 import { formatEpoch, standardStageLabel } from "../constants";
+import { actionTypeLabel, roleLabel } from "../standard-execution-display";
 
 defineOptions({ name: "PullTaskExecutionDetailDrawer" });
 
@@ -14,10 +15,6 @@ defineProps<{
 }>();
 
 const visible = defineModel<boolean>({ required: true });
-
-function roleLabel(value: number): string {
-  return ({ 1: "管理员", 2: "拉手", 3: "站台" } as const)[value] ?? "未知";
-}
 
 function membershipLabel(value: number): string {
   return (
@@ -38,13 +35,6 @@ function availabilityLabel(value: number): string {
     ({ 1: "可用", 2: "风控冷却", 3: "离线或不可用", 4: "已移出" } as const)[
       value
     ] ?? "未知"
-  );
-}
-
-function actionTypeLabel(value: number): string {
-  return (
-    ({ 1: "保存联系人", 2: "邀请入群", 3: "踩链接入群" } as const)[value] ??
-    "未知"
   );
 }
 
@@ -127,7 +117,7 @@ function adminStatusLabel(value: number): string {
         <el-descriptions-item label="最近执行">
           {{ formatEpoch(detail.execution.lastBusinessExecutedAt) }}
         </el-descriptions-item>
-        <el-descriptions-item label="群 JID">
+        <el-descriptions-item label="群 JID（脱敏）">
           {{ detail.execution.groupJid || "-" }}
         </el-descriptions-item>
         <el-descriptions-item label="群链接" :span="2">
@@ -149,10 +139,19 @@ function adminStatusLabel(value: number): string {
                 roleLabel(row.roleType)
               }}</template>
             </el-table-column>
-            <el-table-column prop="accountPhone" label="账号" min-width="150" />
+            <el-table-column
+              prop="accountPhone"
+              label="账号（脱敏）"
+              min-width="150"
+            />
             <el-table-column label="在群状态" width="120">
               <template #default="{ row }">{{
                 membershipLabel(row.membershipStatus)
+              }}</template>
+            </el-table-column>
+            <el-table-column label="管理员权限" width="120">
+              <template #default="{ row }">{{
+                adminStatusLabel(row.adminStatus)
               }}</template>
             </el-table-column>
             <el-table-column label="可用状态" width="140">
@@ -244,7 +243,7 @@ function adminStatusLabel(value: number): string {
             <el-table-column prop="memberSeq" label="顺序" width="80" />
             <el-table-column
               prop="normalizedPhone"
-              label="号码"
+              label="号码（脱敏）"
               min-width="150"
             />
             <el-table-column label="入群结果" width="110">
