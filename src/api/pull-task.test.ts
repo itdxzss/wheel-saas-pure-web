@@ -205,7 +205,6 @@ describe("pull task unified API", () => {
     await uploadPullTaskStandardGroupAvatar(avatar);
     await createPullTaskStandard({
       draftTaskId: 7,
-      version: 3,
       taskName: "普通群链接",
       remark: null,
       autoStart: 1,
@@ -284,10 +283,10 @@ describe("pull task unified API", () => {
         "remark",
         "stationCountPerCall",
         "stationGroupId",
-        "taskName",
-        "version"
+        "taskName"
       ].sort()
     );
+    assert.equal("version" in createData, false);
     assert.deepEqual(Object.keys(createData.groupSetting as object).sort(), [
       "autoCloseInviteAfterTask",
       "autoCloseMuteAfterTask",
