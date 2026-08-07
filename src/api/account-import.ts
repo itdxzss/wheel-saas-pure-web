@@ -1,6 +1,7 @@
 import { http } from "@/utils/http";
 import { armadaRequest } from "@/api/armada";
-import type { PageResponse } from "@/api/account";
+import type { AccountState, LoginState, PageResponse } from "@/api/account";
+import { accountStatusLabel, loginStateLabel } from "@/utils/account-state";
 import { formatEpochMillis } from "@/utils/time";
 import type { PureHttpResponse } from "@/utils/http/types.d";
 
@@ -46,6 +47,13 @@ export interface AccountImportDetailRow {
   account: string;
   status: "成功" | "失败" | "异常" | string;
   reason: string;
+  online_status: string;
+  online_reason: string;
+  account_state?: AccountState | null;
+  account_status: string;
+  login_state?: LoginState | null;
+  login_status: string;
+  account_reason: string;
   group?: string | null;
   tag?: string | null;
   created_at: string;
@@ -153,6 +161,11 @@ interface ArmadaAccountImportDetail {
   parseResultLabel?: string | null;
   failReason?: string | null;
   loginResult?: number | null;
+  onlinePhase?: number | null;
+  loginReason?: string | null;
+  accountState?: AccountState | null;
+  loginState?: LoginState | null;
+  accountStateReason?: string | null;
   createdAt?: number | null;
 }
 
@@ -389,10 +402,31 @@ function toDetailRow(row: ArmadaAccountImportDetail): AccountImportDetailRow {
     account: row.wsPhone ?? "-",
     status: success ? "成功" : "失败",
     reason: success ? "" : row.failReason || row.parseResultLabel || "导入失败",
+    online_status: onlineStatusLabel(row),
+    online_reason: row.loginReason || "",
+    account_state: row.accountState ?? null,
+    account_status: accountStatusLabel({
+      account_state: row.accountState ?? null,
+      mute_status: null
+    }),
+    login_state: row.loginState ?? null,
+    login_status: loginStateLabel(row.loginState),
+    account_reason: row.accountStateReason || "",
     group: null,
     tag: null,
     created_at: formatEpochMillis(row.createdAt)
   };
+}
+
+function onlineStatusLabel(row: ArmadaAccountImportDetail): string {
+  if (row.parseResult !== 1) return "未上线";
+  if (row.loginResult === 1) return "上线成功";
+  if (row.loginResult === 2) return "上线失败";
+  if (row.loginResult === 3) return "密钥异常";
+  if (row.loginResult === 4) return "封禁";
+  if (row.onlinePhase === 1) return "待派发";
+  if (row.onlinePhase === 2) return "上线中";
+  return "未上线";
 }
 
 function toFormData(data: CreateAccountImportTaskRequest): FormData {
