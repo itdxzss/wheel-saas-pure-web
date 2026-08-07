@@ -518,6 +518,7 @@ export interface PullTaskStandardRole {
   roleType: number;
   roleSeq: number;
   membershipStatus: number;
+  adminStatus: number;
   availabilityStatus: number;
   unavailableReasonCode: string | null;
   pullCallId: number | null;

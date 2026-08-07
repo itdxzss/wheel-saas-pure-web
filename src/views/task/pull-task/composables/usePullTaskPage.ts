@@ -49,6 +49,7 @@ import {
 } from "@/api/account-group";
 import { apiErrorMessage } from "@/utils/api-error";
 import { downloadBlobFile } from "@/utils/download";
+import { standardExecutionStatus } from "../standard-execution-display";
 
 export interface PullTaskSearchForm {
   id: string;
@@ -148,27 +149,6 @@ function downloadTextFile(filename: string, content: string): void {
 
 function normalLink(task: PullTaskRow | null): boolean {
   return task?.taskType === "STANDARD" && task.mode === "NORMAL_LINK";
-}
-
-function standardExecutionStatus(
-  execution: PullTaskStandardExecutionSummary
-): PullTaskGroupStatus {
-  if (execution.manualPaused) return "PAUSED";
-  if (execution.executionStatus === 1) return "WAIT_START";
-  if (execution.executionStatus === 2) return "RUNNING";
-  if (execution.executionStatus === 3 && execution.waitResourceType === 1) {
-    return "MANAGER_SHORTAGE";
-  }
-  if (execution.executionStatus === 3 && execution.waitResourceType === 2) {
-    return "PULLER_SHORTAGE";
-  }
-  if (execution.executionStatus === 3 && execution.waitResourceType === 3) {
-    return "STATION_SHORTAGE";
-  }
-  if (execution.executionStatus === 4) return "COMPLETED";
-  if (execution.executionStatus === 5) return "GROUP_INVALID";
-  if (execution.executionStatus === 6) return "ENDED";
-  return "INITIALIZING";
 }
 
 function standardGroupRow(

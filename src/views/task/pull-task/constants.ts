@@ -5,6 +5,12 @@ import type {
   PullTaskType
 } from "@/api/pull-task";
 import { formatEpochMillis } from "@/utils/time";
+import {
+  standardStageLabel,
+  standardStageOptions
+} from "./standard-execution-display";
+
+export { standardStageLabel, standardStageOptions };
 
 export const pullTaskStatusOptions: Array<{
   label: string;
@@ -56,17 +62,7 @@ export const groupRowStatusOptions: Array<{
   { label: "建群失败", value: "GROUP_CREATE_FAILED" },
   { label: "任务完成", value: "COMPLETED" },
   { label: "任务已结束", value: "ENDED" },
-  { label: "管理员无法设置", value: "ADMIN_SETUP_FAILED" }
-];
-
-export const standardStageOptions = [
-  { label: "链接校验", value: 1 },
-  { label: "管理员进群", value: 2 },
-  { label: "管理—拉手联系人", value: 3 },
-  { label: "管理员邀请拉手", value: 4 },
-  { label: "拉人执行", value: 5 },
-  { label: "料子提权", value: 6 },
-  { label: "执行收口", value: 7 }
+  { label: "管理员设置失败", value: "ADMIN_SETUP_FAILED" }
 ];
 
 export const standardWaitResourceOptions = [
@@ -162,12 +158,6 @@ export function groupRowStatusTagType(
     return "warning";
   if (status === "RUNNING" || status === "INITIALIZING") return "primary";
   return "info";
-}
-
-export function standardStageLabel(stage?: number | null): string {
-  return (
-    standardStageOptions.find(option => option.value === stage)?.label ?? "-"
-  );
 }
 
 export function pullTaskModeLabel(mode?: string | null): string {

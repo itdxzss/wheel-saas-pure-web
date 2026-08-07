@@ -34,7 +34,10 @@ const resumeVisible = computed(
   () => activeExecution.value && props.row.manualPaused === true
 );
 const managerVisible = computed(
-  () => normalLinkWait.value && props.row.waitResourceType === 1
+  () =>
+    normalLinkWait.value &&
+    props.row.waitResourceType === 1 &&
+    props.row.stage !== 3
 );
 const pullerVisible = computed(
   () => normalLinkWait.value && props.row.waitResourceType === 2
