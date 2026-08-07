@@ -349,7 +349,9 @@ function submitDrawer(): void {
           <el-form-item
             v-if="form.importKind !== 'json'"
             class="mt-4"
-            :label="form.importKind === 'six' ? '六段号内容' : '全参账号内容'"
+            :label="
+              form.importKind === 'six' ? '五/六段号内容' : '全参账号内容'
+            "
             required
           >
             <el-input
@@ -443,7 +445,7 @@ function submitDrawer(): void {
   gap: 8px;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .drawer-grid {
     grid-template-columns: 1fr;
   }

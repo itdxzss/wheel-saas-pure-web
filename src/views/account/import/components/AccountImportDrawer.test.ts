@@ -12,4 +12,11 @@ describe("account import drawer template", () => {
     assert.match(source, /importKind:\s*"json"\s+as AccountImportKind/);
     assert.match(source, /form\.importKind\s*=\s*"json";/);
   });
+
+  it("labels the compatible text area as five/six content", () => {
+    assert.match(
+      source,
+      /form\.importKind === 'six' \? '五\/六段号内容' : '全参账号内容'/
+    );
+  });
 });

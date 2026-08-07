@@ -9,6 +9,40 @@ import {
 } from "./account-import";
 
 describe("account import API", () => {
+  it("maps both compatible and legacy labels to import format 1", async () => {
+    resetArmadaMock({ list: [], page: 1, pageSize: 10, total: 0 });
+
+    await listAccountImportTasks({ import_type: "五/六段号" });
+    const currentParams = (
+      armadaCalls()[0]?.opts as {
+        params: { importFormat: number };
+      }
+    ).params;
+    assert.equal(currentParams.importFormat, 1);
+
+    resetArmadaMock({ list: [], page: 1, pageSize: 10, total: 0 });
+    await listAccountImportTasks({ import_type: "六段号" });
+    const legacyParams = (
+      armadaCalls()[0]?.opts as {
+        params: { importFormat: number };
+      }
+    ).params;
+    assert.equal(legacyParams.importFormat, 1);
+  });
+
+  it("renders import format 1 as the compatible five/six label", async () => {
+    resetArmadaMock({
+      list: [{ id: 1, sourceFileName: "accounts.txt", importFormat: 1 }],
+      page: 1,
+      pageSize: 10,
+      total: 1
+    });
+
+    const result = await listAccountImportTasks();
+
+    assert.equal(result.list[0]?.import_type, "五/六段号");
+  });
+
   it("passes login result filters through to the list query", async () => {
     resetArmadaMock({ list: [], page: 1, pageSize: 10, total: 0 });
 

@@ -4,7 +4,12 @@ import type { PageResponse } from "@/api/account";
 import { formatEpochMillis } from "@/utils/time";
 import type { PureHttpResponse } from "@/utils/http/types.d";
 
-export type AccountImportType = "六段号" | "JSON号" | "全参账号" | string;
+export type AccountImportType =
+  | "五/六段号"
+  | "六段号"
+  | "JSON号"
+  | "全参账号"
+  | string;
 export type AccountImportStatus = "导入中" | "已完成" | string;
 export type AccountImportProgress = string;
 export type AccountImportIpAllocationMode = "smart" | "mixed";
@@ -153,14 +158,14 @@ interface ArmadaAccountImportDetail {
 
 function importFormatCode(value?: string | number | null): number | undefined {
   if (typeof value === "number") return value;
-  if (value === "六段号") return 1;
+  if (value === "五/六段号" || value === "六段号") return 1;
   if (value === "JSON号") return 2;
   if (value === "全参账号") return 3;
   return undefined;
 }
 
 function importFormatLabel(value?: number | null): string {
-  if (value === 1) return "六段号";
+  if (value === 1) return "五/六段号";
   if (value === 2) return "JSON号";
   if (value === 3) return "全参账号";
   return "-";
@@ -357,7 +362,8 @@ function toTask(row: ArmadaAccountImportBatch): AccountImportTask {
     device: deviceOsLabel(row.deviceOs),
     account_type: accountTypeLabel(row.accountType),
     service: null,
-    ip_mode: ipAllocationModeLabel(row.ipAllocationMode) || row.ipRegion || null,
+    ip_mode:
+      ipAllocationModeLabel(row.ipAllocationMode) || row.ipRegion || null,
     ip_allocation_mode: row.ipAllocationMode ?? null,
     total,
     imported,
@@ -402,7 +408,11 @@ function toFormData(data: CreateAccountImportTaskRequest): FormData {
     data.ip_allocation_mode
   );
   if (ipAllocationMode) form.append("ipAllocationMode", ipAllocationMode);
-  if (!ipAllocationMode && data.ip_mode && !data.ip_mode.startsWith("系统自动")) {
+  if (
+    !ipAllocationMode &&
+    data.ip_mode &&
+    !data.ip_mode.startsWith("系统自动")
+  ) {
     form.append("ipRegion", data.ip_mode);
   }
   if (data.remark) form.append("remark", data.remark);
