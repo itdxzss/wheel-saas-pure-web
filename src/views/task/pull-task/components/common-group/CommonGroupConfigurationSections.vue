@@ -76,9 +76,9 @@ const previewFolderName = computed(
         </el-form-item>
         <el-form-item :error="errors.groupName">
           <template #label>
-            群名称
+            群名称（可选）
             <CommonGroupHelp
-              content="群名称必填；可使用 {no} 作为连续编号占位符。"
+              content="可使用 {no} 作为连续编号占位符；留空时按 9 位大写随机字母加群组 JID 本地部分最后 5 位自动命名。"
             />
           </template>
           <el-input
@@ -86,9 +86,12 @@ const previewFolderName = computed(
             clearable
             maxlength="128"
             show-word-limit
-            placeholder="必填，例如：海外项目群-{no}"
+            placeholder="选填，例如：海外项目群-{no}"
           />
-          <div class="field-help">必填；可使用 {no} 占位符生成连续编号。</div>
+          <div class="field-help">
+            留空时按“9 位大写随机字母 + 群组 JID 本地部分最后 5
+            位”自动命名；填写后可使用 {no} 占位符生成连续编号。
+          </div>
         </el-form-item>
         <el-form-item required :error="errors.groupCount">
           <template #label>
@@ -107,7 +110,10 @@ const previewFolderName = computed(
           />
           <div class="field-help">默认 1，本次最多创建 1000 个群组。</div>
         </el-form-item>
-        <el-form-item required :error="errors.startIndex">
+        <el-form-item
+          :required="form.groupName.trim().length > 0"
+          :error="errors.startIndex"
+        >
           <template #label>
             开始编号
             <CommonGroupHelp
@@ -119,9 +125,13 @@ const previewFolderName = computed(
             :min="1"
             :step="1"
             step-strictly
+            :disabled="!form.groupName.trim()"
             class="full-width"
           />
-          <div class="field-help">默认 1，创建多个群组时逐个递增。</div>
+          <div class="field-help">
+            群名留空时不参与自动命名；填写群名且创建多个群组时从默认值 1
+            开始逐个递增。
+          </div>
         </el-form-item>
         <div class="name-preview">
           <div class="preview-header">

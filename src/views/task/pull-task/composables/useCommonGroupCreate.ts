@@ -105,7 +105,6 @@ function isCommonGroupTaskCreateRequest(
     (value.memberSource === "EMPTY_GROUP" && value.memberCount !== 1) ||
     !isNullablePositiveSafeInteger(value.folderId) ||
     typeof value.groupNameTemplate !== "string" ||
-    !value.groupNameTemplate.trim() ||
     value.groupNameTemplate.length > 128 ||
     !isPositiveSafeInteger(value.groupCount, 1000) ||
     !isPositiveSafeInteger(value.startNo) ||
@@ -433,7 +432,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     clearErrors();
     Object.assign(errors, validateCommonGroupForm(form));
     if (Object.keys(errors).length) {
-      ElMessage.warning("请检查并完善必填配置");
+      ElMessage.warning("请检查并完善表单配置");
       return;
     }
     confirmVisible.value = true;

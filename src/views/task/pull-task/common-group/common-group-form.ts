@@ -86,12 +86,10 @@ export function validateCommonGroupForm(
   if (!isPositiveInteger(form.groupCount) || form.groupCount > 1000) {
     errors.groupCount = "建群数量必须为 1 至 1000 的整数";
   }
-  if (!isPositiveInteger(form.startIndex)) {
+  if (form.groupName.trim() && !isPositiveInteger(form.startIndex)) {
     errors.startIndex = "开始编号必须为大于等于 1 的整数";
   }
-  if (!form.groupName.trim()) {
-    errors.groupName = "请输入群名称";
-  } else if (form.groupName.trim().length > 128) {
+  if (form.groupName.trim().length > 128) {
     errors.groupName = "群名称最多 128 个字符";
   } else if (
     isPositiveInteger(form.groupCount) &&
@@ -120,11 +118,13 @@ export function validateCommonGroupForm(
 }
 
 export function commonGroupNamePreview(form: CommonGroupForm): string[] {
-  const prefix = form.groupName.trim() || "群名称";
   const count = Math.min(Math.max(form.groupCount, 0), 5);
+  const template = form.groupName.trim();
   return Array.from({ length: count }, (_, index) => {
     const no = form.startIndex + index;
-    return generatedCommonGroupName(prefix, form.groupCount, no);
+    return template
+      ? generatedCommonGroupName(template, form.groupCount, no)
+      : `自动生成（第 ${index + 1} 个群）`;
   });
 }
 
@@ -142,7 +142,7 @@ export function toCommonGroupCreateRequest(
     folderId: form.groupFolderId ? Number(form.groupFolderId) : null,
     groupNameTemplate: form.groupName.trim(),
     groupCount: form.groupCount,
-    startNo: form.startIndex,
+    startNo: form.groupName.trim() ? form.startIndex : 1,
     successMigrationGroupId: form.successMoveGroupId
       ? Number(form.successMoveGroupId)
       : null,

@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+// @ts-ignore Node's native TypeScript test runner requires the explicit extension.
+import {
+  commonGroupNamePreview,
+  createCommonGroupForm,
+  toCommonGroupCreateRequest,
+  validateCommonGroupForm
+} from "./common-group/common-group-form.ts";
 
 function source(relativePath: string): string {
   return readFileSync(
@@ -48,11 +55,59 @@ describe("common group creation flow", () => {
     assert.match(formSource, /建群数量必须为 1 至 1000 的整数/);
     assert.match(formSource, /计划群成员快照不能超过 10000 条/);
     assert.match(formSource, /成员数量必须为 1 至 1024 的整数/);
-    assert.match(formSource, /请输入群名称/);
+    assert.doesNotMatch(formSource, /请输入群名称/);
     assert.match(formSource, /生成后的群名称最多 128 个字符/);
+    assert.match(configurationSource, /群名称（可选）/);
+    assert.match(
+      configurationSource,
+      /9 位大写随机字母 \+ 群组 JID 本地部分最后 5/
+    );
+    assert.match(configurationSource, /:disabled="!form\.groupName\.trim\(\)"/);
+    assert.match(configurationSource, /群名留空时不参与自动命名/);
+    assert.match(formSource, /自动生成（第 \$\{index \+ 1\} 个群）/);
+    assert.doesNotMatch(
+      composableSource,
+      /!value\.groupNameTemplate\.trim\(\)/
+    );
+    assert.match(
+      formSource,
+      /startNo: form\.groupName\.trim\(\) \? form\.startIndex : 1/
+    );
     assert.match(formSource, /开始编号必须为大于等于 1 的整数/);
     assert.match(composableSource, /validateCommonGroupForm\(form\)/);
     assert.match(composableSource, /confirmVisible\.value = true/);
+    assert.match(composableSource, /请检查并完善表单配置/);
+  });
+
+  it("accepts a blank group name and normalizes its unused start number", () => {
+    const form = createCommonGroupForm();
+    form.managerGroupId = 101;
+    form.memberGroupId = 102;
+    form.groupName = "   ";
+    form.startIndex = 0;
+
+    assert.deepEqual(validateCommonGroupForm(form), {});
+    assert.deepEqual(commonGroupNamePreview(form), ["自动生成（第 1 个群）"]);
+    assert.deepEqual(
+      {
+        groupNameTemplate: toCommonGroupCreateRequest(form).groupNameTemplate,
+        startNo: toCommonGroupCreateRequest(form).startNo
+      },
+      { groupNameTemplate: "", startNo: 1 }
+    );
+  });
+
+  it("keeps explicit group-name numbering behavior unchanged", () => {
+    const form = createCommonGroupForm();
+    form.managerGroupId = 101;
+    form.memberGroupId = 102;
+    form.groupName = "项目群-{no}";
+    form.groupCount = 2;
+    form.startIndex = 7;
+
+    assert.deepEqual(validateCommonGroupForm(form), {});
+    assert.deepEqual(commonGroupNamePreview(form), ["项目群-7", "项目群-8"]);
+    assert.equal(toCommonGroupCreateRequest(form).startNo, 7);
   });
 
   it("loads current account groups and protects dirty-form closing", () => {
