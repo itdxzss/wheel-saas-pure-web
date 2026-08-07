@@ -57,11 +57,9 @@ function handlePasteSave(): void {
 
 function statusLabel(status: PullTaskStandardLinkLineStatus): string {
   return {
-    VALID: "有效",
+    VALID: "格式通过",
     INVALID_FORMAT: "格式错误",
     DUPLICATE: "重复",
-    LINK_EXPIRED: "链接失效",
-    PROBE_INCOMPLETE: "检测未完成",
     OCCUPIED: "已占用"
   }[status];
 }
@@ -70,7 +68,6 @@ function statusType(
   status: PullTaskStandardLinkLineStatus
 ): "success" | "warning" | "danger" | "info" {
   if (status === "VALID") return "success";
-  if (status === "PROBE_INCOMPLETE") return "warning";
   if (status === "DUPLICATE") return "info";
   return "danger";
 }
@@ -80,11 +77,11 @@ function statusType(
   <div
     v-loading="planning"
     class="resource-sections"
-    element-loading-text="正在校验并生成执行计划"
+    element-loading-text="正在解析并生成执行计划"
   >
     <el-card shadow="never" header="群链接模式配置">
       <el-alert
-        title="群组分组和手工群链接任选其一；同时填写时合并使用。手工链接每行一个。"
+        title="群组分组和手工群链接任选其一；同时填写时合并使用。手工链接每行一个，实际可用性由管理员进群时确认。"
         type="info"
         :closable="false"
         show-icon
