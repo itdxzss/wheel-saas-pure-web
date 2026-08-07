@@ -5,10 +5,110 @@ import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   createAccountImportTask,
   exportAccountImportTask,
+  getAccountImportTask,
   listAccountImportTasks
 } from "./account-import";
 
 describe("account import API", () => {
+  it("maps both compatible and legacy labels to import format 1", async () => {
+    resetArmadaMock({ list: [], page: 1, pageSize: 10, total: 0 });
+
+    await listAccountImportTasks({ import_type: "五/六段号" });
+    const currentParams = (
+      armadaCalls()[0]?.opts as {
+        params: { importFormat: number };
+      }
+    ).params;
+    assert.equal(currentParams.importFormat, 1);
+
+    resetArmadaMock({ list: [], page: 1, pageSize: 10, total: 0 });
+    await listAccountImportTasks({ import_type: "六段号" });
+    const legacyParams = (
+      armadaCalls()[0]?.opts as {
+        params: { importFormat: number };
+      }
+    ).params;
+    assert.equal(legacyParams.importFormat, 1);
+  });
+
+  it("renders import format 1 as the compatible five/six label", async () => {
+    resetArmadaMock({
+      list: [{ id: 1, sourceFileName: "accounts.txt", importFormat: 1 }],
+      page: 1,
+      pageSize: 10,
+      total: 1
+    });
+
+    const result = await listAccountImportTasks();
+
+    assert.equal(result.list[0]?.import_type, "五/六段号");
+  });
+
+  it("maps import, online and current account statuses independently", async () => {
+    resetArmadaMock({
+      list: [
+        {
+          id: 11,
+          lineNo: 1,
+          wsPhone: "8613988000001",
+          parseResult: 1,
+          loginResult: 1,
+          onlinePhase: 3,
+          loginReason: null,
+          accountState: 4,
+          loginState: 2,
+          accountStateReason: null
+        },
+        {
+          id: 12,
+          lineNo: 2,
+          wsPhone: "8613988000002",
+          parseResult: 1,
+          loginResult: 2,
+          onlinePhase: 3,
+          loginReason: "LOGIN_TIMEOUT",
+          accountState: 3,
+          loginState: 2,
+          accountStateReason: "FORBIDDEN"
+        }
+      ],
+      page: 1,
+      pageSize: 10,
+      total: 2
+    });
+
+    const result = await getAccountImportTask(27);
+
+    assert.deepEqual(
+      result.list.map(row => ({
+        status: row.status,
+        online_status: row.online_status,
+        online_reason: row.online_reason,
+        account_status: row.account_status,
+        login_status: row.login_status,
+        account_reason: row.account_reason
+      })),
+      [
+        {
+          status: "成功",
+          online_status: "上线成功",
+          online_reason: "",
+          account_status: "导出",
+          login_status: "离线",
+          account_reason: ""
+        },
+        {
+          status: "成功",
+          online_status: "上线失败",
+          online_reason: "LOGIN_TIMEOUT",
+          account_status: "封禁",
+          login_status: "离线",
+          account_reason: "FORBIDDEN"
+        }
+      ]
+    );
+  });
+
   it("passes login result filters through to the list query", async () => {
     resetArmadaMock({ list: [], page: 1, pageSize: 10, total: 0 });
 

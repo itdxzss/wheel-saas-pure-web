@@ -4,7 +4,9 @@ import {
   accountImportIpAllocationModeOptions,
   detailStatusOptions,
   exportOptions,
-  importKindOptions
+  importKindLabelMap,
+  importKindOptions,
+  importTypeOptions
 } from "./constants";
 
 describe("account import constants", () => {
@@ -37,6 +39,19 @@ describe("account import constants", () => {
     assert.deepEqual(
       accountImportIpAllocationModeOptions.map(option => option.label),
       ["智能分配", "混合国家"]
+    );
+  });
+
+  it("labels the existing six kind as five/six compatible", () => {
+    const option = importKindOptions.find(item => item.value === "six");
+
+    assert.equal(importKindLabelMap.six, "五/六段号");
+    assert.equal(option?.label, "五/六段号");
+    assert.match(option?.desc ?? "", /五段号或六段号/);
+    assert.ok(
+      importTypeOptions.some(
+        item => item.label === "五/六段号" && item.value === "五/六段号"
+      )
     );
   });
 });

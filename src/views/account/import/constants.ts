@@ -25,13 +25,13 @@ export const accountImportIpAllocationModeLabelMap: Record<
 };
 
 export const importKindLabelMap: Record<AccountImportKind, string> = {
-  six: "六段号",
+  six: "五/六段号",
   json: "JSON号",
   fullparam: "全参账号"
 };
 
 export const importTypeOptions = [
-  { label: "六段号", value: "六段号" },
+  { label: "五/六段号", value: "五/六段号" },
   { label: "JSON号", value: "JSON号" },
   { label: "全参账号", value: "全参账号" }
 ];
@@ -44,9 +44,9 @@ export const importKindOptions: Array<{
   disabled?: boolean;
 }> = [
   {
-    label: "六段号",
+    label: "五/六段号",
     value: "six",
-    desc: "支持粘贴或上传 TXT，一行一个六段号。",
+    desc: "支持粘贴或上传 TXT，一行一个五段号或六段号。",
     accept: ".txt"
   },
   {

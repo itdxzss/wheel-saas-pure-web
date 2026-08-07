@@ -69,9 +69,33 @@ function formatDate(value?: string | null): string {
 function statusTagType(
   status?: string
 ): "success" | "danger" | "warning" | "info" {
-  if (status === "成功") return "success";
-  if (status === "失败") return "danger";
-  if (status === "异常") return "warning";
+  if (
+    status === "成功" ||
+    status === "上线成功" ||
+    status === "正常" ||
+    status === "在线" ||
+    status === "导出"
+  )
+    return "success";
+  if (
+    status === "失败" ||
+    status === "上线失败" ||
+    status === "封禁" ||
+    status === "解绑" ||
+    status === "离线"
+  )
+    return "danger";
+  if (
+    status === "异常" ||
+    status === "密钥异常" ||
+    status === "待派发" ||
+    status === "上线中" ||
+    status === "待上线" ||
+    status === "被抢登" ||
+    status === "抢登中" ||
+    status === "账号受限"
+  )
+    return "warning";
   return "info";
 }
 
@@ -84,15 +108,15 @@ function taskStatusTagType(status?: string): "success" | "warning" | "info" {
 function filterDetail(value: string | number | boolean): void {
   emit("filter-change", value as AccountImportDetailStatus);
 }
+
+function statusReason(row: AccountImportDetailRow): string {
+  const reasons = [row.online_reason, row.account_reason].filter(Boolean);
+  return [...new Set(reasons)].join(" / ") || "-";
+}
 </script>
 
 <template>
-  <el-drawer
-    v-model="visible"
-    :title="drawerTitle"
-    size="820px"
-    destroy-on-close
-  >
+  <el-drawer v-model="visible" :title="drawerTitle" size="92%" destroy-on-close>
     <div v-if="task" class="account-import-detail">
       <div class="detail-summary">
         <div class="detail-summary-main">
@@ -185,7 +209,7 @@ function filterDetail(value: string | number | boolean): void {
       <el-card class="mt-3" shadow="never">
         <template #header>
           <div class="drawer-card-header">
-            <strong>登录结果展示</strong>
+            <strong>导入及上线结果</strong>
             <el-radio-group
               :model-value="statusFilter"
               size="small"
@@ -210,7 +234,7 @@ function filterDetail(value: string | number | boolean): void {
             min-width="150"
             show-overflow-tooltip
           />
-          <el-table-column label="状态" width="100">
+          <el-table-column prop="status" label="导入状态" width="110">
             <template #default="{ row }">
               <el-tag size="small" :type="statusTagType(row.status)">
                 {{ row.status || "-" }}
@@ -219,10 +243,47 @@ function filterDetail(value: string | number | boolean): void {
           </el-table-column>
           <el-table-column
             prop="reason"
-            label="失败原因"
+            label="导入失败原因"
             min-width="180"
             show-overflow-tooltip
           />
+          <el-table-column label="上线结果" width="120">
+            <template #default="{ row }">
+              <el-tag size="small" :type="statusTagType(row.online_status)">
+                {{ row.online_status || "-" }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="上线/状态原因"
+            min-width="180"
+            show-overflow-tooltip
+          >
+            <template #default="{ row }">
+              {{ statusReason(row) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="当前账号状态" min-width="190">
+            <template #default="{ row }">
+              <div class="current-status-tags">
+                <el-tag
+                  v-if="row.account_state"
+                  size="small"
+                  :type="statusTagType(row.account_status)"
+                >
+                  {{ row.account_status || "-" }}
+                </el-tag>
+                <el-tag
+                  v-if="row.login_state"
+                  size="small"
+                  :type="statusTagType(row.login_status)"
+                >
+                  {{ row.login_status || "-" }}
+                </el-tag>
+                <span v-if="!row.account_state && !row.login_state">-</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column
             prop="group"
             label="分组"
@@ -317,6 +378,12 @@ function filterDetail(value: string | number | boolean): void {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.current-status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 @media (width <= 768px) {
