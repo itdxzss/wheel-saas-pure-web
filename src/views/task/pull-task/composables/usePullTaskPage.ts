@@ -225,6 +225,9 @@ function standardExecutionFilters(
   if (status === "STATION_SHORTAGE") {
     return { executionStatus: 3, waitResourceType: 3 };
   }
+  if (status === "WAITING_APPROVAL") {
+    return { executionStatus: 3, waitResourceType: 4 };
+  }
   const statuses: Partial<Record<PullTaskGroupStatus, number>> = {
     WAIT_START: 1,
     RUNNING: 2,

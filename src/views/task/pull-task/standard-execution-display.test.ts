@@ -27,6 +27,15 @@ describe("standard pull task execution display", () => {
       }),
       "ADMIN_SETUP_FAILED"
     );
+    assert.equal(
+      standardExecutionStatus({
+        executionStatus: 3,
+        stage: 2,
+        waitResourceType: 4,
+        reasonCode: "MANAGER_JOIN_PENDING_APPROVAL"
+      }),
+      "WAITING_APPROVAL"
+    );
   });
 
   it("declares promoter and promote-manager labels", async () => {

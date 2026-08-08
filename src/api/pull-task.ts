@@ -115,6 +115,7 @@ export type PullTaskGroupStatus =
   | "COMPLETED"
   | "ENDED"
   | "ADMIN_SETUP_FAILED"
+  | "WAITING_APPROVAL"
   | "GROUP_INVALID"
   | string;
 

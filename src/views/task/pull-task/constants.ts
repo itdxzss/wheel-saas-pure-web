@@ -62,13 +62,15 @@ export const groupRowStatusOptions: Array<{
   { label: "建群失败", value: "GROUP_CREATE_FAILED" },
   { label: "任务完成", value: "COMPLETED" },
   { label: "任务已结束", value: "ENDED" },
-  { label: "管理员设置失败", value: "ADMIN_SETUP_FAILED" }
+  { label: "管理员设置失败", value: "ADMIN_SETUP_FAILED" },
+  { label: "等待入群审批", value: "WAITING_APPROVAL" }
 ];
 
 export const standardWaitResourceOptions = [
   { label: "管理员不足", value: 1 },
   { label: "拉手不足", value: 2 },
-  { label: "站台不足", value: 3 }
+  { label: "站台不足", value: 3 },
+  { label: "等待入群审批", value: 4 }
 ];
 
 export const pullTaskColumns: TableColumnList = [
@@ -153,6 +155,7 @@ export function groupRowStatusTagType(
   if (
     status === "MANAGER_SHORTAGE" ||
     status === "PULLER_SHORTAGE" ||
+    status === "WAITING_APPROVAL" ||
     status === "PAUSED"
   )
     return "warning";

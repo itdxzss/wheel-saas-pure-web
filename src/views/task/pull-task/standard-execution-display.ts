@@ -23,6 +23,8 @@ const managerAdminReasons = new Set([
   "MANAGER_ADMIN_UNCONFIRMED"
 ]);
 
+const managerJoinPendingApprovalReason = "MANAGER_JOIN_PENDING_APPROVAL";
+
 export function standardStageLabel(stage?: number | null): string {
   return (
     standardStageOptions.find(option => option.value === stage)?.label ?? "-"
@@ -41,6 +43,13 @@ export function standardExecutionStatus(
     managerAdminReasons.has(execution.reasonCode)
   ) {
     return "ADMIN_SETUP_FAILED";
+  }
+  if (
+    execution.executionStatus === 3 &&
+    execution.waitResourceType === 4 &&
+    execution.reasonCode === managerJoinPendingApprovalReason
+  ) {
+    return "WAITING_APPROVAL";
   }
   if (execution.executionStatus === 3 && execution.waitResourceType === 1) {
     return "MANAGER_SHORTAGE";
