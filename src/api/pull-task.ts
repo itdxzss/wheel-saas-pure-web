@@ -387,8 +387,6 @@ export type PullTaskStandardLinkLineStatus =
   | "VALID"
   | "INVALID_FORMAT"
   | "DUPLICATE"
-  | "LINK_EXPIRED"
-  | "PROBE_INCOMPLETE"
   | "OCCUPIED";
 
 export interface PullTaskStandardExecutionRow {
