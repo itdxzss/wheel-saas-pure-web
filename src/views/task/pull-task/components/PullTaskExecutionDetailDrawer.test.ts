@@ -26,9 +26,10 @@ describe("normal-link execution detail drawer", () => {
     assert.match(source, /拉人调用/);
     assert.match(source, /逐成员结果/);
     assert.match(source, /提权结果/);
-    assert.match(source, /群 JID（脱敏）/);
-    assert.match(source, /账号（脱敏）/);
-    assert.match(source, /号码（脱敏）/);
+    assert.match(source, /label="群 JID"/);
+    assert.match(source, /label="账号"/);
+    assert.match(source, /label="号码"/);
+    assert.doesNotMatch(source, /（脱敏）/);
     assert.doesNotMatch(source, /重新执行|重试|营销/);
   });
 });

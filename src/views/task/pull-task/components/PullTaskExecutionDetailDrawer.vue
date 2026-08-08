@@ -117,7 +117,7 @@ function adminStatusLabel(value: number): string {
         <el-descriptions-item label="最近执行">
           {{ formatEpoch(detail.execution.lastBusinessExecutedAt) }}
         </el-descriptions-item>
-        <el-descriptions-item label="群 JID（脱敏）">
+        <el-descriptions-item label="群 JID">
           {{ detail.execution.groupJid || "-" }}
         </el-descriptions-item>
         <el-descriptions-item label="群链接" :span="2">
@@ -139,11 +139,7 @@ function adminStatusLabel(value: number): string {
                 roleLabel(row.roleType)
               }}</template>
             </el-table-column>
-            <el-table-column
-              prop="accountPhone"
-              label="账号（脱敏）"
-              min-width="150"
-            />
+            <el-table-column prop="accountPhone" label="账号" min-width="150" />
             <el-table-column label="在群状态" width="120">
               <template #default="{ row }">{{
                 membershipLabel(row.membershipStatus)
@@ -243,7 +239,7 @@ function adminStatusLabel(value: number): string {
             <el-table-column prop="memberSeq" label="顺序" width="80" />
             <el-table-column
               prop="normalizedPhone"
-              label="号码（脱敏）"
+              label="号码"
               min-width="150"
             />
             <el-table-column label="入群结果" width="110">
