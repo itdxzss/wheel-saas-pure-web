@@ -97,6 +97,14 @@ function adminStatusLabel(value: number): string {
     )[value] ?? "未知"
   );
 }
+
+function accountLabel(
+  roles: PullTaskStandardExecutionDetail["roles"],
+  roleRowId: number
+): string {
+  const role = roles.find(item => item.roleRowId === roleRowId);
+  return role?.accountPhone || "-";
+}
 </script>
 
 <template>
@@ -175,11 +183,21 @@ function adminStatusLabel(value: number): string {
               label="发起角色行"
               width="120"
             />
+            <el-table-column label="发起账号" min-width="150">
+              <template #default="{ row }">
+                {{ accountLabel(detail.roles, row.actorRoleRowId) }}
+              </template>
+            </el-table-column>
             <el-table-column
               prop="targetRoleRowId"
               label="目标角色行"
               width="120"
             />
+            <el-table-column label="目标账号" min-width="150">
+              <template #default="{ row }">
+                {{ accountLabel(detail.roles, row.targetRoleRowId) }}
+              </template>
+            </el-table-column>
             <el-table-column label="结果" width="110">
               <template #default="{ row }">{{
                 resultLabel(row.actionStatus)
