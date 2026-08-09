@@ -157,6 +157,7 @@ export interface CommonGroupTaskItem {
   status: CommonGroupTaskItemStatus;
   message: string;
   retryable: boolean;
+  updatedAt: number;
 }
 
 export interface CommonGroupTask {
@@ -201,6 +202,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   const groupFolders = ref<GroupFolderRow[]>([]);
   const task = ref<CommonGroupTask | null>(null);
   const pollingError = ref("");
+  const retryingItemBaselines = new Map<number, number>();
   let cleanSnapshot = JSON.stringify(form);
   let pollTimer: number | undefined;
   let unchangedPollAttempts = 0;
@@ -510,7 +512,26 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     return "等待执行";
   }
 
+  function notifyRetryResult(row: CommonGroupTaskItemResult): void {
+    const baseline = retryingItemBaselines.get(row.id);
+    if (baseline === undefined || row.updatedAt <= baseline) return;
+    if (row.status === "PENDING" || row.status === "RUNNING") return;
+    retryingItemBaselines.delete(row.id);
+    if (row.status === "CREATED") {
+      ElMessage.success(`${row.groupSubject} 重试成功`);
+      return;
+    }
+    if (row.status === "FAILED") {
+      ElMessage.error(`${row.groupSubject} 重试失败：${itemMessage(row)}`);
+      return;
+    }
+    ElMessage.warning(
+      `${row.groupSubject} 重试结果需处理：${itemMessage(row)}`
+    );
+  }
+
   function applyTaskDetail(detail: CommonGroupTaskDetailResult): void {
+    detail.items.forEach(notifyRetryResult);
     task.value = {
       taskId: detail.task.id,
       status:
@@ -527,7 +548,8 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
         groupName: row.groupSubject,
         status: itemStatus(row),
         message: itemMessage(row),
-        retryable: row.status === "FAILED"
+        retryable: row.status === "FAILED",
+        updatedAt: row.updatedAt
       }))
     };
   }
@@ -548,8 +570,19 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   }
 
   function activateTask(taskId: number): number {
+    if (activeTaskId !== null && activeTaskId !== taskId) {
+      retryingItemBaselines.clear();
+    }
     activeTaskId = taskId;
     taskGeneration += 1;
+    taskRequestSequence += 1;
+    resetPollingState();
+    return taskGeneration;
+  }
+
+  function prepareTaskRetry(taskId: number): number {
+    stopPolling();
+    if (activeTaskId !== taskId) return activateTask(taskId);
     taskRequestSequence += 1;
     resetPollingState();
     return taskGeneration;
@@ -577,7 +610,9 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     if (disposed || generation !== taskGeneration || activeTaskId !== taskId)
       return;
     stopPolling();
-    if (!resultVisible.value || task.value?.status !== "PROCESSING") return;
+    if (!resultVisible.value) return;
+    if (task.value?.status !== "PROCESSING" && retryingItemBaselines.size === 0)
+      return;
     if (unchangedPollAttempts >= MAX_UNCHANGED_POLL_ATTEMPTS) {
       stopPollingWithError(
         "任务连续 5 分钟无进展，已停止自动刷新。请点击刷新重试，或返回表单新建任务。"
@@ -696,15 +731,20 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
 
   async function retryItem(item: CommonGroupTaskItem): Promise<void> {
     if (!item.retryable || !task.value) return;
+    if (retryingItemBaselines.has(item.id)) {
+      ElMessage.warning(`${item.groupName} 正在重试，请勿重复操作`);
+      return;
+    }
     const taskId = task.value.taskId;
-    stopPolling();
-    const generation = activateTask(taskId);
+    const generation = prepareTaskRetry(taskId);
+    retryingItemBaselines.set(item.id, item.updatedAt);
     try {
       await retryCommonGroupTaskItem(taskId, item.id);
       if (disposed) return;
-      ElMessage.success(`${item.groupName} 已重新进入执行队列`);
+      ElMessage.info(`${item.groupName} 重试请求已提交，正在执行`);
     } catch (error) {
       if (disposed) return;
+      retryingItemBaselines.delete(item.id);
       ElMessage.error(apiErrorMessage(error, "重试失败"));
       schedulePolling(taskId, generation);
       return;
@@ -715,8 +755,9 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     } catch (error) {
       if (disposed) return;
       ElMessage.warning(
-        apiErrorMessage(error, "已提交重试，最新进度读取失败，请点击刷新")
+        apiErrorMessage(error, "已提交重试，最新进度读取失败，将继续自动刷新")
       );
+      schedulePolling(taskId, generation);
     }
   }
 
@@ -727,6 +768,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     taskRequestSequence += 1;
     resultVisible.value = false;
     task.value = null;
+    retryingItemBaselines.clear();
     clearStoredTaskId();
     await open();
   }
@@ -735,6 +777,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     disposed = true;
     stopPolling();
     activeTaskId = null;
+    retryingItemBaselines.clear();
     taskGeneration += 1;
   });
 

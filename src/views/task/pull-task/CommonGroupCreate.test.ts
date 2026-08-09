@@ -179,6 +179,46 @@ describe("common group creation flow", () => {
     assert.match(taskDrawerSource, /type="error"/);
   });
 
+  it("reports the final outcome of the exact item submitted for retry", () => {
+    assert.match(
+      composableSource,
+      /const retryingItemBaselines = new Map<number, number>\(\)/
+    );
+    assert.match(
+      composableSource,
+      /retryingItemBaselines\.set\(item\.id, item\.updatedAt\)[\s\S]*retryCommonGroupTaskItem\(taskId, item\.id\)/
+    );
+    assert.match(
+      composableSource,
+      /function notifyRetryResult[\s\S]*retryingItemBaselines\.get\(row\.id\)[\s\S]*row\.updatedAt <= baseline/
+    );
+    assert.match(
+      composableSource,
+      /row\.status === "FAILED"[\s\S]*重试失败：\$\{itemMessage\(row\)\}/
+    );
+    assert.match(
+      composableSource,
+      /function applyTaskDetail[\s\S]*detail\.items\.forEach\(notifyRetryResult\)/
+    );
+    assert.match(composableSource, /updatedAt: row\.updatedAt/);
+    assert.match(
+      composableSource,
+      /task\.value\?\.status !== "PROCESSING" &&[\s\S]*retryingItemBaselines\.size === 0/
+    );
+    assert.match(
+      composableSource,
+      /function prepareTaskRetry[\s\S]*activeTaskId !== taskId[\s\S]*activateTask\(taskId\)[\s\S]*taskRequestSequence \+= 1[\s\S]*return taskGeneration/
+    );
+    assert.match(
+      composableSource,
+      /const generation = prepareTaskRetry\(taskId\)/
+    );
+    assert.match(
+      composableSource,
+      /已提交重试，最新进度读取失败，将继续自动刷新[\s\S]*schedulePolling\(taskId, generation\)/
+    );
+  });
+
   it("maps the five confirmed settings and keeps invite-link settings out", () => {
     assert.match(formSource, /sendMessagesAllowed/);
     assert.match(formSource, /editGroupSettingsAllowed/);
