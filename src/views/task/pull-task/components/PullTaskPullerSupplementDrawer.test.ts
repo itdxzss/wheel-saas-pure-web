@@ -11,7 +11,7 @@ function source(relativePath: string): string {
 }
 
 describe("normal-link puller supplement selection", () => {
-  it("shows the four immutable selection combinations and fixed data policy", () => {
+  it("shows fixed link entry and never mixes in manager invitation", () => {
     const componentUrl = new URL(
       "./PullTaskPullerSupplementDrawer.vue",
       import.meta.url
@@ -35,9 +35,8 @@ describe("normal-link puller supplement selection", () => {
     assert.match(drawer, /自动选择/);
     assert.match(drawer, /手动选择/);
     assert.match(drawer, /踩链接进群/);
-    assert.match(drawer, /当前管理员邀请进群/);
-    assert.match(drawer, /disabled/);
-    assert.match(drawer, /managerInviteAvailable/);
+    assert.doesNotMatch(drawer, /当前管理员邀请进群/);
+    assert.doesNotMatch(drawer, /managerInviteAvailable/);
   });
 
   it("mounts puller and manager flows behind execution-row resource types", () => {

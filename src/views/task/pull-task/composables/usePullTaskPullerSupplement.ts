@@ -12,7 +12,6 @@ export interface PullTaskPullerSupplementForm {
   accountGroupId: number | "";
   supplementCount: number;
   selectionMode: 1 | 2;
-  entryMode: 1 | 2;
   accountIds: number[];
   continueRemainingData: true;
 }
@@ -43,7 +42,6 @@ function emptyForm(): PullTaskPullerSupplementForm {
     accountGroupId: "",
     supplementCount: 1,
     selectionMode: 1,
-    entryMode: 1,
     accountIds: [],
     continueRemainingData: true
   };
@@ -68,7 +66,6 @@ export function usePullTaskPullerSupplement(
     form.accountGroupId = result.pullerGroupId ?? "";
     form.supplementCount = Math.max(result.missingPullerCount, 1);
     form.accountIds = [];
-    if (!result.managerInviteAvailable) form.entryMode = 1;
   }
 
   async function loadOptions(accountGroupId?: number): Promise<void> {
@@ -123,10 +120,6 @@ export function usePullTaskPullerSupplement(
       ElMessage.warning(`补充数量不能超过当前缺口 ${missing}`);
       return null;
     }
-    if (form.entryMode === 2 && !options.value?.managerInviteAvailable) {
-      ElMessage.warning("当前没有可执行邀请的管理员账号");
-      return null;
-    }
     if (form.selectionMode === 2) {
       const selected = new Set(form.accountIds);
       if (selected.size !== form.supplementCount) {
@@ -141,7 +134,7 @@ export function usePullTaskPullerSupplement(
       accountGroupId: form.accountGroupId,
       supplementCount: form.supplementCount,
       selectionMode: form.selectionMode,
-      entryMode: form.entryMode,
+      entryMode: 1,
       accountIds: form.selectionMode === 2 ? [...form.accountIds] : []
     };
   }

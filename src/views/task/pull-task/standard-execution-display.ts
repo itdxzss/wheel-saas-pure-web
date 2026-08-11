@@ -1,3 +1,5 @@
+import type { PullTaskStandardRole } from "@/api/pull-task";
+
 export interface StandardExecutionStatusInput {
   executionStatus?: number | null;
   stage?: number | null;
@@ -84,4 +86,26 @@ export function actionTypeLabel(value: number): string {
       } as const
     )[value] ?? "未知"
   );
+}
+
+export function pullerAccountLabel(
+  roles: PullTaskStandardRole[],
+  pullerAccountId: number | null
+): string {
+  const puller = roles.find(
+    role => role.roleType === 2 && role.accountId === pullerAccountId
+  );
+  return puller?.accountPhone || "-";
+}
+
+export function stationAccountLabel(
+  roles: PullTaskStandardRole[],
+  pullCallId: number
+): string {
+  const accounts = roles
+    .filter(role => role.roleType === 3 && role.pullCallId === pullCallId)
+    .sort((left, right) => left.roleSeq - right.roleSeq)
+    .map(role => role.accountPhone)
+    .filter(Boolean);
+  return accounts.length > 0 ? accounts.join("、") : "-";
 }

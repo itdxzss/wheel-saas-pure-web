@@ -128,14 +128,9 @@ function handleSelectionModeChange(value: string | number | boolean): void {
           </el-radio-group>
         </el-form-item>
         <el-form-item label="进入群组方式" required>
-          <el-radio-group v-model="form.entryMode">
-            <el-radio :value="1">踩链接进群</el-radio>
-            <el-radio :value="2" :disabled="!options.managerInviteAvailable">
-              当前管理员邀请进群
-            </el-radio>
-          </el-radio-group>
-          <small v-if="!options.managerInviteAvailable" class="field-tip">
-            当前没有管理员可执行邀请，只能选择踩链接进群
+          <el-tag type="success">踩链接进群</el-tag>
+          <small class="field-tip">
+            补充拉手固定踩链接，不与管理员互加联系人
           </small>
         </el-form-item>
         <el-form-item label="目标数据策略">

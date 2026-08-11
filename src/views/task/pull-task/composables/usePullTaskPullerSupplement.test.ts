@@ -19,7 +19,6 @@ function options(
     requiredPullerCount: 2,
     missingPullerCount: 2,
     pullerGroupId: 12,
-    managerInviteAvailable: true,
     currentPullers: [],
     candidates: [
       { accountId: 901, accountPhone: "8613900000901" },
@@ -43,7 +42,6 @@ describe("normal-link puller supplement state", () => {
     assert.equal(state.form.accountGroupId, 12);
     assert.equal(state.form.supplementCount, 2);
     assert.equal(state.form.selectionMode, 1);
-    assert.equal(state.form.entryMode, 1);
     assert.equal(state.form.continueRemainingData, true);
     assert.deepEqual(armadaCalls()[0], {
       method: "get",
@@ -87,7 +85,7 @@ describe("normal-link puller supplement state", () => {
     assert.equal(elementPlusCalls().at(-1)?.text, "请选择 2 个候选拉手账号");
   });
 
-  it("submits the manual manager-invite combination and refreshes rows", async () => {
+  it("submits manual supplements with fixed link entry and refreshes rows", async () => {
     resetArmadaMockQueue([options(), {}]);
     resetElementPlusMock();
     let refreshes = 0;
@@ -98,7 +96,6 @@ describe("normal-link puller supplement state", () => {
     });
     await state.open(7, 19);
     state.form.selectionMode = 2;
-    state.form.entryMode = 2;
     state.form.accountIds = [901, 902];
 
     await state.submit();
@@ -111,7 +108,7 @@ describe("normal-link puller supplement state", () => {
           accountGroupId: 12,
           supplementCount: 2,
           selectionMode: 2,
-          entryMode: 2,
+          entryMode: 1,
           accountIds: [901, 902]
         }
       }

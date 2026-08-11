@@ -526,7 +526,7 @@ export interface PullTaskStandardRole {
 export interface PullTaskStandardCall {
   callId: number;
   callSeq: number;
-  pullerAccountId: number;
+  pullerAccountId: number | null;
   plannedMaterialCount: number;
   plannedStationCount: number;
   callStatus: number;
@@ -706,7 +706,6 @@ export interface PullTaskPullerSupplementOptions {
   requiredPullerCount: number;
   missingPullerCount: number;
   pullerGroupId: number;
-  managerInviteAvailable: boolean;
   currentPullers: PullTaskPullerOptionRole[];
   candidates: PullTaskPullerCandidate[];
 }
@@ -715,7 +714,7 @@ export interface PullTaskPullerSupplementRequest {
   accountGroupId: number;
   supplementCount: number;
   selectionMode: 1 | 2;
-  entryMode: 1 | 2;
+  entryMode: 1;
   accountIds: number[];
 }
 

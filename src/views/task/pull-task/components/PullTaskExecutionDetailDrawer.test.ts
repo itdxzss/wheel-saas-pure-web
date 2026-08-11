@@ -28,6 +28,13 @@ describe("normal-link execution detail drawer", () => {
     assert.match(source, /提权结果/);
     assert.match(source, /label="群 JID"/);
     assert.match(source, /label="账号"/);
+    assert.match(source, /label="拉手账号"/);
+    assert.match(source, /label="站台账号"/);
+    assert.match(
+      source,
+      /pullerAccountLabel\(detail\.roles, row\.pullerAccountId\)/
+    );
+    assert.match(source, /stationAccountLabel\(detail\.roles, row\.callId\)/);
     assert.match(source, /label="号码"/);
     assert.doesNotMatch(source, /（脱敏）/);
     assert.doesNotMatch(source, /重新执行|重试|营销/);

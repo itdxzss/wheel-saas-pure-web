@@ -4,7 +4,12 @@ import type {
   PullTaskStandardMember
 } from "@/api/pull-task";
 import { formatEpoch, standardStageLabel } from "../constants";
-import { actionTypeLabel, roleLabel } from "../standard-execution-display";
+import {
+  actionTypeLabel,
+  pullerAccountLabel,
+  roleLabel,
+  stationAccountLabel
+} from "../standard-execution-display";
 
 defineOptions({ name: "PullTaskExecutionDetailDrawer" });
 
@@ -225,6 +230,15 @@ function accountLabel(
               width="130"
             />
             <el-table-column
+              label="拉手账号"
+              min-width="150"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                {{ pullerAccountLabel(detail.roles, row.pullerAccountId) }}
+              </template>
+            </el-table-column>
+            <el-table-column
               prop="plannedMaterialCount"
               label="计划料子"
               width="100"
@@ -234,6 +248,15 @@ function accountLabel(
               label="计划站台"
               width="100"
             />
+            <el-table-column
+              label="站台账号"
+              min-width="180"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                {{ stationAccountLabel(detail.roles, row.callId) }}
+              </template>
+            </el-table-column>
             <el-table-column label="状态" width="110">
               <template #default="{ row }">{{
                 callStatusLabel(row.callStatus)

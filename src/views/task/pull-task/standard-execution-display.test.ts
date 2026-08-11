@@ -45,4 +45,55 @@ describe("standard pull task execution display", () => {
     assert.equal(roleLabel(4), "提权管理员");
     assert.equal(actionTypeLabel(4), "设置任务管理员");
   });
+
+  it("resolves puller and station accounts for each pull call", async () => {
+    const { pullerAccountLabel, stationAccountLabel } = await import(
+      displayModuleUrl.href
+    );
+    const roles = [
+      {
+        roleRowId: 1,
+        accountId: 1066,
+        accountPhone: "8613800001066",
+        roleType: 2,
+        roleSeq: 1,
+        membershipStatus: 2,
+        adminStatus: 0,
+        availabilityStatus: 1,
+        unavailableReasonCode: null,
+        pullCallId: 201
+      },
+      {
+        roleRowId: 2,
+        accountId: 2048,
+        accountPhone: "8613800002048",
+        roleType: 3,
+        roleSeq: 2,
+        membershipStatus: 2,
+        adminStatus: 0,
+        availabilityStatus: 1,
+        unavailableReasonCode: null,
+        pullCallId: 201
+      },
+      {
+        roleRowId: 3,
+        accountId: 2047,
+        accountPhone: "8613800002047",
+        roleType: 3,
+        roleSeq: 1,
+        membershipStatus: 2,
+        adminStatus: 0,
+        availabilityStatus: 1,
+        unavailableReasonCode: null,
+        pullCallId: 201
+      }
+    ];
+
+    assert.equal(pullerAccountLabel(roles, 1066), "8613800001066");
+    assert.equal(
+      stationAccountLabel(roles, 201),
+      "8613800002047、8613800002048"
+    );
+    assert.equal(stationAccountLabel(roles, 202), "-");
+  });
 });
