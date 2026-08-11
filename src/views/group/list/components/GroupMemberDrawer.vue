@@ -16,6 +16,7 @@ import { apiErrorMessage } from "@/utils/api-error";
 import { timedMessageOptions } from "../constants";
 import { saveChangedGroupProfile } from "../composables/useGroupProfileSaving";
 import { useGroupTimedMessage } from "../composables/useGroupTimedMessage";
+import { applyGroupMemberActionResult } from "../memberActionResult";
 import {
   emptyGroupPermissions,
   useGroupPermissions
@@ -302,7 +303,14 @@ async function runMemberAction(
         { type: "warning", confirmButtonText: "知道了" }
       );
     }
-    await loadDetail();
+    if (detail.value) {
+      detail.value.members = applyGroupMemberActionResult(
+        detail.value.members,
+        action,
+        result
+      );
+    }
+    selectedJids.value = [];
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "成员操作失败"));
   }
