@@ -11,9 +11,13 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import {
   batchAssignGroupFolder,
   batchDeleteGroups,
+  batchRefreshGroupInfo,
+  batchRefreshGroupLinks,
   listGroups,
+  type GroupBatchTaskDetail,
   type GroupListRow
 } from "@/api/group";
+import { useGroupBatchTask } from "./useGroupBatchTask";
 import {
   listGroupFolderOptions,
   type GroupFolderOption
@@ -79,6 +83,13 @@ export interface GroupListPageState {
   searchGroups: () => void;
   selectedCount: ComputedRef<number>;
   total: Ref<number>;
+  refreshLinkBlocked: ComputedRef<boolean>;
+  batchTaskOpen: Ref<boolean>;
+  batchTaskDetail: Ref<GroupBatchTaskDetail | null>;
+  batchTaskError: Ref<string>;
+  closeBatchTask: () => void;
+  submitRefreshLinks: () => Promise<void>;
+  submitRefreshInfo: () => Promise<void>;
 }
 
 function groupName(row: GroupListRow): string {
@@ -117,6 +128,15 @@ export function useGroupListPage(): GroupListPageState {
   const pageSize = ref(10);
   const total = ref(0);
   const selectedCount = computed(() => selectedRows.value.length);
+  // 与后端 selectLinkRefreshBlockedIds 同口径：封禁或不可用都不允许刷新链接；
+  // 链接失效恰恰最需要刷新，不在拦截范围内。
+  const refreshLinkBlocked = computed(() =>
+    selectedRows.value.some(
+      row => row.banned === true || row.status === "UNAVAILABLE"
+    )
+  );
+  const batchTask = useGroupBatchTask();
+  const submittingBatch = ref(false);
   const historicalAppliedCount = computed(
     () =>
       Object.values(historicalApplied).filter(
@@ -346,7 +366,57 @@ export function useGroupListPage(): GroupListPageState {
     void loadCountryOptions();
   });
 
+  function newRequestId(): string {
+    return `grp-batch-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  async function submitBatch(
+    action: (ids: number[], requestId: string) => Promise<{ taskId: number }>,
+    emptyHint: string
+  ): Promise<void> {
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning(emptyHint);
+      return;
+    }
+    if (submittingBatch.value) return;
+    submittingBatch.value = true;
+    try {
+      const ids = selectedRows.value.map(row => row.id);
+      const accepted = await action(ids, newRequestId());
+      await batchTask.track(accepted.taskId);
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "批量任务提交失败，请稍后重试"));
+    } finally {
+      submittingBatch.value = false;
+    }
+  }
+
+  async function submitRefreshLinks(): Promise<void> {
+    if (refreshLinkBlocked.value) {
+      ElMessage.warning("当前群组状态异常，暂不支持刷新邀请链接");
+      return;
+    }
+    await submitBatch(batchRefreshGroupLinks, "请先勾选需要操作的群组");
+  }
+
+  async function submitRefreshInfo(): Promise<void> {
+    await submitBatch(batchRefreshGroupInfo, "请先勾选需要操作的群组");
+  }
+
+  /** 关闭进度弹窗即销毁轮询并丢弃 taskId（PRD P-06），后台任务不受影响继续跑完。 */
+  function closeBatchTask(): void {
+    batchTask.close();
+    void refreshGroups();
+  }
+
   return {
+    refreshLinkBlocked,
+    batchTaskOpen: batchTask.open,
+    batchTaskDetail: batchTask.detail,
+    batchTaskError: batchTask.error,
+    closeBatchTask,
+    submitRefreshLinks,
+    submitRefreshInfo,
     assignFolderDialogOpen,
     assigningFolder,
     assignSelectedFolder,
