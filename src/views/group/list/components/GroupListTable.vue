@@ -18,12 +18,16 @@ const props = defineProps<{
   pageSize: number;
   rows: GroupListRow[];
   selectedCount: number;
+  /** 选中项里存在封禁或不可用群时，刷新链接整体不可用（PRD P-08）。 */
+  refreshLinkBlocked: boolean;
   total: number;
 }>();
 
 const emit = defineEmits<{
   (event: "assign-folder"): void;
   (event: "delete-selected"): void;
+  (event: "batch-refresh-links"): void;
+  (event: "batch-refresh-info"): void;
   (event: "manage-folders"): void;
   (event: "create-normal-group"): void;
   (event: "refresh"): void;
@@ -86,6 +90,32 @@ function formatGroupCreatedAt(value: number | null | undefined): string {
         @click="emit('assign-folder')"
       >
         批量分组
+        <span v-if="selectedCount">({{ selectedCount }})</span>
+      </el-button>
+      <el-tooltip
+        :disabled="!refreshLinkBlocked || selectedCount === 0"
+        content="当前群组状态异常，暂不支持刷新邀请链接"
+        placement="top"
+      >
+        <span>
+          <el-button
+            type="primary"
+            plain
+            :disabled="selectedCount === 0 || refreshLinkBlocked"
+            @click="emit('batch-refresh-links')"
+          >
+            批量刷新群链接
+            <span v-if="selectedCount">({{ selectedCount }})</span>
+          </el-button>
+        </span>
+      </el-tooltip>
+      <el-button
+        type="primary"
+        plain
+        :disabled="selectedCount === 0"
+        @click="emit('batch-refresh-info')"
+      >
+        批量获取最新群信息
         <span v-if="selectedCount">({{ selectedCount }})</span>
       </el-button>
       <el-button

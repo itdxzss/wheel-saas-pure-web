@@ -339,3 +339,86 @@ export function uploadGroupAvatar(
     }
   );
 }
+
+export type GroupBatchTaskType = "REFRESH_LINK" | "REFRESH_INFO";
+
+export type GroupBatchTaskStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELED";
+
+export type GroupBatchTaskItemStatus =
+  | "PENDING"
+  | "SUCCESS"
+  | "FAILED"
+  | "CANCELED";
+
+export interface GroupBatchTaskAccepted {
+  taskId: number;
+  createdAt: number | null;
+  status: GroupBatchTaskStatus;
+}
+
+export interface GroupBatchTaskItem {
+  groupLinkId: number;
+  groupJid: string | null;
+  account: string | null;
+  status: GroupBatchTaskItemStatus;
+  description: string | null;
+  operatedAt: number | null;
+}
+
+export interface GroupBatchTaskDetail {
+  taskId: number;
+  taskType: GroupBatchTaskType;
+  status: GroupBatchTaskStatus;
+  /** 后端直接给出是否终态，前端据此停止轮询，不自行维护状态枚举。 */
+  terminal: boolean;
+  createdAt: number | null;
+  completedAt: number | null;
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  items: GroupBatchTaskItem[];
+}
+
+export function batchRefreshGroupLinks(
+  ids: number[],
+  requestId: string
+): Promise<GroupBatchTaskAccepted> {
+  return armadaRequest<GroupBatchTaskAccepted>(
+    "post",
+    "/api/group-links/batch-refresh-links",
+    { data: { ids, requestId } }
+  );
+}
+
+export function batchRefreshGroupInfo(
+  ids: number[],
+  requestId: string
+): Promise<GroupBatchTaskAccepted> {
+  return armadaRequest<GroupBatchTaskAccepted>(
+    "post",
+    "/api/group-links/batch-refresh-info",
+    { data: { ids, requestId } }
+  );
+}
+
+export function getGroupBatchTask(
+  taskId: number
+): Promise<GroupBatchTaskDetail> {
+  return armadaRequest<GroupBatchTaskDetail>(
+    "get",
+    `/api/group-links/batch-tasks/${taskId}`
+  );
+}
+
+/** 取消任务中尚未开始执行的明细；返回实际取消的明细数。 */
+export function cancelGroupBatchTask(taskId: number): Promise<number> {
+  return armadaRequest<number>(
+    "post",
+    `/api/group-links/batch-tasks/${taskId}/cancel`
+  );
+}

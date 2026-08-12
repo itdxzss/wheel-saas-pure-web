@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import CommonGroupCreateFlow from "@/views/task/pull-task/components/common-group/CommonGroupCreateFlow.vue";
 import BatchAssignFolderDialog from "./components/BatchAssignFolderDialog.vue";
+import GroupBatchTaskDialog from "./components/GroupBatchTaskDialog.vue";
 import GroupFolderManageDialog from "./components/GroupFolderManageDialog.vue";
 import GroupListTable from "./components/GroupListTable.vue";
 import GroupMemberDrawer from "./components/GroupMemberDrawer.vue";
@@ -28,6 +29,13 @@ const {
   assignFolderDialogOpen,
   assigningFolder,
   assignSelectedFolder,
+  batchTaskDetail,
+  batchTaskError,
+  batchTaskOpen,
+  closeBatchTask,
+  refreshLinkBlocked,
+  submitRefreshInfo,
+  submitRefreshLinks,
   applyHistoricalFilter,
   clearHistoricalDraft,
   closeHistoricalFilter,
@@ -200,15 +208,25 @@ function handleRowAction(row, action: string): void {
       :columns="groupListColumns"
       :loading="loading"
       :rows="rows"
+      :refresh-link-blocked="refreshLinkBlocked"
       :selected-count="selectedCount"
       :total="total"
       @assign-folder="openAssignFolder"
+      @batch-refresh-links="submitRefreshLinks"
+      @batch-refresh-info="submitRefreshInfo"
       @create-normal-group="commonGroupCreateFlow?.open()"
       @delete-selected="deleteSelectedGroups"
       @manage-folders="openGroupFolderManage"
       @refresh="refreshGroups"
       @row-action="handleRowAction"
       @selection-change="onSelectionChange"
+    />
+
+    <GroupBatchTaskDialog
+      v-model="batchTaskOpen"
+      :detail="batchTaskDetail"
+      :error="batchTaskError"
+      @close="closeBatchTask"
     />
 
     <BatchAssignFolderDialog
