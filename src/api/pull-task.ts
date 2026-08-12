@@ -149,6 +149,7 @@ export interface PullTaskGroupRow {
   seq: number;
   groupName?: string | null;
   groupLinkUrl?: string | null;
+  sourceFileName?: string | null;
   status: PullTaskGroupStatus;
   memberCount?: number | null;
   joinedCount?: number | null;
@@ -496,6 +497,7 @@ export interface PullTaskStandardExecutionSummary {
   seq: number;
   normalizedLink: string;
   groupJid: string | null;
+  sourceFileName: string | null;
   executionStatus: number;
   stage: number;
   manualPaused: boolean;

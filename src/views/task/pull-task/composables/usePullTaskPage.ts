@@ -159,6 +159,7 @@ function standardGroupRow(
     seq: execution.seq,
     groupName: execution.groupJid,
     groupLinkUrl: execution.normalizedLink,
+    sourceFileName: execution.sourceFileName,
     status: standardExecutionStatus(execution),
     memberCount: execution.validMemberCount,
     joinedCount: execution.materialSummary?.successfulCount ?? null,

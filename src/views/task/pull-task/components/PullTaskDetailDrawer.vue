@@ -320,6 +320,17 @@ function countValue(value?: number | null): number | string {
           </div>
         </template>
       </el-table-column>
+      <el-table-column
+        v-if="normalLink"
+        prop="sourceFileName"
+        label="料子包名称"
+        min-width="180"
+        show-overflow-tooltip
+      >
+        <template #default="{ row }">
+          {{ row.sourceFileName || "-" }}
+        </template>
+      </el-table-column>
       <el-table-column label="任务情况" width="130">
         <template #default="{ row }">
           <el-tag
