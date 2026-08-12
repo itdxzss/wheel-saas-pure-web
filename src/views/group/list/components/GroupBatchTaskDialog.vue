@@ -127,6 +127,15 @@ function handleClose(): void {
 
     <el-table :data="settledItems" border size="small" max-height="320">
       <el-table-column prop="groupLinkId" label="ID" width="90" />
+      <!-- 排查时要能直接拿群 JID 去比对协议侧日志，未解析出 JID 的项(没选出账号/群标识未知)显示占位。 -->
+      <el-table-column
+        prop="groupJid"
+        label="群JID"
+        width="230"
+        show-overflow-tooltip
+      >
+        <template #default="{ row }">{{ row.groupJid || "-" }}</template>
+      </el-table-column>
       <el-table-column prop="account" label="账号" width="150">
         <template #default="{ row }">{{ row.account || "-" }}</template>
       </el-table-column>
