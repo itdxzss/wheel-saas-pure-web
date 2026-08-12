@@ -346,9 +346,14 @@ export type GroupBatchTaskStatus =
   | "PENDING"
   | "RUNNING"
   | "COMPLETED"
-  | "FAILED";
+  | "FAILED"
+  | "CANCELED";
 
-export type GroupBatchTaskItemStatus = "PENDING" | "SUCCESS" | "FAILED";
+export type GroupBatchTaskItemStatus =
+  | "PENDING"
+  | "SUCCESS"
+  | "FAILED"
+  | "CANCELED";
 
 export interface GroupBatchTaskAccepted {
   taskId: number;
@@ -407,5 +412,13 @@ export function getGroupBatchTask(
   return armadaRequest<GroupBatchTaskDetail>(
     "get",
     `/api/group-links/batch-tasks/${taskId}`
+  );
+}
+
+/** 取消任务中尚未开始执行的明细；返回实际取消的明细数。 */
+export function cancelGroupBatchTask(taskId: number): Promise<number> {
+  return armadaRequest<number>(
+    "post",
+    `/api/group-links/batch-tasks/${taskId}/cancel`
   );
 }

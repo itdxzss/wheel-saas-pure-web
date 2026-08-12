@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-// @ts-ignore Node's native TypeScript test runner requires the explicit extension.
 import {
   commonGroupNamePreview,
   createCommonGroupForm,
   toCommonGroupCreateRequest,
   validateCommonGroupForm
+  // @ts-ignore Node's native TypeScript test runner requires the explicit extension.
 } from "./common-group/common-group-form.ts";
 
 function source(relativePath: string): string {

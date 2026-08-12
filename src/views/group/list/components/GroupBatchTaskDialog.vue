@@ -43,6 +43,7 @@ const statusLabel = computed(() => {
   const status = props.detail?.status;
   if (status === "COMPLETED") return "任务完成";
   if (status === "FAILED") return "任务失败";
+  if (status === "CANCELED") return "已取消";
   if (status === "RUNNING") return "运行中";
   return "待执行";
 });
@@ -61,6 +62,11 @@ const settledItems = computed(
 function itemTagType(status: string): "success" | "danger" | "info" {
   if (status === "SUCCESS") return "success";
   return status === "FAILED" ? "danger" : "info";
+}
+
+function itemStatusLabel(status: string): string {
+  if (status === "SUCCESS") return "成功";
+  return status === "FAILED" ? "失败" : "已取消";
 }
 
 function handleClose(): void {
@@ -127,7 +133,7 @@ function handleClose(): void {
       <el-table-column label="任务状态" width="110">
         <template #default="{ row }">
           <el-tag :type="itemTagType(row.status)" size="small">
-            {{ row.status === "SUCCESS" ? "成功" : "失败" }}
+            {{ itemStatusLabel(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
