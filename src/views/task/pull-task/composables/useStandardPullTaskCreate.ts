@@ -100,7 +100,7 @@ function emptyForm(): StandardPullTaskCreateForm {
     clearExistingMembers: false,
     pullCountMin: 50,
     pullCountMax: 50,
-    pullIntervalSeconds: 6,
+    pullIntervalSeconds: 15,
     pullerCountPerGroup: 2,
     stationCountPerCall: 0,
     concurrentGroupCount: 1,
