@@ -212,11 +212,15 @@ describe("group API", () => {
       url: "/api/group-links/42",
       opts: { data: { remark: "本地备注" } }
     });
-    const uploadOptions = calls[2].opts as { data: FormData };
+    const uploadOptions = calls[2].opts as {
+      data: FormData;
+      timeout: number;
+    };
     assert.equal(calls[2].method, "post");
     assert.equal(calls[2].url, "/api/group-links/42/avatar");
     assert.ok(uploadOptions.data instanceof FormData);
     assert.equal(uploadOptions.data.get("file"), file);
+    assert.equal(uploadOptions.timeout, 45000);
     assert.equal(avatarResult.mirrorSynced, true);
     assert.equal(avatarResult.avatarUrl, "https://pps.whatsapp.net/new.jpg");
   });

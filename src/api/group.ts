@@ -333,6 +333,7 @@ export function uploadGroupAvatar(
     `/api/group-links/${id}/avatar`,
     { data: form },
     {
+      timeout: 45000,
       beforeRequestCallback: config => {
         delete config.headers["Content-Type"];
       }
