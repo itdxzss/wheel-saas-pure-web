@@ -24,6 +24,8 @@ describe("group member drawer", () => {
     assert.match(profileSavingSource, /updateGroupRemark/);
     assert.match(profileSavingSource, /Promise\.allSettled/);
     assert.match(source, /mirrorSynced/);
+    assert.match(source, /ref="avatarUploadRef"/);
+    assert.match(source, /avatarUploadRef\.value\?\.clearFiles\(\)/);
     assert.match(source, /useGroupTimedMessage/);
     assert.match(source, /savingTimedMessage/);
     assert.match(source, /useGroupPermissions/);

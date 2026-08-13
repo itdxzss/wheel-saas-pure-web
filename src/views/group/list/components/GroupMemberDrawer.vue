@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
-import { ElMessage, ElMessageBox, type UploadFile } from "element-plus";
+import {
+  ElMessage,
+  ElMessageBox,
+  type UploadFile,
+  type UploadInstance
+} from "element-plus";
 import {
   demoteGroupMembers,
   getGroupDetail,
@@ -44,6 +49,7 @@ const detail = ref<GroupDetail | null>(null);
 const loading = ref(false);
 const savingProfile = ref(false);
 const uploadingAvatar = ref(false);
+const avatarUploadRef = ref<UploadInstance>();
 const refreshingMetadata = ref(false);
 const memberSearch = ref("");
 const selectedJids = ref<string[]>([]);
@@ -252,6 +258,7 @@ async function handleAvatarChange(uploadFile: UploadFile): Promise<void> {
     ElMessage.error(apiErrorMessage(error, "群头像上传失败"));
   } finally {
     uploadingAvatar.value = false;
+    avatarUploadRef.value?.clearFiles();
   }
 }
 
@@ -391,6 +398,7 @@ onBeforeUnmount(resetState);
       <el-form class="drawer-section" :model="profileForm" label-position="top">
         <el-form-item label="群头像">
           <el-upload
+            ref="avatarUploadRef"
             accept="image/*"
             :auto-upload="false"
             :limit="1"
