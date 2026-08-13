@@ -7,6 +7,8 @@ export interface AccountGroupApiRow {
   name: string;
   totalAccounts: number;
   onlineAccounts: number;
+  /** 状态正常、在线且协议身份完整，可直接参与新建普群的账号数。 */
+  executableOnlineAccounts?: number;
   abnormalAccounts: number;
   bannedAccounts: number;
   accountCountSummary?: string | null;
@@ -64,6 +66,7 @@ interface ArmadaAccountGroupRow {
   systemBuiltin?: number | boolean | null;
   accountCount?: number | null;
   onlineCount?: number | null;
+  executableOnlineCount?: number | null;
   restrictedCount?: number | null;
   riskCount?: number | null;
   bannedCount?: number | null;
@@ -86,6 +89,7 @@ function toQuery(params: AccountGroupListQuery) {
 function toAccountGroupRow(row: ArmadaAccountGroupRow): AccountGroupApiRow {
   const totalAccounts = row.accountCount ?? 0;
   const onlineAccounts = row.onlineCount ?? 0;
+  const executableOnlineAccounts = row.executableOnlineCount ?? 0;
   const abnormalAccounts = row.restrictedCount ?? row.riskCount ?? 0;
   const bannedAccounts = row.bannedCount ?? 0;
   return {
@@ -94,6 +98,7 @@ function toAccountGroupRow(row: ArmadaAccountGroupRow): AccountGroupApiRow {
     remark: row.remark ?? null,
     totalAccounts,
     onlineAccounts,
+    executableOnlineAccounts,
     abnormalAccounts,
     bannedAccounts,
     accountCountSummary: `${totalAccounts} - ${onlineAccounts} / ${abnormalAccounts} / ${bannedAccounts}`,

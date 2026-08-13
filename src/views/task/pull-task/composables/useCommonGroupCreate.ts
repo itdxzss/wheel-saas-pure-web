@@ -36,7 +36,7 @@ const MAX_CONSECUTIVE_POLL_ERRORS = 3;
 const ACTIVE_TASK_STORAGE_KEY = "armada:normal-group-creation:active-task-id";
 const PENDING_SUBMISSION_STORAGE_KEY =
   "armada:normal-group-creation:pending-submission";
-const PENDING_SUBMISSION_STORAGE_VERSION = 1;
+const PENDING_SUBMISSION_STORAGE_VERSION = 2;
 const PENDING_SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
 const PENDING_SUBMISSION_CLOCK_SKEW_MS = 60 * 1000;
 
@@ -82,6 +82,8 @@ function isCommonGroupTaskCreateRequest(
     !isRecord(value) ||
     !hasExactKeys(value, [
       "adminAccountGroupId",
+      "secondaryAdminAccountGroupId",
+      "secondaryAdminCount",
       "creatorLeavePolicy",
       "memberSource",
       "memberAccountGroupId",
@@ -96,6 +98,8 @@ function isCommonGroupTaskCreateRequest(
       "settings"
     ]) ||
     !isPositiveSafeInteger(value.adminAccountGroupId) ||
+    !isPositiveSafeInteger(value.secondaryAdminAccountGroupId) ||
+    !isPositiveSafeInteger(value.secondaryAdminCount, 1024) ||
     (value.creatorLeavePolicy !== "KEEP" &&
       value.creatorLeavePolicy !== "LEAVE") ||
     (value.memberSource !== "CONTROLLED_GROUP" &&
@@ -111,7 +115,8 @@ function isCommonGroupTaskCreateRequest(
     value.speed !== "NORMAL" ||
     !isNullablePositiveSafeInteger(value.successMigrationGroupId) ||
     !isNullablePositiveSafeInteger(value.failedMigrationGroupId) ||
-    value.groupCount * value.memberCount > 10000 ||
+    value.groupCount * (value.memberCount + value.secondaryAdminCount) >
+      10000 ||
     !isRecord(value.settings) ||
     !hasExactKeys(value.settings, [
       "sendMessagesAllowed",
@@ -432,7 +437,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
 
   function submit(): void {
     clearErrors();
-    Object.assign(errors, validateCommonGroupForm(form));
+    Object.assign(errors, validateCommonGroupForm(form, accountGroups.value));
     if (Object.keys(errors).length) {
       ElMessage.warning("请检查并完善表单配置");
       return;

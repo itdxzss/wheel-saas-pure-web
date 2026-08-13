@@ -35,6 +35,9 @@ const {
 const selectedManagerGroup = computed(() =>
   accountGroups.value.find(group => group.id === form.managerGroupId)
 );
+const selectedSecondaryManagerGroup = computed(() =>
+  accountGroups.value.find(group => group.id === form.secondaryManagerGroupId)
+);
 const selectedMemberGroup = computed(() =>
   accountGroups.value.find(group => group.id === form.memberGroupId)
 );
@@ -113,6 +116,10 @@ defineExpose({ open });
     <el-descriptions :column="1" border>
       <el-descriptions-item label="管理员分组">
         {{ selectedManagerGroup?.name || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="次管理员配置">
+        {{ selectedSecondaryManagerGroup?.name || "-" }}，每群
+        {{ form.secondaryManagerCount }} 人
       </el-descriptions-item>
       <el-descriptions-item label="成员配置">
         <template v-if="form.memberType === 'CONTROLLED'">

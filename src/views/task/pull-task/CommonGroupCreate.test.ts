@@ -33,6 +33,7 @@ const taskDrawerSource = source(
   "./components/common-group/CommonGroupTaskDrawer.vue"
 );
 const apiSource = source("../../../api/common-group-task.ts");
+const accountGroupApiSource = source("../../../api/account-group.ts");
 
 describe("common group creation flow", () => {
   it("keeps common-group creation out of the pull-task page", () => {
@@ -51,6 +52,7 @@ describe("common group creation flow", () => {
 
   it("validates the required groups and numeric limits before confirmation", () => {
     assert.match(formSource, /请选择管理员分组/);
+    assert.match(formSource, /请选择次管理员分组/);
     assert.match(formSource, /请选择成员分组/);
     assert.match(formSource, /建群数量必须为 1 至 1000 的整数/);
     assert.match(formSource, /计划群成员快照不能超过 10000 条/);
@@ -74,7 +76,10 @@ describe("common group creation flow", () => {
       /startNo: form\.groupName\.trim\(\) \? form\.startIndex : 1/
     );
     assert.match(formSource, /开始编号必须为大于等于 1 的整数/);
-    assert.match(composableSource, /validateCommonGroupForm\(form\)/);
+    assert.match(
+      composableSource,
+      /validateCommonGroupForm\(form, accountGroups\.value\)/
+    );
     assert.match(composableSource, /confirmVisible\.value = true/);
     assert.match(composableSource, /请检查并完善表单配置/);
   });
@@ -82,6 +87,7 @@ describe("common group creation flow", () => {
   it("accepts a blank group name and normalizes its unused start number", () => {
     const form = createCommonGroupForm();
     form.managerGroupId = 101;
+    form.secondaryManagerGroupId = 103;
     form.memberGroupId = 102;
     form.groupName = "   ";
     form.startIndex = 0;
@@ -100,6 +106,7 @@ describe("common group creation flow", () => {
   it("keeps explicit group-name numbering behavior unchanged", () => {
     const form = createCommonGroupForm();
     form.managerGroupId = 101;
+    form.secondaryManagerGroupId = 103;
     form.memberGroupId = 102;
     form.groupName = "项目群-{no}";
     form.groupCount = 2;
@@ -108,6 +115,49 @@ describe("common group creation flow", () => {
     assert.deepEqual(validateCommonGroupForm(form), {});
     assert.deepEqual(commonGroupNamePreview(form), ["项目群-7", "项目群-8"]);
     assert.equal(toCommonGroupCreateRequest(form).startNo, 7);
+  });
+
+  it("validates and submits the secondary-admin group configuration", () => {
+    const form = createCommonGroupForm();
+    form.managerGroupId = 101;
+    form.secondaryManagerGroupId = 103;
+    form.secondaryManagerCount = 2;
+    form.memberGroupId = 102;
+
+    assert.deepEqual(
+      validateCommonGroupForm(form, [
+        { id: 103, onlineAccounts: 10, executableOnlineAccounts: 1 }
+      ]),
+      {
+        secondaryManagerCount:
+          "次管理员分组当前状态正常且在线的可用账号仅 1 个，请减少次管理员入群数量"
+      }
+    );
+
+    assert.deepEqual(
+      validateCommonGroupForm(form, [
+        { id: 103, onlineAccounts: 10, executableOnlineAccounts: 2 }
+      ]),
+      {}
+    );
+    assert.deepEqual(
+      {
+        secondaryAdminAccountGroupId:
+          toCommonGroupCreateRequest(form).secondaryAdminAccountGroupId,
+        secondaryAdminCount:
+          toCommonGroupCreateRequest(form).secondaryAdminCount
+      },
+      { secondaryAdminAccountGroupId: 103, secondaryAdminCount: 2 }
+    );
+    assert.match(accountMemberSource, /次管理员分组/);
+    assert.match(accountMemberSource, /次管理员入群数量/);
+    assert.match(accountMemberSource, /正常在线可用/);
+    assert.match(
+      accountGroupApiSource,
+      /executableOnlineAccounts = row\.executableOnlineCount \?\? 0/
+    );
+    assert.match(flowSource, /次管理员配置/);
+    assert.match(composableSource, /PENDING_SUBMISSION_STORAGE_VERSION = 2/);
   });
 
   it("loads current account groups and protects dirty-form closing", () => {

@@ -77,6 +77,53 @@ watch(
           </div>
         </el-form-item>
       </div>
+
+      <div class="field-columns secondary-admin-fields">
+        <el-form-item required :error="errors.secondaryManagerGroupId">
+          <template #label>
+            次管理员分组
+            <CommonGroupHelp
+              content="从账号分组中选择次管理员；系统会为每个群随机选择状态正常且在线的账号。"
+            />
+          </template>
+          <el-select
+            v-model="form.secondaryManagerGroupId"
+            filterable
+            placeholder="请选择次管理员分组"
+            class="full-width"
+          >
+            <el-option
+              v-for="group in accountGroups"
+              :key="group.id"
+              :label="`${group.name}（正常在线可用 ${group.executableOnlineAccounts ?? 0}）`"
+              :value="group.id"
+            />
+          </el-select>
+          <div class="field-help">
+            仅统计状态正常、在线且协议身份完整的账号；同一个计划群不重复选择，不同群之间可以复用。
+          </div>
+        </el-form-item>
+
+        <el-form-item required :error="errors.secondaryManagerCount">
+          <template #label>
+            次管理员入群数量
+            <CommonGroupHelp
+              content="每个新建群组与创群账号、普通成员一起入群的次管理员账号数量。"
+            />
+          </template>
+          <el-input-number
+            v-model="form.secondaryManagerCount"
+            :min="1"
+            :max="1024"
+            :step="1"
+            step-strictly
+            class="full-width"
+          />
+          <div class="field-help">
+            建群成功后，群主会通过现有成员管理接口将这些账号设置为管理员。
+          </div>
+        </el-form-item>
+      </div>
     </el-card>
 
     <el-card shadow="never" class="form-section">
@@ -201,6 +248,10 @@ watch(
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.secondary-admin-fields {
+  margin-top: 16px;
 }
 
 .full-width {

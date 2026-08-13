@@ -15,6 +15,7 @@ describe("account group API", () => {
           name: "A",
           accountCount: 12,
           onlineCount: 3,
+          executableOnlineCount: 2,
           restrictedCount: 4,
           riskCount: 2,
           bannedCount: 1,
@@ -28,6 +29,7 @@ describe("account group API", () => {
     const result = await listAccountGroups({ page: 1, pageSize: 20 });
 
     assert.equal(result.list?.[0]?.abnormalAccounts, 4);
+    assert.equal(result.list?.[0]?.executableOnlineAccounts, 2);
     assert.equal(result.list?.[0]?.accountCountSummary, "12 - 3 / 4 / 1");
     assert.deepEqual(armadaCalls(), [
       {
@@ -61,6 +63,17 @@ describe("account group API", () => {
 
     assert.equal(result.list?.[0]?.abnormalAccounts, 3);
     assert.equal(result.list?.[0]?.accountCountSummary, "8 - 2 / 3 / 1");
+  });
+
+  it("does not treat the broad online count as executable when the backend field is absent", async () => {
+    resetArmadaMock({
+      list: [{ id: 13, name: "旧响应", onlineCount: 9 }],
+      total: 1
+    });
+
+    const result = await listAccountGroups();
+
+    assert.equal(result.list?.[0]?.executableOnlineAccounts, 0);
   });
 
   it("maps marketing occupancy facts without loading task details", async () => {

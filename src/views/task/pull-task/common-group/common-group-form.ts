@@ -5,6 +5,8 @@ export type CommonGroupDefaultMode = "DEFAULT" | "OPEN" | "CLOSED";
 
 export interface CommonGroupForm {
   managerGroupId: number | "";
+  secondaryManagerGroupId: number | "";
+  secondaryManagerCount: number;
   creatorAutoLeave: boolean;
   memberType: CommonGroupMemberType;
   memberGroupId: number | "";
@@ -35,6 +37,8 @@ export type CommonGroupFormErrors = Partial<
 export function createCommonGroupForm(): CommonGroupForm {
   return {
     managerGroupId: "",
+    secondaryManagerGroupId: "",
+    secondaryManagerCount: 1,
     creatorAutoLeave: false,
     memberType: "CONTROLLED",
     memberGroupId: "",
@@ -70,10 +74,35 @@ function generatedCommonGroupName(
 }
 
 export function validateCommonGroupForm(
-  form: CommonGroupForm
+  form: CommonGroupForm,
+  accountGroups: ReadonlyArray<{
+    id: number;
+    onlineAccounts: number;
+    executableOnlineAccounts?: number;
+  }> = []
 ): CommonGroupFormErrors {
   const errors: CommonGroupFormErrors = {};
   if (!form.managerGroupId) errors.managerGroupId = "请选择管理员分组";
+  if (!form.secondaryManagerGroupId) {
+    errors.secondaryManagerGroupId = "请选择次管理员分组";
+  }
+  if (
+    !isPositiveInteger(form.secondaryManagerCount) ||
+    form.secondaryManagerCount > 1024
+  ) {
+    errors.secondaryManagerCount = "次管理员入群数量必须为 1 至 1024 的整数";
+  } else if (form.secondaryManagerGroupId) {
+    const selectedGroup = accountGroups.find(
+      group => group.id === form.secondaryManagerGroupId
+    );
+    if (
+      selectedGroup &&
+      form.secondaryManagerCount >
+        (selectedGroup.executableOnlineAccounts ?? 0)
+    ) {
+      errors.secondaryManagerCount = `次管理员分组当前状态正常且在线的可用账号仅 ${selectedGroup.executableOnlineAccounts ?? 0} 个，请减少次管理员入群数量`;
+    }
+  }
   if (form.memberType !== "CUSTOM" && !form.memberGroupId) {
     errors.memberGroupId = "请选择成员分组";
   }
@@ -110,7 +139,10 @@ export function validateCommonGroupForm(
   if (
     isPositiveInteger(form.groupCount) &&
     isPositiveInteger(effectiveMemberCount) &&
-    form.groupCount * effectiveMemberCount > 10000
+    isPositiveInteger(form.secondaryManagerCount) &&
+    form.groupCount *
+        (effectiveMemberCount + form.secondaryManagerCount) >
+      10000
   ) {
     errors.groupCount = "计划群成员快照不能超过 10000 条，请减少建群或成员数量";
   }
@@ -133,6 +165,8 @@ export function toCommonGroupCreateRequest(
 ): CommonGroupTaskCreateRequest {
   return {
     adminAccountGroupId: Number(form.managerGroupId),
+    secondaryAdminAccountGroupId: Number(form.secondaryManagerGroupId),
+    secondaryAdminCount: form.secondaryManagerCount,
     creatorLeavePolicy: form.creatorAutoLeave ? "LEAVE" : "KEEP",
     memberSource:
       form.memberType === "EMPTY" ? "EMPTY_GROUP" : "CONTROLLED_GROUP",
