@@ -24,6 +24,14 @@ describe("group member drawer", () => {
     assert.match(profileSavingSource, /updateGroupRemark/);
     assert.match(profileSavingSource, /Promise\.allSettled/);
     assert.match(source, /mirrorSynced/);
+    assert.match(source, /ref="avatarUploadRef"/);
+    assert.match(source, /avatarUploadRef\.value\?\.clearFiles\(\)/);
+    assert.match(source, /loaded\.metadataSyncedAt\s*!==\s*previousSyncedAt/);
+    assert.match(source, /群信息仍在同步，请稍后再试/);
+    assert.doesNotMatch(
+      source,
+      /requestGroupMetadataSync\(group\.id\)[\s\S]{0,120}await loadDetail\(\)/
+    );
     assert.match(source, /useGroupTimedMessage/);
     assert.match(source, /savingTimedMessage/);
     assert.match(source, /useGroupPermissions/);

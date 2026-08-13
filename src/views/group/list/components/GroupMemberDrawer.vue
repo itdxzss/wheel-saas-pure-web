@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
-import { ElMessage, ElMessageBox, type UploadFile } from "element-plus";
+import {
+  ElMessage,
+  ElMessageBox,
+  type UploadFile,
+  type UploadInstance
+} from "element-plus";
 import {
   demoteGroupMembers,
   getGroupDetail,
@@ -44,11 +49,13 @@ const detail = ref<GroupDetail | null>(null);
 const loading = ref(false);
 const savingProfile = ref(false);
 const uploadingAvatar = ref(false);
+const avatarUploadRef = ref<UploadInstance>();
 const refreshingMetadata = ref(false);
 const memberSearch = ref("");
 const selectedJids = ref<string[]>([]);
 const avatarPreviewUrl = ref<string | null>(null);
 const objectUrl = ref<string | null>(null);
+let metadataRefreshSession = 0;
 const profileForm = reactive({
   groupName: "",
   remark: ""
@@ -130,6 +137,7 @@ function resetRealtimeState(): void {
 }
 
 function resetState(): void {
+  metadataRefreshSession += 1;
   detail.value = null;
   memberSearch.value = "";
   selectedJids.value = [];
@@ -137,6 +145,16 @@ function resetState(): void {
   if (objectUrl.value) URL.revokeObjectURL(objectUrl.value);
   objectUrl.value = null;
   avatarPreviewUrl.value = null;
+}
+
+function applyDetail(group: GroupListRow, loaded: GroupDetail): void {
+  detail.value = loaded;
+  profileForm.groupName = loaded.groupName ?? displayGroupName(group);
+  profileForm.remark = loaded.remark ?? group.remark ?? "";
+  Object.assign(profileBaseline, profileForm);
+  avatarPreviewUrl.value = loaded.avatarUrl ?? group.avatarUrl ?? null;
+  setTimedMessageMode(loaded.timedMessageMode);
+  setPermissions(loaded.permissions);
 }
 
 function hydrateFromGroup(group: GroupListRow | null): void {
@@ -154,13 +172,7 @@ async function loadDetail(): Promise<void> {
   resetRealtimeState();
   try {
     const loaded = await getGroupDetail(group.id);
-    detail.value = loaded;
-    profileForm.groupName = loaded.groupName ?? displayGroupName(group);
-    profileForm.remark = loaded.remark ?? group.remark ?? "";
-    Object.assign(profileBaseline, profileForm);
-    avatarPreviewUrl.value = loaded.avatarUrl ?? group.avatarUrl ?? null;
-    setTimedMessageMode(loaded.timedMessageMode);
-    setPermissions(loaded.permissions);
+    applyDetail(group, loaded);
   } catch (error) {
     detail.value = fallbackDetail(
       group,
@@ -174,12 +186,39 @@ async function loadDetail(): Promise<void> {
 async function refreshMetadata(): Promise<void> {
   const group = props.group;
   if (!group) return;
+  const session = ++metadataRefreshSession;
+  const previousSyncedAt = detail.value?.metadataSyncedAt ?? null;
   refreshingMetadata.value = true;
   try {
     await requestGroupMetadataSync(group.id);
     ElMessage.success("已加入同步队列");
-    await loadDetail();
-    emit("refresh");
+    if (detail.value) {
+      detail.value.metadataSyncStatus = "PENDING";
+      detail.value.metadataSyncError = null;
+    }
+    for (let attempt = 0; attempt < 15; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (session !== metadataRefreshSession || !props.modelValue) return;
+      const loaded = await getGroupDetail(group.id);
+      if (detail.value) {
+        detail.value.metadataSyncStatus = loaded.metadataSyncStatus;
+        detail.value.metadataSyncError = loaded.metadataSyncError;
+      }
+      const completedThisRefresh =
+        loaded.metadataSyncStatus === "SUCCEEDED" &&
+        loaded.metadataSyncedAt != null &&
+        loaded.metadataSyncedAt !== previousSyncedAt;
+      if (completedThisRefresh) {
+        applyDetail(group, loaded);
+        emit("refresh");
+        ElMessage.success("群信息已刷新");
+        return;
+      }
+      if (loaded.metadataSyncStatus === "FAILED") {
+        throw new Error(loaded.metadataSyncError || "群信息同步失败");
+      }
+    }
+    ElMessage.warning("群信息仍在同步，请稍后再试");
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "群信息刷新请求失败"));
   } finally {
@@ -252,6 +291,7 @@ async function handleAvatarChange(uploadFile: UploadFile): Promise<void> {
     ElMessage.error(apiErrorMessage(error, "群头像上传失败"));
   } finally {
     uploadingAvatar.value = false;
+    avatarUploadRef.value?.clearFiles();
   }
 }
 
@@ -332,6 +372,7 @@ watch(
   () => props.group,
   group => {
     if (props.modelValue) {
+      metadataRefreshSession += 1;
       hydrateFromGroup(group);
       void loadDetail();
     }
@@ -391,6 +432,7 @@ onBeforeUnmount(resetState);
       <el-form class="drawer-section" :model="profileForm" label-position="top">
         <el-form-item label="群头像">
           <el-upload
+            ref="avatarUploadRef"
             accept="image/*"
             :auto-upload="false"
             :limit="1"
