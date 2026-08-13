@@ -52,7 +52,7 @@ describe("common group creation flow", () => {
 
   it("validates the required groups and numeric limits before confirmation", () => {
     assert.match(formSource, /请选择管理员分组/);
-    assert.match(formSource, /请选择次管理员分组/);
+    assert.doesNotMatch(formSource, /请选择次管理员分组/);
     assert.match(formSource, /请选择成员分组/);
     assert.match(formSource, /建群数量必须为 1 至 1000 的整数/);
     assert.match(formSource, /计划群成员快照不能超过 10000 条/);
@@ -88,6 +88,7 @@ describe("common group creation flow", () => {
     const form = createCommonGroupForm();
     form.managerGroupId = 101;
     form.secondaryManagerGroupId = 103;
+    form.secondaryManagerCount = 1;
     form.memberGroupId = 102;
     form.groupName = "   ";
     form.startIndex = 0;
@@ -107,6 +108,7 @@ describe("common group creation flow", () => {
     const form = createCommonGroupForm();
     form.managerGroupId = 101;
     form.secondaryManagerGroupId = 103;
+    form.secondaryManagerCount = 1;
     form.memberGroupId = 102;
     form.groupName = "项目群-{no}";
     form.groupCount = 2;
@@ -126,11 +128,11 @@ describe("common group creation flow", () => {
 
     assert.deepEqual(
       validateCommonGroupForm(form, [
-        { id: 103, onlineAccounts: 10, executableOnlineAccounts: 1 }
+        { id: 103, onlineAccounts: 1, executableOnlineAccounts: 1 }
       ]),
       {
         secondaryManagerCount:
-          "次管理员分组当前状态正常且在线的可用账号仅 1 个，请减少次管理员入群数量"
+          "次管理员分组当前在线账号仅 1 个，请减少次管理员入群数量"
       }
     );
 
@@ -151,7 +153,7 @@ describe("common group creation flow", () => {
     );
     assert.match(accountMemberSource, /次管理员分组/);
     assert.match(accountMemberSource, /次管理员入群数量/);
-    assert.match(accountMemberSource, /正常在线可用/);
+    assert.match(accountMemberSource, /在线/);
     assert.match(
       accountGroupApiSource,
       /executableOnlineAccounts = row\.executableOnlineCount \?\? 0/

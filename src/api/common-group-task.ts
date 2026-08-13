@@ -12,7 +12,7 @@ export interface CommonGroupSettingsRequest {
 
 export interface CommonGroupTaskCreateRequest {
   adminAccountGroupId: number;
-  secondaryAdminAccountGroupId: number;
+  secondaryAdminAccountGroupId: number | null;
   secondaryAdminCount: number;
   creatorLeavePolicy: "KEEP" | "LEAVE";
   memberSource: CommonGroupMemberSource;
