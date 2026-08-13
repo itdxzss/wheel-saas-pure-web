@@ -75,6 +75,15 @@ function isNullablePositiveSafeInteger(value: unknown): value is number | null {
   return value === null || isPositiveSafeInteger(value);
 }
 
+function isNonNegativeSafeInteger(value: unknown, max?: number): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    (max === undefined || value <= max)
+  );
+}
+
 function isCommonGroupTaskCreateRequest(
   value: unknown
 ): value is CommonGroupTaskCreateRequest {
@@ -98,8 +107,11 @@ function isCommonGroupTaskCreateRequest(
       "settings"
     ]) ||
     !isPositiveSafeInteger(value.adminAccountGroupId) ||
-    !isPositiveSafeInteger(value.secondaryAdminAccountGroupId) ||
-    !isPositiveSafeInteger(value.secondaryAdminCount, 1024) ||
+    !isNullablePositiveSafeInteger(value.secondaryAdminAccountGroupId) ||
+    !isNonNegativeSafeInteger(value.secondaryAdminCount, 1024) ||
+    (value.secondaryAdminAccountGroupId === null
+      ? value.secondaryAdminCount !== 0
+      : value.secondaryAdminCount === 0) ||
     (value.creatorLeavePolicy !== "KEEP" &&
       value.creatorLeavePolicy !== "LEAVE") ||
     (value.memberSource !== "CONTROLLED_GROUP" &&

@@ -118,8 +118,11 @@ defineExpose({ open });
         {{ selectedManagerGroup?.name || "-" }}
       </el-descriptions-item>
       <el-descriptions-item label="次管理员配置">
-        {{ selectedSecondaryManagerGroup?.name || "-" }}，每群
-        {{ form.secondaryManagerCount }} 人
+        <template v-if="selectedSecondaryManagerGroup">
+          {{ selectedSecondaryManagerGroup.name }}，每群
+          {{ form.secondaryManagerCount }} 人
+        </template>
+        <template v-else>未配置</template>
       </el-descriptions-item>
       <el-descriptions-item label="成员配置">
         <template v-if="form.memberType === 'CONTROLLED'">
