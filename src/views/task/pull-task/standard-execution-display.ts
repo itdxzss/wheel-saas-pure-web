@@ -13,7 +13,7 @@ export const standardStageOptions = [
   { label: "管理员进群", value: 2 },
   { label: "管理员设置", value: 3 },
   { label: "管理—拉手联系人", value: 4 },
-  { label: "管理员邀请拉手", value: 5 },
+  { label: "拉手进群", value: 5 },
   { label: "拉人执行", value: 6 },
   { label: "料子提权", value: 7 },
   { label: "执行收口", value: 8 }

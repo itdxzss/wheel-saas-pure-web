@@ -31,6 +31,7 @@ export interface StandardPullTaskCreateForm {
   materialAdminTiming: 1 | 2;
   pullerSyncMode: "SINGLE" | "BATCH";
   clearExistingMembers: boolean;
+  pullerJoinByLink: boolean;
   earlyPullCount: number;
   earlyPullCallCount: number;
   pullCountMin: number;
@@ -100,6 +101,7 @@ function emptyForm(): StandardPullTaskCreateForm {
     materialAdminTiming: 2,
     pullerSyncMode: "SINGLE",
     clearExistingMembers: false,
+    pullerJoinByLink: false,
     earlyPullCount: 1,
     earlyPullCallCount: 2,
     pullCountMin: 50,
@@ -457,6 +459,7 @@ export function useStandardPullTaskCreate(
       pullerSyncMode: form.pullerSyncMode,
       materialAdminTiming: form.materialAdminTiming,
       clearExistingMembers: form.clearExistingMembers,
+      pullerJoinByLink: form.pullerJoinByLink,
       earlyPullCount: form.earlyPullCount,
       earlyPullCallCount: form.earlyPullCallCount,
       pullCountMin: form.pullCountMin,

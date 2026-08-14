@@ -212,6 +212,7 @@ describe("pull task unified API", () => {
       pullerSyncMode: "BATCH",
       materialAdminTiming: 1,
       clearExistingMembers: true,
+      pullerJoinByLink: true,
       earlyPullCount: 1,
       earlyPullCallCount: 2,
       pullCountMin: 3,
@@ -265,6 +266,7 @@ describe("pull task unified API", () => {
     assert.equal(createData.managerGroupId, 11);
     assert.equal(createData.earlyPullCount, 1);
     assert.equal(createData.earlyPullCallCount, 2);
+    assert.equal(createData.pullerJoinByLink, true);
     assert.deepEqual(
       Object.keys(createData).sort(),
       [
@@ -283,6 +285,7 @@ describe("pull task unified API", () => {
         "pullCountMin",
         "pullIntervalSeconds",
         "pullerCountPerGroup",
+        "pullerJoinByLink",
         "pullerFinishGroupId",
         "pullerGroupId",
         "pullerSyncMode",

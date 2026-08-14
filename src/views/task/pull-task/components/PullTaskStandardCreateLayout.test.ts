@@ -58,6 +58,7 @@ describe("normal-link create prototype layout", () => {
     for (const field of [
       "群组分组",
       "拉手同步料子方式",
+      "拉手踩链接进群",
       "是否清空群原成员",
       "前期单次拉人数",
       "前期拉人执行次数",

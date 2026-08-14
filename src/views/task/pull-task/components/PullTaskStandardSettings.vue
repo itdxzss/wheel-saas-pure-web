@@ -100,6 +100,9 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
             <el-form-item label="是否清空群原成员">
               <el-switch v-model="form.clearExistingMembers" />
             </el-form-item>
+            <el-form-item label="拉手踩链接进群">
+              <el-switch v-model="form.pullerJoinByLink" />
+            </el-form-item>
           </div>
         </section>
 
@@ -334,7 +337,7 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
 }
 
 .strategy-grid {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
 }
 
 .params-grid {

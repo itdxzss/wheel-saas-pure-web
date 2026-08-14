@@ -110,6 +110,9 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="清空群原成员">
           {{ yesNo(standardSetting.clearExistingMembers) }}
         </el-descriptions-item>
+        <el-descriptions-item label="拉手踩链接进群">
+          {{ yesNo(standardSetting.pullerJoinByLink) }}
+        </el-descriptions-item>
         <el-descriptions-item label="前期单次拉人数">
           {{ standardSetting.earlyPullCount }}
         </el-descriptions-item>
