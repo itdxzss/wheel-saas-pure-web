@@ -43,6 +43,7 @@ export interface CommonGroupTaskItemResult {
   itemNo: number;
   groupSubject: string;
   creatorAccountId: number;
+  creatorWsPhone: string;
   creatorProtocolBackend: "WEB" | "ANDROID";
   groupJid: string | null;
   groupLinkId: number | null;
