@@ -110,6 +110,12 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="清空群原成员">
           {{ yesNo(standardSetting.clearExistingMembers) }}
         </el-descriptions-item>
+        <el-descriptions-item label="前期单次拉人数">
+          {{ standardSetting.earlyPullCount }}
+        </el-descriptions-item>
+        <el-descriptions-item label="前期拉人执行次数">
+          {{ standardSetting.earlyPullCallCount }} 次
+        </el-descriptions-item>
         <el-descriptions-item label="单次拉人数范围">
           {{ standardSetting.pullCountMin }} ~
           {{ standardSetting.pullCountMax }}

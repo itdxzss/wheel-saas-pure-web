@@ -212,6 +212,8 @@ describe("pull task unified API", () => {
       pullerSyncMode: "BATCH",
       materialAdminTiming: 1,
       clearExistingMembers: true,
+      earlyPullCount: 1,
+      earlyPullCallCount: 2,
       pullCountMin: 3,
       pullCountMax: 5,
       pullIntervalSeconds: 6,
@@ -261,6 +263,8 @@ describe("pull task unified API", () => {
       armadaCalls()[5].opts as { data: Record<string, unknown> }
     ).data;
     assert.equal(createData.managerGroupId, 11);
+    assert.equal(createData.earlyPullCount, 1);
+    assert.equal(createData.earlyPullCallCount, 2);
     assert.deepEqual(
       Object.keys(createData).sort(),
       [
@@ -268,6 +272,8 @@ describe("pull task unified API", () => {
         "clearExistingMembers",
         "concurrentGroupCount",
         "draftTaskId",
+        "earlyPullCallCount",
+        "earlyPullCount",
         "groupFolderId",
         "groupSetting",
         "managerFinishGroupId",

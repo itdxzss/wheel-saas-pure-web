@@ -59,6 +59,8 @@ describe("normal-link create prototype layout", () => {
       "群组分组",
       "拉手同步料子方式",
       "是否清空群原成员",
+      "前期单次拉人数",
+      "前期拉人执行次数",
       "任务完成的管理移至分组",
       "任务完成的拉手移至分组",
       "设置顺序",
@@ -85,8 +87,6 @@ describe("normal-link create prototype layout", () => {
       "次管理",
       "拉手退群方式",
       "管理员退群方式",
-      "前期单次拉人数",
-      "前期拉人执行次数",
       "拉手风控时间"
     ]) {
       assert.doesNotMatch(allCreateSources, new RegExp(excludedField));

@@ -157,6 +157,23 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
                 class="full-width"
               />
             </el-form-item>
+            <el-form-item label="前期单次拉人数" required>
+              <el-input-number
+                v-model="form.earlyPullCount"
+                :min="1"
+                controls-position="right"
+                class="full-width"
+              />
+            </el-form-item>
+            <el-form-item label="前期拉人执行次数" required>
+              <el-input-number
+                v-model="form.earlyPullCallCount"
+                :min="1"
+                controls-position="right"
+                class="full-width"
+              />
+              <span class="field-unit">次</span>
+            </el-form-item>
           </div>
         </section>
 

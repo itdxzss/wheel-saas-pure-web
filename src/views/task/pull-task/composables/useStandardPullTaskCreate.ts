@@ -31,6 +31,8 @@ export interface StandardPullTaskCreateForm {
   materialAdminTiming: 1 | 2;
   pullerSyncMode: "SINGLE" | "BATCH";
   clearExistingMembers: boolean;
+  earlyPullCount: number;
+  earlyPullCallCount: number;
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
@@ -98,6 +100,8 @@ function emptyForm(): StandardPullTaskCreateForm {
     materialAdminTiming: 2,
     pullerSyncMode: "SINGLE",
     clearExistingMembers: false,
+    earlyPullCount: 1,
+    earlyPullCallCount: 2,
     pullCountMin: 50,
     pullCountMax: 50,
     pullIntervalSeconds: 15,
@@ -440,6 +444,10 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("单次拉人数范围配置不正确");
       return null;
     }
+    if (form.earlyPullCount < 1 || form.earlyPullCallCount < 1) {
+      ElMessage.warning("前期拉人人数或执行次数配置不正确");
+      return null;
+    }
     return {
       draftTaskId: draft.value.draftTaskId,
       taskName: form.taskName.trim(),
@@ -449,6 +457,8 @@ export function useStandardPullTaskCreate(
       pullerSyncMode: form.pullerSyncMode,
       materialAdminTiming: form.materialAdminTiming,
       clearExistingMembers: form.clearExistingMembers,
+      earlyPullCount: form.earlyPullCount,
+      earlyPullCallCount: form.earlyPullCallCount,
       pullCountMin: form.pullCountMin,
       pullCountMax: form.pullCountMax,
       pullIntervalSeconds: form.pullIntervalSeconds,

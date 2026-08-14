@@ -464,6 +464,8 @@ export interface PullTaskStandardCreateRequest {
   pullerSyncMode: "SINGLE" | "BATCH";
   materialAdminTiming: 1 | 2;
   clearExistingMembers: boolean;
+  earlyPullCount: number;
+  earlyPullCallCount: number;
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
@@ -608,6 +610,8 @@ export interface PullTaskStandardSetting {
   pullerSyncMode: "SINGLE" | "BATCH";
   materialAdminTiming: 1 | 2;
   clearExistingMembers: boolean;
+  earlyPullCount: number;
+  earlyPullCallCount: number;
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;

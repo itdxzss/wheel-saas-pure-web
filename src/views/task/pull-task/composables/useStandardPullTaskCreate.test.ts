@@ -57,6 +57,8 @@ describe("standard normal-link pull task create state", () => {
 
     assert.equal(state.form.autoStart, true);
     assert.equal(state.form.materialAdminTiming, 2);
+    assert.equal(state.form.earlyPullCount, 1);
+    assert.equal(state.form.earlyPullCallCount, 2);
     assert.equal(state.form.pullCountMin, 50);
     assert.equal(state.form.pullCountMax, 50);
     assert.equal(state.form.pullerCountPerGroup, 2);
@@ -332,6 +334,8 @@ describe("standard normal-link pull task create state", () => {
       "clearExistingMembers",
       "concurrentGroupCount",
       "draftTaskId",
+      "earlyPullCallCount",
+      "earlyPullCount",
       "groupFolderId",
       "groupSetting",
       "managerFinishGroupId",
@@ -353,6 +357,8 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(payload.managerGroupId, 11);
     assert.equal(payload.pullerGroupId, 12);
     assert.equal(payload.stationGroupId, 13);
+    assert.equal(payload.earlyPullCount, 1);
+    assert.equal(payload.earlyPullCallCount, 2);
     assert.deepEqual(payload.groupSetting, {
       settingTiming: "BEFORE_PULL",
       groupName: null,

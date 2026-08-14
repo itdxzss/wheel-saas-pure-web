@@ -100,6 +100,8 @@ describe("pull task list prototype", () => {
     assert.match(detailDrawerSource, /detailTask\?\.standardSetting/);
     assert.match(detailDrawerSource, /detailTask\?\.groupSetting/);
     assert.match(savedSettingsSource, /已保存任务配置/);
+    assert.match(savedSettingsSource, /前期单次拉人数/);
+    assert.match(savedSettingsSource, /前期拉人执行次数/);
     assert.match(savedSettingsSource, /avatarPreviewUrl/);
     assert.match(savedSettingsSource, /getPullTaskStandardGroupAvatarContent/);
     assert.match(savedSettingsSource, /URL\.createObjectURL/);
