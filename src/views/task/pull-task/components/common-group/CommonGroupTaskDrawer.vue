@@ -50,7 +50,7 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
 </script>
 
 <template>
-  <el-drawer v-model="visible" title="普群任务详情" size="720px">
+  <el-drawer v-model="visible" title="普群任务详情" size="960px">
     <template v-if="task">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="任务 ID">
@@ -76,6 +76,7 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
       <el-table :data="task.items" border>
         <el-table-column prop="index" label="序号" width="80" />
         <el-table-column prop="groupName" label="群名称" min-width="180" />
+        <el-table-column prop="creatorPhone" label="创群号" min-width="150" />
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)" effect="light">
@@ -84,6 +85,7 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
           </template>
         </el-table-column>
         <el-table-column prop="message" label="执行说明" min-width="180" />
+        <el-table-column prop="operationTime" label="操作时间" width="170" />
         <el-table-column label="操作" width="90">
           <template #default="{ row }">
             <el-button
@@ -98,6 +100,13 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
           </template>
         </el-table-column>
       </el-table>
+
+      <section class="task-log-block">
+        <h4>任务日志</h4>
+        <ol>
+          <li v-for="log in task.logs" :key="log">{{ log }}</li>
+        </ol>
+      </section>
     </template>
 
     <template #footer>
@@ -115,5 +124,23 @@ const itemStatusText = (status: CommonGroupTaskItem["status"]) =>
   gap: 12px;
   align-items: center;
   margin: 20px 0;
+}
+
+.task-log-block {
+  padding: 16px 20px;
+  margin-top: 20px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.task-log-block h4 {
+  margin: 0 0 12px;
+}
+
+.task-log-block ol {
+  padding-left: 24px;
+  margin: 0;
+  line-height: 1.8;
+  color: var(--el-text-color-regular);
 }
 </style>

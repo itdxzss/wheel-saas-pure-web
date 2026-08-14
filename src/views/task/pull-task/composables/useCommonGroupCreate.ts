@@ -7,6 +7,7 @@ import {
   type Ref
 } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import dayjs from "dayjs";
 import {
   createCommonGroupTask,
   getCommonGroupTask,
@@ -29,6 +30,7 @@ import {
   type CommonGroupForm,
   type CommonGroupFormErrors
 } from "../common-group/common-group-form";
+import { buildCommonGroupTaskLogs } from "../common-group-task-logs";
 
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLL_ATTEMPTS = 2400;
@@ -154,6 +156,8 @@ export interface CommonGroupTaskItem {
   id: number;
   index: number;
   groupName: string;
+  creatorPhone: string;
+  operationTime: string;
   status: CommonGroupTaskItemStatus;
   message: string;
   retryable: boolean;
@@ -163,6 +167,7 @@ export interface CommonGroupTask {
   taskId: number;
   status: "PROCESSING" | "SUCCESS" | "PARTIAL_SUCCESS" | "FAILED";
   items: CommonGroupTaskItem[];
+  logs: string[];
 }
 
 export interface CommonGroupCreateState {
@@ -451,14 +456,31 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     return "PENDING";
   }
 
+  function currentStepMessage(currentStep: string): string {
+    return (
+      {
+        PREPARING_CONTACTS: "正在进行互为好友阶段",
+        CREATING_GROUP: "正在进行新建普群阶段",
+        APPLYING_SETTINGS: "正在进行设置管理员与群配置阶段",
+        LEAVING_GROUP: "正在完成群配置",
+        DONE: "建群及后处理完成"
+      }[currentStep] ?? "正在执行新建普群流程"
+    );
+  }
+
   function itemMessage(row: CommonGroupTaskItemResult): string {
     if (row.lastErrorMessage) return row.lastErrorMessage;
     if (row.status === "CREATED") return "建群及后处理完成";
     if (row.status === "CREATED_PARTIAL")
       return "群已创建，部分成员或后处理未完成";
-    if (row.status === "RESULT_UNKNOWN") return "协议结果未知，请先人工对账";
-    if (row.status === "RUNNING") return `正在执行：${row.currentStep}`;
+    if (row.status === "RESULT_UNKNOWN") return "执行结果未知，请先人工核对";
+    if (row.status === "RUNNING") return currentStepMessage(row.currentStep);
     return "等待执行";
+  }
+
+  function formatOperationTime(timestamp: number): string {
+    const value = dayjs(timestamp);
+    return value.isValid() ? value.format("YYYY-MM-DD HH:mm:ss") : "-";
   }
 
   function applyTaskDetail(detail: CommonGroupTaskDetailResult): void {
@@ -476,10 +498,13 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
         id: row.id,
         index: row.itemNo,
         groupName: row.groupSubject,
+        creatorPhone: row.creatorWsPhone,
+        operationTime: formatOperationTime(row.updatedAt),
         status: itemStatus(row),
         message: itemMessage(row),
         retryable: row.status === "FAILED"
-      }))
+      })),
+      logs: buildCommonGroupTaskLogs(detail)
     };
   }
 
@@ -494,7 +519,8 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
             : summary.status === "FAILED"
               ? "FAILED"
               : "PROCESSING",
-      items: []
+      items: [],
+      logs: ["任务已提交，等待开始执行。"]
     };
   }
 

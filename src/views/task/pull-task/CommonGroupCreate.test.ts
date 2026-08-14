@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+// @ts-expect-error Node 24 测试运行器直接加载同目录 TypeScript 源文件。
+import { buildCommonGroupTaskLogs } from "./common-group-task-logs.ts";
 
 function source(relativePath: string): string {
   return readFileSync(
@@ -113,6 +115,92 @@ describe("common group creation flow", () => {
     assert.doesNotMatch(composableSource, /startMockExecution|模拟执行/);
     assert.match(taskDrawerSource, /v-perms="\['tenant:normal_group:retry'\]"/);
     assert.doesNotMatch(taskDrawerSource, /v-auth=/);
+  });
+
+  it("shows the creator phone, operation time and business stage logs", () => {
+    assert.match(apiSource, /creatorWsPhone: string/);
+    assert.match(composableSource, /creatorPhone: row\.creatorWsPhone/);
+    assert.match(
+      composableSource,
+      /operationTime: formatOperationTime\(row\.updatedAt\)/
+    );
+    assert.match(composableSource, /buildCommonGroupTaskLogs\(detail\)/);
+    assert.match(taskDrawerSource, /prop="creatorPhone" label="创群号"/);
+    assert.match(taskDrawerSource, /prop="operationTime" label="操作时间"/);
+    assert.match(taskDrawerSource, /任务日志/);
+    assert.match(taskDrawerSource, /v-for="log in task\.logs"/);
+  });
+
+  it("does not invent the settings stage for a partial result stopped at group creation", () => {
+    const logs = buildCommonGroupTaskLogs({
+      task: {
+        id: 8,
+        status: "PARTIAL",
+        totalCount: 1,
+        successCount: 0,
+        failedCount: 1,
+        createdAt: 1,
+        updatedAt: 2
+      },
+      items: [
+        {
+          id: 81,
+          itemNo: 1,
+          groupSubject: "测试群",
+          creatorAccountId: 11,
+          creatorWsPhone: "919000000001",
+          creatorProtocolBackend: "WEB",
+          groupJid: "120363000000000@g.us",
+          groupLinkId: null,
+          status: "CREATED_PARTIAL",
+          currentStep: "CREATING_GROUP",
+          settingsStatus: "PENDING",
+          creatorLeaveStatus: "PENDING",
+          lastErrorCode: "SECONDARY_ADMIN_PROMOTION_FAILED",
+          lastErrorMessage: "部分管理员未设置成功",
+          updatedAt: 2
+        }
+      ]
+    });
+
+    assert.match(logs.join("\n"), /后续群配置阶段未执行完成/);
+    assert.doesNotMatch(logs.join("\n"), /进入设置管理员与群配置阶段/);
+  });
+
+  it("does not invent group creation when the task ended during contact preparation", () => {
+    const logs = buildCommonGroupTaskLogs({
+      task: {
+        id: 9,
+        status: "FAILED",
+        totalCount: 1,
+        successCount: 0,
+        failedCount: 1,
+        createdAt: 1,
+        updatedAt: 2
+      },
+      items: [
+        {
+          id: 91,
+          itemNo: 1,
+          groupSubject: "测试群",
+          creatorAccountId: 11,
+          creatorWsPhone: "919000000001",
+          creatorProtocolBackend: "WEB",
+          groupJid: null,
+          groupLinkId: null,
+          status: "FAILED",
+          currentStep: "PREPARING_CONTACTS",
+          settingsStatus: "PENDING",
+          creatorLeaveStatus: "PENDING",
+          lastErrorCode: "CONTACT_RATE_LIMITED",
+          lastErrorMessage: "联系人操作触发限流",
+          updatedAt: 2
+        }
+      ]
+    });
+
+    assert.match(logs.join("\n"), /任务未进入新建普群阶段/);
+    assert.ok(!logs.includes("互为好友阶段已完成，进入新建普群阶段。"));
   });
 
   it("maps the five confirmed settings and keeps invite-link settings out", () => {
