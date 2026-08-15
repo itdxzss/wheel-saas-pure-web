@@ -139,33 +139,6 @@ function formatGroupCreatedAt(value: number | null | undefined): string {
         @selection-change="emit('selection-change', $event)"
       >
         <el-table-column type="selection" width="48" />
-        <el-table-column type="expand" width="46">
-          <template #default="{ row }">
-            <el-descriptions class="group-detail" :column="2" border>
-              <el-descriptions-item label="groupJid">
-                {{ row.groupJid || "-" }}
-              </el-descriptions-item>
-              <el-descriptions-item label="群主">
-                {{ row.ownerPhone || "-" }}
-              </el-descriptions-item>
-              <el-descriptions-item label="群关系">
-                {{ row.membershipStateLabel || "-" }}
-              </el-descriptions-item>
-              <el-descriptions-item label="最近解析">
-                {{ formatEpoch(row.lastPreviewAt) }}
-              </el-descriptions-item>
-              <el-descriptions-item label="最近检测">
-                {{ formatEpoch(row.lastCheckAt) }}
-              </el-descriptions-item>
-              <el-descriptions-item label="检测原因">
-                {{ row.lastHealthError || "-" }}
-              </el-descriptions-item>
-              <el-descriptions-item label="备注" :span="2">
-                {{ row.remark || "-" }}
-              </el-descriptions-item>
-            </el-descriptions>
-          </template>
-        </el-table-column>
 
         <el-table-column
           v-if="!dynamicColumns[0].hide"
@@ -360,10 +333,6 @@ function formatGroupCreatedAt(value: number | null | undefined): string {
   display: block;
   margin-top: 4px;
   color: var(--el-text-color-secondary);
-}
-
-.group-detail {
-  margin: 8px 16px;
 }
 
 .group-type-tags,

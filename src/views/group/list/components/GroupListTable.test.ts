@@ -33,6 +33,11 @@ test("group list renders historical classification and metadata columns", () => 
   assert.match(tableSource, /formatGroupCreatedAt\(row\.groupCreatedAt\)/);
 });
 
+test("group list does not render an expandable detail row", () => {
+  assert.doesNotMatch(tableSource, /type="expand"/);
+  assert.doesNotMatch(tableSource, /class="group-detail"/);
+});
+
 test("group list exposes group folder toolbar and name tag", () => {
   assert.match(apiSource, /folderName\?: string \| null/);
   assert.match(tableSource, /管理群组分组/);
