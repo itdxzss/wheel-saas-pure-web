@@ -82,7 +82,10 @@ export function actionTypeLabel(value: number): string {
         1: "保存联系人",
         2: "邀请入群",
         3: "踩链接入群",
-        4: "设置任务管理员"
+        4: "设置任务管理员",
+        // 5、6 由 V119 引入；用词与 pull_task_account_action.action_type 列注释一致。
+        5: "放开加人权限",
+        6: "关闭进群审核"
       } as const
     )[value] ?? "未知"
   );
