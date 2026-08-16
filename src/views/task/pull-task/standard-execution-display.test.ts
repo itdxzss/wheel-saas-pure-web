@@ -65,6 +65,14 @@ describe("standard pull task execution display", () => {
     assert.equal(actionTypeLabel(4), "设置任务管理员");
   });
 
+  it("declares group settings action labels", async () => {
+    const { actionTypeLabel } = await import(displayModuleUrl.href);
+
+    // 用词与 V119 迁移里 pull_task_account_action.action_type 的列注释保持一致。
+    assert.equal(actionTypeLabel(5), "放开加人权限");
+    assert.equal(actionTypeLabel(6), "关闭进群审核");
+  });
+
   it("resolves puller and station accounts for each pull call", async () => {
     const { pullerAccountLabel, stationAccountLabel } = await import(
       displayModuleUrl.href
