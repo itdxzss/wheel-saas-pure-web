@@ -27,7 +27,7 @@ interface GroupPermissionsState {
   reset: () => void;
   saving: Ref<boolean>;
   setPermissions: (value: GroupPermissionState) => void;
-  toggle: (field: GroupPermissionField) => Promise<void>;
+  toggle: (field: GroupPermissionField, value?: boolean) => Promise<void>;
 }
 
 export function emptyGroupPermissions(): GroupPermissionState {
@@ -55,11 +55,14 @@ export function useGroupPermissions(
     saving.value = false;
   }
 
-  async function toggle(field: GroupPermissionField): Promise<void> {
+  async function toggle(
+    field: GroupPermissionField,
+    requestedValue?: boolean
+  ): Promise<void> {
     const groupId = options.groupId();
     const previous = permissions[field];
-    if (groupId == null || previous == null || saving.value) return;
-    const enabled = !previous;
+    if (groupId == null || saving.value) return;
+    const enabled = requestedValue ?? (previous == null ? true : !previous);
     permissions[field] = enabled;
     saving.value = true;
     try {
@@ -71,8 +74,15 @@ export function useGroupPermissions(
       return;
     }
     ElMessage.success("群组权限已更新");
-    await options.reload();
-    saving.value = false;
+    try {
+      await options.reload();
+      // 协议层旧数据可能仍未返回该权限，保留本次已确认的写入结果，避免开关回弹。
+      if (permissions[field] == null) {
+        permissions[field] = enabled;
+      }
+    } finally {
+      saving.value = false;
+    }
   }
 
   return { permissions, reset, saving, setPermissions, toggle };

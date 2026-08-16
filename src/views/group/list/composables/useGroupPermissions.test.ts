@@ -82,4 +82,30 @@ describe("group permission state", () => {
       }
     ]);
   });
+
+  it("allows enabling a permission when its current metadata state is unknown", async () => {
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    const state = useGroupPermissions({
+      groupId: () => 42,
+      reload: async () => undefined
+    });
+    state.setPermissions({
+      ...knownPermissions,
+      adminApproveNewMembers: null
+    });
+
+    await state.toggle("adminApproveNewMembers", true);
+
+    assert.equal(state.permissions.adminApproveNewMembers, true);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/group-links/42/settings",
+        opts: {
+          data: { key: "ADMIN_APPROVE_NEW_MEMBERS", enabled: true }
+        }
+      }
+    ]);
+  });
 });
