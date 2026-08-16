@@ -15,7 +15,7 @@ const knownPermissions = {
   editGroupSettings: true,
   sendMessages: true,
   addMembers: false,
-  inviteViaLink: null,
+  inviteViaLink: false,
   adminApproveNewMembers: false
 };
 
@@ -59,6 +59,27 @@ describe("group permission state", () => {
     assert.equal(state.permissions.sendMessages, true);
     assert.deepEqual(elementPlusCalls(), [
       { type: "error", text: "执行账号没有管理员权限" }
+    ]);
+  });
+
+  it("posts the independent invite-via-link key when capability provides a value", async () => {
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    const state = useGroupPermissions({
+      groupId: () => 42,
+      reload: async () => undefined
+    });
+    state.setPermissions(knownPermissions);
+
+    await state.toggle("inviteViaLink");
+
+    assert.equal(state.permissions.inviteViaLink, true);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/group-links/42/settings",
+        opts: { data: { key: "INVITE_VIA_LINK", enabled: true } }
+      }
     ]);
   });
 });
