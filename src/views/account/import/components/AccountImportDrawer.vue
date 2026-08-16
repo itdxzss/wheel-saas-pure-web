@@ -195,7 +195,7 @@ function submitDrawer(): void {
     ipAllocationMode: form.ipAllocationMode,
     remark: form.remark.trim() || null,
     text: form.importKind === "json" ? null : form.text,
-    file: form.importKind === "json" ? form.file : null
+    file: form.importKind === "six" ? null : form.file
   });
 }
 </script>

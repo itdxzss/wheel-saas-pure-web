@@ -6,7 +6,8 @@ import {
   createAccountImportTask,
   exportAccountImportTask,
   getAccountImportTask,
-  listAccountImportTasks
+  listAccountImportTasks,
+  uploadAccountImportFile
 } from "./account-import";
 
 describe("account import API", () => {
@@ -168,6 +169,39 @@ describe("account import API", () => {
     const form = (opts as { data: FormData }).data;
     assert.equal(form.get("ipAllocationMode"), "mixed");
     assert.equal(form.get("ipRegion"), null);
+  });
+
+  it("uploads full params TXT with import format 3", async () => {
+    resetArmadaMock({
+      id: 2,
+      sourceFileName: "mx-params.txt",
+      importFormat: 3,
+      deviceOs: 2,
+      accountType: 1,
+      totalRows: 10,
+      importedRows: 10,
+      duplicateRows: 0,
+      formatErrorRows: 0,
+      status: 2
+    });
+    const file = new File(["synthetic-params"], "mx-params.txt", {
+      type: "text/plain"
+    });
+
+    await uploadAccountImportFile({
+      import_type: "全参账号",
+      group: "默认分组",
+      group_id: 1,
+      device: "苹果",
+      account_type: "个人",
+      ip_allocation_mode: "smart",
+      file
+    });
+
+    const form = (armadaCalls()[0]?.opts as { data: FormData }).data;
+    assert.equal(form.get("importFormat"), "3");
+    assert.equal(form.get("deviceOs"), "2");
+    assert.equal(form.get("file"), file);
   });
 
   it("downloads export files as blobs and uses filename* from response headers", async () => {

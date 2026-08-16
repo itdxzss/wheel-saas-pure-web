@@ -19,4 +19,11 @@ describe("account import drawer template", () => {
       /form\.importKind === 'six' \? '五\/六段号内容' : '全参账号内容'/
     );
   });
+
+  it("forwards a selected full params TXT file to preserve its filename", () => {
+    assert.match(
+      source,
+      /file:\s*form\.importKind === "six" \? null : form\.file/
+    );
+  });
 });
