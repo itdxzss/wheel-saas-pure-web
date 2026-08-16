@@ -17,8 +17,15 @@ describe("group member drawer", () => {
     assert.doesNotMatch(source, /inviteViaLink:\s*true/);
     assert.match(source, /getGroupDetail\(group\.id\)/);
     assert.match(source, /permissions\.inviteViaLink/);
-    assert.match(source, /permissions\.editGroupSettings\s*==\s*null/);
-    assert.match(source, /capabilities\.inviteViaLink\.supported/);
+    assert.doesNotMatch(source, /permissions\.editGroupSettings\s*==\s*null/);
+    assert.doesNotMatch(
+      source,
+      /permissions\.adminApproveNewMembers\s*==\s*null/
+    );
+    assert.doesNotMatch(
+      source,
+      /!detail\?\.capabilities\.inviteViaLink\.supported/
+    );
     assert.match(source, /saveChangedGroupProfile/);
     assert.match(profileSavingSource, /updateGroupSubject/);
     assert.match(profileSavingSource, /updateGroupRemark/);
