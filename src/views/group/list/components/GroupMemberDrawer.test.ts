@@ -38,8 +38,36 @@ describe("group member drawer", () => {
     assert.doesNotMatch(source, /待接入|群组权限接口已降级/);
     assert.match(source, /:selectable="row => !row\.locked"/);
     assert.match(source, /ElMessageBox\.alert/);
-    assert.match(source, /result\.partial/);
+    assert.match(source, /reconcileGroupMemberActionResult/);
+    assert.doesNotMatch(source, /if\s*\(\s*result\.(?:ok|partial)\s*\)/);
+    assert.match(source, /excludedMemberJids:\s*outcome\.succeededJids/);
+    assert.match(source, /selectionJids:\s*outcome\.retryJids/);
+    assert.match(source, /preserveCurrentOnError:\s*true/);
     assert.match(source, /item\.reason/);
+  });
+
+  it("keeps stale detail requests from overwriting the active drawer", () => {
+    assert.match(source, /let detailLoadSession = 0/);
+    assert.match(source, /const loadSession = \+\+detailLoadSession/);
+    assert.match(source, /session === detailLoadSession/);
+    assert.match(source, /props\.modelValue/);
+    assert.match(source, /props\.group\?\.id === groupId/);
+    assert.match(
+      source,
+      /function resetState\(\)[\s\S]*?invalidateDetailLoad\(\)/
+    );
+    assert.match(
+      source,
+      /applyGroupMemberActionResult\([\s\S]*?loaded\.members[\s\S]*?options\.excludedMemberJids/
+    );
+    assert.match(
+      source,
+      /if \(isCurrent\(\)\) \{\s*loading\.value = false;\s*\}/
+    );
+    assert.match(
+      source,
+      /restoreMemberSelection\(options\.selectionJids \?\? \[\], isCurrent\)/
+    );
   });
 
   it("does not invent controls that are absent from the current drawer", () => {
