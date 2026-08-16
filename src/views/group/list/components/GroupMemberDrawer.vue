@@ -484,32 +484,28 @@ onBeforeUnmount(resetState);
             <span>编辑群组设置</span>
             <el-switch
               :model-value="permissions.editGroupSettings ?? false"
-              :disabled="
-                loading ||
-                savingPermission ||
-                permissions.editGroupSettings == null
+              :disabled="loading || savingPermission"
+              @change="
+                value => togglePermission('editGroupSettings', Boolean(value))
               "
-              @change="togglePermission('editGroupSettings')"
             />
           </label>
           <label class="permission-row">
             <span>发送新消息</span>
             <el-switch
               :model-value="permissions.sendMessages ?? false"
-              :disabled="
-                loading || savingPermission || permissions.sendMessages == null
+              :disabled="loading || savingPermission"
+              @change="
+                value => togglePermission('sendMessages', Boolean(value))
               "
-              @change="togglePermission('sendMessages')"
             />
           </label>
           <label class="permission-row">
             <span>添加其他成员</span>
             <el-switch
               :model-value="permissions.addMembers ?? false"
-              :disabled="
-                loading || savingPermission || permissions.addMembers == null
-              "
-              @change="togglePermission('addMembers')"
+              :disabled="loading || savingPermission"
+              @change="value => togglePermission('addMembers', Boolean(value))"
             />
           </label>
           <label class="permission-row">
@@ -521,25 +517,21 @@ onBeforeUnmount(resetState);
             </span>
             <el-switch
               :model-value="permissions.inviteViaLink ?? false"
-              :disabled="
-                loading ||
-                savingPermission ||
-                permissions.inviteViaLink == null ||
-                !detail?.capabilities.inviteViaLink.supported
+              :disabled="loading || savingPermission"
+              @change="
+                value => togglePermission('inviteViaLink', Boolean(value))
               "
-              @change="togglePermission('inviteViaLink')"
             />
           </label>
           <label class="permission-row">
             <span>管理员可以批准新成员</span>
             <el-switch
               :model-value="permissions.adminApproveNewMembers ?? false"
-              :disabled="
-                loading ||
-                savingPermission ||
-                permissions.adminApproveNewMembers == null
+              :disabled="loading || savingPermission"
+              @change="
+                value =>
+                  togglePermission('adminApproveNewMembers', Boolean(value))
               "
-              @change="togglePermission('adminApproveNewMembers')"
             />
           </label>
         </div>
