@@ -30,6 +30,7 @@ import {
   emptyGroupPermissions,
   useGroupPermissions
 } from "../composables/useGroupPermissions";
+import { waitForGroupMetadataRefresh } from "../composables/waitForGroupMetadataRefresh";
 
 defineOptions({
   name: "GroupMemberDrawer"
@@ -85,7 +86,8 @@ const {
   toggle: togglePermission
 } = useGroupPermissions({
   groupId: () => props.group?.id ?? null,
-  reload: loadDetail
+  reload: loadDetail,
+  refreshAfterSubmit: refreshAfterPermissionSubmit
 });
 
 const filteredMembers = computed<GroupMember[]>(() => {
@@ -262,33 +264,55 @@ async function refreshMetadata(): Promise<void> {
       detail.value.metadataSyncStatus = "PENDING";
       detail.value.metadataSyncError = null;
     }
-    for (let attempt = 0; attempt < 15; attempt += 1) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      if (session !== metadataRefreshSession || !props.modelValue) return;
-      const loaded = await getGroupDetail(group.id);
-      if (detail.value) {
-        detail.value.metadataSyncStatus = loaded.metadataSyncStatus;
-        detail.value.metadataSyncError = loaded.metadataSyncError;
+    const loaded = await waitForGroupMetadataRefresh({
+      previousSyncedAt,
+      isCurrent: () =>
+        session === metadataRefreshSession && props.modelValue,
+      load: () => getGroupDetail(group.id),
+      onProgress: current => {
+        if (detail.value) {
+          detail.value.metadataSyncStatus = current.metadataSyncStatus;
+          detail.value.metadataSyncError = current.metadataSyncError;
+        }
       }
-      const completedThisRefresh =
-        loaded.metadataSyncStatus === "SUCCEEDED" &&
-        loaded.metadataSyncedAt != null &&
-        loaded.metadataSyncedAt !== previousSyncedAt;
-      if (completedThisRefresh) {
-        applyDetail(group, loaded);
-        emit("refresh");
-        ElMessage.success("群信息已刷新");
-        return;
-      }
-      if (loaded.metadataSyncStatus === "FAILED") {
-        throw new Error(loaded.metadataSyncError || "群信息同步失败");
-      }
+    });
+    if (loaded) {
+      applyDetail(group, loaded);
+      emit("refresh");
+      ElMessage.success("群信息已刷新");
+      return;
     }
     ElMessage.warning("群信息仍在同步，请稍后再试");
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "群信息刷新请求失败"));
   } finally {
     refreshingMetadata.value = false;
+  }
+}
+
+async function refreshAfterPermissionSubmit(): Promise<void> {
+  const group = props.group;
+  if (!group || !props.modelValue) return;
+  const session = ++metadataRefreshSession;
+  const previousSyncedAt = detail.value?.metadataSyncedAt ?? null;
+  if (detail.value) {
+    detail.value.metadataSyncStatus = "PENDING";
+    detail.value.metadataSyncError = null;
+  }
+  const loaded = await waitForGroupMetadataRefresh({
+    previousSyncedAt,
+    isCurrent: () => session === metadataRefreshSession && props.modelValue,
+    load: () => getGroupDetail(group.id),
+    onProgress: current => {
+      if (detail.value) {
+        detail.value.metadataSyncStatus = current.metadataSyncStatus;
+        detail.value.metadataSyncError = current.metadataSyncError;
+      }
+    }
+  });
+  if (loaded) {
+    applyDetail(group, loaded);
+    emit("refresh");
   }
 }
 

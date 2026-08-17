@@ -83,6 +83,29 @@ describe("group permission state", () => {
     ]);
   });
 
+  it("keeps the submitted value while metadata refresh runs asynchronously", async () => {
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    let reloads = 0;
+    let refreshes = 0;
+    const state = useGroupPermissions({
+      groupId: () => 42,
+      reload: async () => {
+        reloads += 1;
+      },
+      refreshAfterSubmit: async () => {
+        refreshes += 1;
+      }
+    });
+    state.setPermissions(knownPermissions);
+
+    await state.toggle("addMembers");
+
+    assert.equal(state.permissions.addMembers, true);
+    assert.equal(reloads, 0);
+    assert.equal(refreshes, 1);
+  });
+
   it("allows enabling a permission when its current metadata state is unknown", async () => {
     resetArmadaMock(undefined);
     resetElementPlusMock();
