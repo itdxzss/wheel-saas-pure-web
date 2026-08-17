@@ -27,6 +27,10 @@ describe("normal-link execution detail drawer", () => {
     assert.match(source, /逐成员结果/);
     assert.match(source, /提权结果/);
     assert.match(source, /label="群 JID"/);
+    assert.match(
+      source,
+      /formatGroupLinkUrl\(detail\.execution\.normalizedLink\)/
+    );
     assert.match(source, /label="账号"/);
     assert.match(source, /label="拉手账号"/);
     assert.match(source, /label="站台账号"/);

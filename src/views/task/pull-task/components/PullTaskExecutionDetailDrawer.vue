@@ -6,6 +6,7 @@ import type {
 import { formatEpoch, standardStageLabel } from "../constants";
 import {
   actionTypeLabel,
+  formatGroupLinkUrl,
   pullerAccountLabel,
   roleLabel,
   stationAccountLabel
@@ -134,7 +135,7 @@ function accountLabel(
           {{ detail.execution.groupJid || "-" }}
         </el-descriptions-item>
         <el-descriptions-item label="群链接" :span="2">
-          {{ detail.execution.normalizedLink }}
+          {{ formatGroupLinkUrl(detail.execution.normalizedLink) }}
         </el-descriptions-item>
         <el-descriptions-item label="当前异常" :span="3">
           {{
