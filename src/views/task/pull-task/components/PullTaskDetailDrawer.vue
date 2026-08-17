@@ -16,6 +16,7 @@ import {
   standardStageOptions,
   standardWaitResourceOptions
 } from "../constants";
+import { formatGroupLinkUrl } from "../standard-execution-display";
 import type {
   PullTaskGroupRow,
   PullTaskDetail,
@@ -112,6 +113,10 @@ function phoneList(value?: string[] | null): string {
 
 function countValue(value?: number | null): number | string {
   return value ?? "-";
+}
+
+function groupIdentity(row: PullTaskGroupRow): string {
+  return normalLink.value ? row.groupJid || "-" : row.groupName || "-";
 }
 </script>
 
@@ -312,11 +317,22 @@ function countValue(value?: number | null): number | string {
     >
       <el-table-column v-if="!normalLink" type="selection" width="48" />
       <el-table-column prop="seq" label="序号" width="80" />
+      <el-table-column
+        v-if="normalLink"
+        prop="groupName"
+        label="群组名称"
+        min-width="180"
+        show-overflow-tooltip
+      >
+        <template #default="{ row }">
+          {{ row.groupName || "-" }}
+        </template>
+      </el-table-column>
       <el-table-column label="群组" min-width="240" show-overflow-tooltip>
         <template #default="{ row }">
           <div class="name-cell">
-            <strong>{{ row.groupName || "-" }}</strong>
-            <small>{{ row.groupLinkUrl || "-" }}</small>
+            <strong>{{ groupIdentity(row) }}</strong>
+            <small>{{ formatGroupLinkUrl(row.groupLinkUrl) }}</small>
           </div>
         </template>
       </el-table-column>

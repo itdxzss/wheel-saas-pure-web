@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 import {
   ElMessage,
   ElMessageBox,
+  type TableInstance,
   type UploadFile,
   type UploadInstance
 } from "element-plus";
@@ -21,11 +22,15 @@ import { apiErrorMessage } from "@/utils/api-error";
 import { timedMessageOptions } from "../constants";
 import { saveChangedGroupProfile } from "../composables/useGroupProfileSaving";
 import { useGroupTimedMessage } from "../composables/useGroupTimedMessage";
-import { applyGroupMemberActionResult } from "../memberActionResult";
+import {
+  applyGroupMemberActionResult,
+  reconcileGroupMemberActionResult
+} from "../memberActionResult";
 import {
   emptyGroupPermissions,
   useGroupPermissions
 } from "../composables/useGroupPermissions";
+import { waitForGroupMetadataRefresh } from "../composables/waitForGroupMetadataRefresh";
 
 defineOptions({
   name: "GroupMemberDrawer"
@@ -50,11 +55,13 @@ const loading = ref(false);
 const savingProfile = ref(false);
 const uploadingAvatar = ref(false);
 const avatarUploadRef = ref<UploadInstance>();
+const memberTableRef = ref<TableInstance>();
 const refreshingMetadata = ref(false);
 const memberSearch = ref("");
 const selectedJids = ref<string[]>([]);
 const avatarPreviewUrl = ref<string | null>(null);
 const objectUrl = ref<string | null>(null);
+let detailLoadSession = 0;
 let metadataRefreshSession = 0;
 const profileForm = reactive({
   groupName: "",
@@ -78,8 +85,7 @@ const {
   setPermissions,
   toggle: togglePermission
 } = useGroupPermissions({
-  groupId: () => props.group?.id ?? null,
-  reload: loadDetail
+  groupId: () => props.group?.id ?? null
 });
 
 const filteredMembers = computed<GroupMember[]>(() => {
@@ -136,7 +142,13 @@ function resetRealtimeState(): void {
   resetPermissions();
 }
 
+function invalidateDetailLoad(): void {
+  detailLoadSession += 1;
+  loading.value = false;
+}
+
 function resetState(): void {
+  invalidateDetailLoad();
   metadataRefreshSession += 1;
   detail.value = null;
   memberSearch.value = "";
@@ -164,23 +176,77 @@ function hydrateFromGroup(group: GroupListRow | null): void {
   avatarPreviewUrl.value = group?.avatarUrl ?? null;
 }
 
-async function loadDetail(): Promise<void> {
+interface LoadDetailOptions {
+  excludedMemberJids?: readonly string[];
+  preserveCurrentOnError?: boolean;
+  selectionJids?: readonly string[];
+}
+
+function isCurrentDetailLoad(
+  session: number,
+  groupId: GroupListRow["id"]
+): boolean {
+  return (
+    session === detailLoadSession &&
+    props.modelValue &&
+    props.group?.id === groupId
+  );
+}
+
+async function restoreMemberSelection(
+  jids: readonly string[],
+  canApply: () => boolean = () => true
+): Promise<void> {
+  if (!canApply()) return;
+  const requested = new Set(jids);
+  const selectedMembers = filteredMembers.value.filter(
+    member => requested.has(member.jid) && !member.locked
+  );
+  selectedJids.value = selectedMembers.map(member => member.jid);
+  await nextTick();
+  if (!canApply()) return;
+  memberTableRef.value?.clearSelection();
+  selectedMembers.forEach(member =>
+    memberTableRef.value?.toggleRowSelection(member, true)
+  );
+}
+
+async function loadDetail(options: LoadDetailOptions = {}): Promise<void> {
   const group = props.group;
-  if (!group) return;
+  if (!group || !props.modelValue) return;
+  const groupId = group.id;
+  const loadSession = ++detailLoadSession;
+  const isCurrent = () => isCurrentDetailLoad(loadSession, groupId);
   loading.value = true;
   selectedJids.value = [];
   resetRealtimeState();
   try {
     const loaded = await getGroupDetail(group.id);
-    applyDetail(group, loaded);
-  } catch (error) {
-    detail.value = fallbackDetail(
-      group,
-      apiErrorMessage(error, "群详情加载失败")
+    if (!isCurrent()) return;
+    const members = applyGroupMemberActionResult(
+      loaded.members,
+      "kick",
+      options.excludedMemberJids ?? []
     );
+    applyDetail(
+      group,
+      members === loaded.members ? loaded : { ...loaded, members }
+    );
+  } catch (error) {
+    if (!isCurrent()) return;
+    const reason = apiErrorMessage(error, "群详情加载失败");
+    if (options.preserveCurrentOnError) {
+      ElMessage.warning(`${reason}，已保留本次成员操作结果`);
+    } else {
+      detail.value = fallbackDetail(group, reason);
+    }
   } finally {
-    loading.value = false;
+    if (isCurrent()) {
+      loading.value = false;
+    }
   }
+  if (!isCurrent()) return;
+  await restoreMemberSelection(options.selectionJids ?? [], isCurrent);
 }
 
 async function refreshMetadata(): Promise<void> {
@@ -196,27 +262,23 @@ async function refreshMetadata(): Promise<void> {
       detail.value.metadataSyncStatus = "PENDING";
       detail.value.metadataSyncError = null;
     }
-    for (let attempt = 0; attempt < 15; attempt += 1) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      if (session !== metadataRefreshSession || !props.modelValue) return;
-      const loaded = await getGroupDetail(group.id);
-      if (detail.value) {
-        detail.value.metadataSyncStatus = loaded.metadataSyncStatus;
-        detail.value.metadataSyncError = loaded.metadataSyncError;
+    const loaded = await waitForGroupMetadataRefresh({
+      previousSyncedAt,
+      isCurrent: () =>
+        session === metadataRefreshSession && props.modelValue,
+      load: () => getGroupDetail(group.id),
+      onProgress: current => {
+        if (detail.value) {
+          detail.value.metadataSyncStatus = current.metadataSyncStatus;
+          detail.value.metadataSyncError = current.metadataSyncError;
+        }
       }
-      const completedThisRefresh =
-        loaded.metadataSyncStatus === "SUCCEEDED" &&
-        loaded.metadataSyncedAt != null &&
-        loaded.metadataSyncedAt !== previousSyncedAt;
-      if (completedThisRefresh) {
-        applyDetail(group, loaded);
-        emit("refresh");
-        ElMessage.success("群信息已刷新");
-        return;
-      }
-      if (loaded.metadataSyncStatus === "FAILED") {
-        throw new Error(loaded.metadataSyncError || "群信息同步失败");
-      }
+    });
+    if (loaded) {
+      applyDetail(group, loaded);
+      emit("refresh");
+      ElMessage.success("群信息已刷新");
+      return;
     }
     ElMessage.warning("群信息仍在同步，请稍后再试");
   } catch (error) {
@@ -320,39 +382,61 @@ async function runMemberAction(
     }
   }
   try {
+    const requestedJids = [...selectedJids.value];
+    const isCurrentGroup = () =>
+      props.modelValue && props.group?.id === group.id;
     const call =
       action === "promote"
         ? promoteGroupMembers
         : action === "demote"
           ? demoteGroupMembers
           : kickGroupMembers;
-    const result = await call(group.id, selectedJids.value);
-    if (result.ok) {
-      ElMessage.success(result.message || "成员操作已提交");
-    } else {
-      ElMessage.warning(result.message || "成员操作未完成");
-    }
-    if (result.partial) {
-      const failures = (result.results ?? [])
-        .filter(item => item.status !== "OK")
-        .map(item => `${item.jid}：${item.reason || item.status}`)
-        .join("\n");
-      await ElMessageBox.alert(
-        failures || result.message || "部分成员操作未完成",
-        "成员操作结果",
-        { type: "warning", confirmButtonText: "知道了" }
-      );
-    }
+    const result = await call(group.id, requestedJids);
+    if (!isCurrentGroup()) return;
+    const outcome = reconcileGroupMemberActionResult(requestedJids, result);
     if (detail.value) {
       detail.value.members = applyGroupMemberActionResult(
         detail.value.members,
         action,
-        result
+        outcome.succeededJids
       );
     }
-    selectedJids.value = [];
+    if (outcome.complete) {
+      ElMessage.success(result.message || "成员操作已提交");
+    } else if (outcome.succeededJids.length > 0) {
+      ElMessage.warning(
+        `已完成 ${outcome.succeededJids.length}/${requestedJids.length} 名成员操作，其余成员待重试`
+      );
+    } else {
+      ElMessage.warning("成员操作未完成，未收到成员成功确认");
+    }
+    if (action === "kick" && outcome.succeededJids.length > 0) {
+      await loadDetail({
+        excludedMemberJids: outcome.succeededJids,
+        preserveCurrentOnError: true,
+        selectionJids: outcome.retryJids
+      });
+    } else {
+      await restoreMemberSelection(outcome.retryJids, isCurrentGroup);
+    }
+    if (!isCurrentGroup()) return;
+    if (outcome.failures.length > 0) {
+      const failures = outcome.failures
+        .map(item => `${item.jid}：${item.reason || item.status}`)
+        .join("\n");
+      try {
+        await ElMessageBox.alert(failures, "成员操作结果", {
+          type: "warning",
+          confirmButtonText: "知道了"
+        });
+      } catch {
+        // 关闭结果明细不改变已经确认的成员操作结果。
+      }
+    }
   } catch (error) {
-    ElMessage.error(apiErrorMessage(error, "成员操作失败"));
+    if (props.modelValue && props.group?.id === group.id) {
+      ElMessage.error(apiErrorMessage(error, "成员操作失败"));
+    }
   }
 }
 
@@ -372,6 +456,7 @@ watch(
   () => props.group,
   group => {
     if (props.modelValue) {
+      invalidateDetailLoad();
       metadataRefreshSession += 1;
       hydrateFromGroup(group);
       void loadDetail();
@@ -550,7 +635,7 @@ onBeforeUnmount(resetState);
           placeholder="请输入WS号，多个账号用空格/换行/逗号分隔"
         >
           <template #append>
-            <el-button :loading="loading" @click="loadDetail"
+            <el-button :loading="loading" @click="loadDetail()"
               >重新读取</el-button
             >
           </template>
@@ -569,6 +654,7 @@ onBeforeUnmount(resetState);
           </template>
         </el-alert>
         <el-table
+          ref="memberTableRef"
           v-loading="loading"
           :data="filteredMembers"
           row-key="jid"

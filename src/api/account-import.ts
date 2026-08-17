@@ -482,7 +482,7 @@ export function createAccountImportTask(
   ).then(toTask);
 }
 
-export function uploadAccountImportZip(
+export function uploadAccountImportFile(
   data: CreateAccountImportTaskRequest & {
     file: File;
   }

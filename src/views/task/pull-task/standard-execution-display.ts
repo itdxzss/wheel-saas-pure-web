@@ -1,5 +1,7 @@
 import type { PullTaskStandardRole } from "@/api/pull-task";
 
+const HTTP_URL_PATTERN = /^https?:\/\//i;
+
 export interface StandardExecutionStatusInput {
   executionStatus?: number | null;
   stage?: number | null;
@@ -18,6 +20,14 @@ export const standardStageOptions = [
   { label: "料子提权", value: 7 },
   { label: "执行收口", value: 8 }
 ];
+
+export function formatGroupLinkUrl(value?: string | null): string {
+  const normalized = value?.trim();
+  if (!normalized) return "-";
+  return HTTP_URL_PATTERN.test(normalized)
+    ? normalized
+    : `https://${normalized}`;
+}
 
 const managerAdminReasons = new Set([
   "MANAGER_ADMIN_ACTOR_UNAVAILABLE",

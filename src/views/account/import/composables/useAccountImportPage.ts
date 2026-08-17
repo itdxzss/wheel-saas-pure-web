@@ -5,7 +5,7 @@ import {
   exportAccountImportTask,
   getAccountImportTask,
   listAccountImportTasks,
-  uploadAccountImportZip,
+  uploadAccountImportFile,
   type AccountImportDetailRow,
   type AccountImportFailReason,
   type AccountImportTask,
@@ -221,12 +221,12 @@ export function useAccountImportPage(): AccountImportPageState {
     }
     submittingImport.value = true;
     try {
-      if (payload.importKind === "json") {
+      if (payload.importKind === "json" || payload.file) {
         if (!payload.file) {
           ElMessage.warning("请上传 JSON号 ZIP 包");
           return false;
         }
-        await uploadAccountImportZip({
+        await uploadAccountImportFile({
           import_type: importKindLabelMap[payload.importKind],
           group: groupName,
           group_id: payload.groupId,

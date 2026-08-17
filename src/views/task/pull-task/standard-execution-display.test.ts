@@ -9,6 +9,25 @@ const displayModuleUrl = new URL(
 );
 
 describe("standard pull task execution display", () => {
+  it("formats group links as copyable absolute URLs", async () => {
+    const { formatGroupLinkUrl } = await import(displayModuleUrl.href);
+
+    assert.equal(
+      formatGroupLinkUrl("chat.whatsapp.com/InviteCode"),
+      "https://chat.whatsapp.com/InviteCode"
+    );
+    assert.equal(
+      formatGroupLinkUrl("http://chat.whatsapp.com/InviteCode"),
+      "http://chat.whatsapp.com/InviteCode"
+    );
+    assert.equal(
+      formatGroupLinkUrl("https://chat.whatsapp.com/InviteCode"),
+      "https://chat.whatsapp.com/InviteCode"
+    );
+    assert.equal(formatGroupLinkUrl("  "), "-");
+    assert.equal(formatGroupLinkUrl(null), "-");
+  });
+
   it("maps the eight stages and manager setup anomaly", async () => {
     assert.ok(existsSync(fileURLToPath(displayModuleUrl)));
     const { standardExecutionStatus, standardStageLabel } = await import(

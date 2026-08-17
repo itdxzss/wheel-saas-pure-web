@@ -58,9 +58,8 @@ export const importKindOptions: Array<{
   {
     label: "全参账号",
     value: "fullparam",
-    desc: "支持粘贴或上传 TXT，保留完整参数。",
-    accept: ".txt",
-    disabled: true
+    desc: "支持粘贴或上传 TXT，一行一个 JSON 对象，固定转换后走 Android 协议。",
+    accept: ".txt"
   }
 ];
 

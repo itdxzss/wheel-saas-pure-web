@@ -15,27 +15,25 @@ const knownPermissions = {
   editGroupSettings: true,
   sendMessages: true,
   addMembers: false,
-  inviteViaLink: null,
+  inviteViaLink: false,
   adminApproveNewMembers: false
 };
 
 describe("group permission state", () => {
-  it("uses the fixed backend key and reloads confirmed detail", async () => {
+  it("uses the fixed backend key and returns after submission", async () => {
     resetArmadaMock(undefined);
     resetElementPlusMock();
-    let reloads = 0;
     const state = useGroupPermissions({
-      groupId: () => 42,
-      reload: async () => {
-        reloads += 1;
-      }
+      groupId: () => 42
     });
     state.setPermissions(knownPermissions);
 
     await state.toggle("addMembers");
 
     assert.equal(state.permissions.addMembers, true);
-    assert.equal(reloads, 1);
+    assert.deepEqual(elementPlusCalls(), [
+      { type: "success", text: "群组权限设置已提交" }
+    ]);
     assert.deepEqual(armadaCalls(), [
       {
         method: "post",
@@ -49,8 +47,7 @@ describe("group permission state", () => {
     resetArmadaMockFailure(new Error("执行账号没有管理员权限"));
     resetElementPlusMock();
     const state = useGroupPermissions({
-      groupId: () => 42,
-      reload: async () => undefined
+      groupId: () => 42
     });
     state.setPermissions(knownPermissions);
 
@@ -62,12 +59,47 @@ describe("group permission state", () => {
     ]);
   });
 
+  it("posts the independent invite-via-link key when capability provides a value", async () => {
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    const state = useGroupPermissions({
+      groupId: () => 42
+    });
+    state.setPermissions(knownPermissions);
+
+    await state.toggle("inviteViaLink");
+
+    assert.equal(state.permissions.inviteViaLink, true);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/group-links/42/settings",
+        opts: { data: { key: "INVITE_VIA_LINK", enabled: true } }
+      }
+    ]);
+  });
+
+  it("does not start a metadata refresh after submission", async () => {
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    const state = useGroupPermissions({
+      groupId: () => 42
+    });
+    state.setPermissions(knownPermissions);
+
+    await state.toggle("addMembers");
+
+    assert.equal(state.permissions.addMembers, true);
+    assert.deepEqual(elementPlusCalls(), [
+      { type: "success", text: "群组权限设置已提交" }
+    ]);
+  });
+
   it("allows enabling a permission when its current metadata state is unknown", async () => {
     resetArmadaMock(undefined);
     resetElementPlusMock();
     const state = useGroupPermissions({
-      groupId: () => 42,
-      reload: async () => undefined
+      groupId: () => 42
     });
     state.setPermissions({
       ...knownPermissions,

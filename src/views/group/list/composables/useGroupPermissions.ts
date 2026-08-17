@@ -19,7 +19,6 @@ const PERMISSION_KEYS: Record<GroupPermissionField, GroupPermissionKey> = {
 
 interface GroupPermissionOptions {
   groupId: () => number | null;
-  reload: () => Promise<void>;
 }
 
 interface GroupPermissionsState {
@@ -73,16 +72,8 @@ export function useGroupPermissions(
       saving.value = false;
       return;
     }
-    ElMessage.success("群组权限已更新");
-    try {
-      await options.reload();
-      // 协议层旧数据可能仍未返回该权限，保留本次已确认的写入结果，避免开关回弹。
-      if (permissions[field] == null) {
-        permissions[field] = enabled;
-      }
-    } finally {
-      saving.value = false;
-    }
+    ElMessage.success("群组权限设置已提交");
+    saving.value = false;
   }
 
   return { permissions, reset, saving, setPermissions, toggle };
