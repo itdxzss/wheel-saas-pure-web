@@ -157,7 +157,8 @@ function standardGroupRow(
   return {
     id: execution.executionId,
     seq: execution.seq,
-    groupName: execution.groupJid,
+    groupJid: execution.groupJid,
+    groupName: execution.groupName,
     groupLinkUrl: execution.normalizedLink,
     sourceFileName: execution.sourceFileName,
     status: standardExecutionStatus(execution),

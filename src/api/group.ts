@@ -284,9 +284,12 @@ export function updateGroupSetting(
   key: GroupPermissionKey,
   enabled: boolean
 ): Promise<void> {
-  return armadaRequest<void>("post", `/api/group-links/${id}/settings`, {
-    data: { key, enabled }
-  });
+  return armadaRequest<void>(
+    "post",
+    `/api/group-links/${id}/settings`,
+    { data: { key, enabled } },
+    { timeout: 45_000 }
+  );
 }
 
 export function promoteGroupMembers(

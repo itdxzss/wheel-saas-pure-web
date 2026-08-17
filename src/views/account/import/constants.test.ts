@@ -23,12 +23,17 @@ describe("account import constants", () => {
     assert.equal(exportValues.includes("ABNORMAL"), false);
   });
 
-  it("only disables account import kinds that are still unsupported", () => {
+  it("enables full params import and explains the Android conversion", () => {
     const disabledKinds = importKindOptions
       .filter(option => option.disabled)
       .map(option => option.value);
+    const fullParams = importKindOptions.find(
+      option => option.value === "fullparam"
+    );
 
-    assert.deepEqual(disabledKinds, ["fullparam"]);
+    assert.deepEqual(disabledKinds, []);
+    assert.match(fullParams?.desc ?? "", /一行一个 JSON 对象/);
+    assert.match(fullParams?.desc ?? "", /Android/);
   });
 
   it("uses smart and mixed IP allocation modes for account import", () => {

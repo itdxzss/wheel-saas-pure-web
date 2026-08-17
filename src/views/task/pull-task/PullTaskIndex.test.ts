@@ -81,6 +81,14 @@ describe("pull task list prototype", () => {
     assert.match(standardSummarySource, /已取消/);
   });
 
+  it("shows the WhatsApp group name separately and a copyable group link", () => {
+    assert.match(pageStateSource, /groupJid: execution\.groupJid/);
+    assert.match(pageStateSource, /groupName: execution\.groupName/);
+    assert.match(detailDrawerSource, /label="群组名称"/);
+    assert.match(detailDrawerSource, /row\.groupJid/);
+    assert.match(detailDrawerSource, /formatGroupLinkUrl\(row\.groupLinkUrl\)/);
+  });
+
   it("mounts the real execution and member detail drawer", () => {
     assert.match(indexSource, /usePullTaskExecutionDetail/);
     assert.match(indexSource, /PullTaskExecutionDetailDrawer/);

@@ -248,7 +248,8 @@ describe("group API", () => {
       {
         method: "post",
         url: "/api/group-links/42/settings",
-        opts: { data: { key: "ADD_MEMBERS", enabled: true } }
+        opts: { data: { key: "ADD_MEMBERS", enabled: true } },
+        config: { timeout: 45_000 }
       }
     ]);
   });
