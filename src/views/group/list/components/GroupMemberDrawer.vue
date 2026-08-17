@@ -85,9 +85,7 @@ const {
   setPermissions,
   toggle: togglePermission
 } = useGroupPermissions({
-  groupId: () => props.group?.id ?? null,
-  reload: loadDetail,
-  refreshAfterSubmit: refreshAfterPermissionSubmit
+  groupId: () => props.group?.id ?? null
 });
 
 const filteredMembers = computed<GroupMember[]>(() => {
@@ -287,32 +285,6 @@ async function refreshMetadata(): Promise<void> {
     ElMessage.error(apiErrorMessage(error, "群信息刷新请求失败"));
   } finally {
     refreshingMetadata.value = false;
-  }
-}
-
-async function refreshAfterPermissionSubmit(): Promise<void> {
-  const group = props.group;
-  if (!group || !props.modelValue) return;
-  const session = ++metadataRefreshSession;
-  const previousSyncedAt = detail.value?.metadataSyncedAt ?? null;
-  if (detail.value) {
-    detail.value.metadataSyncStatus = "PENDING";
-    detail.value.metadataSyncError = null;
-  }
-  const loaded = await waitForGroupMetadataRefresh({
-    previousSyncedAt,
-    isCurrent: () => session === metadataRefreshSession && props.modelValue,
-    load: () => getGroupDetail(group.id),
-    onProgress: current => {
-      if (detail.value) {
-        detail.value.metadataSyncStatus = current.metadataSyncStatus;
-        detail.value.metadataSyncError = current.metadataSyncError;
-      }
-    }
-  });
-  if (loaded) {
-    applyDetail(group, loaded);
-    emit("refresh");
   }
 }
 

@@ -19,8 +19,6 @@ const PERMISSION_KEYS: Record<GroupPermissionField, GroupPermissionKey> = {
 
 interface GroupPermissionOptions {
   groupId: () => number | null;
-  reload: () => Promise<void>;
-  refreshAfterSubmit?: () => Promise<void>;
 }
 
 interface GroupPermissionsState {
@@ -74,24 +72,7 @@ export function useGroupPermissions(
       saving.value = false;
       return;
     }
-    ElMessage.success("群组权限设置已提交，后台正在刷新群信息");
-    if (options.refreshAfterSubmit) {
-      void options.refreshAfterSubmit().catch(error => {
-        ElMessage.warning(
-          apiErrorMessage(error, "群信息同步未完成，请手动刷新")
-        );
-      });
-    } else {
-      try {
-        await options.reload();
-        // 协议层旧数据可能仍未返回该权限，保留本次已提交的写入结果，避免开关回弹。
-        if (permissions[field] == null) {
-          permissions[field] = enabled;
-        }
-      } catch (error) {
-        ElMessage.warning(apiErrorMessage(error, "群信息刷新失败，请手动刷新"));
-      }
-    }
+    ElMessage.success("群组权限设置已提交");
     saving.value = false;
   }
 
