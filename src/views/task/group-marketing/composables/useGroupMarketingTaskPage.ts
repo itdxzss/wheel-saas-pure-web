@@ -22,6 +22,7 @@ import {
   startMarketingTask,
   updateTaskMarketingTemplate,
   type MarketingAccountTree,
+  type MarketingNewGroupDelayUnit,
   type MarketingSelection,
   type MarketingTaskDetail,
   type MarketingTaskRow,
@@ -65,6 +66,9 @@ export interface GroupMarketingCreateForm {
   onlineCheckEnabled: boolean;
   abnormalGroupSkipped: boolean;
   autoRetryEnabled: boolean;
+  newGroupDelayEnabled: boolean;
+  newGroupDelayValue: number;
+  newGroupDelayUnit: MarketingNewGroupDelayUnit;
   remark: string;
 }
 
@@ -145,6 +149,9 @@ function emptyCreateForm(): GroupMarketingCreateForm {
     onlineCheckEnabled: true,
     abnormalGroupSkipped: true,
     autoRetryEnabled: false,
+    newGroupDelayEnabled: false,
+    newGroupDelayValue: 30,
+    newGroupDelayUnit: "MINUTE",
     remark: ""
   };
 }
@@ -218,6 +225,16 @@ function isValidAccountGroupSendIntervalSeconds(value: number): boolean {
     value >= 0.5 &&
     value <= 3 &&
     Number.isInteger(value * 10)
+  );
+}
+
+function isValidNewGroupDelay(form: GroupMarketingCreateForm): boolean {
+  if (!form.newGroupDelayEnabled) return true;
+  const max = form.newGroupDelayUnit === "MINUTE" ? 60 : 24;
+  return (
+    Number.isInteger(form.newGroupDelayValue) &&
+    form.newGroupDelayValue >= 1 &&
+    form.newGroupDelayValue <= max
   );
 }
 
@@ -461,6 +478,14 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
       ElMessage.warning("单账号下群组发送间隔必须为0.5到3秒，最多一位小数");
       return;
     }
+    if (!isValidNewGroupDelay(form)) {
+      ElMessage.warning(
+        form.newGroupDelayUnit === "MINUTE"
+          ? "分钟延迟时长必须为1到60的正整数"
+          : "小时延迟时长必须为1到24的正整数"
+      );
+      return;
+    }
     const lifecycleTimes = validateLifecycleTimes(form);
     if (!lifecycleTimes) {
       return;
@@ -482,6 +507,9 @@ export function useGroupMarketingTaskPage(): GroupMarketingTaskPageState {
         onlineCheckEnabled: form.onlineCheckEnabled,
         abnormalGroupSkipped: form.abnormalGroupSkipped,
         autoRetryEnabled: form.autoRetryEnabled,
+        newGroupDelayEnabled: form.newGroupDelayEnabled,
+        newGroupDelayValue: form.newGroupDelayValue,
+        newGroupDelayUnit: form.newGroupDelayUnit,
         remark: form.remark.trim() || null,
         selections: payload.selections
       });

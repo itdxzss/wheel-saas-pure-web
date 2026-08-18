@@ -20,6 +20,7 @@ import type {
   GroupMarketingCreatePayload
 } from "../composables/useGroupMarketingTaskPage";
 import { groupMembershipStatusMeta } from "./group-membership-status";
+import MarketingNewGroupDelayConfig from "./MarketingNewGroupDelayConfig.vue";
 
 defineOptions({
   name: "GroupMarketingCreateDrawer"
@@ -416,6 +417,7 @@ function submit(): void {
           :default-time="END_OF_DAY_TIME"
         />
       </el-form-item>
+      <MarketingNewGroupDelayConfig v-model="form" />
       <el-form-item label="单轮发送数量">
         <el-input-number v-model="form.sendPerRound" :min="1" :step="1" />
       </el-form-item>

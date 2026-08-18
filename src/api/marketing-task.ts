@@ -12,6 +12,7 @@ export type MarketingTaskStatus = 1 | 2 | 5 | 7 | 8;
 export type MarketingTaskTargetStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type MarketingTaskStartMode = "PENDING" | "IMMEDIATE";
 export type MarketingTargetScope = "GROUP_FIXED" | "ACCOUNT_DYNAMIC";
+export type MarketingNewGroupDelayUnit = "MINUTE" | "HOUR";
 export type AccountGroupMembershipStatus =
   | "IN_GROUP"
   | "UNCONFIRMED"
@@ -42,6 +43,9 @@ export interface MarketingTaskRow {
   abnormalGroupSkipped: boolean;
   autoRetryEnabled: boolean;
   retryLimit?: number | null;
+  newGroupDelayEnabled: boolean;
+  newGroupDelayValue: number;
+  newGroupDelayUnit: MarketingNewGroupDelayUnit;
   remark?: string | null;
   accountGroupSendAt?: number | null;
   taskStartAt?: number | null;
@@ -184,6 +188,9 @@ export interface CreateMarketingTaskRequest {
   onlineCheckEnabled: boolean;
   abnormalGroupSkipped: boolean;
   autoRetryEnabled: boolean;
+  newGroupDelayEnabled: boolean;
+  newGroupDelayValue: number;
+  newGroupDelayUnit: MarketingNewGroupDelayUnit;
   remark?: string | null;
   selections: MarketingSelection[];
 }

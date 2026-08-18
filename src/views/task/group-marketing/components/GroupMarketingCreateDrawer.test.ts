@@ -10,6 +10,10 @@ const pageSource = readFileSync(
   new URL("../composables/useGroupMarketingTaskPage.ts", import.meta.url),
   "utf8"
 );
+const delayConfigSource = readFileSync(
+  new URL("./MarketingNewGroupDelayConfig.vue", import.meta.url),
+  "utf8"
+);
 
 describe("group marketing create drawer", () => {
   it("keeps marketing template required without task-level text content", () => {
@@ -101,9 +105,22 @@ describe("group marketing create drawer", () => {
     assert.match(pageSource, /taskEndAt: endOfDayTimestamp\(\)/);
   });
 
+  it("adds only the new-group delay configuration without displaying stored timestamps", () => {
+    assert.match(source, /<MarketingNewGroupDelayConfig v-model="form"/);
+    assert.match(delayConfigSource, /群组检测后延迟发送/);
+    assert.match(delayConfigSource, /v-model="form\.newGroupDelayEnabled"/);
+    assert.match(delayConfigSource, /v-model="form\.newGroupDelayValue"/);
+    assert.match(delayConfigSource, /v-model="form\.newGroupDelayUnit"/);
+    assert.match(delayConfigSource, /不以任务启动时间计算/);
+    assert.doesNotMatch(
+      source + delayConfigSource,
+      /detectedAt|scheduledSendAt/
+    );
+  });
+
   it("keeps lazy loaded groups out of the root account tree data", () => {
     const match = pageSource.match(
-      /async function loadAccountGroups[\s\S]*?\n  }\n\n  function searchTasks/
+      /async function loadAccountGroups[\s\S]*?\r?\n  }\r?\n\r?\n  function searchTasks/
     );
     assert.ok(match, "loadAccountGroups should stay easy to review");
     assert.match(match[0], /loadedGroupAccounts/);
@@ -117,5 +134,10 @@ describe("group marketing create drawer", () => {
     assert.match(source, /accountListSignature/);
     assert.match(source, /loadedAccountsById/);
     assert.doesNotMatch(source, /\{\s*deep:\s*true\s*\}/);
+  });
+
+  it("keeps the numeric delay unchanged when switching units", () => {
+    assert.doesNotMatch(delayConfigSource, /watch\s*\(/);
+    assert.doesNotMatch(delayConfigSource, /newGroupDelayValue\s*=/);
   });
 });

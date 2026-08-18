@@ -121,6 +121,9 @@ describe("group marketing task page state", () => {
     });
     const pageState = useGroupMarketingTaskPage();
     assert.equal(pageState.createForm.accountGroupSendIntervalSeconds, 0.5);
+    assert.equal(pageState.createForm.newGroupDelayEnabled, false);
+    assert.equal(pageState.createForm.newGroupDelayValue, 30);
+    assert.equal(pageState.createForm.newGroupDelayUnit, "MINUTE");
     pageState.accountGroups.value = [
       {
         id: 8,
@@ -178,6 +181,9 @@ describe("group marketing task page state", () => {
       onlineCheckEnabled: true,
       abnormalGroupSkipped: true,
       autoRetryEnabled: false,
+      newGroupDelayEnabled: false,
+      newGroupDelayValue: 30,
+      newGroupDelayUnit: "MINUTE",
       remark: null,
       selections: [
         { accountId: 3, targetScope: "GROUP_FIXED", groupLinkIds: [11] }
