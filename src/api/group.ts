@@ -39,6 +39,9 @@ export interface GroupListRow {
   creatorCountryName?: string | null;
   creatorCountryFlag?: string | null;
   creatorContinentCode?: string | null;
+  /** 创建者手机号原始号段归属区，不表示当前所在地。 */
+  creatorPhoneRegionCode?: string | null;
+  creatorPhoneRegionName?: string | null;
   groupCreatedAt?: number | null;
   metadataSyncStatus?: string | null;
   metadataSyncedAt?: number | null;

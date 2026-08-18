@@ -253,14 +253,19 @@ function formatGroupCreatedAt(value: number | null | undefined): string {
         <el-table-column
           v-if="!dynamicColumns[7].hide"
           label="创建信息"
-          min-width="210"
+          min-width="250"
         >
           <template #default="{ row }">
             <div class="creation-info">
+              <span>
+                国家：{{ row.creatorCountryFlag || "" }}
+                {{ row.creatorCountryName || "-" }}
+              </span>
               <span
-                >{{ row.creatorCountryFlag || "" }}
-                {{ row.creatorCountryName || "-" }}</span
+                title="依据创建者手机号原始号段推断，不代表当前所在地"
               >
+                州：{{ row.creatorPhoneRegionName || "-" }}
+              </span>
               <span>创建者：{{ row.creatorPhone || "-" }}</span>
               <span>建群：{{ formatGroupCreatedAt(row.groupCreatedAt) }}</span>
             </div>

@@ -30,6 +30,11 @@ test("group list renders historical classification and metadata columns", () => 
   assert.match(tableSource, />\s*上控后群/);
   assert.match(tableSource, /row\.adminPhones/);
   assert.match(tableSource, /row\.availableAdmin/);
+  assert.match(apiSource, /creatorPhoneRegionCode\?: string \| null/);
+  assert.match(apiSource, /creatorPhoneRegionName\?: string \| null/);
+  assert.match(tableSource, /国家：/);
+  assert.match(tableSource, /州：/);
+  assert.match(tableSource, /row\.creatorPhoneRegionName \|\| "-"/);
   assert.match(tableSource, /formatGroupCreatedAt\(row\.groupCreatedAt\)/);
 });
 
