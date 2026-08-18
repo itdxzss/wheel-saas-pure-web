@@ -123,7 +123,7 @@ function groupIdentity(row: PullTaskGroupRow): string {
 <template>
   <el-drawer
     v-model="visible"
-    size="980px"
+    size="calc(100% - 210px)"
     destroy-on-close
     title="拉群任务详情"
   >

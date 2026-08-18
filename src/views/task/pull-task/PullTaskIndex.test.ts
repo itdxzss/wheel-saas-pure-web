@@ -89,6 +89,11 @@ describe("pull task list prototype", () => {
     assert.match(detailDrawerSource, /formatGroupLinkUrl\(row\.groupLinkUrl\)/);
   });
 
+  it("extends the detail drawer across the whole main content area", () => {
+    assert.match(detailDrawerSource, /size="calc\(100% - 210px\)"/);
+    assert.doesNotMatch(detailDrawerSource, /detailDrawerSize/);
+  });
+
   it("mounts the real execution and member detail drawer", () => {
     assert.match(indexSource, /usePullTaskExecutionDetail/);
     assert.match(indexSource, /PullTaskExecutionDetailDrawer/);
