@@ -57,7 +57,7 @@ export const groupListColumns: TableColumnList = [
   { label: "全部管理员号码", prop: "adminPhones", minWidth: 190 },
   { label: "状态", prop: "status", width: 110 },
   { label: "可用管理员", prop: "availableAdmin", width: 120 },
-  { label: "创建信息", prop: "groupCreatedAt", minWidth: 210 },
+  { label: "创建信息", prop: "groupCreatedAt", minWidth: 250 },
   { label: "群 JID", prop: "groupJid", minWidth: 210 },
   { label: "操作", prop: "operation", fixed: "right", width: 220 }
 ];
