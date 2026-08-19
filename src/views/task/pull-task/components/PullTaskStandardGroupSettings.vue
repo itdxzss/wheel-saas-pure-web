@@ -30,9 +30,18 @@ function clearAvatar(): void {
 </script>
 
 <template>
-  <el-card shadow="never" header="群信息设置">
+  <el-card shadow="never">
+    <template #header>
+      <div class="group-setting-header">
+        <span class="group-setting-title">群信息设置</span>
+        <el-switch v-model="form.groupSettingEnabled" />
+      </div>
+    </template>
     <el-form :model="form" label-position="top" class="group-settings-form">
-      <section class="group-setting-block timing-block">
+      <section
+        v-if="form.groupSettingEnabled"
+        class="group-setting-block timing-block"
+      >
         <h3>设置顺序</h3>
         <el-form-item label="设置顺序">
           <el-radio-group v-model="form.groupSettingTiming">
@@ -42,7 +51,10 @@ function clearAvatar(): void {
         </el-form-item>
       </section>
 
-      <section class="group-setting-block profile-block">
+      <section
+        v-if="form.groupSettingEnabled"
+        class="group-setting-block profile-block"
+      >
         <h3>基础资料</h3>
         <div class="group-setting-grid profile-grid">
           <el-form-item label="群名称（可选）">
@@ -87,7 +99,10 @@ function clearAvatar(): void {
         </div>
       </section>
 
-      <section class="group-setting-block permission-block">
+      <section
+        v-if="form.groupSettingEnabled"
+        class="group-setting-block permission-block"
+      >
         <h3>权限控制</h3>
         <div class="group-setting-grid permission-grid">
           <el-form-item label="是否任务完成后自动关闭禁言">
@@ -138,6 +153,16 @@ function clearAvatar(): void {
 </template>
 
 <style scoped>
+.group-setting-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.group-setting-title {
+  font-weight: 700;
+}
+
 .group-settings-form {
   display: grid;
   grid-template-columns: minmax(220px, 0.45fr) minmax(520px, 1.55fr);

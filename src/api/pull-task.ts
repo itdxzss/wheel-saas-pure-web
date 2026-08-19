@@ -438,6 +438,8 @@ export interface PullTaskStandardDraft {
 }
 
 export interface PullTaskStandardGroupSettingRequest {
+  /** 「群信息设置」整块总开关；false 时后端不走群信息设置流程。 */
+  enabled: boolean;
   settingTiming: "BEFORE_PULL" | "AFTER_PULL";
   groupName: string | null;
   useMaterialFileNameAsGroupName: boolean;

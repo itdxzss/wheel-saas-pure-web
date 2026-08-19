@@ -227,6 +227,7 @@ describe("pull task unified API", () => {
       managerFinishGroupId: 14,
       pullerFinishGroupId: 15,
       groupSetting: {
+        enabled: true,
         settingTiming: "AFTER_PULL",
         groupName: "测试群",
         useMaterialFileNameAsGroupName: false,
@@ -302,6 +303,7 @@ describe("pull task unified API", () => {
       "avatarFileKey",
       "disappearingMessage",
       "editPermission",
+      "enabled",
       "groupDescription",
       "groupName",
       "linkPermission",

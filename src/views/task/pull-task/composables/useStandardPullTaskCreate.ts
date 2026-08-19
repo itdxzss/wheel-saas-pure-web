@@ -45,6 +45,8 @@ export interface StandardPullTaskCreateForm {
   stationGroupId: number | "";
   managerFinishGroupId: number | "";
   pullerFinishGroupId: number | "";
+  /** 「群信息设置」整块总开关；关闭时三个小块不展示,也不走群信息设置流程。 */
+  groupSettingEnabled: boolean;
   groupSettingTiming: "BEFORE_PULL" | "AFTER_PULL";
   groupName: string;
   useMaterialFileNameAsGroupName: boolean;
@@ -115,6 +117,8 @@ function emptyForm(): StandardPullTaskCreateForm {
     stationGroupId: "",
     managerFinishGroupId: "",
     pullerFinishGroupId: "",
+    // 新建任务时「群信息设置」总开关默认关闭，三个小块不展示。
+    groupSettingEnabled: false,
     groupSettingTiming: "AFTER_PULL",
     groupName: "",
     useMaterialFileNameAsGroupName: false,
@@ -480,6 +484,7 @@ export function useStandardPullTaskCreate(
         ? form.pullerFinishGroupId
         : null,
       groupSetting: {
+        enabled: form.groupSettingEnabled,
         settingTiming: form.groupSettingTiming,
         groupName: form.useMaterialFileNameAsGroupName
           ? null

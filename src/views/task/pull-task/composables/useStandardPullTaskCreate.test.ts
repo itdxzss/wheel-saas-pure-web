@@ -64,6 +64,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(state.form.pullCountMax, 50);
     assert.equal(state.form.pullerCountPerGroup, 2);
     assert.equal(state.form.pullerSyncMode, "SINGLE");
+    assert.equal(state.form.groupSettingEnabled, false);
     assert.equal(state.form.groupSettingTiming, "AFTER_PULL");
     assert.equal(state.form.linkPermission, "ADMIN_ONLY");
     assert.equal(state.form.disappearingMessage, "UNCHANGED");
@@ -315,6 +316,7 @@ describe("standard normal-link pull task create state", () => {
     state.form.pullerJoinByLink = true;
     state.form.managerFinishGroupId = 31;
     state.form.pullerFinishGroupId = 32;
+    state.form.groupSettingEnabled = true;
     state.form.groupSettingTiming = "BEFORE_PULL";
     state.form.groupName = "前端验收群名";
     state.form.useMaterialFileNameAsGroupName = true;
@@ -364,6 +366,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(payload.earlyPullCallCount, 2);
     assert.equal(payload.pullerJoinByLink, true);
     assert.deepEqual(payload.groupSetting, {
+      enabled: true,
       settingTiming: "BEFORE_PULL",
       groupName: null,
       useMaterialFileNameAsGroupName: true,
@@ -623,5 +626,27 @@ describe("standard normal-link pull task create state", () => {
       "/api/pull-tasks/standard/draft/rows/19"
     );
     assert.equal(state.linksText.value, "");
+  });
+
+  it("posts enabled=false inside the group setting when the switch stays off", async () => {
+    resetArmadaMock({
+      id: 7,
+      taskName: "普通群链接",
+      status: "WAIT_START",
+      groupCount: 1,
+      expectedPullCount: 1
+    });
+    resetElementPlusMock();
+    const state = validState();
+
+    await state.create();
+
+    const payload = (
+      armadaCalls()[0].opts as {
+        data: { groupSetting: { enabled: boolean } };
+      }
+    ).data;
+    assert.equal(armadaCalls()[0].url, "/api/pull-tasks/standard");
+    assert.equal(payload.groupSetting.enabled, false);
   });
 });
