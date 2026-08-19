@@ -6,6 +6,10 @@ const source = readFileSync(
   new URL("./HistoricalGroupFilterDrawer.vue", import.meta.url),
   "utf8"
 );
+const constantsSource = readFileSync(
+  new URL("../constants.ts", import.meta.url),
+  "utf8"
+);
 
 test("historical drawer contains approved fields, quick ranges and actions", () => {
   assert.match(source, /<el-drawer/);
@@ -32,6 +36,9 @@ test("historical drawer contains approved fields, quick ranges and actions", () 
     "SOUTH_AMERICA",
     "OCEANIA"
   ]) {
-    assert.match(source, new RegExp(code));
+    assert.match(constantsSource, new RegExp(code));
   }
+  assert.match(constantsSource, /ANTARCTICA/);
+  assert.match(constantsSource, /南极洲/);
+  assert.match(source, /groupContinentOptions/);
 });

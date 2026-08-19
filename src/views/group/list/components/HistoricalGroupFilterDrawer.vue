@@ -5,6 +5,7 @@ import {
   countriesForContinent,
   type HistoricalFilterValue
 } from "../group-list-filters";
+import { groupContinentOptions } from "../constants";
 
 defineOptions({ name: "HistoricalGroupFilterDrawer" });
 
@@ -34,15 +35,6 @@ const visible = computed({
 const countryOptions = computed(() =>
   countriesForContinent(props.countries, props.value.continentCode)
 );
-
-const continents = [
-  ["ASIA", "亚洲"],
-  ["AFRICA", "非洲"],
-  ["EUROPE", "欧洲"],
-  ["NORTH_AMERICA", "北美洲"],
-  ["SOUTH_AMERICA", "南美洲"],
-  ["OCEANIA", "大洋洲"]
-] as const;
 
 const ageRanges = [
   [0, 7, "0-7天"],
@@ -91,7 +83,7 @@ function updateContinent(continentCode: string): void {
           @update:model-value="updateContinent"
         >
           <el-option
-            v-for="item in continents"
+            v-for="item in groupContinentOptions"
             :key="item[0]"
             :value="item[0]"
             :label="item[1]"

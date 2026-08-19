@@ -20,6 +20,17 @@ export const availableAdminOptions = [
   { label: "无可用管理员", value: "NO" }
 ];
 
+/** 群创建者国家所属七大洲的稳定代码与中文展示名。 */
+export const groupContinentOptions = [
+  ["ASIA", "亚洲"],
+  ["AFRICA", "非洲"],
+  ["EUROPE", "欧洲"],
+  ["NORTH_AMERICA", "北美洲"],
+  ["SOUTH_AMERICA", "南美洲"],
+  ["OCEANIA", "大洋洲"],
+  ["ANTARCTICA", "南极洲"]
+] as const;
+
 export const groupOriginOptions: Array<{ label: string; value: "" | number }> =
   [
     { label: "全部来源", value: "" },

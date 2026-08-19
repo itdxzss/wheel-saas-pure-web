@@ -5,6 +5,7 @@ import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { GroupListRow } from "@/api/group";
 import { formatEpochMillis as formatEpoch } from "@/utils/time";
+import { groupContinentOptions } from "../constants";
 import Delete from "~icons/ep/delete";
 
 defineOptions({
@@ -69,6 +70,10 @@ function avatarText(row: GroupListRow): string {
 
 function formatGroupCreatedAt(value: number | null | undefined): string {
   return value == null ? "-" : formatEpoch(value * 1000);
+}
+
+function continentName(code: string | null | undefined): string {
+  return groupContinentOptions.find(item => item[0] === code)?.[1] ?? "-";
 }
 </script>
 
@@ -261,11 +266,7 @@ function formatGroupCreatedAt(value: number | null | undefined): string {
                 国家：{{ row.creatorCountryFlag || "" }}
                 {{ row.creatorCountryName || "-" }}
               </span>
-              <span
-                title="依据创建者手机号原始号段推断，不代表当前所在地"
-              >
-                州：{{ row.creatorPhoneRegionName || "-" }}
-              </span>
+              <span>洲：{{ continentName(row.creatorContinentCode) }}</span>
               <span>创建者：{{ row.creatorPhone || "-" }}</span>
               <span>建群：{{ formatGroupCreatedAt(row.groupCreatedAt) }}</span>
             </div>
