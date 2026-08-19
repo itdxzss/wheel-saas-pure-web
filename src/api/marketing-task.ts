@@ -75,7 +75,11 @@ export interface MarketingTaskTargetRow {
   lastReason?: string | null;
 }
 
-export type MarketingGroupExecutionResult = "SUCCESS" | "FAILED" | "SKIPPED";
+export type MarketingGroupExecutionResult =
+  | "SUCCESS"
+  | "FAILED"
+  | "SKIPPED"
+  | "WAITING";
 
 export interface MarketingTaskGroupStatRow {
   groupLinkId?: number | null;

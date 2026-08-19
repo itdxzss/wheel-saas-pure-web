@@ -25,6 +25,11 @@ const RESULT_META: Record<string, GroupExecutionResultMeta> = {
     label: "已跳过",
     tagType: "warning",
     tagged: true
+  },
+  WAITING: {
+    label: "等待发送",
+    tagType: "info",
+    tagged: true
   }
 };
 

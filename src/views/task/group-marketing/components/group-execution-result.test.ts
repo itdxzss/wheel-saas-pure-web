@@ -21,6 +21,11 @@ describe("group execution result meta", () => {
       tagType: "warning",
       tagged: true
     });
+    assert.deepEqual(groupExecutionResultMeta("WAITING"), {
+      label: "等待发送",
+      tagType: "info",
+      tagged: true
+    });
   });
 
   it("shows a plain dash for missing or unknown values", () => {
