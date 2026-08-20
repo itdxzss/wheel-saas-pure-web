@@ -16,7 +16,10 @@ import {
   standardStageOptions,
   standardWaitResourceOptions
 } from "../constants";
-import { formatGroupLinkUrl } from "../standard-execution-display";
+import {
+  formatGroupLinkUrl,
+  standardCreateStepLabel
+} from "../standard-execution-display";
 import type {
   PullTaskGroupRow,
   PullTaskDetail,
@@ -92,6 +95,12 @@ const normalLink = computed(
     props.activeTask?.taskType === "STANDARD" &&
     props.activeTask.mode === "NORMAL_LINK"
 );
+const newGroupMode = computed(
+  () =>
+    normalLink.value &&
+    (props.detailTask?.creationMode ?? props.activeTask?.creationMode) ===
+      "NEW_GROUP"
+);
 const selectedGroupTip = computed(() =>
   props.detailSelectedCount > 0
     ? `已选 ${props.detailSelectedCount} 个群组`
@@ -116,7 +125,25 @@ function countValue(value?: number | null): number | string {
 }
 
 function groupIdentity(row: PullTaskGroupRow): string {
-  return normalLink.value ? row.groupJid || "-" : row.groupName || "-";
+  if (!normalLink.value) return row.groupName || "-";
+  if (!newGroupMode.value) return row.groupJid || "-";
+  return (
+    row.groupName ||
+    row.groupSubject ||
+    row.sourceFileName?.replace(/\.txt$/i, "") ||
+    standardCreateStepLabel(row.createStep)
+  );
+}
+
+function groupNameLabel(row: PullTaskGroupRow): string {
+  if (row.groupName || row.groupSubject) {
+    return row.groupName || row.groupSubject || "";
+  }
+  if (!newGroupMode.value) return "-";
+  return (
+    row.sourceFileName?.replace(/\.txt$/i, "") ||
+    standardCreateStepLabel(row.createStep)
+  );
 }
 </script>
 
@@ -130,6 +157,15 @@ function groupIdentity(row: PullTaskGroupRow): string {
     <div class="detail-head">
       <div>
         <strong>{{ activeTask?.taskName || "拉群任务" }}</strong>
+        <el-tag
+          v-if="normalLink"
+          size="small"
+          :type="newGroupMode ? 'primary' : 'info'"
+          effect="plain"
+          data-testid="pull-task-detail-creation-mode"
+        >
+          {{ newGroupMode ? "新群模式" : "群链接模式" }}
+        </el-tag>
         <small v-if="!normalLink">{{ selectedGroupTip }}</small>
       </div>
       <div v-if="!normalLink" class="detail-actions">
@@ -214,6 +250,7 @@ function groupIdentity(row: PullTaskGroupRow): string {
         normalLink && detailTask?.standardSetting && detailTask?.groupSetting
       "
       :visible="visible"
+      :creation-mode="detailTask.creationMode"
       :standard-setting="detailTask.standardSetting"
       :group-setting="detailTask.groupSetting"
     />
@@ -229,12 +266,12 @@ function groupIdentity(row: PullTaskGroupRow): string {
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="群链接">
+      <el-form-item :label="newGroupMode ? '群名 / 料子' : '群链接'">
         <el-input
           v-model="searchForm.keyword"
           clearable
           class="search-keyword"
-          placeholder="群名 / 群链接"
+          :placeholder="newGroupMode ? '群名 / 料子包名称' : '群名 / 群链接'"
           @keyup.enter="emit('refresh-detail-groups')"
         />
       </el-form-item>
@@ -325,14 +362,19 @@ function groupIdentity(row: PullTaskGroupRow): string {
         show-overflow-tooltip
       >
         <template #default="{ row }">
-          {{ row.groupName || "-" }}
+          {{ groupNameLabel(row) }}
         </template>
       </el-table-column>
       <el-table-column label="群组" min-width="240" show-overflow-tooltip>
         <template #default="{ row }">
           <div class="name-cell">
             <strong>{{ groupIdentity(row) }}</strong>
-            <small>{{ formatGroupLinkUrl(row.groupLinkUrl) }}</small>
+            <small v-if="!newGroupMode || row.groupLinkUrl">
+              {{ formatGroupLinkUrl(row.groupLinkUrl) }}
+            </small>
+            <small v-else data-testid="pull-task-group-create-step">
+              建群步骤：{{ standardCreateStepLabel(row.createStep) }}
+            </small>
           </div>
         </template>
       </el-table-column>
@@ -359,9 +401,12 @@ function groupIdentity(row: PullTaskGroupRow): string {
         </template>
       </el-table-column>
       <el-table-column v-if="normalLink" label="当前阶段" width="150">
-        <template #default="{ row }">{{
-          standardStageLabel(row.stage)
-        }}</template>
+        <template #default="{ row }">
+          {{ standardStageLabel(row.stage) }}
+          <template v-if="row.stage === 9">
+            / {{ standardCreateStepLabel(row.createStep) }}
+          </template>
+        </template>
       </el-table-column>
       <el-table-column v-if="normalLink" label="料子进度" min-width="230">
         <template #default="{ row }">

@@ -28,7 +28,7 @@ describe("standard pull task execution display", () => {
     assert.equal(formatGroupLinkUrl(null), "-");
   });
 
-  it("maps the eight stages and manager setup anomaly", async () => {
+  it("maps all stages and manager setup anomaly", async () => {
     assert.ok(existsSync(fileURLToPath(displayModuleUrl)));
     const { standardExecutionStatus, standardStageLabel } = await import(
       displayModuleUrl.href
@@ -37,6 +37,7 @@ describe("standard pull task execution display", () => {
     assert.equal(standardStageLabel(3), "管理员设置");
     assert.equal(standardStageLabel(4), "管理—拉手联系人");
     assert.equal(standardStageLabel(8), "执行收口");
+    assert.equal(standardStageLabel(9), "创建新群");
     assert.equal(
       standardExecutionStatus({
         executionStatus: 3,
@@ -61,8 +62,17 @@ describe("standard pull task execution display", () => {
     assert.ok(existsSync(fileURLToPath(displayModuleUrl)));
     const { actionTypeLabel, roleLabel } = await import(displayModuleUrl.href);
 
-    assert.equal(roleLabel(4), "提权管理员");
+    assert.equal(roleLabel(4), "建群人/提权管理员");
     assert.equal(actionTypeLabel(4), "设置任务管理员");
+  });
+
+  it("maps the seven persisted group-create steps", async () => {
+    const { standardCreateStepLabel } = await import(displayModuleUrl.href);
+
+    assert.equal(standardCreateStepLabel(1), "准备建群账号");
+    assert.equal(standardCreateStepLabel(3), "保存建群结果");
+    assert.equal(standardCreateStepLabel(7), "登记自建群");
+    assert.equal(standardCreateStepLabel(null), "准备建群");
   });
 
   it("declares group settings action labels", async () => {

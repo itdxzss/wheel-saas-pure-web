@@ -9,6 +9,7 @@ import {
   formatGroupLinkUrl,
   pullerAccountLabel,
   roleLabel,
+  standardCreateStepLabel,
   stationAccountLabel
 } from "../standard-execution-display";
 
@@ -127,6 +128,9 @@ function accountLabel(
         </el-descriptions-item>
         <el-descriptions-item label="当前阶段">
           {{ standardStageLabel(detail.execution.stage) }}
+          <template v-if="detail.execution.stage === 9">
+            / {{ standardCreateStepLabel(detail.execution.createStep) }}
+          </template>
         </el-descriptions-item>
         <el-descriptions-item label="最近执行">
           {{ formatEpoch(detail.execution.lastBusinessExecutedAt) }}
@@ -134,8 +138,18 @@ function accountLabel(
         <el-descriptions-item label="群 JID">
           {{ detail.execution.groupJid || "-" }}
         </el-descriptions-item>
-        <el-descriptions-item label="群链接" :span="2">
+        <el-descriptions-item
+          v-if="detail.execution.normalizedLink"
+          label="群链接"
+          :span="2"
+        >
           {{ formatGroupLinkUrl(detail.execution.normalizedLink) }}
+        </el-descriptions-item>
+        <el-descriptions-item v-else label="建群步骤" :span="2">
+          {{ standardCreateStepLabel(detail.execution.createStep) }}
+          <template v-if="detail.execution.groupSubject">
+            · {{ detail.execution.groupSubject }}
+          </template>
         </el-descriptions-item>
         <el-descriptions-item label="当前异常" :span="3">
           {{

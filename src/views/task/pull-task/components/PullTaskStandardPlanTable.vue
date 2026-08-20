@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import type { PullTaskStandardDraft } from "@/api/pull-task";
+import type {
+  PullTaskCreationMode,
+  PullTaskStandardDraft
+} from "@/api/pull-task";
 
 defineOptions({
   name: "PullTaskStandardPlanTable"
 });
 
 defineProps<{
+  creationMode: PullTaskCreationMode;
   draft: PullTaskStandardDraft;
 }>();
 
@@ -24,7 +28,14 @@ const emit = defineEmits<{
       show-icon
       class="plan-tip"
     />
-    <el-empty v-else description="粘贴链接并上传 TXT 后生成执行计划" />
+    <el-empty
+      v-else
+      :description="
+        creationMode === 'NEW_GROUP'
+          ? '上传 TXT 后生成待建群执行计划'
+          : '粘贴链接并上传 TXT 后生成执行计划'
+      "
+    />
     <el-table
       v-if="draft.rows.length"
       :data="draft.rows"
@@ -33,12 +44,24 @@ const emit = defineEmits<{
       border
     >
       <el-table-column prop="seq" label="序号" width="64" fixed />
-      <el-table-column label="群链接" min-width="220" show-overflow-tooltip>
+      <el-table-column
+        :label="creationMode === 'NEW_GROUP' ? '待建群' : '群链接'"
+        min-width="220"
+        show-overflow-tooltip
+      >
         <template #default="{ row }">
-          <span>https://{{ row.normalizedLink }}</span>
+          <span v-if="creationMode === 'NEW_GROUP'">
+            {{ row.sourceFileName.replace(/\.txt$/i, "") }}
+          </span>
+          <span v-else>https://{{ row.normalizedLink }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="sourceLinkLineNo" label="链接行" width="78" />
+      <el-table-column
+        v-if="creationMode === 'PASTED_LINK'"
+        prop="sourceLinkLineNo"
+        label="链接行"
+        width="78"
+      />
       <el-table-column
         prop="sourceFileName"
         label="进群料子"

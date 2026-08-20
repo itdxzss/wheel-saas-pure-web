@@ -2,6 +2,7 @@
 import { onBeforeUnmount, ref, watch } from "vue";
 import {
   getPullTaskStandardGroupAvatarContent,
+  type PullTaskCreationMode,
   type PullTaskStandardGroupSetting,
   type PullTaskStandardSetting
 } from "@/api/pull-task";
@@ -12,6 +13,7 @@ defineOptions({
 
 const props = defineProps<{
   visible: boolean;
+  creationMode: PullTaskCreationMode;
   standardSetting: PullTaskStandardSetting;
   groupSetting: PullTaskStandardGroupSetting;
 }>();
@@ -91,11 +93,26 @@ onBeforeUnmount(() => {
     <el-collapse-item title="已保存任务配置" name="saved-settings">
       <el-divider content-position="left">执行设置</el-divider>
       <el-descriptions :column="3" border size="small">
+        <el-descriptions-item label="创建模式">
+          {{ creationMode === "NEW_GROUP" ? "新群模式" : "群链接模式" }}
+        </el-descriptions-item>
         <el-descriptions-item label="自动启动">
           {{ standardSetting.autoStart === 1 ? "是" : "否" }}
         </el-descriptions-item>
         <el-descriptions-item label="群组分组">
           {{ namedGroup(standardSetting.groupFolderName) }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="creationMode === 'NEW_GROUP'"
+          label="建群人分组"
+        >
+          {{ namedGroup(standardSetting.creatorGroupName) }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="creationMode === 'NEW_GROUP'"
+          label="建群时站台数量"
+        >
+          {{ standardSetting.initialStationCount }}
         </el-descriptions-item>
         <el-descriptions-item label="拉手同步料子方式">
           {{ settingLabel(standardSetting.pullerSyncMode) }}
@@ -167,6 +184,9 @@ onBeforeUnmount(() => {
           头像加载失败
         </span>
         <el-descriptions :column="3" border size="small">
+          <el-descriptions-item label="总开关">
+            {{ groupSetting.enabled ? "开启" : "关闭" }}
+          </el-descriptions-item>
           <el-descriptions-item label="设置顺序">
             {{ settingLabel(groupSetting.settingTiming) }}
           </el-descriptions-item>

@@ -35,6 +35,11 @@ const emit = defineEmits<{
 function timestampLabel(value?: number | null): string {
   return value == null ? "--" : formatEpoch(value);
 }
+
+function creationModeLabel(row: PullTaskRow): string | null {
+  if (row.taskType !== "STANDARD" || row.mode !== "NORMAL_LINK") return null;
+  return row.creationMode === "NEW_GROUP" ? "新群模式" : "群链接模式";
+}
 </script>
 
 <template>
@@ -60,6 +65,15 @@ function timestampLabel(value?: number | null): string {
               groupSourceLabel(row.groupSource)
             }}
           </span>
+          <el-tag
+            v-if="creationModeLabel(row)"
+            size="small"
+            effect="plain"
+            :type="row.creationMode === 'NEW_GROUP' ? 'primary' : 'info'"
+            data-testid="pull-task-creation-mode"
+          >
+            {{ creationModeLabel(row) }}
+          </el-tag>
           <span class="secondary-line">
             创建人：{{ row.operatorName || "--" }}
           </span>

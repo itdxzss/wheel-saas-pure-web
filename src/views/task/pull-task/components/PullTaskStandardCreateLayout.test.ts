@@ -35,10 +35,22 @@ describe("normal-link create prototype layout", () => {
     assert.match(drawerSource, /新群模式/);
     assert.match(drawerSource, /群链接模式/);
     assert.match(drawerSource, /速拉模式/);
+    assert.match(drawerSource, /name="NEW_GROUP"/);
+    assert.doesNotMatch(drawerSource, /name="NEW_GROUP"[^>]*disabled/);
     assert.ok(
       drawerSource.indexOf("PullTaskStandardSettings") <
         drawerSource.indexOf("PullTaskStandardResources")
     );
+  });
+
+  it("exposes the approved new-group inputs and one-TXT-per-group rule", () => {
+    assert.match(settingsSource, /建群人分组/);
+    assert.match(settingsSource, /建群时初始站台数/);
+    assert.match(settingsSource, /Math\.max/);
+    assert.match(settingsSource, /较大值计算，不相加/);
+    assert.match(resourcesSource, /每个有效文件对应一个新群/);
+    assert.match(resourcesSource, /pull-task-upload-error/);
+    assert.match(planSource, /待建群/);
   });
 
   it("groups the approved normal-link fields like the prototype", () => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { GroupFolderRow } from "@/api/group-folder";
 import type { StandardPullTaskCreateForm } from "../composables/useStandardPullTaskCreate";
@@ -8,7 +9,7 @@ defineOptions({
   name: "PullTaskStandardSettings"
 });
 
-defineProps<{
+const props = defineProps<{
   accountGroups: AccountGroupApiRow[];
   groupFolders: GroupFolderRow[];
   groupAvatarFile: File | null;
@@ -21,6 +22,44 @@ const emit = defineEmits<{
 
 const form = defineModel<StandardPullTaskCreateForm>("form", {
   required: true
+});
+
+function nonNegativeCount(value: number): number {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+const stationDemand = computed(() => {
+  const pullStationCount = nonNegativeCount(form.value.stationCountPerCall);
+  const initialStationCount =
+    form.value.creationMode === "NEW_GROUP"
+      ? nonNegativeCount(form.value.initialStationCount)
+      : 0;
+  return Math.max(pullStationCount, initialStationCount);
+});
+const selectedStationGroup = computed(() =>
+  props.accountGroups.find(group => group.id === form.value.stationGroupId)
+);
+const stationCapacity = computed(
+  () =>
+    selectedStationGroup.value?.executableOnlineAccounts ??
+    selectedStationGroup.value?.onlineAccounts ??
+    0
+);
+const stationCapacityTitle = computed(() => {
+  if (stationDemand.value === 0) {
+    return "站台容量：当前配置不需要站台账号";
+  }
+  if (!selectedStationGroup.value) {
+    return `当前配置至少需要 ${stationDemand.value} 个在线正常站台，请选择站台分组`;
+  }
+  return `站台容量：至少需要 ${stationDemand.value} 个，当前可执行在线账号 ${stationCapacity.value} 个`;
+});
+const stationCapacityType = computed<"success" | "warning" | "info">(() => {
+  if (stationDemand.value === 0) return "info";
+  return selectedStationGroup.value &&
+    stationCapacity.value >= stationDemand.value
+    ? "success"
+    : "warning";
 });
 </script>
 
@@ -41,7 +80,10 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
           </el-form-item>
         </section>
 
-        <section class="setting-block link-source-block">
+        <section
+          v-if="form.creationMode === 'PASTED_LINK'"
+          class="setting-block link-source-block"
+        >
           <h3>群链接配置</h3>
           <el-form-item label="群组分组">
             <el-select
@@ -59,6 +101,44 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
               />
             </el-select>
           </el-form-item>
+        </section>
+
+        <section
+          v-else
+          class="setting-block new-group-block"
+          data-testid="pull-task-new-group-settings"
+        >
+          <h3>建群配置</h3>
+          <div class="setting-grid new-group-grid">
+            <el-form-item label="建群人分组" required>
+              <el-select
+                v-model="form.creatorGroupId"
+                clearable
+                filterable
+                class="full-width"
+                placeholder="请选择建群人分组"
+                data-testid="pull-task-creator-group"
+              >
+                <el-option
+                  v-for="group in accountGroups"
+                  :key="group.id"
+                  :label="`${group.name}（可执行在线 ${group.executableOnlineAccounts ?? group.onlineAccounts}）`"
+                  :value="group.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="建群时初始站台数">
+              <el-input-number
+                v-model="form.initialStationCount"
+                :min="0"
+                :precision="0"
+                :step="1"
+                controls-position="right"
+                class="full-width"
+                data-testid="pull-task-initial-station-count"
+              />
+            </el-form-item>
+          </div>
         </section>
 
         <section class="setting-block task-base-block">
@@ -231,6 +311,17 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
             </el-form-item>
           </div>
 
+          <el-alert
+            v-if="form.creationMode === 'NEW_GROUP'"
+            :title="stationCapacityTitle"
+            description="建群时占用的站台会减少后续拉人调用的可选站台；分组偏小时，执行行会卡在“等待站台”。需求按初始站台数和每次拉人站台数的较大值计算，不相加。"
+            :type="stationCapacityType"
+            :closable="false"
+            show-icon
+            class="station-capacity"
+            data-testid="pull-task-station-capacity"
+          />
+
           <h4>完成归档</h4>
           <div class="setting-grid archive-grid">
             <el-form-item label="任务完成的管理移至分组">
@@ -336,6 +427,10 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
   grid-template-columns: minmax(280px, 1fr) 180px;
 }
 
+.new-group-grid {
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 0.7fr);
+}
+
 .strategy-grid {
   grid-template-columns: repeat(4, minmax(180px, 1fr));
 }
@@ -357,6 +452,10 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
   margin: 0 0 12px;
   font-size: 13px;
   border-top: 1px solid var(--el-border-color-extra-light);
+}
+
+.station-capacity {
+  margin-bottom: 14px;
 }
 
 .settings-form :deep(.el-form-item) {
@@ -391,6 +490,7 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
   .settings-form,
   .strategy-grid,
   .params-grid,
+  .new-group-grid,
   .account-grid,
   .archive-grid {
     grid-template-columns: repeat(2, minmax(220px, 1fr));

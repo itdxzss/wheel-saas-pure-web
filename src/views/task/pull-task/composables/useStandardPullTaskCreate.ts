@@ -8,6 +8,7 @@ import {
   planPullTaskStandardDraft,
   removePullTaskStandardDraftRow,
   type PullTaskStandardCreateRequest,
+  type PullTaskCreationMode,
   type PullTaskStandardDraft,
   type PullTaskStandardGroupAvatarUpload,
   uploadPullTaskStandardGroupAvatar
@@ -24,6 +25,7 @@ const PLANNED_LINKS_STORAGE_KEY =
   "pull-task-standard-normal-link-planned-links";
 
 export interface StandardPullTaskCreateForm {
+  creationMode: PullTaskCreationMode;
   taskName: string;
   remark: string;
   autoStart: boolean;
@@ -43,6 +45,8 @@ export interface StandardPullTaskCreateForm {
   managerGroupId: number | "";
   pullerGroupId: number | "";
   stationGroupId: number | "";
+  creatorGroupId: number | "";
+  initialStationCount: number;
   managerFinishGroupId: number | "";
   pullerFinishGroupId: number | "";
   /** 「群信息设置」整块总开关；关闭时三个小块不展示,也不走群信息设置流程。 */
@@ -82,6 +86,7 @@ export interface StandardPullTaskCreateState {
   pendingFiles: Ref<File[]>;
   groupAvatarFile: Ref<File | null>;
   uploadedAvatar: Ref<PullTaskStandardGroupAvatarUpload | null>;
+  resourceError: Ref<string>;
   open: () => Promise<void>;
   addFiles: (files: File[]) => void;
   movePendingFile: (fileName: string, offset: -1 | 1) => void;
@@ -96,6 +101,7 @@ export interface StandardPullTaskCreateState {
 
 function emptyForm(): StandardPullTaskCreateForm {
   return {
+    creationMode: "PASTED_LINK",
     taskName: `任务_${Date.now().toString().slice(-8)}`,
     remark: "",
     autoStart: true,
@@ -115,6 +121,8 @@ function emptyForm(): StandardPullTaskCreateForm {
     managerGroupId: "",
     pullerGroupId: "",
     stationGroupId: "",
+    creatorGroupId: "",
+    initialStationCount: 0,
     managerFinishGroupId: "",
     pullerFinishGroupId: "",
     // 新建任务时「群信息设置」总开关默认关闭，三个小块不展示。
@@ -135,6 +143,7 @@ function emptyForm(): StandardPullTaskCreateForm {
 function emptyDraft(): PullTaskStandardDraft {
   return {
     draftTaskId: null,
+    creationMode: "PASTED_LINK",
     rows: [],
     linkLines: [],
     fileResults: [],
@@ -207,9 +216,11 @@ export function useStandardPullTaskCreate(
   const pendingFiles = ref<File[]>([]);
   const groupAvatarFile = ref<File | null>(null);
   const uploadedAvatar = ref<PullTaskStandardGroupAvatarUpload | null>(null);
+  const resourceError = ref("");
   let plannedLinksText = storedPlannedLinks();
   let plannedPendingNames = new Set<string>();
   let plannedGroupFolderId: number | null = null;
+  let plannedCreationMode: PullTaskCreationMode = form.creationMode;
 
   watch(linksText, value => storeLinks(value));
 
@@ -241,6 +252,13 @@ export function useStandardPullTaskCreate(
       }
       if (draftResult.status === "fulfilled") {
         draft.value = draftResult.value;
+        const restoredMode = draftResult.value.creationMode ?? "PASTED_LINK";
+        form.creationMode = restoredMode;
+        plannedCreationMode = restoredMode;
+        if (restoredMode === "NEW_GROUP") {
+          form.groupSettingEnabled = true;
+          plannedLinksText = "";
+        }
       } else {
         ElMessage.error(apiErrorMessage(draftResult.reason, "草稿加载失败"));
       }
@@ -250,17 +268,18 @@ export function useStandardPullTaskCreate(
   }
 
   function addFiles(files: File[]): void {
+    resourceError.value = "";
     const knownNames = new Set([
       ...pendingFiles.value.map(file => file.name),
       ...draft.value.rows.map(row => row.sourceFileName)
     ]);
     files.forEach(file => {
       if (!file.name.toLowerCase().endsWith(".txt")) {
-        ElMessage.warning(`${file.name} 不是 TXT 文件，已忽略`);
+        resourceError.value = `${file.name} 不是 TXT 文件，已忽略`;
         return;
       }
       if (knownNames.has(file.name)) {
-        ElMessage.warning(`${file.name} 已添加，请勿重复上传同名文件`);
+        resourceError.value = `${file.name} 已添加，请勿重复上传同名文件`;
         return;
       }
       knownNames.add(file.name);
@@ -269,6 +288,7 @@ export function useStandardPullTaskCreate(
   }
 
   function removePendingFile(fileName: string): void {
+    resourceError.value = "";
     pendingFiles.value = pendingFiles.value.filter(
       file => file.name !== fileName
     );
@@ -344,16 +364,23 @@ export function useStandardPullTaskCreate(
   }
 
   function currentGroupFolderId(): number | null {
+    if (form.creationMode === "NEW_GROUP") return null;
     return positiveId(form.groupFolderId) ? form.groupFolderId : null;
   }
 
+  function currentLinksText(): string {
+    return form.creationMode === "NEW_GROUP" ? "" : linksText.value;
+  }
+
   function hasGroupSource(): boolean {
+    if (form.creationMode === "NEW_GROUP") return true;
     return currentGroupFolderId() !== null || Boolean(linksText.value.trim());
   }
 
   function resourcePlanChanged(): boolean {
     return (
-      linksText.value !== plannedLinksText ||
+      currentLinksText() !== plannedLinksText ||
+      form.creationMode !== plannedCreationMode ||
       currentGroupFolderId() !== plannedGroupFolderId ||
       pendingFiles.value.length !== plannedPendingNames.size ||
       pendingFiles.value.some(file => !plannedPendingNames.has(file.name))
@@ -366,23 +393,26 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("请选择群组分组或粘贴群链接");
       return false;
     }
+    resourceError.value = "";
     planning.value = true;
     try {
       const result = await planPullTaskStandardDraft(
         groupFolderId,
-        linksText.value,
-        pendingFiles.value
+        currentLinksText(),
+        pendingFiles.value,
+        form.creationMode
       );
       draft.value = result;
       reconcilePendingFiles(result);
-      plannedLinksText = linksText.value;
+      plannedLinksText = currentLinksText();
       plannedPendingNames = new Set(pendingFiles.value.map(file => file.name));
       plannedGroupFolderId = groupFolderId;
+      plannedCreationMode = form.creationMode;
       storePlannedLinks(plannedLinksText);
       ElMessage.success("执行计划已生成");
       return true;
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "执行计划生成失败"));
+      resourceError.value = apiErrorMessage(error, "执行计划生成失败");
       return false;
     } finally {
       planning.value = false;
@@ -391,17 +421,18 @@ export function useStandardPullTaskCreate(
 
   async function removeRow(rowId: number): Promise<void> {
     const removedRow = draft.value.rows.find(row => row.rowId === rowId);
-    const nextLinksText = removedRow
-      ? withoutFrozenLink(
-          linksText.value,
-          removedRow.sourceLinkLineNo,
-          removedRow.normalizedLink
-        )
-      : linksText.value;
+    const nextLinksText =
+      removedRow?.sourceLinkLineNo != null && removedRow.normalizedLink
+        ? withoutFrozenLink(
+            linksText.value,
+            removedRow.sourceLinkLineNo,
+            removedRow.normalizedLink
+          )
+        : linksText.value;
     try {
       draft.value = await removePullTaskStandardDraftRow(rowId);
       linksText.value = nextLinksText;
-      plannedLinksText = nextLinksText;
+      plannedLinksText = form.creationMode === "NEW_GROUP" ? "" : nextLinksText;
       storePlannedLinks(plannedLinksText);
       ElMessage.success("执行行已移除");
     } catch (error) {
@@ -418,6 +449,8 @@ export function useStandardPullTaskCreate(
       plannedLinksText = "";
       plannedPendingNames = new Set();
       plannedGroupFolderId = null;
+      plannedCreationMode = form.creationMode;
+      resourceError.value = "";
       storePlannedLinks("");
       ElMessage.success("创建草稿已清空");
     } catch (error) {
@@ -442,7 +475,26 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("请选择管理和拉手分组");
       return null;
     }
-    if (form.stationCountPerCall > 0 && !positiveId(form.stationGroupId)) {
+    const creatorGroupId = positiveId(form.creatorGroupId)
+      ? form.creatorGroupId
+      : null;
+    if (form.creationMode === "NEW_GROUP" && creatorGroupId === null) {
+      ElMessage.warning("请选择建群人分组");
+      return null;
+    }
+    if (
+      form.creationMode === "NEW_GROUP" &&
+      (!Number.isInteger(form.initialStationCount) ||
+        form.initialStationCount < 0)
+    ) {
+      ElMessage.warning("建群时初始站台数必须是非负整数");
+      return null;
+    }
+    const requiredStationCount = Math.max(
+      form.stationCountPerCall,
+      form.creationMode === "NEW_GROUP" ? form.initialStationCount : 0
+    );
+    if (requiredStationCount > 0 && !positiveId(form.stationGroupId)) {
       ElMessage.warning("请选择站台分组");
       return null;
     }
@@ -483,6 +535,13 @@ export function useStandardPullTaskCreate(
       pullerFinishGroupId: positiveId(form.pullerFinishGroupId)
         ? form.pullerFinishGroupId
         : null,
+      creationMode: form.creationMode,
+      ...(form.creationMode === "NEW_GROUP"
+        ? {
+            creatorGroupId,
+            initialStationCount: form.initialStationCount
+          }
+        : {}),
       groupSetting: {
         enabled: form.groupSettingEnabled,
         settingTiming: form.groupSettingTiming,
@@ -547,14 +606,16 @@ export function useStandardPullTaskCreate(
       plannedLinksText = "";
       plannedPendingNames = new Set();
       plannedGroupFolderId = null;
+      plannedCreationMode = "PASTED_LINK";
+      resourceError.value = "";
       groupAvatarFile.value = null;
       uploadedAvatar.value = null;
       storePlannedLinks("");
       Object.assign(form, emptyForm());
-      ElMessage.success("普通群链接任务已创建");
+      ElMessage.success("拉群任务已创建");
       await options.onCreated();
     } catch (error) {
-      ElMessage.error(apiErrorMessage(error, "普通群链接任务创建失败"));
+      ElMessage.error(apiErrorMessage(error, "拉群任务创建失败"));
     } finally {
       creating.value = false;
     }
@@ -574,6 +635,7 @@ export function useStandardPullTaskCreate(
     pendingFiles,
     groupAvatarFile,
     uploadedAvatar,
+    resourceError,
     open,
     addFiles,
     movePendingFile,

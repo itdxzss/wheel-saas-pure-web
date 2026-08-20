@@ -3,21 +3,27 @@ import { computed, nextTick, ref } from "vue";
 import type { UploadFile } from "element-plus";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type {
+  PullTaskCreationMode,
   PullTaskStandardDraft,
   PullTaskStandardLinkLineStatus
 } from "@/api/pull-task";
 import Delete from "~icons/ep/delete";
 import Upload from "~icons/ep/upload";
 
+const MAX_MATERIAL_FILE_COUNT = 50;
+const MAX_MATERIAL_FILE_BYTES = 2 * 1024 * 1024;
+
 defineOptions({
   name: "PullTaskStandardResources"
 });
 
-defineProps<{
+const props = defineProps<{
   clearing: boolean;
+  creationMode: PullTaskCreationMode;
   draft: PullTaskStandardDraft;
   pendingFiles: File[];
   planning: boolean;
+  resourceError: string;
 }>();
 
 const emit = defineEmits<{
@@ -30,9 +36,13 @@ const emit = defineEmits<{
 
 const linksText = defineModel<string>("linksText", { required: true });
 const pasteVisible = ref(false);
+const uploadValidationMessage = ref("");
 let automaticPlanQueued = false;
 const pastedLineCount = computed(
   () => linksText.value.split(/\r?\n/).filter(line => line.trim()).length
+);
+const visibleResourceError = computed(
+  () => uploadValidationMessage.value || props.resourceError
 );
 
 function scheduleAutomaticPlan(): void {
@@ -40,19 +50,48 @@ function scheduleAutomaticPlan(): void {
   automaticPlanQueued = true;
   void nextTick(() => {
     automaticPlanQueued = false;
-    if (linksText.value.trim()) emit("plan");
+    if (props.creationMode === "NEW_GROUP" || linksText.value.trim()) {
+      emit("plan");
+    }
   });
 }
 
 function handleFileChange(uploadFile: UploadFile): void {
-  if (!uploadFile.raw) return;
-  emit("add-files", [uploadFile.raw]);
+  const file = uploadFile.raw;
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".txt")) {
+    uploadValidationMessage.value = `${file.name} 不是 TXT 文件，请重新选择`;
+    return;
+  }
+  if (file.size > MAX_MATERIAL_FILE_BYTES) {
+    uploadValidationMessage.value = `${file.name} 超过 2MB，请拆分后重新上传`;
+    return;
+  }
+  if (props.pendingFiles.length >= MAX_MATERIAL_FILE_COUNT) {
+    uploadValidationMessage.value = `单次最多上传 ${MAX_MATERIAL_FILE_COUNT} 个 TXT 文件`;
+    return;
+  }
+  const knownNames = new Set([
+    ...props.pendingFiles.map(item => item.name),
+    ...props.draft.rows.map(row => row.sourceFileName)
+  ]);
+  if (knownNames.has(file.name)) {
+    uploadValidationMessage.value = `${file.name} 已添加，请勿重复上传同名文件`;
+    return;
+  }
+  uploadValidationMessage.value = "";
+  emit("add-files", [file]);
   scheduleAutomaticPlan();
 }
 
 function handlePasteSave(): void {
   pasteVisible.value = false;
   scheduleAutomaticPlan();
+}
+
+function handleClear(): void {
+  uploadValidationMessage.value = "";
+  emit("clear");
 }
 
 function statusLabel(status: PullTaskStandardLinkLineStatus): string {
@@ -77,9 +116,13 @@ function statusType(
   <div
     v-loading="planning"
     class="resource-sections"
-    element-loading-text="正在解析并生成执行计划"
+    element-loading-text="正在校验并生成执行计划"
   >
-    <el-card shadow="never" header="群链接模式配置">
+    <el-card
+      v-if="creationMode === 'PASTED_LINK'"
+      shadow="never"
+      header="群链接模式配置"
+    >
       <el-alert
         title="群组分组和手工群链接任选其一；同时填写时合并使用。手工链接每行一个，实际可用性由管理员进群时确认。"
         type="info"
@@ -133,6 +176,25 @@ function statusType(
       </el-table>
     </el-card>
 
+    <el-card v-else shadow="never" header="新群模式配置">
+      <el-alert
+        title="每一份解析通过的 TXT 料子文件创建一个新群；不需要粘贴群链接。"
+        type="info"
+        :closable="false"
+        show-icon
+        class="resource-tip"
+        data-testid="pull-task-new-group-file-rule"
+      />
+      <el-descriptions :column="2" border size="small" class="draft-stats">
+        <el-descriptions-item label="待建群执行行">
+          {{ draft.matchedCount }} 个
+        </el-descriptions-item>
+        <el-descriptions-item label="未采用 TXT">
+          {{ draft.ignoredFileCount }} 个
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
     <el-card shadow="never">
       <template #header>
         <div class="card-header">
@@ -142,7 +204,7 @@ function statusType(
             plain
             :icon="useRenderIcon(Delete)"
             :loading="clearing"
-            @click="emit('clear')"
+            @click="handleClear"
           >
             清除全部
           </el-button>
@@ -150,7 +212,11 @@ function statusType(
       </template>
 
       <el-alert
-        title="可一次选择多个 TXT；A/a 标识会随料子解析。群与 TXT 的匹配及执行顺序由服务端自动生成。"
+        :title="
+          creationMode === 'NEW_GROUP'
+            ? '可一次选择多个 TXT；每个有效文件对应一个新群，A/a 标识会随料子解析。'
+            : '可一次选择多个 TXT；A/a 标识会随料子解析。群与 TXT 的匹配及执行顺序由服务端自动生成。'
+        "
         type="info"
         :closable="false"
         show-icon
@@ -169,6 +235,16 @@ function statusType(
         <el-icon class="upload-icon"><Upload /></el-icon>
         <div class="el-upload__text">拖拽或点击上传 .txt 文件</div>
       </el-upload>
+
+      <el-alert
+        v-if="visibleResourceError"
+        :title="visibleResourceError"
+        type="error"
+        :closable="false"
+        show-icon
+        class="resource-error"
+        data-testid="pull-task-upload-error"
+      />
 
       <div v-if="pendingFiles.length" class="pending-files">
         <span class="pending-label">待匹配 TXT：</span>
@@ -235,7 +311,12 @@ function statusType(
       </el-table>
     </el-card>
 
-    <el-dialog v-model="pasteVisible" title="自定义粘贴链接" width="680px">
+    <el-dialog
+      v-if="creationMode === 'PASTED_LINK'"
+      v-model="pasteVisible"
+      title="自定义粘贴链接"
+      width="680px"
+    >
       <el-input
         v-model="linksText"
         type="textarea"
@@ -276,6 +357,7 @@ function statusType(
 .draft-stats,
 .result-table,
 .txt-upload,
+.resource-error,
 .pending-files {
   margin-top: 14px;
 }

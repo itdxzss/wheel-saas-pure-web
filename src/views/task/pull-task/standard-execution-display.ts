@@ -18,7 +18,18 @@ export const standardStageOptions = [
   { label: "拉手进群", value: 5 },
   { label: "拉人执行", value: 6 },
   { label: "料子提权", value: 7 },
-  { label: "执行收口", value: 8 }
+  { label: "执行收口", value: 8 },
+  { label: "创建新群", value: 9 }
+];
+
+export const standardCreateStepOptions = [
+  { label: "准备建群账号", value: 1 },
+  { label: "创建 WhatsApp 群", value: 2 },
+  { label: "保存建群结果", value: 3 },
+  { label: "设置群资料", value: 4 },
+  { label: "生成群邀请链接", value: 5 },
+  { label: "应用拉人前群设置", value: 6 },
+  { label: "登记自建群", value: 7 }
 ];
 
 export function formatGroupLinkUrl(value?: string | null): string {
@@ -40,6 +51,13 @@ const managerJoinPendingApprovalReason = "MANAGER_JOIN_PENDING_APPROVAL";
 export function standardStageLabel(stage?: number | null): string {
   return (
     standardStageOptions.find(option => option.value === stage)?.label ?? "-"
+  );
+}
+
+export function standardCreateStepLabel(step?: number | null): string {
+  return (
+    standardCreateStepOptions.find(option => option.value === step)?.label ??
+    "准备建群"
   );
 }
 
@@ -80,8 +98,9 @@ export function standardExecutionStatus(
 
 export function roleLabel(value: number): string {
   return (
-    ({ 1: "管理员", 2: "拉手", 3: "站台", 4: "提权管理员" } as const)[value] ??
-    "未知"
+    ({ 1: "管理员", 2: "拉手", 3: "站台", 4: "建群人/提权管理员" } as const)[
+      value
+    ] ?? "未知"
   );
 }
 

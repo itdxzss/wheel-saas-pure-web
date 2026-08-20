@@ -26,6 +26,8 @@ export type PullTaskStatus = PullTaskStandardStatus | PullTaskMarketingStatus;
 
 export type PullTaskMode = "OLD_LINK" | "CREATE_NEW" | "NORMAL_LINK" | string;
 
+export type PullTaskCreationMode = "PASTED_LINK" | "NEW_GROUP";
+
 export type PullTaskType = "STANDARD" | "GROUP_MARKETING";
 
 export type PullTaskGroupSource = "HISTORICAL" | "SELF_COLLECTED" | "MIXED";
@@ -124,6 +126,7 @@ export interface PullTaskRow {
   taskName: string;
   groupName?: string | null;
   mode: PullTaskMode;
+  creationMode: PullTaskCreationMode;
   status: PullTaskStatus;
   taskType: PullTaskType;
   groupSource: PullTaskGroupSource | null;
@@ -165,6 +168,8 @@ export interface PullTaskGroupRow {
   updatedAt?: number | null;
   executionStatus?: number | null;
   stage?: number | null;
+  createStep?: number | null;
+  groupSubject?: string | null;
   manualPaused?: boolean | null;
   waitResourceType?: number | null;
   reasonCode?: string | null;
@@ -395,8 +400,8 @@ export type PullTaskStandardLinkLineStatus =
 export interface PullTaskStandardExecutionRow {
   rowId: number;
   seq: number;
-  normalizedLink: string;
-  sourceLinkLineNo: number;
+  normalizedLink: string | null;
+  sourceLinkLineNo: number | null;
   sourceFileName: string;
   totalLineCount: number;
   validMemberCount: number;
@@ -429,6 +434,7 @@ export interface PullTaskStandardFileResult {
 
 export interface PullTaskStandardDraft {
   draftTaskId: number | null;
+  creationMode: PullTaskCreationMode;
   rows: PullTaskStandardExecutionRow[];
   linkLines: PullTaskStandardLinkLine[];
   fileResults: PullTaskStandardFileResult[];
@@ -482,6 +488,9 @@ export interface PullTaskStandardCreateRequest {
   managerFinishGroupId: number | null;
   pullerFinishGroupId: number | null;
   groupSetting: PullTaskStandardGroupSettingRequest;
+  creationMode: PullTaskCreationMode;
+  creatorGroupId?: number;
+  initialStationCount?: number;
 }
 
 export interface PullTaskStandardGroupAvatarUpload {
@@ -501,12 +510,14 @@ export interface PullTaskStandardCreated {
 export interface PullTaskStandardExecutionSummary {
   executionId: number;
   seq: number;
-  normalizedLink: string;
+  normalizedLink: string | null;
   groupJid: string | null;
   groupName?: string | null;
   sourceFileName: string | null;
   executionStatus: number;
   stage: number;
+  createStep: number | null;
+  groupSubject: string | null;
   manualPaused: boolean;
   waitResourceType: number | null;
   validMemberCount: number;
@@ -624,6 +635,9 @@ export interface PullTaskStandardSetting {
   pullerCountPerGroup: number;
   stationCountPerCall: number;
   concurrentGroupCount: number;
+  initialStationCount: number;
+  creatorGroupId: number | null;
+  creatorGroupName: string | null;
   managerGroupId: number;
   managerGroupName: string;
   pullerGroupId: number;
@@ -645,6 +659,7 @@ export interface PullTaskStandardTaskDetail {
   taskId: number;
   taskName: string;
   status: PullTaskStandardStatus;
+  creationMode: PullTaskCreationMode;
   groupCount: number;
   expectedPullCount: number;
   startedAt: number | null;
@@ -889,13 +904,15 @@ export function getPullTaskStandardDraft(): Promise<PullTaskStandardDraft> {
 export function planPullTaskStandardDraft(
   groupFolderId: number | null,
   linksText: string,
-  files: File[] = []
+  files: File[] = [],
+  creationMode: PullTaskCreationMode = "PASTED_LINK"
 ): Promise<PullTaskStandardDraft> {
   const data = new FormData();
   if (groupFolderId !== null) {
     data.append("groupFolderId", String(groupFolderId));
   }
   data.append("linksText", linksText);
+  data.append("creationMode", creationMode);
   files.forEach(file => data.append("files", file));
   return armadaRequest<PullTaskStandardDraft>(
     "post",

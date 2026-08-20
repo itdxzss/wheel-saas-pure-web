@@ -119,6 +119,7 @@ const {
   pendingFiles: standardPendingFiles,
   plan: planStandardDraft,
   planning: standardPlanning,
+  resourceError: standardResourceError,
   removePendingFile: removeStandardPendingFile,
   removeRow: removeStandardRow,
   setGroupAvatarFile: setStandardGroupAvatarFile,
@@ -319,6 +320,7 @@ async function handleDetailTaskAction(
       :loading="standardCreateLoading"
       :pending-files="standardPendingFiles"
       :planning="standardPlanning"
+      :resource-error="standardResourceError"
       @add-files="addStandardFiles"
       @avatar-change="setStandardGroupAvatarFile"
       @avatar-clear="clearStandardGroupAvatar"

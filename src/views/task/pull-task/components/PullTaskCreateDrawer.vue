@@ -21,6 +21,7 @@ defineProps<{
   loading: boolean;
   pendingFiles: File[];
   planning: boolean;
+  resourceError: string;
 }>();
 
 const emit = defineEmits<{
@@ -43,6 +44,14 @@ const linksText = defineModel<string>("linksText", { required: true });
 
 function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
   emit("move-pending-file", fileName, offset);
+}
+
+function changeCreationMode(mode: string): void {
+  if (mode !== "PASTED_LINK" && mode !== "NEW_GROUP") return;
+  if (mode === "NEW_GROUP" && form.value.creationMode !== "NEW_GROUP") {
+    form.value.groupSettingEnabled = true;
+  }
+  form.value.creationMode = mode;
 }
 </script>
 
@@ -72,9 +81,17 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
         </el-button>
       </header>
 
-      <el-tabs model-value="link" class="create-mode-tabs">
-        <el-tab-pane name="new" label="新群模式（后期）" disabled />
-        <el-tab-pane name="link" label="群链接模式" />
+      <el-tabs
+        :model-value="form.creationMode"
+        class="create-mode-tabs"
+        @update:model-value="changeCreationMode"
+      >
+        <el-tab-pane
+          name="NEW_GROUP"
+          label="新群模式"
+          data-testid="pull-task-new-group-mode-tab"
+        />
+        <el-tab-pane name="PASTED_LINK" label="群链接模式" />
         <el-tab-pane name="fast" label="速拉模式（后期）" disabled />
       </el-tabs>
 
@@ -92,9 +109,11 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
           <PullTaskStandardResources
             v-model:links-text="linksText"
             :clearing="clearing"
+            :creation-mode="form.creationMode"
             :draft="draft"
             :pending-files="pendingFiles"
             :planning="planning"
+            :resource-error="resourceError"
             @add-files="emit('add-files', $event)"
             @clear="emit('clear')"
             @move-pending-file="forwardPendingFileMove"
@@ -102,6 +121,7 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
             @remove-pending-file="emit('remove-pending-file', $event)"
           />
           <PullTaskStandardPlanTable
+            :creation-mode="form.creationMode"
             :draft="draft"
             @remove-row="emit('remove-row', $event)"
           />

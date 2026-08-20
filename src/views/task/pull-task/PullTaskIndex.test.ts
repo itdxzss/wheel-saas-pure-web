@@ -128,6 +128,28 @@ describe("pull task list prototype", () => {
     assert.doesNotMatch(savedSettingsSource, /已应用到 WhatsApp/);
   });
 
+  it("shows new-group mode and persisted create steps before a link exists", () => {
+    assert.match(pageStateSource, /creationMode: detail\.creationMode/);
+    assert.match(pageStateSource, /createStep: execution\.createStep/);
+    assert.match(detailDrawerSource, /const newGroupMode = computed/);
+    assert.match(detailDrawerSource, /pull-task-detail-creation-mode/);
+    assert.match(detailDrawerSource, /pull-task-group-create-step/);
+    assert.match(
+      detailDrawerSource,
+      /standardCreateStepLabel\(row\.createStep\)/
+    );
+    assert.match(savedSettingsSource, /standardSetting\.creatorGroupName/);
+    assert.match(savedSettingsSource, /standardSetting\.initialStationCount/);
+    assert.match(
+      executionDetailSource,
+      /v-if="detail\.execution\.normalizedLink"/
+    );
+    assert.match(
+      executionDetailSource,
+      /standardCreateStepLabel\(detail\.execution\.createStep\)/
+    );
+  });
+
   it("removes only the obsolete create state and legacy API call", () => {
     for (const obsolete of [
       "createPullTask",

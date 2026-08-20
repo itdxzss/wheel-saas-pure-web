@@ -224,6 +224,7 @@ describe("pull task unified API", () => {
       managerGroupId: 11,
       pullerGroupId: 12,
       stationGroupId: null,
+      creationMode: "PASTED_LINK",
       managerFinishGroupId: 14,
       pullerFinishGroupId: 15,
       groupSetting: {
@@ -258,6 +259,7 @@ describe("pull task unified API", () => {
     const formData = (armadaCalls()[1].opts as { data: FormData }).data;
     assert.equal(formData.get("groupFolderId"), "18");
     assert.equal(formData.get("linksText"), " https://chat.whatsapp.com/code ");
+    assert.equal(formData.get("creationMode"), "PASTED_LINK");
     assert.equal((formData.get("files") as File).name, "material.txt");
     const avatarData = (armadaCalls()[4].opts as { data: FormData }).data;
     assert.equal(avatarData.get("file"), avatar);
@@ -274,6 +276,7 @@ describe("pull task unified API", () => {
         "autoStart",
         "clearExistingMembers",
         "concurrentGroupCount",
+        "creationMode",
         "draftTaskId",
         "earlyPullCallCount",
         "earlyPullCount",
@@ -297,6 +300,8 @@ describe("pull task unified API", () => {
       ].sort()
     );
     assert.equal("version" in createData, false);
+    assert.equal("creatorGroupId" in createData, false);
+    assert.equal("initialStationCount" in createData, false);
     assert.deepEqual(Object.keys(createData.groupSetting as object).sort(), [
       "autoCloseInviteAfterTask",
       "autoCloseMuteAfterTask",

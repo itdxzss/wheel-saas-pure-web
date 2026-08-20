@@ -9,7 +9,10 @@ import {
   elementPlusCalls,
   resetElementPlusMock
 } from "@/api/__tests__/element-plus-test-double";
-import type { PullTaskStandardDraft } from "@/api/pull-task";
+import type {
+  PullTaskStandardCreateRequest,
+  PullTaskStandardDraft
+} from "@/api/pull-task";
 import { useStandardPullTaskCreate } from "./useStandardPullTaskCreate";
 
 function draft(
@@ -17,6 +20,7 @@ function draft(
 ): PullTaskStandardDraft {
   return {
     draftTaskId: 7,
+    creationMode: "PASTED_LINK",
     rows: [
       {
         rowId: 19,
@@ -64,6 +68,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(state.form.pullCountMax, 50);
     assert.equal(state.form.pullerCountPerGroup, 2);
     assert.equal(state.form.pullerSyncMode, "SINGLE");
+    assert.equal(state.form.creationMode, "PASTED_LINK");
     assert.equal(state.form.groupSettingEnabled, false);
     assert.equal(state.form.groupSettingTiming, "AFTER_PULL");
     assert.equal(state.form.linkPermission, "ADMIN_ONLY");
@@ -94,6 +99,23 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(state.accountGroups.value[0]?.name, "管理组");
     assert.equal(state.groupFolders.value[0]?.name, "历史群分组");
     assert.equal(state.draft.value.rows[0]?.rowId, 19);
+  });
+
+  it("restores new-group mode from a persisted server draft", async () => {
+    resetArmadaMockQueue([
+      { list: [] },
+      { list: [] },
+      draft({ creationMode: "NEW_GROUP" })
+    ]);
+    resetElementPlusMock();
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+
+    await state.open();
+
+    assert.equal(state.form.creationMode, "NEW_GROUP");
+    assert.equal(state.form.groupSettingEnabled, true);
   });
 
   it("keeps successful create data when one initial request fails", async () => {
@@ -190,6 +212,85 @@ describe("standard normal-link pull task create state", () => {
     await requiredStation.create();
     assert.equal(armadaCalls().length, 0);
     assert.equal(elementPlusCalls().at(-1)?.text, "请选择站台分组");
+  });
+
+  it("creates one new group for each accepted TXT without a link source", async () => {
+    resetArmadaMockQueue([
+      draft({
+        rows: [
+          {
+            rowId: 19,
+            seq: 1,
+            normalizedLink: null,
+            sourceLinkLineNo: null,
+            sourceFileName: "first-group.txt",
+            totalLineCount: 1,
+            validMemberCount: 1,
+            invalidLineCount: 0,
+            duplicateLineCount: 0
+          },
+          {
+            rowId: 20,
+            seq: 2,
+            normalizedLink: null,
+            sourceLinkLineNo: null,
+            sourceFileName: "second-group.txt",
+            totalLineCount: 1,
+            validMemberCount: 1,
+            invalidLineCount: 0,
+            duplicateLineCount: 0
+          }
+        ],
+        matchedCount: 2
+      }),
+      {
+        id: 7,
+        taskName: "新群任务",
+        status: "WAIT_START",
+        groupCount: 2,
+        expectedPullCount: 2
+      }
+    ]);
+    resetElementPlusMock();
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+    state.form.creationMode = "NEW_GROUP";
+    state.form.taskName = "新群任务";
+    state.form.creatorGroupId = 10;
+    state.form.managerGroupId = 11;
+    state.form.pullerGroupId = 12;
+    state.form.stationGroupId = 13;
+    state.form.initialStationCount = 2;
+    state.form.groupSettingEnabled = true;
+    state.linksText.value = "https://chat.whatsapp.com/hidden-old-link";
+    state.addFiles([
+      new File(["8613900000000"], "first-group.txt", { type: "text/plain" }),
+      new File(["8613900000001"], "second-group.txt", { type: "text/plain" })
+    ]);
+
+    await state.create();
+
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      ["/api/pull-tasks/standard/draft/plan", "/api/pull-tasks/standard"]
+    );
+    const planPayload = (armadaCalls()[0].opts as { data: FormData }).data;
+    assert.equal(planPayload.get("creationMode"), "NEW_GROUP");
+    assert.equal(planPayload.get("groupFolderId"), null);
+    assert.equal(planPayload.get("linksText"), "");
+    assert.deepEqual(
+      planPayload.getAll("files").map(file => (file as File).name),
+      ["first-group.txt", "second-group.txt"]
+    );
+    const createPayload = (
+      armadaCalls()[1].opts as { data: PullTaskStandardCreateRequest }
+    ).data;
+    assert.equal(createPayload.creationMode, "NEW_GROUP");
+    assert.equal(createPayload.creatorGroupId, 10);
+    assert.equal(createPayload.initialStationCount, 2);
+    assert.equal(createPayload.groupFolderId, null);
+    assert.equal(createPayload.groupSetting.enabled, true);
   });
 
   it("plans with full links and keeps unmatched accepted TXT for retry", async () => {
@@ -337,6 +438,7 @@ describe("standard normal-link pull task create state", () => {
       "autoStart",
       "clearExistingMembers",
       "concurrentGroupCount",
+      "creationMode",
       "draftTaskId",
       "earlyPullCallCount",
       "earlyPullCount",
@@ -362,6 +464,9 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(payload.managerGroupId, 11);
     assert.equal(payload.pullerGroupId, 12);
     assert.equal(payload.stationGroupId, 13);
+    assert.equal(payload.creationMode, "PASTED_LINK");
+    assert.equal("creatorGroupId" in payload, false);
+    assert.equal("initialStationCount" in payload, false);
     assert.equal(payload.earlyPullCount, 1);
     assert.equal(payload.earlyPullCallCount, 2);
     assert.equal(payload.pullerJoinByLink, true);
@@ -648,5 +753,68 @@ describe("standard normal-link pull task create state", () => {
     ).data;
     assert.equal(armadaCalls()[0].url, "/api/pull-tasks/standard");
     assert.equal(payload.groupSetting.enabled, false);
+  });
+
+  it("rejects a non-integer or negative initial station count", async () => {
+    for (const invalidCount of [-1, 1.5]) {
+      resetArmadaMockQueue([
+        draft({
+          creationMode: "NEW_GROUP",
+          rows: [
+            {
+              rowId: 19,
+              seq: 1,
+              normalizedLink: null,
+              sourceLinkLineNo: null,
+              sourceFileName: "new-group.txt",
+              totalLineCount: 1,
+              validMemberCount: 1,
+              invalidLineCount: 0,
+              duplicateLineCount: 0
+            }
+          ]
+        })
+      ]);
+      resetElementPlusMock();
+      const state = useStandardPullTaskCreate({
+        onCreated: async () => undefined
+      });
+      state.form.creationMode = "NEW_GROUP";
+      state.form.taskName = "新群任务";
+      state.form.creatorGroupId = 10;
+      state.form.managerGroupId = 11;
+      state.form.pullerGroupId = 12;
+      state.form.stationGroupId = 13;
+      state.form.initialStationCount = invalidCount;
+      state.addFiles([new File(["8613900000000"], "new-group.txt")]);
+
+      await state.create();
+
+      assert.deepEqual(
+        armadaCalls().map(call => call.url),
+        ["/api/pull-tasks/standard/draft/plan"]
+      );
+      assert.equal(
+        elementPlusCalls().at(-1)?.text,
+        "建群时初始站台数必须是非负整数"
+      );
+    }
+  });
+
+  it("keeps draft planning errors available inside the create drawer", async () => {
+    resetArmadaMock(Promise.reject(new Error("TXT 不是纯文本")));
+    resetElementPlusMock();
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+    state.form.creationMode = "NEW_GROUP";
+    state.addFiles([new File(["\0"], "binary.txt")]);
+
+    assert.equal(await state.plan(), false);
+    assert.equal(state.resourceError.value, "TXT 不是纯文本");
+    assert.equal(
+      elementPlusCalls().some(call => call.type === "error"),
+      false
+    );
   });
 });
