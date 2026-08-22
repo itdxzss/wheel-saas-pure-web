@@ -183,6 +183,9 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
             <el-form-item label="拉手踩链接进群">
               <el-switch v-model="form.pullerJoinByLink" />
             </el-form-item>
+            <el-form-item label="拉人完成后群主退群">
+              <el-switch v-model="form.creatorLeaveAfterPull" />
+            </el-form-item>
           </div>
         </section>
 

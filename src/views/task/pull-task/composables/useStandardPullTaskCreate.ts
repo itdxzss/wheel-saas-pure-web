@@ -29,6 +29,7 @@ export interface StandardPullTaskCreateForm {
   taskName: string;
   remark: string;
   autoStart: boolean;
+  creatorLeaveAfterPull: boolean;
   groupFolderId: number | "";
   materialAdminTiming: 1 | 2;
   pullerSyncMode: "SINGLE" | "BATCH";
@@ -105,6 +106,7 @@ function emptyForm(): StandardPullTaskCreateForm {
     taskName: `任务_${Date.now().toString().slice(-8)}`,
     remark: "",
     autoStart: true,
+    creatorLeaveAfterPull: false,
     groupFolderId: "",
     materialAdminTiming: 2,
     pullerSyncMode: "SINGLE",
@@ -511,6 +513,7 @@ export function useStandardPullTaskCreate(
       taskName: form.taskName.trim(),
       remark: form.remark.trim() || null,
       autoStart: form.autoStart ? 1 : 0,
+      creatorLeaveAfterPull: form.creatorLeaveAfterPull,
       groupFolderId: currentGroupFolderId(),
       pullerSyncMode: form.pullerSyncMode,
       materialAdminTiming: form.materialAdminTiming,

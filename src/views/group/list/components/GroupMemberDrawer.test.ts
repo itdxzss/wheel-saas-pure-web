@@ -77,6 +77,14 @@ describe("group member drawer", () => {
     );
   });
 
+  it("adds creator leave from database capability without metadata refresh", () => {
+    assert.match(source, /群主退群/);
+    assert.match(source, /loadCreatorLeaveCapability/);
+    assert.match(source, /:disabled="!creatorLeaveExecutable"/);
+    assert.match(source, /runCreatorLeave/);
+    assert.doesNotMatch(source, /groupMetadata/);
+  });
+
   it("does not invent controls that are absent from the current drawer", () => {
     assert.doesNotMatch(
       source,

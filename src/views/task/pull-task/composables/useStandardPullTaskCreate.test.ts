@@ -69,6 +69,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(state.form.pullerCountPerGroup, 2);
     assert.equal(state.form.pullerSyncMode, "SINGLE");
     assert.equal(state.form.creationMode, "PASTED_LINK");
+    assert.equal(state.form.creatorLeaveAfterPull, false);
     assert.equal(state.form.groupSettingEnabled, false);
     assert.equal(state.form.groupSettingTiming, "AFTER_PULL");
     assert.equal(state.form.linkPermission, "ADMIN_ONLY");
@@ -262,6 +263,7 @@ describe("standard normal-link pull task create state", () => {
     state.form.pullerGroupId = 12;
     state.form.stationGroupId = 13;
     state.form.initialStationCount = 2;
+    state.form.creatorLeaveAfterPull = true;
     state.form.groupSettingEnabled = true;
     state.linksText.value = "https://chat.whatsapp.com/hidden-old-link";
     state.addFiles([
@@ -289,6 +291,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(createPayload.creationMode, "NEW_GROUP");
     assert.equal(createPayload.creatorGroupId, 10);
     assert.equal(createPayload.initialStationCount, 2);
+    assert.equal(createPayload.creatorLeaveAfterPull, true);
     assert.equal(createPayload.groupFolderId, null);
     assert.equal(createPayload.groupSetting.enabled, true);
   });
@@ -413,6 +416,7 @@ describe("standard normal-link pull task create state", () => {
     });
     state.visible.value = true;
     state.form.pullerSyncMode = "BATCH";
+    state.form.creatorLeaveAfterPull = true;
     state.form.clearExistingMembers = true;
     state.form.pullerJoinByLink = true;
     state.form.managerFinishGroupId = 31;
@@ -439,6 +443,7 @@ describe("standard normal-link pull task create state", () => {
       "clearExistingMembers",
       "concurrentGroupCount",
       "creationMode",
+      "creatorLeaveAfterPull",
       "draftTaskId",
       "earlyPullCallCount",
       "earlyPullCount",
@@ -465,6 +470,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(payload.pullerGroupId, 12);
     assert.equal(payload.stationGroupId, 13);
     assert.equal(payload.creationMode, "PASTED_LINK");
+    assert.equal(payload.creatorLeaveAfterPull, true);
     assert.equal("creatorGroupId" in payload, false);
     assert.equal("initialStationCount" in payload, false);
     assert.equal(payload.earlyPullCount, 1);

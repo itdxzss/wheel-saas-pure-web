@@ -31,6 +31,7 @@ import {
   useGroupPermissions
 } from "../composables/useGroupPermissions";
 import { waitForGroupMetadataRefresh } from "../composables/waitForGroupMetadataRefresh";
+import { useGroupCreatorLeave } from "../composables/useGroupCreatorLeave";
 
 defineOptions({
   name: "GroupMemberDrawer"
@@ -86,6 +87,19 @@ const {
   toggle: togglePermission
 } = useGroupPermissions({
   groupId: () => props.group?.id ?? null
+});
+const {
+  capabilityLoading: creatorLeaveCapabilityLoading,
+  creatorLeaveExecutable,
+  creatorLeaveReason,
+  creatorLeaving,
+  loadCreatorLeaveCapability,
+  resetCreatorLeave,
+  runCreatorLeave
+} = useGroupCreatorLeave({
+  groupId: () => props.group?.id ?? null,
+  active: () => props.modelValue,
+  onSuccess: () => emit("refresh")
 });
 
 const filteredMembers = computed<GroupMember[]>(() => {
@@ -153,6 +167,7 @@ function resetState(): void {
   detail.value = null;
   memberSearch.value = "";
   selectedJids.value = [];
+  resetCreatorLeave();
   resetRealtimeState();
   if (objectUrl.value) URL.revokeObjectURL(objectUrl.value);
   objectUrl.value = null;
@@ -264,8 +279,7 @@ async function refreshMetadata(): Promise<void> {
     }
     const loaded = await waitForGroupMetadataRefresh({
       previousSyncedAt,
-      isCurrent: () =>
-        session === metadataRefreshSession && props.modelValue,
+      isCurrent: () => session === metadataRefreshSession && props.modelValue,
       load: () => getGroupDetail(group.id),
       onProgress: current => {
         if (detail.value) {
@@ -446,6 +460,7 @@ watch(
     if (isOpen) {
       hydrateFromGroup(props.group);
       void loadDetail();
+      void loadCreatorLeaveCapability();
     } else {
       resetState();
     }
@@ -460,6 +475,7 @@ watch(
       metadataRefreshSession += 1;
       hydrateFromGroup(group);
       void loadDetail();
+      void loadCreatorLeaveCapability();
     }
   }
 );
@@ -686,6 +702,15 @@ onBeforeUnmount(resetState);
 
     <template #footer>
       <el-button
+        type="danger"
+        :loading="creatorLeaving"
+        :disabled="!creatorLeaveExecutable"
+        :title="creatorLeaveReason"
+        @click="runCreatorLeave"
+      >
+        群主退群
+      </el-button>
+      <el-button
         type="primary"
         :disabled="batchDisabled"
         @click="runMemberAction('promote')"
@@ -703,6 +728,9 @@ onBeforeUnmount(resetState);
       >
         踢出
       </el-button>
+      <span v-if="creatorLeaveCapabilityLoading" class="creator-leave-loading">
+        正在检查退群条件...
+      </span>
     </template>
   </el-drawer>
 </template>

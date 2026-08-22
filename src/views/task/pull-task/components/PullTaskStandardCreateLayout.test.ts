@@ -72,6 +72,7 @@ describe("normal-link create prototype layout", () => {
       "拉手同步料子方式",
       "拉手踩链接进群",
       "是否清空群原成员",
+      "拉人完成后群主退群",
       "前期单次拉人数",
       "前期拉人执行次数",
       "任务完成的管理移至分组",
@@ -104,6 +105,14 @@ describe("normal-link create prototype layout", () => {
     ]) {
       assert.doesNotMatch(allCreateSources, new RegExp(excludedField));
     }
+  });
+
+  it("shows creator leave as a common strategy for both creation modes", () => {
+    assert.match(settingsSource, /v-model="form\.creatorLeaveAfterPull"/);
+    assert.doesNotMatch(
+      settingsSource,
+      /v-if="form\.creationMode[^>]*>[\s\S]{0,300}creatorLeaveAfterPull/
+    );
   });
 
   it("uses the prototype field vocabulary and execution-order columns", () => {

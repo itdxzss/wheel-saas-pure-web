@@ -469,6 +469,7 @@ export interface PullTaskStandardCreateRequest {
   taskName: string;
   remark: string | null;
   autoStart: 0 | 1;
+  creatorLeaveAfterPull: boolean;
   groupFolderId: number | null;
   pullerSyncMode: "SINGLE" | "BATCH";
   materialAdminTiming: 1 | 2;
@@ -621,6 +622,7 @@ export interface PullTaskStandardTaskSummary {
 
 export interface PullTaskStandardSetting {
   autoStart: 0 | 1;
+  creatorLeaveAfterPull: boolean;
   groupFolderId: number | null;
   groupFolderName: string | null;
   pullerSyncMode: "SINGLE" | "BATCH";

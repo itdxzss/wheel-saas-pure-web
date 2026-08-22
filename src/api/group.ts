@@ -156,6 +156,25 @@ export interface GroupMetadataSyncAccepted {
   status: string;
 }
 
+export interface GroupCreatorLeaveCapability {
+  executable: boolean;
+  blockedReasonCode: string | null;
+  blockedReason: string | null;
+}
+
+export type GroupCreatorLeaveStatus =
+  | "SUCCESS"
+  | "NOT_CREATOR"
+  | "CREATOR_UNAVAILABLE"
+  | "NO_AVAILABLE_CONTROLLER"
+  | "PROMOTION_FAILED"
+  | "LEAVE_FAILED";
+
+export interface GroupCreatorLeaveResult {
+  status: GroupCreatorLeaveStatus;
+  message: string;
+}
+
 function toListParams(query: GroupListQuery) {
   return {
     page: query.page,
@@ -255,6 +274,24 @@ export function requestGroupMetadataSync(
   return armadaRequest<GroupMetadataSyncAccepted>(
     "post",
     `/api/group-links/${id}/metadata-sync`
+  );
+}
+
+export function getGroupCreatorLeaveCapability(
+  id: number
+): Promise<GroupCreatorLeaveCapability> {
+  return armadaRequest<GroupCreatorLeaveCapability>(
+    "get",
+    `/api/group-links/${id}/creator-leave-capability`
+  );
+}
+
+export function executeGroupCreatorLeave(
+  id: number
+): Promise<GroupCreatorLeaveResult> {
+  return armadaRequest<GroupCreatorLeaveResult>(
+    "post",
+    `/api/group-links/${id}/creator-leave`
   );
 }
 

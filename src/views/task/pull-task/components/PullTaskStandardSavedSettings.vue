@@ -99,6 +99,9 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="自动启动">
           {{ standardSetting.autoStart === 1 ? "是" : "否" }}
         </el-descriptions-item>
+        <el-descriptions-item label="拉人完成后群主退群">
+          {{ yesNo(standardSetting.creatorLeaveAfterPull) }}
+        </el-descriptions-item>
         <el-descriptions-item label="群组分组">
           {{ namedGroup(standardSetting.groupFolderName) }}
         </el-descriptions-item>
