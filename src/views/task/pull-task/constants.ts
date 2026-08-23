@@ -18,6 +18,7 @@ export const pullTaskStatusOptions: Array<{
 }> = [
   { label: "草稿", value: "DRAFT" },
   { label: "待开始", value: "WAIT_START" },
+  { label: "等待群组资源", value: "WAIT_GROUP_RESOURCE" },
   { label: "校验中", value: "VALIDATING" },
   { label: "等待资源", value: "WAITING_RESOURCE" },
   { label: "执行中", value: "EXECUTING" },
@@ -92,6 +93,7 @@ export const pullTaskColumns: TableColumnList = [
 const standardStatusLabels: Partial<Record<PullTaskStatus, string>> = {
   WAIT_START: "待启动",
   EXECUTING: "进行中",
+  WAIT_GROUP_RESOURCE: "等待群组资源",
   PAUSED: "暂停中",
   INTERRUPTED: "已中断",
   COMPLETED: "已完成",
@@ -127,7 +129,7 @@ export function pullTaskStatusTagType(status?: PullTaskStatus | string | null) {
   if (status === "EXECUTING") return "primary";
   if (status === "COMPLETED") return "success";
   if (status === "INTERRUPTED") return "danger";
-  if (status === "PAUSED") return "warning";
+  if (status === "PAUSED" || status === "WAIT_GROUP_RESOURCE") return "warning";
   return "info";
 }
 

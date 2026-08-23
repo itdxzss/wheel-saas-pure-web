@@ -38,7 +38,8 @@ function timestampLabel(value?: number | null): string {
 
 function creationModeLabel(row: PullTaskRow): string | null {
   if (row.taskType !== "STANDARD" || row.mode !== "NORMAL_LINK") return null;
-  return row.creationMode === "NEW_GROUP" ? "新群模式" : "群链接模式";
+  if (row.creationMode === "NEW_GROUP") return "新群模式";
+  return row.creationMode === "RESOURCE_POOL" ? "资源池模式" : "群链接模式";
 }
 </script>
 

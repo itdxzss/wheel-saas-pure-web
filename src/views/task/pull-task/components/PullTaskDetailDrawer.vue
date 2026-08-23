@@ -164,7 +164,13 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           effect="plain"
           data-testid="pull-task-detail-creation-mode"
         >
-          {{ newGroupMode ? "新群模式" : "群链接模式" }}
+          {{
+            newGroupMode
+              ? "新群模式"
+              : activeTask?.creationMode === "RESOURCE_POOL"
+                ? "资源池模式"
+                : "群链接模式"
+          }}
         </el-tag>
         <small v-if="!normalLink">{{ selectedGroupTip }}</small>
       </div>

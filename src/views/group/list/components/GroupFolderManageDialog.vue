@@ -78,6 +78,7 @@ function openCreate(): void {
 }
 
 function openEdit(row: GroupFolderRow): void {
+  if (row.systemBuiltin) return;
   editingId.value = row.id;
   form.name = row.name;
   editorOpen.value = true;
@@ -109,6 +110,7 @@ async function save(): Promise<void> {
 }
 
 async function deleteFolder(row: GroupFolderRow): Promise<void> {
+  if (row.systemBuiltin) return;
   try {
     await ElMessageBox.confirm(
       `删除后，该分组下 ${row.groupCount} 个群组将进入未分组。确认删除吗？`,
@@ -168,7 +170,14 @@ watch(
     </div>
 
     <el-table v-loading="loading" :data="rows" border>
-      <el-table-column prop="name" label="分组名称" min-width="220" />
+      <el-table-column label="分组名称" min-width="220">
+        <template #default="{ row }">
+          {{ row.name }}
+          <el-tag v-if="row.systemBuiltin" size="small" effect="plain">
+            系统分组
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="groupCount" label="群组数量" width="120" />
       <el-table-column label="创建时间" min-width="180">
         <template #default="{ row }">
@@ -177,16 +186,21 @@ watch(
       </el-table-column>
       <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button
-            link
-            type="danger"
-            :loading="deletingId === row.id"
-            :disabled="deletingId != null"
-            @click="deleteFolder(row)"
-          >
-            删除
-          </el-button>
+          <template v-if="!row.systemBuiltin">
+            <el-button link type="primary" @click="openEdit(row)">
+              编辑
+            </el-button>
+            <el-button
+              link
+              type="danger"
+              :loading="deletingId === row.id"
+              :disabled="deletingId != null"
+              @click="deleteFolder(row)"
+            >
+              删除
+            </el-button>
+          </template>
+          <span v-else>--</span>
         </template>
       </el-table-column>
       <template #empty>

@@ -50,7 +50,7 @@ function scheduleAutomaticPlan(): void {
   automaticPlanQueued = true;
   void nextTick(() => {
     automaticPlanQueued = false;
-    if (props.creationMode === "NEW_GROUP" || linksText.value.trim()) {
+    if (props.creationMode !== "PASTED_LINK" || linksText.value.trim()) {
       emit("plan");
     }
   });
@@ -84,14 +84,14 @@ function handleFileChange(uploadFile: UploadFile): void {
   scheduleAutomaticPlan();
 }
 
-function handlePasteSave(): void {
-  pasteVisible.value = false;
-  scheduleAutomaticPlan();
-}
-
 function handleClear(): void {
   uploadValidationMessage.value = "";
   emit("clear");
+}
+
+function handlePasteSave(): void {
+  pasteVisible.value = false;
+  scheduleAutomaticPlan();
 }
 
 function statusLabel(status: PullTaskStandardLinkLineStatus): string {
@@ -130,7 +130,6 @@ function statusType(
         show-icon
         class="resource-tip"
       />
-
       <div class="link-entry">
         <el-button type="primary" plain @click="pasteVisible = true">
           自定义粘贴链接
@@ -143,7 +142,6 @@ function statusType(
           }}
         </el-tag>
       </div>
-
       <el-descriptions :column="3" border size="small" class="draft-stats">
         <el-descriptions-item label="已匹配">
           {{ draft.matchedCount }} 组
@@ -155,7 +153,6 @@ function statusType(
           {{ draft.ignoredFileCount }} 个
         </el-descriptions-item>
       </el-descriptions>
-
       <el-table
         v-if="draft.linkLines.length"
         :data="draft.linkLines"
@@ -174,6 +171,28 @@ function statusType(
         <el-table-column prop="raw" label="原始内容" show-overflow-tooltip />
         <el-table-column prop="reason" label="说明" show-overflow-tooltip />
       </el-table>
+    </el-card>
+
+    <el-card
+      v-else-if="creationMode === 'RESOURCE_POOL'"
+      shadow="never"
+      header="群组资源池"
+    >
+      <el-alert
+        title="任务执行时从所选群组资源池动态取群；新补入分组的群，可在任务进入等待后点击继续使用。"
+        type="info"
+        :closable="false"
+        show-icon
+        class="resource-tip"
+      />
+      <el-descriptions :column="2" border size="small" class="draft-stats">
+        <el-descriptions-item label="待执行 TXT">
+          {{ draft.matchedCount }} 个
+        </el-descriptions-item>
+        <el-descriptions-item label="未采用 TXT">
+          {{ draft.ignoredFileCount }} 个
+        </el-descriptions-item>
+      </el-descriptions>
     </el-card>
 
     <el-card v-else shadow="never" header="新群模式配置">
@@ -215,7 +234,9 @@ function statusType(
         :title="
           creationMode === 'NEW_GROUP'
             ? '可一次选择多个 TXT；每个有效文件对应一个新群，A/a 标识会随料子解析。'
-            : '可一次选择多个 TXT；A/a 标识会随料子解析。群与 TXT 的匹配及执行顺序由服务端自动生成。'
+            : creationMode === 'RESOURCE_POOL'
+              ? '可一次选择多个 TXT；A/a 标识会随料子解析。具体群组在任务执行时从资源池动态分配。'
+              : '可一次选择多个 TXT；A/a 标识会随料子解析。群与 TXT 的匹配及执行顺序由服务端自动生成。'
         "
         type="info"
         :closable="false"
@@ -247,7 +268,9 @@ function statusType(
       />
 
       <div v-if="pendingFiles.length" class="pending-files">
-        <span class="pending-label">待匹配 TXT：</span>
+        <span class="pending-label">
+          {{ creationMode === "PASTED_LINK" ? "待匹配 TXT：" : "待解析 TXT：" }}
+        </span>
         <div
           v-for="(file, index) in pendingFiles"
           :key="file.name"

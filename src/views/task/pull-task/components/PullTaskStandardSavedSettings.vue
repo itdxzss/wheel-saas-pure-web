@@ -94,7 +94,13 @@ onBeforeUnmount(() => {
       <el-divider content-position="left">执行设置</el-divider>
       <el-descriptions :column="3" border size="small">
         <el-descriptions-item label="创建模式">
-          {{ creationMode === "NEW_GROUP" ? "新群模式" : "群链接模式" }}
+          {{
+            creationMode === "NEW_GROUP"
+              ? "新群模式"
+              : creationMode === "RESOURCE_POOL"
+                ? "资源池模式"
+                : "群链接模式"
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="自动启动">
           {{ standardSetting.autoStart === 1 ? "是" : "否" }}

@@ -245,7 +245,9 @@ export function useStandardPullTaskCreate(
         );
       }
       if (folderResult.status === "fulfilled") {
-        groupFolders.value = folderResult.value.list ?? [];
+        groupFolders.value = (folderResult.value.list ?? []).filter(
+          folder => !folder.systemBuiltin
+        );
       } else {
         groupFolders.value = [];
         ElMessage.error(
@@ -257,9 +259,11 @@ export function useStandardPullTaskCreate(
         const restoredMode = draftResult.value.creationMode ?? "PASTED_LINK";
         form.creationMode = restoredMode;
         plannedCreationMode = restoredMode;
+        if (restoredMode !== "PASTED_LINK") {
+          plannedLinksText = "";
+        }
         if (restoredMode === "NEW_GROUP") {
           form.groupSettingEnabled = true;
-          plannedLinksText = "";
         }
       } else {
         ElMessage.error(apiErrorMessage(draftResult.reason, "草稿加载失败"));
@@ -371,11 +375,18 @@ export function useStandardPullTaskCreate(
   }
 
   function currentLinksText(): string {
-    return form.creationMode === "NEW_GROUP" ? "" : linksText.value;
+    return form.creationMode === "PASTED_LINK" ? linksText.value : "";
+  }
+
+  function planningGroupFolderId(): number | null {
+    return form.creationMode === "PASTED_LINK" ? currentGroupFolderId() : null;
   }
 
   function hasGroupSource(): boolean {
     if (form.creationMode === "NEW_GROUP") return true;
+    if (form.creationMode === "RESOURCE_POOL") {
+      return currentGroupFolderId() !== null;
+    }
     return currentGroupFolderId() !== null || Boolean(linksText.value.trim());
   }
 
@@ -383,15 +394,14 @@ export function useStandardPullTaskCreate(
     return (
       currentLinksText() !== plannedLinksText ||
       form.creationMode !== plannedCreationMode ||
-      currentGroupFolderId() !== plannedGroupFolderId ||
+      planningGroupFolderId() !== plannedGroupFolderId ||
       pendingFiles.value.length !== plannedPendingNames.size ||
       pendingFiles.value.some(file => !plannedPendingNames.has(file.name))
     );
   }
 
   async function plan(): Promise<boolean> {
-    const groupFolderId = currentGroupFolderId();
-    if (!hasGroupSource()) {
+    if (form.creationMode === "PASTED_LINK" && !hasGroupSource()) {
       ElMessage.warning("请选择群组分组或粘贴群链接");
       return false;
     }
@@ -399,7 +409,7 @@ export function useStandardPullTaskCreate(
     planning.value = true;
     try {
       const result = await planPullTaskStandardDraft(
-        groupFolderId,
+        planningGroupFolderId(),
         currentLinksText(),
         pendingFiles.value,
         form.creationMode
@@ -408,7 +418,7 @@ export function useStandardPullTaskCreate(
       reconcilePendingFiles(result);
       plannedLinksText = currentLinksText();
       plannedPendingNames = new Set(pendingFiles.value.map(file => file.name));
-      plannedGroupFolderId = groupFolderId;
+      plannedGroupFolderId = planningGroupFolderId();
       plannedCreationMode = form.creationMode;
       storePlannedLinks(plannedLinksText);
       ElMessage.success("执行计划已生成");
@@ -424,7 +434,9 @@ export function useStandardPullTaskCreate(
   async function removeRow(rowId: number): Promise<void> {
     const removedRow = draft.value.rows.find(row => row.rowId === rowId);
     const nextLinksText =
-      removedRow?.sourceLinkLineNo != null && removedRow.normalizedLink
+      form.creationMode === "PASTED_LINK" &&
+      removedRow?.sourceLinkLineNo != null &&
+      removedRow.normalizedLink
         ? withoutFrozenLink(
             linksText.value,
             removedRow.sourceLinkLineNo,
@@ -434,7 +446,8 @@ export function useStandardPullTaskCreate(
     try {
       draft.value = await removePullTaskStandardDraftRow(rowId);
       linksText.value = nextLinksText;
-      plannedLinksText = form.creationMode === "NEW_GROUP" ? "" : nextLinksText;
+      plannedLinksText =
+        form.creationMode === "PASTED_LINK" ? nextLinksText : "";
       storePlannedLinks(plannedLinksText);
       ElMessage.success("执行行已移除");
     } catch (error) {
@@ -469,8 +482,15 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("请填写任务名称");
       return null;
     }
+    if (
+      form.creationMode === "RESOURCE_POOL" &&
+      currentGroupFolderId() === null
+    ) {
+      ElMessage.warning("请选择群组资源池");
+      return null;
+    }
     if (draft.value.draftTaskId === null || draft.value.rows.length === 0) {
-      ElMessage.warning("未生成可执行计划，请检查群来源和 TXT 料子");
+      ElMessage.warning("未生成可执行计划，请检查 TXT 料子");
       return null;
     }
     if (!positiveId(form.managerGroupId) || !positiveId(form.pullerGroupId)) {
@@ -575,6 +595,10 @@ export function useStandardPullTaskCreate(
 
   async function ensureExecutionPlan(): Promise<boolean> {
     const hasExecutionRows = draft.value.rows.length > 0;
+    if (form.creationMode === "RESOURCE_POOL" && !hasGroupSource()) {
+      ElMessage.warning("请选择群组资源池");
+      return false;
+    }
     if (!hasExecutionRows && !hasGroupSource()) {
       ElMessage.warning("请选择群组分组或粘贴群链接");
       return false;
@@ -587,7 +611,7 @@ export function useStandardPullTaskCreate(
       if (!(await plan())) return false;
     }
     if (draft.value.rows.length === 0) {
-      ElMessage.warning("未生成可执行计划，请检查群来源和 TXT 料子");
+      ElMessage.warning("未生成可执行计划，请检查 TXT 料子");
       return false;
     }
     return true;

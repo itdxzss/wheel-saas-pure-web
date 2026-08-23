@@ -22,7 +22,11 @@ const emit = defineEmits<{
   <el-card shadow="never" header="进群顺序展示">
     <el-alert
       v-if="draft.rows.length"
-      :title="`已生成 ${draft.rows.length} 个群的执行计划，提交后按下列序号调度`"
+      :title="
+        creationMode === 'RESOURCE_POOL'
+          ? `已生成 ${draft.rows.length} 个 TXT 执行项，提交后按下列序号调度`
+          : `已生成 ${draft.rows.length} 个群的执行计划，提交后按下列序号调度`
+      "
       type="success"
       :closable="false"
       show-icon
@@ -33,7 +37,9 @@ const emit = defineEmits<{
       :description="
         creationMode === 'NEW_GROUP'
           ? '上传 TXT 后生成待建群执行计划'
-          : '粘贴链接并上传 TXT 后生成执行计划'
+          : creationMode === 'RESOURCE_POOL'
+            ? '上传 TXT 后生成执行计划，群组在运行时从资源池分配'
+            : '粘贴链接并上传 TXT 后生成执行计划'
       "
     />
     <el-table
@@ -45,13 +51,22 @@ const emit = defineEmits<{
     >
       <el-table-column prop="seq" label="序号" width="64" fixed />
       <el-table-column
-        :label="creationMode === 'NEW_GROUP' ? '待建群' : '群链接'"
+        :label="
+          creationMode === 'NEW_GROUP'
+            ? '待建群'
+            : creationMode === 'RESOURCE_POOL'
+              ? '群组资源'
+              : '群链接'
+        "
         min-width="220"
         show-overflow-tooltip
       >
         <template #default="{ row }">
           <span v-if="creationMode === 'NEW_GROUP'">
             {{ row.sourceFileName.replace(/\.txt$/i, "") }}
+          </span>
+          <span v-else-if="creationMode === 'RESOURCE_POOL'">
+            运行时动态分配
           </span>
           <span v-else>https://{{ row.normalizedLink }}</span>
         </template>

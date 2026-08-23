@@ -5,6 +5,7 @@ import type { PageResponse } from "@/api/account";
 export type PullTaskStandardStatus =
   | "WAIT_START"
   | "EXECUTING"
+  | "WAIT_GROUP_RESOURCE"
   | "PAUSED"
   | "INTERRUPTED"
   | "COMPLETED"
@@ -26,7 +27,10 @@ export type PullTaskStatus = PullTaskStandardStatus | PullTaskMarketingStatus;
 
 export type PullTaskMode = "OLD_LINK" | "CREATE_NEW" | "NORMAL_LINK" | string;
 
-export type PullTaskCreationMode = "PASTED_LINK" | "NEW_GROUP";
+export type PullTaskCreationMode =
+  | "PASTED_LINK"
+  | "RESOURCE_POOL"
+  | "NEW_GROUP";
 
 export type PullTaskType = "STANDARD" | "GROUP_MARKETING";
 

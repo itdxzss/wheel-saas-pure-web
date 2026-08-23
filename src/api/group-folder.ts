@@ -4,6 +4,7 @@ import type { PageResponse } from "@/api/account";
 export interface GroupFolderRow {
   id: number;
   name: string;
+  systemBuiltin: boolean;
   groupCount: number;
   createdAt: number;
   updatedAt: number;

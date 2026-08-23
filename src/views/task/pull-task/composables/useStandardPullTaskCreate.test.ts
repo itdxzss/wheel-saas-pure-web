@@ -188,6 +188,73 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(elementPlusCalls().at(-1)?.text, "请上传 TXT 料子文件");
   });
 
+  it("requires a folder only for resource-pool mode", async () => {
+    resetArmadaMock({ id: 1 });
+    resetElementPlusMock();
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+    state.form.creationMode = "RESOURCE_POOL";
+    state.form.taskName = "资源池任务";
+
+    await state.create();
+
+    assert.equal(armadaCalls().length, 0);
+    assert.equal(elementPlusCalls().at(-1)?.text, "请选择群组资源池");
+  });
+
+  it("plans resource-pool TXT without links and freezes the folder on create", async () => {
+    resetArmadaMockQueue([
+      draft({
+        creationMode: "RESOURCE_POOL",
+        rows: [
+          {
+            rowId: 19,
+            seq: 1,
+            normalizedLink: null,
+            sourceLinkLineNo: null,
+            sourceFileName: "material.txt",
+            totalLineCount: 1,
+            validMemberCount: 1,
+            invalidLineCount: 0,
+            duplicateLineCount: 0
+          }
+        ]
+      }),
+      {
+        id: 7,
+        taskName: "资源池任务",
+        status: "WAIT_START",
+        groupCount: 1,
+        expectedPullCount: 1
+      }
+    ]);
+    resetElementPlusMock();
+    const state = useStandardPullTaskCreate({
+      onCreated: async () => undefined
+    });
+    state.form.creationMode = "RESOURCE_POOL";
+    state.form.taskName = "资源池任务";
+    state.form.groupFolderId = 21;
+    state.form.managerGroupId = 11;
+    state.form.pullerGroupId = 12;
+    state.addFiles([
+      new File(["8613900000000"], "material.txt", { type: "text/plain" })
+    ]);
+
+    await state.create();
+
+    const planPayload = (armadaCalls()[0].opts as { data: FormData }).data;
+    assert.equal(planPayload.get("creationMode"), "RESOURCE_POOL");
+    assert.equal(planPayload.get("groupFolderId"), null);
+    assert.equal(planPayload.get("linksText"), "");
+    const createPayload = (
+      armadaCalls()[1].opts as { data: PullTaskStandardCreateRequest }
+    ).data;
+    assert.equal(createPayload.creationMode, "RESOURCE_POOL");
+    assert.equal(createPayload.groupFolderId, 21);
+  });
+
   it("only requires a station group when stations are used", async () => {
     resetArmadaMock({ id: 1 });
     resetElementPlusMock();
