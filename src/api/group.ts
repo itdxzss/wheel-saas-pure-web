@@ -392,6 +392,8 @@ export type GroupBatchTaskStatus =
 
 export type GroupBatchTaskItemStatus =
   | "PENDING"
+  | "DISPATCHED"
+  | "WAITING_RESULT"
   | "SUCCESS"
   | "FAILED"
   | "CANCELED";

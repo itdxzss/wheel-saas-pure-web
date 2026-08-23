@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { GroupBatchTaskDetail } from "@/api/group";
+import type {
+  GroupBatchTaskDetail,
+  GroupBatchTaskItemStatus
+} from "@/api/group";
 import { formatEpochMillis as formatEpoch } from "@/utils/time";
 
 defineOptions({
@@ -54,19 +57,29 @@ const progressStatus = computed(() => {
   return undefined;
 });
 
-/** 运行中即展示已终结的明细，不等整个任务完成。 */
+/** 运行中展示已派发及已终结的明细，不等整个任务完成。 */
 const settledItems = computed(
   () => props.detail?.items?.filter(item => item.status !== "PENDING") ?? []
 );
 
-function itemTagType(status: string): "success" | "danger" | "info" {
+const itemStatusLabels = {
+  PENDING: "待执行",
+  DISPATCHED: "发送中",
+  WAITING_RESULT: "发送中",
+  SUCCESS: "成功",
+  FAILED: "失败",
+  CANCELED: "已取消"
+} satisfies Record<GroupBatchTaskItemStatus, string>;
+
+function itemTagType(
+  status: GroupBatchTaskItemStatus
+): "success" | "danger" | "info" {
   if (status === "SUCCESS") return "success";
   return status === "FAILED" ? "danger" : "info";
 }
 
-function itemStatusLabel(status: string): string {
-  if (status === "SUCCESS") return "成功";
-  return status === "FAILED" ? "失败" : "已取消";
+function itemStatusLabel(status: GroupBatchTaskItemStatus): string {
+  return itemStatusLabels[status];
 }
 
 function handleClose(): void {
