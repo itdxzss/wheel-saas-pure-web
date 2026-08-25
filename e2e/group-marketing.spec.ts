@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { loginAsTestUser } from "./support/auth";
 
 const composeFile = fileURLToPath(
   new URL("../../armada/armada-api/src/test/e2e/compose.yaml", import.meta.url)
@@ -13,10 +14,6 @@ function composeExec(service: string, ...args: string[]): string {
     ["compose", "-f", composeFile, "exec", "-T", service, ...args],
     { encoding: "utf8" }
   ).trim();
-}
-
-function captchaAnswer(captchaId: string): string {
-  return composeExec("redis", "redis-cli", "GET", `auth:captcha:${captchaId}`);
 }
 
 function activeOccupancyCount(): number {
@@ -35,28 +32,6 @@ function activeOccupancyCount(): number {
   return Number(result);
 }
 
-async function login(page: Page): Promise<void> {
-  const captchaResponse = page.waitForResponse(response =>
-    response.url().includes("/api/public/auth/captcha")
-  );
-  await page.goto("/#/login");
-  const captchaPayload = await (await captchaResponse).json();
-  const captchaId = captchaPayload.data.captchaId as string;
-
-  await page.getByPlaceholder("用户名").fill("admin");
-  await page.getByPlaceholder("密码").fill("armada123");
-  await page.getByPlaceholder("图片验证码").fill(captchaAnswer(captchaId));
-
-  const loginResponse = page.waitForResponse(
-    response =>
-      response.url().includes("/api/public/auth/login") &&
-      response.request().method() === "POST"
-  );
-  await page.getByRole("button", { name: "登录", exact: true }).click();
-  expect((await (await loginResponse).json()).code).toBe(0);
-  await expect(page).not.toHaveURL(/#\/login$/);
-}
-
 test("真实前后端完成跨页选群、等待池恢复、移出和取消释放", async ({ page }) => {
   const consoleErrors: string[] = [];
   const apiFailures: string[] = [];
@@ -69,7 +44,9 @@ test("真实前后端完成跨页选群、等待池恢复、移出和取消释�
     }
   });
 
-  await login(page);
+  await loginAsTestUser(page, {
+    localCredentials: { username: "admin", password: "armada123" }
+  });
   const firstCandidateResponse = page.waitForResponse(response =>
     response.url().includes("/api/pull-tasks/group-marketing/candidate-groups")
   );

@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { loginAsTestUser } from "./support/auth";
 
 /**
  * 「群信息设置」总开关的端到端验收。
@@ -40,10 +41,6 @@ function mysqlQuery(sql: string): string {
     "-e",
     sql
   );
-}
-
-function captchaAnswer(captchaId: string): string {
-  return composeExec("redis", "redis-cli", "GET", `auth:captcha:${captchaId}`);
 }
 
 /** 建任务只要求分组存在，账号成员由拉起后的调度器消费，这里不需要。 */
@@ -86,28 +83,6 @@ function groupSettingRow(taskName: string): Record<string, string> {
   return Object.fromEntries(
     columns.map((column, index) => [column, values[index]])
   );
-}
-
-async function login(page: Page): Promise<void> {
-  const captchaResponse = page.waitForResponse(response =>
-    response.url().includes("/api/public/auth/captcha")
-  );
-  await page.goto("/#/login");
-  const captchaPayload = await (await captchaResponse).json();
-  const captchaId = captchaPayload.data.captchaId as string;
-
-  await page.getByPlaceholder("用户名").fill("admin");
-  await page.getByPlaceholder("密码").fill("armada123");
-  await page.getByPlaceholder("图片验证码").fill(captchaAnswer(captchaId));
-
-  const loginResponse = page.waitForResponse(
-    response =>
-      response.url().includes("/api/public/auth/login") &&
-      response.request().method() === "POST"
-  );
-  await page.getByRole("button", { name: "登录", exact: true }).click();
-  expect((await (await loginResponse).json()).code).toBe(0);
-  await expect(page).not.toHaveURL(/#\/login$/);
 }
 
 function groupSettingCard(page: Page): Locator {
@@ -202,7 +177,9 @@ test.beforeEach(() => {
 
 test("关着开关建任务时群信息设置整块按表默认值落库", async ({ page }) => {
   const taskName = `E2E群设置关闭_${Date.now()}`;
-  await login(page);
+  await loginAsTestUser(page, {
+    localCredentials: { username: "admin", password: "armada123" }
+  });
   await openCreateDrawerWithRequiredFields(page, taskName);
 
   await expect(groupSettingToggle(page)).not.toHaveClass(/is-checked/);
@@ -232,7 +209,9 @@ test("打开开关填完群信息后 12 个字段全部落库", async ({ page })
   const taskName = `E2E群设置打开_${Date.now()}`;
   const groupName = "E2E群信息设置群名";
   const groupDescription = "E2E群描述";
-  await login(page);
+  await loginAsTestUser(page, {
+    localCredentials: { username: "admin", password: "armada123" }
+  });
   await openCreateDrawerWithRequiredFields(page, taskName);
 
   await groupSettingToggle(page).click();
