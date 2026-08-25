@@ -23,6 +23,7 @@ import { type menuType, routerArrays } from "@/layout/types";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
 import { usePermissionStoreHook } from "@/store/modules/permission";
 import { findViewModuleKey, shouldKeepMenuNode } from "./menu-tree";
+import { createInitRouter } from "./init-router";
 const IFrame = () => import("@/layout/frame.vue");
 // https://cn.vitejs.dev/guide/features.html#glob-import
 const modulesRoutes = import.meta.glob("/src/views/**/*.{vue,tsx}");
@@ -197,35 +198,15 @@ function handleAsyncRoutes(routeList) {
   addPathMatch();
 }
 
-/** 初始化路由（`new Promise` 写法防止在异步请求中造成无限循环）*/
-function initRouter() {
-  if (getConfig()?.CachingAsyncRoutes) {
-    // 开启动态路由缓存本地localStorage
-    const key = "async-routes";
-    const asyncRouteList = storageLocal().getItem(key) as any;
-    if (asyncRouteList && asyncRouteList?.length > 0) {
-      return new Promise(resolve => {
-        handleAsyncRoutes(asyncRouteList);
-        resolve(router);
-      });
-    } else {
-      return new Promise(resolve => {
-        getAsyncRoutes().then(data => {
-          handleAsyncRoutes(cloneDeep(data));
-          storageLocal().setItem(key, data);
-          resolve(router);
-        });
-      });
-    }
-  } else {
-    return new Promise(resolve => {
-      getAsyncRoutes().then(data => {
-        handleAsyncRoutes(cloneDeep(data));
-        resolve(router);
-      });
-    });
-  }
-}
+/** 初始化路由；菜单请求或路由装配失败时必须向调用方传播异常。 */
+const initRouter = createInitRouter<RouteRecordRaw, typeof router>({
+  cacheKey: () => (getConfig()?.CachingAsyncRoutes ? "async-routes" : null),
+  readCache: key => storageLocal().getItem<RouteRecordRaw[]>(key),
+  loadRoutes: getAsyncRoutes,
+  applyRoutes: routes => handleAsyncRoutes(cloneDeep(routes)),
+  writeCache: (key, routes) => storageLocal().setItem(key, routes),
+  router: () => router
+});
 
 /**
  * 将多级嵌套路由处理成一维数组

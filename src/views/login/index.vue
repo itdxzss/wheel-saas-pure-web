@@ -11,6 +11,7 @@ import type { FormInstance } from "element-plus";
 import { useLayout } from "@/layout/hooks/useLayout";
 import { useUserStoreHook } from "@/store/modules/user";
 import { initRouter, getTopMenu } from "@/router/utils";
+import { removeToken } from "@/utils/auth";
 import { bg, avatar, illustration } from "./utils/static";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
@@ -78,15 +79,22 @@ const onLogin = async (formEl: FormInstance | undefined) => {
         .then(res => {
           if (res.success) {
             // 获取后端路由
-            return initRouter().then(() => {
-              disabled.value = true;
-              router
-                .push(getTopMenu(true).path)
-                .then(() => {
-                  message("登录成功", { type: "success" });
-                })
-                .finally(() => (disabled.value = false));
-            });
+            return initRouter()
+              .then(async () => {
+                disabled.value = true;
+                await router.push(getTopMenu(true).path);
+                message("登录成功", { type: "success" });
+              })
+              .catch((error: unknown) => {
+                removeToken();
+                message(
+                  error instanceof Error
+                    ? error.message
+                    : "菜单加载失败，请重试",
+                  { type: "error" }
+                );
+              })
+              .finally(() => (disabled.value = false));
           } else {
             message(res.message ?? "登录失败", { type: "error" });
             // refreshCaptcha();

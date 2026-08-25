@@ -27,4 +27,10 @@ describe("login page", () => {
     assert.match(page, /getCaptcha/);
     assert.match(page, /prop="captchaCode"/);
   });
+
+  it("ends the login attempt when dynamic menu loading fails", () => {
+    assert.match(activePage, /initRouter\(\)[\s\S]*?\.catch\(/);
+    assert.match(activePage, /removeToken\(\)/);
+    assert.match(activePage, /菜单加载失败/);
+  });
 });
