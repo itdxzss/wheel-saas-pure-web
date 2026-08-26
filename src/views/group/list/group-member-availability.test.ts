@@ -7,6 +7,7 @@ describe("group member availability", () => {
     const row = {
       id: 12,
       url: "chat.whatsapp.com/test",
+      groupClassification: "UNCLASSIFIED" as const,
       membershipState: 1,
       membershipStateLabel: "目标未进群",
       groupJid: null
@@ -22,6 +23,7 @@ describe("group member availability", () => {
     const row = {
       id: 13,
       url: "chat.whatsapp.com/test",
+      groupClassification: "UNCLASSIFIED" as const,
       membershipState: 2,
       membershipStateLabel: "已进群",
       groupJid: null
@@ -37,6 +39,7 @@ describe("group member availability", () => {
     const row = {
       id: 14,
       url: "chat.whatsapp.com/test",
+      groupClassification: "UNCLASSIFIED" as const,
       membershipState: 2,
       membershipStateLabel: "已进群",
       groupJid: "120363@test.g.us"

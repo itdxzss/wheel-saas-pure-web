@@ -1,7 +1,7 @@
 import type { GroupListQuery } from "@/api/group";
 import type { IpCountryOption } from "@/api/resource-ip";
 
-export type GroupType = "" | "HISTORICAL" | "POST_CONTROL" | "BOTH";
+export type GroupType = "" | "HISTORICAL" | "POST_CONTROL";
 
 export interface HistoricalFilterValue {
   continentCode: string;

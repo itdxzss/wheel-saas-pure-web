@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import type { GroupListRow } from "@/api/group";
+import type { GroupClassification, GroupListRow } from "@/api/group";
 import { formatEpochMillis as formatEpoch } from "@/utils/time";
 import { groupContinentOptions } from "../constants";
 import Delete from "~icons/ep/delete";
@@ -74,6 +74,20 @@ function formatGroupCreatedAt(value: number | null | undefined): string {
 
 function continentName(code: string | null | undefined): string {
   return groupContinentOptions.find(item => item[0] === code)?.[1] ?? "-";
+}
+
+const groupClassificationMeta: Record<
+  Exclude<GroupClassification, "UNCLASSIFIED">,
+  { label: string; type: "success" | "warning" }
+> = {
+  HISTORICAL: { label: "历史群", type: "warning" },
+  POST_CONTROL: { label: "上控后群", type: "success" }
+};
+
+function classificationMeta(row: GroupListRow) {
+  return row.groupClassification === "UNCLASSIFIED"
+    ? null
+    : groupClassificationMeta[row.groupClassification];
 }
 </script>
 
@@ -160,11 +174,12 @@ function continentName(code: string | null | undefined): string {
                 <strong>{{ displayGroupName(row as GroupListRow) }}</strong>
                 <small>{{ row.remark || "暂无备注" }}</small>
                 <div class="group-type-tags">
-                  <el-tag v-if="row.isHistorical" size="small" type="warning">
-                    历史群
-                  </el-tag>
-                  <el-tag v-if="row.isPostControl" size="small" type="success">
-                    上控后群
+                  <el-tag
+                    v-if="classificationMeta(row as GroupListRow)"
+                    size="small"
+                    :type="classificationMeta(row as GroupListRow)?.type"
+                  >
+                    {{ classificationMeta(row as GroupListRow)?.label }}
                   </el-tag>
                 </div>
               </div>

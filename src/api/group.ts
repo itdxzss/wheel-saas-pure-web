@@ -1,5 +1,11 @@
 import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
+import {
+  normalizeGroupClassificationRow,
+  type GroupClassification
+} from "./group-classification";
+
+export type { GroupClassification } from "./group-classification";
 
 export interface GroupListRow {
   id: number;
@@ -28,8 +34,7 @@ export interface GroupListRow {
   lastCheckAt?: number | null;
   lastHealthError?: string | null;
   createdAt?: number | null;
-  isHistorical?: boolean | null;
-  isPostControl?: boolean | null;
+  groupClassification: GroupClassification;
   inviteUrl?: string | null;
   adminPhones?: string[] | null;
   availableAdmin?: boolean | null;
@@ -45,6 +50,13 @@ export interface GroupListRow {
   metadataSyncError?: string | null;
 }
 
+interface BackendGroupListRow
+  extends Omit<GroupListRow, "groupClassification"> {
+  groupClassification?: unknown;
+  isHistorical?: boolean | null;
+  isPostControl?: boolean | null;
+}
+
 export interface GroupListQuery {
   page?: number;
   pageSize?: number;
@@ -55,7 +67,7 @@ export interface GroupListQuery {
   membershipState?: number | "";
   folderId?: number;
   withoutFolder?: boolean;
-  groupType?: "HISTORICAL" | "POST_CONTROL" | "BOTH";
+  groupType?: "HISTORICAL" | "POST_CONTROL";
   availableAdmin?: boolean;
   memberCountMin?: number;
   memberCountMax?: number;
@@ -226,12 +238,22 @@ function toGroupMemberList(data: BackendGroupMemberList): GroupMemberList {
   };
 }
 
-export function listGroups(
+function toGroupListRow(row: BackendGroupListRow): GroupListRow {
+  return normalizeGroupClassificationRow(row);
+}
+
+export async function listGroups(
   query: GroupListQuery = {}
 ): Promise<PageResponse<GroupListRow>> {
-  return armadaRequest<PageResponse<GroupListRow>>("get", "/api/group-links", {
-    params: toListParams(query)
-  });
+  const response = await armadaRequest<PageResponse<BackendGroupListRow>>(
+    "get",
+    "/api/group-links",
+    { params: toListParams(query) }
+  );
+  return {
+    ...response,
+    list: response.list?.map(toGroupListRow)
+  };
 }
 
 export function batchDeleteGroups(ids: number[]): Promise<number> {

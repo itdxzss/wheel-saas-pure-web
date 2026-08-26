@@ -19,15 +19,24 @@ const pageSource = readFileSync(
   "utf8"
 );
 
-test("group list renders historical classification and metadata columns", () => {
-  assert.match(apiSource, /isHistorical\?: boolean/);
-  assert.match(apiSource, /isPostControl\?: boolean/);
+test("group list renders one canonical classification and metadata columns", () => {
+  const classificationBlock = tableSource.match(
+    /<div class="group-type-tags">([\s\S]*?)<\/div>/
+  )?.[1];
+
+  assert.match(apiSource, /groupClassification: GroupClassification/);
   assert.match(constantsSource, /label: "邀请链接", prop: "inviteUrl"/);
   assert.match(constantsSource, /label: "创建信息", prop: "groupCreatedAt"/);
-  assert.match(tableSource, /row\.isHistorical/);
-  assert.match(tableSource, /row\.isPostControl/);
-  assert.match(tableSource, />\s*历史群/);
-  assert.match(tableSource, />\s*上控后群/);
+  assert.match(tableSource, /function classificationMeta/);
+  assert.match(tableSource, /v-if="classificationMeta\(row as GroupListRow\)"/);
+  assert.match(tableSource, /label: "历史群"/);
+  assert.match(tableSource, /label: "上控后群"/);
+  assert.ok(classificationBlock);
+  assert.equal((classificationBlock.match(/<el-tag\b/g) ?? []).length, 1);
+  assert.doesNotMatch(tableSource, /row\.isHistorical/);
+  assert.doesNotMatch(tableSource, /row\.isPostControl/);
+  assert.doesNotMatch(apiSource, /groupType\?:[^;]*BOTH/);
+  assert.doesNotMatch(constantsSource, /BOTH|同时属于两类/);
   assert.match(tableSource, /row\.adminPhones/);
   assert.match(tableSource, /row\.availableAdmin/);
   assert.match(apiSource, /creatorContinentCode\?: string \| null/);
