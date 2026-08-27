@@ -1,0 +1,221 @@
+import { armadaRequest } from "@/api/armada";
+
+export type DataPackageImportMode = "APPEND" | "OVERWRITE";
+
+export type DataPackagePoolStatus =
+  | "UNUSED"
+  | "CLAIMED"
+  | "SENT"
+  | "DELIVERED"
+  | "RETRYABLE_FAILED"
+  | "UNREGISTERED";
+
+export interface PageResult<T> {
+  list: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface DataPackageMetrics {
+  totalCount: number;
+  unusedCount: number;
+  usedCount: number;
+  sentCount: number;
+  deliveredCount: number;
+  failedCount: number;
+  unregisteredCount: number;
+  clickUvCount: number;
+}
+
+export interface DataPackageListItem {
+  id: number;
+  name: string;
+  remark: string | null;
+  countries: Array<string | null>;
+  metrics: DataPackageMetrics;
+  version: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DataPackageDetail extends DataPackageListItem {
+  currentGeneration: number;
+}
+
+export interface DataPackagePhoneItem {
+  id: number;
+  generation: number;
+  phone: string;
+  countryIso2: string | null;
+  poolStatus: DataPackagePoolStatus;
+  sourceImportId: number;
+  createdAt: number;
+}
+
+export interface DataPackageCountryOption {
+  value: string;
+  countryIso2: string | null;
+  nameZh: string;
+}
+
+export interface DataPackageImportResult {
+  importId: number;
+  mode: DataPackageImportMode;
+  generation: number;
+  totalRows: number;
+  acceptedRows: number;
+  invalidRows: number;
+  duplicatedRows: number;
+  phoneCountAfterImport: number;
+}
+
+export interface DataPackageListQuery {
+  page?: number;
+  pageSize?: number;
+  name?: string | null;
+  createdFrom?: number;
+  createdTo?: number;
+  countryIso2s?: string[];
+  forTask?: boolean;
+}
+
+export interface DataPackagePhoneQuery {
+  page?: number;
+  pageSize?: number;
+  phone?: string | null;
+  poolStatus?: DataPackagePoolStatus;
+  countryIso2?: string | null;
+}
+
+export interface DataPackageCreateInput {
+  name: string;
+  remark: string | null;
+}
+
+export interface DataPackageUpdateInput extends DataPackageCreateInput {
+  version: number;
+}
+
+export interface DataPackageImportInput {
+  mode: DataPackageImportMode;
+  file: File;
+}
+
+function optionalTrimmed(value?: string | null): string | undefined {
+  return value?.trim() || undefined;
+}
+
+function nullableTrimmed(value: string | null): string | null {
+  return value?.trim() || null;
+}
+
+function countryListParam(values?: string[]): string | undefined {
+  const normalized = [
+    ...new Set(
+      (values ?? []).map(value => value.trim().toUpperCase()).filter(Boolean)
+    )
+  ];
+  return normalized.length > 0 ? normalized.join(",") : undefined;
+}
+
+export function listDataPackages(
+  query: DataPackageListQuery = {}
+): Promise<PageResult<DataPackageListItem>> {
+  return armadaRequest<PageResult<DataPackageListItem>>(
+    "get",
+    "/api/data-packages",
+    {
+      params: {
+        page: query.page,
+        pageSize: query.pageSize,
+        name: optionalTrimmed(query.name),
+        createdFrom: query.createdFrom,
+        createdTo: query.createdTo,
+        countryIso2s: countryListParam(query.countryIso2s),
+        forTask: query.forTask
+      }
+    }
+  );
+}
+
+export function getDataPackage(id: number): Promise<DataPackageDetail> {
+  return armadaRequest<DataPackageDetail>("get", `/api/data-packages/${id}`);
+}
+
+export function createDataPackage(
+  input: DataPackageCreateInput
+): Promise<DataPackageDetail> {
+  return armadaRequest<DataPackageDetail>("post", "/api/data-packages", {
+    data: {
+      name: input.name.trim(),
+      remark: nullableTrimmed(input.remark)
+    }
+  });
+}
+
+export function updateDataPackage(
+  id: number,
+  input: DataPackageUpdateInput
+): Promise<DataPackageDetail> {
+  return armadaRequest<DataPackageDetail>("put", `/api/data-packages/${id}`, {
+    data: {
+      name: input.name.trim(),
+      remark: nullableTrimmed(input.remark),
+      version: input.version
+    }
+  });
+}
+
+export function importDataPackagePhones(
+  id: number,
+  input: DataPackageImportInput
+): Promise<DataPackageImportResult> {
+  const formData = new FormData();
+  formData.append("mode", input.mode);
+  formData.append("file", input.file);
+  return armadaRequest<DataPackageImportResult>(
+    "post",
+    `/api/data-packages/${id}/import`,
+    { data: formData },
+    {
+      timeout: 120000,
+      beforeRequestCallback: config => {
+        delete config.headers["Content-Type"];
+      }
+    }
+  );
+}
+
+export function listDataPackagePhones(
+  id: number,
+  query: DataPackagePhoneQuery = {}
+): Promise<PageResult<DataPackagePhoneItem>> {
+  return armadaRequest<PageResult<DataPackagePhoneItem>>(
+    "get",
+    `/api/data-packages/${id}/phones`,
+    {
+      params: {
+        page: query.page,
+        pageSize: query.pageSize,
+        phone: optionalTrimmed(query.phone),
+        poolStatus: query.poolStatus,
+        countryIso2: optionalTrimmed(query.countryIso2)?.toUpperCase()
+      }
+    }
+  );
+}
+
+export function listDataPackageCountries(): Promise<
+  DataPackageCountryOption[]
+> {
+  return armadaRequest<DataPackageCountryOption[]>(
+    "get",
+    "/api/data-packages/countries"
+  );
+}
+
+export function deleteDataPackage(id: number): Promise<null> {
+  return armadaRequest<null>("delete", `/api/data-packages/${id}`);
+}
