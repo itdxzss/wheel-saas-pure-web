@@ -2,7 +2,7 @@
 
 - 日期 / 分支 / worktree: 2026-08-27 / `codex/user-data-isolation` / `/Users/daishuaishuai/IdeaProjects/wheel-saas-pure-web-user-data-isolation`
 - 后端配套: `/Users/daishuaishuai/IdeaProjects/armada-user-data-isolation`
-- 状态: 代码完成，未部署
+- 状态: 代码完成，已随 `caf5f5f0` 部署 test1；页面跨路由实操受浏览器新标签认证态阻塞
 
 ## 目标
 
@@ -25,7 +25,7 @@
 - `pnpm build`：生产构建通过。
 - 项目全量 Node 测试：与既有基线相同，仅 5 个未修改测试套件失败（`group.test.ts` 1、`GroupMemberDrawer` 1、`GroupPermissions` 3），本次无新增失败。
 - `git diff --check`：通过。
-- 未连接真库、未 SSH、未部署。
+- 前端制品已发布 test1；Playwright 登录 U1 成功并验证账号列表只显示 2 条 U1 数据，但跨路由进入分组页时认证态丢失（导航约 8-14s 后回登录页），因此未继续重复操作。
 
 ## 上线提示
 
