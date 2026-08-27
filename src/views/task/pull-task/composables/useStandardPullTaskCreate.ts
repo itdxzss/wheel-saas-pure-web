@@ -19,6 +19,7 @@ import {
 } from "@/api/account-group";
 import { listGroupFolders, type GroupFolderRow } from "@/api/group-folder";
 import { apiErrorMessage } from "@/utils/api-error";
+import { currentUserDataStorageKey } from "@/utils/current-user-data-storage";
 
 const LINKS_STORAGE_KEY = "pull-task-standard-normal-link-links";
 const PLANNED_LINKS_STORAGE_KEY =
@@ -157,30 +158,36 @@ function emptyDraft(): PullTaskStandardDraft {
 
 function storedLinks(): string {
   if (typeof window === "undefined") return "";
-  return window.sessionStorage.getItem(LINKS_STORAGE_KEY) ?? "";
+  const storageKey = currentUserDataStorageKey(LINKS_STORAGE_KEY);
+  return storageKey ? (window.sessionStorage.getItem(storageKey) ?? "") : "";
 }
 
 function storeLinks(value: string): void {
   if (typeof window === "undefined") return;
+  const storageKey = currentUserDataStorageKey(LINKS_STORAGE_KEY);
+  if (!storageKey) return;
   if (value) {
-    window.sessionStorage.setItem(LINKS_STORAGE_KEY, value);
+    window.sessionStorage.setItem(storageKey, value);
     return;
   }
-  window.sessionStorage.removeItem(LINKS_STORAGE_KEY);
+  window.sessionStorage.removeItem(storageKey);
 }
 
 function storedPlannedLinks(): string {
   if (typeof window === "undefined") return "";
-  return window.sessionStorage.getItem(PLANNED_LINKS_STORAGE_KEY) ?? "";
+  const storageKey = currentUserDataStorageKey(PLANNED_LINKS_STORAGE_KEY);
+  return storageKey ? (window.sessionStorage.getItem(storageKey) ?? "") : "";
 }
 
 function storePlannedLinks(value: string): void {
   if (typeof window === "undefined") return;
+  const storageKey = currentUserDataStorageKey(PLANNED_LINKS_STORAGE_KEY);
+  if (!storageKey) return;
   if (value) {
-    window.sessionStorage.setItem(PLANNED_LINKS_STORAGE_KEY, value);
+    window.sessionStorage.setItem(storageKey, value);
     return;
   }
-  window.sessionStorage.removeItem(PLANNED_LINKS_STORAGE_KEY);
+  window.sessionStorage.removeItem(storageKey);
 }
 
 function withoutFrozenLink(

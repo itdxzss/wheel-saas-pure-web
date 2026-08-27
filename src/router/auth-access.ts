@@ -18,12 +18,12 @@ export function hasValidAuthSession(
   );
 }
 
-/** 认证失败或权限不足都按产品要求重新登录。 */
+/** 只有认证失效才重新登录；403 是已认证用户的授权拒绝。 */
 export function isUnauthorizedHttpStatus(status?: number): boolean {
-  return status === 401 || status === 403;
+  return status === 401;
 }
 
-/** 当前登录身份相关的业务拒绝码；不包含登录表单失败及业务账号自身权限码。 */
+/** 当前登录身份失效的业务码；授权拒绝必须留在当前页面展示。 */
 export function isUnauthorizedBusinessCode(code?: number): boolean {
-  return code === 40101 || code === 40104 || code === 40302;
+  return code === 40101 || code === 40104;
 }

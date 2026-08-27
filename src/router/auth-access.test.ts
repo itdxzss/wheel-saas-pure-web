@@ -32,9 +32,9 @@ describe("route authentication access", () => {
     );
   });
 
-  it("treats HTTP 401 and 403 as forced-login responses", () => {
+  it("only treats HTTP 401 as a forced-login response", () => {
     assert.equal(isUnauthorizedHttpStatus(401), true);
-    assert.equal(isUnauthorizedHttpStatus(403), true);
+    assert.equal(isUnauthorizedHttpStatus(403), false);
     assert.equal(isUnauthorizedHttpStatus(500), false);
     assert.equal(isUnauthorizedHttpStatus(undefined), false);
   });
@@ -42,7 +42,7 @@ describe("route authentication access", () => {
   it("only treats current-user authentication business codes as forced login", () => {
     assert.equal(isUnauthorizedBusinessCode(40101), true);
     assert.equal(isUnauthorizedBusinessCode(40104), true);
-    assert.equal(isUnauthorizedBusinessCode(40302), true);
+    assert.equal(isUnauthorizedBusinessCode(40302), false);
     assert.equal(isUnauthorizedBusinessCode(40103), false);
     assert.equal(isUnauthorizedBusinessCode(40301), false);
   });

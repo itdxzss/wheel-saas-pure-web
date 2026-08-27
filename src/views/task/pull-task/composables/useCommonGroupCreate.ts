@@ -23,6 +23,7 @@ import {
 } from "@/api/account-group";
 import { listGroupFolders, type GroupFolderRow } from "@/api/group-folder";
 import { apiErrorMessage } from "@/utils/api-error";
+import { currentUserDataStorageKey } from "@/utils/current-user-data-storage";
 import {
   createCommonGroupForm,
   toCommonGroupCreateRequest,
@@ -77,7 +78,10 @@ function isNullablePositiveSafeInteger(value: unknown): value is number | null {
   return value === null || isPositiveSafeInteger(value);
 }
 
-function isNonNegativeSafeInteger(value: unknown, max?: number): value is number {
+function isNonNegativeSafeInteger(
+  value: unknown,
+  max?: number
+): value is number {
   return (
     typeof value === "number" &&
     Number.isSafeInteger(value) &&
@@ -259,7 +263,9 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
 
   function storedTaskId(): number | null {
     try {
-      const value = window.sessionStorage.getItem(ACTIVE_TASK_STORAGE_KEY);
+      const storageKey = currentUserDataStorageKey(ACTIVE_TASK_STORAGE_KEY);
+      if (!storageKey) return null;
+      const value = window.sessionStorage.getItem(storageKey);
       const taskId = Number(value);
       return Number.isSafeInteger(taskId) && taskId > 0 ? taskId : null;
     } catch {
@@ -269,7 +275,10 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
 
   function storeTaskId(taskId: number): void {
     try {
-      window.sessionStorage.setItem(ACTIVE_TASK_STORAGE_KEY, String(taskId));
+      const storageKey = currentUserDataStorageKey(ACTIVE_TASK_STORAGE_KEY);
+      if (storageKey) {
+        window.sessionStorage.setItem(storageKey, String(taskId));
+      }
     } catch {
       // 浏览器禁用 sessionStorage 时仍可在当前页面跟踪任务。
     }
@@ -277,7 +286,8 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
 
   function clearStoredTaskId(): void {
     try {
-      window.sessionStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
+      const storageKey = currentUserDataStorageKey(ACTIVE_TASK_STORAGE_KEY);
+      if (storageKey) window.sessionStorage.removeItem(storageKey);
     } catch {
       // 无持久化能力不影响任务本身执行。
     }
@@ -285,9 +295,11 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
 
   function storedSubmissionIdentity(): PendingSubmission | null {
     try {
-      const value = window.sessionStorage.getItem(
+      const storageKey = currentUserDataStorageKey(
         PENDING_SUBMISSION_STORAGE_KEY
       );
+      if (!storageKey) return null;
+      const value = window.sessionStorage.getItem(storageKey);
       if (!value) return null;
       const parsed = JSON.parse(value) as {
         createdAt?: unknown;
@@ -312,7 +324,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
         !isCommonGroupTaskCreateRequest(parsed.payload) ||
         JSON.stringify(parsed.payload) !== parsed.fingerprint
       ) {
-        window.sessionStorage.removeItem(PENDING_SUBMISSION_STORAGE_KEY);
+        window.sessionStorage.removeItem(storageKey);
         return null;
       }
       return {
@@ -331,8 +343,12 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     payload: CommonGroupTaskCreateRequest
   ): void {
     try {
+      const storageKey = currentUserDataStorageKey(
+        PENDING_SUBMISSION_STORAGE_KEY
+      );
+      if (!storageKey) return;
       window.sessionStorage.setItem(
-        PENDING_SUBMISSION_STORAGE_KEY,
+        storageKey,
         JSON.stringify({
           version: PENDING_SUBMISSION_STORAGE_VERSION,
           fingerprint,
@@ -348,7 +364,10 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
 
   function clearStoredSubmissionIdentity(): void {
     try {
-      window.sessionStorage.removeItem(PENDING_SUBMISSION_STORAGE_KEY);
+      const storageKey = currentUserDataStorageKey(
+        PENDING_SUBMISSION_STORAGE_KEY
+      );
+      if (storageKey) window.sessionStorage.removeItem(storageKey);
     } catch {
       // 无持久化能力不影响任务本身执行。
     }

@@ -186,7 +186,7 @@ describe("common group creation flow", () => {
     assert.match(composableSource, /hasExactKeys/);
     assert.match(
       composableSource,
-      /removeItem\(PENDING_SUBMISSION_STORAGE_KEY\)/
+      /currentUserDataStorageKey\([\s\S]*PENDING_SUBMISSION_STORAGE_KEY/
     );
     assert.match(composableSource, /payload: parsed\.payload/);
     assert.match(

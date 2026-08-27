@@ -81,7 +81,10 @@ export const useUserStore = defineStore("pure-user", {
               username: res.user.username,
               nickname: res.user.nickname ?? res.user.username,
               roles: res.user.roles,
-              permissions: res.user.permissions
+              permissions: res.user.permissions,
+              userId: res.user.id,
+              tenantId: res.tenant.id,
+              tenantCode: res.tenant.code
             });
             resolve({ success: true, data: res });
           })

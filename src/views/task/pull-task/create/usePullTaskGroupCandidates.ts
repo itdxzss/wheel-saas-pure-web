@@ -10,6 +10,7 @@ import {
   type PullTaskGroupWaitingPool
 } from "@/api/pull-task";
 import { apiErrorMessage } from "@/utils/api-error";
+import { currentUserDataStorageKey } from "@/utils/current-user-data-storage";
 import type { PullTaskMarketingCreateDraft } from "./create-draft";
 import { reconcileSelectedGroupJids } from "./create-interactions";
 
@@ -55,6 +56,10 @@ export function usePullTaskGroupCandidates(
     return typeof window === "undefined" ? null : window.sessionStorage;
   }
 
+  function waitingPoolStorageKey(): string | null {
+    return currentUserDataStorageKey(WAITING_POOL_STORAGE_KEY);
+  }
+
   function applyWaitingPool(pool: PullTaskGroupWaitingPool): void {
     waitingGroups.value = pool.groups ?? [];
     draft.value.selectedGroupJids = waitingGroups.value.map(
@@ -62,13 +67,14 @@ export function usePullTaskGroupCandidates(
     );
     draft.value.waitingPoolToken =
       waitingGroups.value.length > 0 ? pool.reservationToken : "";
+    const storage = waitingPoolStorage();
+    const storageKey = waitingPoolStorageKey();
     if (draft.value.waitingPoolToken) {
-      waitingPoolStorage()?.setItem(
-        WAITING_POOL_STORAGE_KEY,
-        draft.value.waitingPoolToken
-      );
-    } else {
-      waitingPoolStorage()?.removeItem(WAITING_POOL_STORAGE_KEY);
+      if (storage && storageKey) {
+        storage.setItem(storageKey, draft.value.waitingPoolToken);
+      }
+    } else if (storage && storageKey) {
+      storage.removeItem(storageKey);
     }
     if (pool.rejected?.length) {
       ElMessage.warning(
@@ -78,9 +84,11 @@ export function usePullTaskGroupCandidates(
   }
 
   async function restoreWaitingPool(): Promise<void> {
+    const storage = waitingPoolStorage();
+    const storageKey = waitingPoolStorageKey();
     const token =
       draft.value.waitingPoolToken ||
-      waitingPoolStorage()?.getItem(WAITING_POOL_STORAGE_KEY);
+      (storage && storageKey ? storage.getItem(storageKey) : null);
     if (!token) return;
     draft.value.waitingPoolToken = token;
     waitingPoolLoading.value = true;
@@ -191,7 +199,9 @@ export function usePullTaskGroupCandidates(
       waitingGroups.value = [];
       draft.value.selectedGroupJids = [];
       draft.value.waitingPoolToken = "";
-      waitingPoolStorage()?.removeItem(WAITING_POOL_STORAGE_KEY);
+      const storage = waitingPoolStorage();
+      const storageKey = waitingPoolStorageKey();
+      if (storage && storageKey) storage.removeItem(storageKey);
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "释放等待任务池失败"));
       throw error;

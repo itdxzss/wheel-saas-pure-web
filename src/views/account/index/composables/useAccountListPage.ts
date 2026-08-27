@@ -42,6 +42,7 @@ import {
   type AccountGroupMarketingOccupancy
 } from "@/api/account-group";
 import { apiErrorMessage, isRequestTimeout } from "@/utils/api-error";
+import { currentUserDataStorageKey } from "@/utils/current-user-data-storage";
 import { downloadBlobFile } from "@/utils/download";
 import {
   buildAccountStatCards,
@@ -279,8 +280,8 @@ export function useAccountListPage(): AccountListPageState {
       .filter((id): id is number => id !== null);
   }
 
-  function onlineCooldownKey(id: number): string {
-    return `${ONLINE_COOLDOWN_KEY_PREFIX}${id}`;
+  function onlineCooldownKey(id: number): string | null {
+    return currentUserDataStorageKey(`${ONLINE_COOLDOWN_KEY_PREFIX}${id}`);
   }
 
   // localStorage 让刷新页面或重新打开账号列表后，未过期的 30 秒冷却仍然生效。
@@ -288,11 +289,14 @@ export function useAccountListPage(): AccountListPageState {
     const inMemoryUntil = onlineCooldownUntilById.value.get(id) ?? 0;
     let storedUntil = 0;
     try {
-      const raw = window.localStorage.getItem(onlineCooldownKey(id));
-      const value = raw ? Number(raw) : 0;
-      storedUntil = Number.isFinite(value) && value > 0 ? value : 0;
-      if (storedUntil > 0 && storedUntil <= now.value) {
-        window.localStorage.removeItem(onlineCooldownKey(id));
+      const storageKey = onlineCooldownKey(id);
+      if (storageKey) {
+        const raw = window.localStorage.getItem(storageKey);
+        const value = raw ? Number(raw) : 0;
+        storedUntil = Number.isFinite(value) && value > 0 ? value : 0;
+        if (storedUntil > 0 && storedUntil <= now.value) {
+          window.localStorage.removeItem(storageKey);
+        }
       }
     } catch {
       storedUntil = 0;
@@ -309,7 +313,10 @@ export function useAccountListPage(): AccountListPageState {
     const until = Date.now() + ONLINE_COOLDOWN_MS;
     onlineCooldownUntilById.value.set(id, until);
     try {
-      window.localStorage.setItem(onlineCooldownKey(id), String(until));
+      const storageKey = onlineCooldownKey(id);
+      if (storageKey) {
+        window.localStorage.setItem(storageKey, String(until));
+      }
     } catch {
       // localStorage 不可用时仍保留当前页面内的 30 秒禁用。
     }
