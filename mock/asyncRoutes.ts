@@ -242,6 +242,55 @@ const resourceRouter = {
   ]
 };
 
+// 仅用于本地开发预览；生产菜单与按钮权限由 /api/tenant/me/menus 返回。
+const hyperlinkRouter = {
+  path: "/hyperlink",
+  meta: {
+    title: "超链营销",
+    icon: "ep:link",
+    rank: 7,
+    module_key: "hyperlink_marketing"
+  },
+  children: [
+    {
+      path: "/hyperlink/data",
+      component: "hyperlink/data/index",
+      name: "HyperlinkDataPackage",
+      meta: {
+        title: "超链数据包",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_data",
+        perm_key: "tenant:hyperlink_data:view",
+        auths: [
+          "tenant:hyperlink_data:create",
+          "tenant:hyperlink_data:import",
+          "tenant:hyperlink_data:edit",
+          "tenant:hyperlink_data:delete"
+        ]
+      }
+    },
+    {
+      path: "/hyperlink/templates",
+      component: "hyperlink/templates/index",
+      name: "HyperlinkTemplate",
+      meta: {
+        title: "超链营销模板",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_template",
+        perm_key: "tenant:hyperlink_template:view",
+        auths: [
+          "tenant:hyperlink_template:create",
+          "tenant:hyperlink_template:edit",
+          "tenant:hyperlink_template:copy",
+          "tenant:hyperlink_template:delete"
+        ]
+      }
+    }
+  ]
+};
+
 const systemRouter = {
   path: "/system",
   meta: {
@@ -321,6 +370,7 @@ export default defineFakeRoute([
           taskRouter,
           materialRouter,
           resourceRouter,
+          hyperlinkRouter,
           systemRouter
         ]
       };
