@@ -1,6 +1,15 @@
 import { armadaRequest } from "@/api/armada";
+import { http } from "@/utils/http";
 
 export type DataPackageImportMode = "APPEND" | "OVERWRITE";
+export type DataPackageUsageStatus =
+  | "all"
+  | "unused"
+  | "success"
+  | "single"
+  | "double"
+  | "failed"
+  | "fail_404";
 
 export type DataPackagePoolStatus =
   | "UNUSED"
@@ -34,6 +43,7 @@ export interface DataPackageListItem {
   name: string;
   remark: string | null;
   countries: Array<string | null>;
+  primaryCountryIso2: string | null;
   metrics: DataPackageMetrics;
   version: number;
   createdAt: number;
@@ -78,7 +88,15 @@ export interface DataPackageListQuery {
   createdFrom?: number;
   createdTo?: number;
   countryIso2s?: string[];
+  minUvPercent?: number;
+  maxUvPercent?: number;
   forTask?: boolean;
+}
+
+export interface DataPackageExportResult {
+  blob: Blob;
+  filename: string;
+  exportedCount: number;
 }
 
 export interface DataPackagePhoneQuery {
@@ -134,6 +152,8 @@ export function listDataPackages(
         createdFrom: query.createdFrom,
         createdTo: query.createdTo,
         countryIso2s: countryListParam(query.countryIso2s),
+        minUvPercent: query.minUvPercent,
+        maxUvPercent: query.maxUvPercent,
         forTask: query.forTask
       }
     }
@@ -218,4 +238,80 @@ export function listDataPackageCountries(): Promise<
 
 export function deleteDataPackage(id: number): Promise<null> {
   return armadaRequest<null>("delete", `/api/data-packages/${id}`);
+}
+
+export function resetDataPackageFailed(id: number): Promise<number> {
+  return armadaRequest<number>("post", `/api/data-packages/${id}/reset-failed`);
+}
+
+export function exportDataPackagePhones(
+  id: number,
+  usageStatus: DataPackageUsageStatus
+): Promise<DataPackageExportResult> {
+  return requestDataPackageExport(
+    "get",
+    `/api/data-packages/${id}/export`,
+    { params: { usageStatus } },
+    `data_package_${id}_${usageStatus}.txt`
+  );
+}
+
+export function exportDataPackagePhonesBatch(
+  ids: number[],
+  usageStatus: DataPackageUsageStatus
+): Promise<DataPackageExportResult> {
+  return requestDataPackageExport(
+    "post",
+    "/api/data-packages/export",
+    { data: { ids, usageStatus } },
+    `data_packages_${usageStatus}.txt`
+  );
+}
+
+async function requestDataPackageExport(
+  method: "get" | "post",
+  url: string,
+  options: Record<string, unknown>,
+  fallbackFilename: string
+): Promise<DataPackageExportResult> {
+  let filename = fallbackFilename;
+  let exportedCount = 0;
+  const blob = await http.request<Blob>(
+    method,
+    url,
+    { ...options, responseType: "blob" },
+    {
+      beforeResponseCallback: response => {
+        filename =
+          filenameFromDisposition(
+            headerValue(response.headers, "Content-Disposition")
+          ) ?? fallbackFilename;
+        exportedCount = Number(
+          headerValue(response.headers, "X-Export-Count") ?? 0
+        );
+      }
+    }
+  );
+  return { blob, filename, exportedCount };
+}
+
+function headerValue(headers: unknown, name: string): string | undefined {
+  if (!headers || typeof headers !== "object") return undefined;
+  const values = headers as Record<string, unknown>;
+  const entry = Object.entries(values).find(
+    ([key]) => key.toLowerCase() === name.toLowerCase()
+  );
+  return typeof entry?.[1] === "string" ? entry[1] : undefined;
+}
+
+function filenameFromDisposition(value?: string): string | undefined {
+  const encoded = value?.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  }
+  return value?.match(/filename="?([^";]+)"?/i)?.[1];
 }

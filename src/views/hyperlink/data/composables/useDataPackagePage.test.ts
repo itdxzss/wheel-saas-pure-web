@@ -8,6 +8,7 @@ import {
 import type { DataPackageListItem } from "@/api/hyperlink-data-package";
 import {
   createDataPackageTableColumns,
+  dataPackageImportBlocked,
   dataPackageCountryLabel,
   useDataPackagePage
 } from "./useDataPackagePage";
@@ -20,6 +21,7 @@ function dataPackageRow(
     name: "菲律宾新客",
     remark: "8 月活动",
     countries: ["PH"],
+    primaryCountryIso2: "PH",
     metrics: {
       totalCount: 4800,
       unusedCount: 4800,
@@ -45,19 +47,7 @@ describe("hyperlink data package page state", () => {
   it("keeps the contract metric columns in product order", () => {
     assert.deepEqual(
       createDataPackageTableColumns().map(column => column.label),
-      [
-        "数据包名称",
-        "国家",
-        "总数",
-        "未使用",
-        "已使用",
-        "发送成功",
-        "已送达",
-        "失败",
-        "未注册",
-        "点击 UV",
-        "创建时间"
-      ]
+      ["ID", "数据包", "号码使用", "投递漏斗", "创建时间"]
     );
   });
 
@@ -74,6 +64,8 @@ describe("hyperlink data package page state", () => {
     state.searchForm.value = {
       name: " 菲律宾 ",
       createdRange: [new Date(1787846400000), new Date(1787932799999)],
+      minUvPercent: 1.5,
+      maxUvPercent: 25,
       countryIso2s: ["PH", "UNKNOWN"]
     };
 
@@ -92,6 +84,8 @@ describe("hyperlink data package page state", () => {
             name: "菲律宾",
             createdFrom: 1787846400000,
             createdTo: 1787932799999,
+            minUvPercent: 1.5,
+            maxUvPercent: 25,
             countryIso2s: "PH,UNKNOWN",
             forTask: false
           }
@@ -108,6 +102,16 @@ describe("hyperlink data package page state", () => {
 
     assert.equal(dataPackageCountryLabel("PH", options), "菲律宾 (PH)");
     assert.equal(dataPackageCountryLabel(null, options), "未识别");
+  });
+
+  it("blocks the import entry when any existing country is restricted", () => {
+    assert.equal(
+      dataPackageImportBlocked(
+        dataPackageRow({ countries: ["PH", "CN"], primaryCountryIso2: "PH" })
+      ),
+      true
+    );
+    assert.equal(dataPackageImportBlocked(dataPackageRow()), false);
   });
 
   it("opens phone detail with fixed page size 50 and current-generation filters", async () => {

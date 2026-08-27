@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
+import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { formatEpochMillis } from "@/utils/time";
 import type {
   HyperlinkMessageType,
-  HyperlinkTemplateListItem
+  HyperlinkTemplateListItem,
+  SupportedHyperlinkMessageType
 } from "@/api/hyperlink-template";
-import Search from "~icons/ri/search-line";
 import RefreshRight from "~icons/ep/refresh-right";
 import Plus from "~icons/ep/plus";
+import Edit from "~icons/ep/edit";
+import CopyDocument from "~icons/ep/copy-document";
+import Delete from "~icons/ep/delete";
+import Library from "~icons/solar/library-bold-duotone";
 import HyperlinkTemplateDrawer from "./components/HyperlinkTemplateDrawer.vue";
 import { useHyperlinkTemplatePage } from "./composables/useHyperlinkTemplatePage";
 import {
@@ -48,6 +53,12 @@ const {
   selectImage
 } = useHyperlinkTemplatePage();
 
+const buttonTemplateCount = computed(
+  () =>
+    rows.value.filter(row => row.messageType === 3 || row.messageType === 4)
+      .length
+);
+
 function asTemplateRow(row: unknown): HyperlinkTemplateListItem {
   return row as HyperlinkTemplateListItem;
 }
@@ -61,6 +72,14 @@ function typeTag(
   return "info";
 }
 
+function changeSearchMessageType(
+  value: string | number | boolean | undefined
+): void {
+  searchForm.value.messageType =
+    value === "all" ? "" : (Number(value) as SupportedHyperlinkMessageType);
+  void search();
+}
+
 onMounted(() => {
   void refresh();
 });
@@ -68,6 +87,42 @@ onMounted(() => {
 
 <template>
   <div class="hyperlink-template-page">
+    <el-card shadow="never" class="intro-card">
+      <div class="intro-content">
+        <component :is="useRenderIcon(Library)" class="intro-icon" />
+        <div>
+          <div class="intro-title">
+            WhatsApp 超链模板
+            <el-tag type="success" effect="plain" round>Hyperlink</el-tag>
+          </div>
+          <p>
+            预先编排好 <b>消息类型 + 文案 + 图片 + 按钮</b>
+            的超链消息模板；新建超链群发任务时可一键引用，无需每个任务重写。编辑时可实时预览
+            WhatsApp 真机效果。
+          </p>
+        </div>
+      </div>
+    </el-card>
+
+    <el-card shadow="never" class="stats-card">
+      <div class="template-stats">
+        <div class="stat-item">
+          <span>模板总数</span>
+          <strong>{{ total.toLocaleString() }}</strong>
+        </div>
+        <el-divider direction="vertical" />
+        <div class="stat-item">
+          <span>本页按钮模板</span>
+          <strong class="success-value">{{
+            buttonTemplateCount.toLocaleString()
+          }}</strong>
+        </div>
+        <el-tooltip content="模板总数来自当前筛选条件；按钮模板仅统计本页数据">
+          <span class="stat-tip">?</span>
+        </el-tooltip>
+      </div>
+    </el-card>
+
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="模板名称">
@@ -76,45 +131,39 @@ onMounted(() => {
             clearable
             class="name-input"
             maxlength="128"
-            placeholder="输入模板名称关键词"
+            placeholder="按模板名称搜索"
+            @blur="search"
             @keyup.enter="search"
           />
         </el-form-item>
         <el-form-item label="消息类型">
-          <el-select
-            v-model="searchForm.messageType"
-            clearable
-            class="type-select"
-            placeholder="全部类型"
+          <el-radio-group
+            :model-value="searchForm.messageType || 'all'"
+            @change="changeSearchMessageType"
           >
-            <el-option
+            <el-radio-button value="all">全部</el-radio-button>
+            <el-radio-button
               v-for="option in hyperlinkMessageTypeOptions"
               :key="option.value"
-              :label="option.label"
               :value="option.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="创建时间">
-          <el-date-picker
-            v-model="searchForm.createdRange"
-            type="datetimerange"
-            value-format="x"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            range-separator="至"
-          />
+            >
+              {{ option.label }}
+            </el-radio-button>
+          </el-radio-group>
         </el-form-item>
         <el-form-item>
-          <el-button
-            type="primary"
-            :icon="useRenderIcon(Search)"
-            @click="search"
-          >
-            查询
-          </el-button>
           <el-button :icon="useRenderIcon(RefreshRight)" @click="resetSearch">
             重置
+          </el-button>
+        </el-form-item>
+        <el-form-item class="create-action">
+          <el-button
+            v-auth="'tenant:hyperlink_template:create'"
+            type="primary"
+            :icon="useRenderIcon(Plus)"
+            @click="openCreate"
+          >
+            新建超链模板
           </el-button>
         </el-form-item>
       </el-form>
@@ -131,127 +180,112 @@ onMounted(() => {
       <el-button link type="primary" @click="refresh">重试</el-button>
     </el-alert>
 
-    <PureTableBar title="超链营销模板" :columns="columns" @refresh="refresh">
-      <template #buttons>
-        <el-button
-          v-auth="'tenant:hyperlink_template:create'"
-          type="primary"
-          :icon="useRenderIcon(Plus)"
-          @click="openCreate"
-        >
-          创建模板
-        </el-button>
+    <PureTableBar title="超链模板" :columns="columns" @refresh="refresh">
+      <template #title>
+        <div class="table-title">
+          <span>模板管理</span>
+          <el-tag effect="light" round>本页 {{ rows.length }} 个</el-tag>
+        </div>
       </template>
-
       <template #default="{ dynamicColumns }">
-        <el-table v-loading="loading" :data="rows" row-key="id" border>
+        <el-table v-loading="loading" :data="rows" row-key="id" size="small">
           <el-table-column
             v-if="!dynamicColumns[0].hide"
-            prop="id"
-            label="ID"
-            width="90"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[1].hide"
             prop="name"
-            label="模板名称"
-            min-width="180"
-            show-overflow-tooltip
-          />
-          <el-table-column
-            v-if="!dynamicColumns[2].hide"
-            prop="messageType"
-            label="消息类型"
-            width="120"
+            label="模板名称 / 类型"
+            min-width="260"
           >
             <template #default="{ row }">
-              <el-tag :type="typeTag(row.messageType)" effect="plain">
-                {{ hyperlinkMessageTypeLabel(row.messageType) }}
-              </el-tag>
+              <div class="template-name-cell">
+                <div class="template-name-line">
+                  <span class="template-name">
+                    {{
+                      asTemplateRow(row).name ||
+                      `模板 #${asTemplateRow(row).id}`
+                    }}
+                  </span>
+                  <el-tag
+                    :type="typeTag(asTemplateRow(row).messageType)"
+                    effect="plain"
+                    size="small"
+                    round
+                  >
+                    {{
+                      hyperlinkMessageTypeLabel(asTemplateRow(row).messageType)
+                    }}
+                  </el-tag>
+                </div>
+                <span class="template-id">#{{ asTemplateRow(row).id }}</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column
-            v-if="!dynamicColumns[3].hide"
-            prop="title"
-            label="标题"
-            min-width="180"
-            show-overflow-tooltip
-          />
-          <el-table-column
-            v-if="!dynamicColumns[4].hide"
-            prop="taskRefCount"
-            label="任务引用"
-            width="100"
-            align="right"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[5].hide"
-            prop="version"
-            label="版本"
-            width="90"
-            align="right"
-          />
-          <el-table-column
-            v-if="!dynamicColumns[6].hide"
+            v-if="!dynamicColumns[1].hide"
             prop="updatedAt"
             label="更新时间"
-            width="180"
+            width="178"
+            align="center"
           >
-            <template #default="{ row }">{{
-              formatEpochMillis(row.updatedAt)
-            }}</template>
-          </el-table-column>
-          <el-table-column label="操作" fixed="right" width="245">
             <template #default="{ row }">
-              <el-button
-                v-auth="'tenant:hyperlink_template:view'"
-                link
-                type="primary"
-                @click="openDetail(asTemplateRow(row), 'preview')"
-              >
-                详情/预览
-              </el-button>
+              {{ formatEpochMillis(asTemplateRow(row).updatedAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            fixed="right"
+            width="190"
+            align="center"
+          >
+            <template #default="{ row }">
               <el-button
                 v-auth="'tenant:hyperlink_template:edit'"
                 link
                 type="primary"
-                @click="openDetail(asTemplateRow(row), 'edit')"
+                :icon="useRenderIcon(Edit)"
+                @click="openDetail(asTemplateRow(row))"
               >
                 编辑
               </el-button>
               <el-button
                 v-auth="'tenant:hyperlink_template:copy'"
                 link
-                type="primary"
+                type="warning"
+                :icon="useRenderIcon(CopyDocument)"
                 @click="copy(asTemplateRow(row))"
               >
                 复制
               </el-button>
-              <el-button
-                v-auth="'tenant:hyperlink_template:delete'"
-                link
-                type="danger"
-                @click="remove(asTemplateRow(row))"
+              <el-tooltip
+                :disabled="asTemplateRow(row).taskRefCount === 0"
+                :content="`仍被 ${asTemplateRow(row).taskRefCount} 个任务引用，不能删除`"
               >
-                删除
-              </el-button>
+                <span>
+                  <el-button
+                    v-auth="'tenant:hyperlink_template:delete'"
+                    link
+                    type="danger"
+                    :icon="useRenderIcon(Delete)"
+                    :disabled="asTemplateRow(row).taskRefCount > 0"
+                    @click="remove(asTemplateRow(row))"
+                  >
+                    删除
+                  </el-button>
+                </span>
+              </el-tooltip>
             </template>
           </el-table-column>
           <template #empty>
-            <el-empty description="暂无符合条件的超链营销模板" />
+            <el-empty description="暂无符合条件的超链模板" />
           </template>
         </el-table>
 
-        <div class="pagination">
-          <el-pagination
-            v-model:current-page="page"
-            :page-size="pageSize"
-            background
-            layout="total, prev, pager, next, jumper"
-            :total="total"
-            @current-change="refresh"
-          />
-        </div>
+        <WheelPagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          @change="refresh"
+        />
       </template>
     </PureTableBar>
 
@@ -276,26 +310,141 @@ onMounted(() => {
   padding: 16px;
 }
 
+.intro-card,
+.stats-card,
 .search-card,
 .error-alert {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.intro-content,
+.intro-title,
+.template-stats,
+.template-name-line {
+  display: flex;
+  align-items: center;
+}
+
+.intro-content {
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.intro-icon {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  color: var(--el-color-primary);
+}
+
+.intro-title {
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.intro-content p {
+  margin: 8px 0 0;
+  line-height: 1.8;
+  color: var(--el-text-color-secondary);
+}
+
+.stats-card :deep(.el-card__body) {
+  padding: 16px 20px;
+}
+
+.template-stats {
+  gap: 24px;
+}
+
+.stat-item {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  color: var(--el-text-color-secondary);
+}
+
+.stat-item strong {
+  font-size: 24px;
+  color: var(--el-text-color-primary);
+}
+
+.stat-item .success-value {
+  color: var(--el-color-success);
+}
+
+.stat-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  border: 1px solid var(--el-border-color);
+  border-radius: 50%;
 }
 
 .search-card :deep(.el-card__body) {
   padding-bottom: 2px;
 }
 
+.search-card :deep(.el-form) {
+  display: flex;
+}
+
 .name-input {
   width: 240px;
 }
 
-.type-select {
-  width: 160px;
+.create-action {
+  margin-left: auto;
 }
 
-.pagination {
+.table-title {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  gap: 10px;
+  align-items: center;
+  font-weight: 700;
+}
+
+.template-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.template-name-line {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.template-name {
+  font-weight: 600;
+}
+
+.template-id {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+@media (width <= 900px) {
+  .intro-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .create-action {
+    margin-left: 0;
+  }
+
+  .search-card :deep(.el-form) {
+    display: block;
+  }
+
+  .template-stats {
+    flex-wrap: wrap;
+  }
 }
 </style>

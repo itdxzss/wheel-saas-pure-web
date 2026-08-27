@@ -1,29 +1,40 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import type { DataPackageListItem } from "@/api/hyperlink-data-package";
+import type {
+  DataPackageListItem,
+  DataPackageUsageStatus
+} from "@/api/hyperlink-data-package";
 import { formatEpochMillis } from "@/utils/time";
-import Search from "~icons/ri/search-line";
-import RefreshRight from "~icons/ep/refresh-right";
 import Plus from "~icons/ep/plus";
+import Download from "~icons/ep/download";
+import Upload from "~icons/ep/upload";
+import RefreshRight from "~icons/ep/refresh-right";
+import MoreFilled from "~icons/ep/more-filled";
+import FileExcel from "~icons/ri/file-excel-2-line";
+import Cursor from "~icons/ri/cursor-line";
 import DataPackageFormDialog from "./components/DataPackageFormDialog.vue";
+import DataPackageFunnelCell from "./components/DataPackageFunnelCell.vue";
+import DataPackageIdentityCell from "./components/DataPackageIdentityCell.vue";
 import DataPackageImportDialog from "./components/DataPackageImportDialog.vue";
+import DataPackageIntro from "./components/DataPackageIntro.vue";
 import DataPackagePhoneDrawer from "./components/DataPackagePhoneDrawer.vue";
+import DataPackageSearchCard from "./components/DataPackageSearchCard.vue";
+import DataPackageUsageCell from "./components/DataPackageUsageCell.vue";
 import {
-  dataPackageCountryLabel,
+  dataPackageImportBlocked,
+  dataPackageExportOptions,
+  retryableFailureCount,
+  type DataPackageTableColumn,
   useDataPackagePage
 } from "./composables/useDataPackagePage";
 
 defineOptions({ name: "HyperlinkDataPackage" });
 
-const createdDateDefaultTime: [Date, Date] = [
-  new Date(2000, 0, 1, 0, 0, 0),
-  new Date(2000, 0, 1, 23, 59, 59, 999)
-];
-
 const {
+  clickAnalysisVisible,
   columns,
   countries,
   countryErrorMessage,
@@ -51,51 +62,68 @@ const {
   rows,
   saving,
   searchForm,
+  selectedRows,
   total,
+  visitTarget,
+  visitTrendVisible,
+  exportClickRecords,
+  exportCurrentPageCsv,
+  exportOne,
+  exportSelected,
   initialize,
+  openClickAnalysis,
   openCreateForm,
   openEditForm,
   openImport,
   openPhoneDrawer,
+  openVisitTrend,
   refreshCountryOptions,
   refreshDataPackages,
   refreshPhoneRows,
   removeDataPackage,
+  resetFailed,
   resetPhoneFilters,
   resetSearchForm,
   saveMetadata,
   searchDataPackages,
   searchPhoneRows,
+  setSelectedRows,
   submitImport
 } = useDataPackagePage();
+
+const currentPagePhoneCount = computed(() =>
+  rows.value.reduce((sum, row) => sum + row.metrics.totalCount, 0)
+);
+const currentPageEmptyCount = computed(
+  () => rows.value.filter(row => row.metrics.totalCount === 0).length
+);
 
 function asDataPackage(row: unknown): DataPackageListItem {
   return row as DataPackageListItem;
 }
 
-function tableValue(row: DataPackageListItem, prop: string): string | number {
-  switch (prop) {
-    case "name":
-      return row.name;
-    case "metrics.totalCount":
-      return row.metrics.totalCount;
-    case "metrics.unusedCount":
-      return row.metrics.unusedCount;
-    case "metrics.usedCount":
-      return row.metrics.usedCount;
-    case "metrics.sentCount":
-      return row.metrics.sentCount;
-    case "metrics.deliveredCount":
-      return row.metrics.deliveredCount;
-    case "metrics.failedCount":
-      return row.metrics.failedCount;
-    case "metrics.unregisteredCount":
-      return row.metrics.unregisteredCount;
-    case "metrics.clickUvCount":
-      return row.metrics.clickUvCount;
-    default:
-      return "-";
-  }
+function columnVisible(
+  dynamicColumns: DataPackageTableColumn[],
+  prop: string
+): boolean {
+  return dynamicColumns.find(column => column.prop === prop)?.hide !== true;
+}
+
+function handleMore(command: string, row: DataPackageListItem): void {
+  if (command === "view") void openPhoneDrawer(row);
+  if (command === "rename") openEditForm(row);
+  if (command === "delete") void removeDataPackage(row);
+}
+
+function handleSingleExport(
+  command: DataPackageUsageStatus,
+  row: DataPackageListItem
+): void {
+  void exportOne(row, command);
+}
+
+function handleBatchExport(command: DataPackageUsageStatus): void {
+  void exportSelected(command);
 }
 
 onMounted(() => {
@@ -105,66 +133,15 @@ onMounted(() => {
 
 <template>
   <div class="data-package-page">
-    <el-card class="search-card" shadow="never">
-      <el-form :model="searchForm" inline>
-        <el-form-item label="数据包名称">
-          <el-input
-            v-model="searchForm.name"
-            clearable
-            maxlength="128"
-            placeholder="输入名称关键词"
-            class="name-filter"
-            @keyup.enter="searchDataPackages"
-          />
-        </el-form-item>
-        <el-form-item label="创建日期">
-          <el-date-picker
-            v-model="searchForm.createdRange"
-            type="daterange"
-            :default-time="createdDateDefaultTime"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            range-separator="至"
-            class="date-filter"
-          />
-        </el-form-item>
-        <el-form-item label="国家">
-          <el-select
-            v-model="searchForm.countryIso2s"
-            multiple
-            filterable
-            clearable
-            collapse-tags
-            collapse-tags-tooltip
-            :loading="countryLoading"
-            placeholder="全部国家"
-            class="country-filter"
-          >
-            <el-option
-              v-for="country in countries"
-              :key="country.value"
-              :label="dataPackageCountryLabel(country.countryIso2, countries)"
-              :value="country.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="primary"
-            :icon="useRenderIcon(Search)"
-            @click="searchDataPackages"
-          >
-            查询
-          </el-button>
-          <el-button
-            :icon="useRenderIcon(RefreshRight)"
-            @click="resetSearchForm"
-          >
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <DataPackageIntro />
+
+    <DataPackageSearchCard
+      v-model:search-form="searchForm"
+      :countries="countries"
+      :country-loading="countryLoading"
+      @reset="resetSearchForm"
+      @search="searchDataPackages"
+    />
 
     <el-alert
       v-if="errorMessage"
@@ -192,96 +169,270 @@ onMounted(() => {
     </el-alert>
 
     <PureTableBar
-      title="超链数据包"
+      class="management-table"
+      title="数据包管理"
       :columns="columns"
       @refresh="refreshDataPackages"
     >
+      <template #title>
+        <div class="management-title">
+          <strong>数据包管理</strong>
+          <el-tag size="small" effect="light" type="primary" round>
+            本页 {{ rows.length }} 个
+          </el-tag>
+          <el-tag size="small" effect="light" type="success" round>
+            本页号码 {{ currentPagePhoneCount.toLocaleString() }}
+          </el-tag>
+          <el-tag
+            v-if="currentPageEmptyCount > 0"
+            size="small"
+            effect="light"
+            type="warning"
+            round
+          >
+            空包 {{ currentPageEmptyCount }}
+          </el-tag>
+        </div>
+      </template>
       <template #buttons>
-        <el-button
-          v-auth="'tenant:hyperlink_data:create'"
-          type="primary"
-          :icon="useRenderIcon(Plus)"
-          @click="openCreateForm"
-        >
-          创建数据包
-        </el-button>
+        <div class="table-actions">
+          <el-button
+            v-auth="'tenant:hyperlink_data:create'"
+            type="primary"
+            :icon="useRenderIcon(Plus)"
+            @click="openCreateForm"
+          >
+            新建数据包
+          </el-button>
+          <el-dropdown
+            v-auth="'tenant:hyperlink_data:export'"
+            trigger="click"
+            @command="handleBatchExport"
+          >
+            <el-button
+              type="primary"
+              plain
+              :icon="useRenderIcon(Download)"
+              :disabled="selectedRows.length === 0"
+            >
+              批量导出号码<span v-if="selectedRows.length">
+                （已选 {{ selectedRows.length }}）
+              </span>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  v-for="option in dataPackageExportOptions"
+                  :key="option.value"
+                  :command="option.value"
+                >
+                  {{ option.label }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-dropdown
+            v-auth="'tenant:hyperlink_data:export'"
+            trigger="click"
+            @command="exportClickRecords"
+          >
+            <el-button
+              type="info"
+              plain
+              :icon="useRenderIcon(Cursor)"
+              :disabled="selectedRows.length === 0"
+            >
+              批量导出点击记录<span v-if="selectedRows.length">
+                （已选 {{ selectedRows.length }}）
+              </span>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="xlsx">导出 XLSX</el-dropdown-item>
+                <el-dropdown-item command="csv">导出 CSV</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-button
+            v-auth="'tenant:hyperlink_data:view'"
+            type="warning"
+            plain
+            :icon="useRenderIcon(Cursor)"
+            @click="openClickAnalysis"
+          >
+            超链点击分析
+          </el-button>
+          <el-button
+            v-auth="'tenant:hyperlink_data:view'"
+            type="primary"
+            plain
+            :icon="useRenderIcon(FileExcel)"
+            @click="exportCurrentPageCsv"
+          >
+            导出 CSV
+          </el-button>
+        </div>
       </template>
 
       <template #default="{ dynamicColumns }">
-        <el-table v-loading="loading" :data="rows" row-key="id" border>
+        <el-table
+          v-loading="loading"
+          :data="rows"
+          row-key="id"
+          border
+          size="small"
+          @selection-change="setSelectedRows"
+        >
+          <el-table-column type="selection" width="48" fixed="left" />
           <el-table-column
-            v-for="column in dynamicColumns"
-            :key="column.prop"
-            v-bind="column"
+            v-if="columnVisible(dynamicColumns, 'id')"
+            prop="id"
+            label="ID"
+            width="80"
+            fixed="left"
           >
             <template #default="{ row }">
-              <template v-if="column.prop === 'countries'">
-                <div
-                  v-if="asDataPackage(row).countries.length > 0"
-                  class="country-tags"
-                >
-                  <el-tag
-                    v-for="country in asDataPackage(row).countries"
-                    :key="country ?? 'UNKNOWN'"
-                    size="small"
-                    effect="plain"
-                  >
-                    {{ dataPackageCountryLabel(country, countries) }}
-                  </el-tag>
-                </div>
-                <span v-else>-</span>
-              </template>
-              <template v-else-if="column.prop === 'createdAt'">
-                {{ formatEpochMillis(asDataPackage(row).createdAt) }}
-              </template>
-              <template v-else>
-                {{ tableValue(asDataPackage(row), column.prop) }}
-              </template>
+              <span class="package-id">#{{ asDataPackage(row).id }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="columnVisible(dynamicColumns, 'dataPackage')"
+            label="数据包"
+            min-width="340"
+            fixed="left"
+          >
+            <template #default="{ row }">
+              <DataPackageIdentityCell
+                v-auth="'tenant:hyperlink_data:view'"
+                :row="asDataPackage(row)"
+                :countries="countries"
+                @visit="openVisitTrend(asDataPackage(row))"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="columnVisible(dynamicColumns, 'phoneUsage')"
+            label="号码使用"
+            min-width="280"
+          >
+            <template #default="{ row }">
+              <DataPackageUsageCell :row="asDataPackage(row)" />
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="columnVisible(dynamicColumns, 'deliveryFunnel')"
+            label="投递漏斗"
+            min-width="250"
+          >
+            <template #default="{ row }">
+              <DataPackageFunnelCell :row="asDataPackage(row)" />
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="columnVisible(dynamicColumns, 'createdAt')"
+            label="创建时间"
+            width="180"
+          >
+            <template #default="{ row }">
+              {{ formatEpochMillis(asDataPackage(row).createdAt) }}
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" fixed="right" width="330">
+          <el-table-column
+            label="操作"
+            fixed="right"
+            width="390"
+            align="center"
+          >
             <template #default="{ row }">
-              <el-button
-                v-auth="'tenant:hyperlink_data:view'"
-                link
-                type="primary"
-                @click="openPhoneDrawer(asDataPackage(row))"
+              <el-tooltip
+                :disabled="!dataPackageImportBlocked(asDataPackage(row))"
+                content="该数据包包含禁止上传号码的国家或地区"
+                placement="top"
               >
-                查看号码
-              </el-button>
-              <el-button
-                v-auth="'tenant:hyperlink_data:import'"
-                link
-                type="primary"
-                @click="openImport(asDataPackage(row), 'APPEND')"
+                <span>
+                  <el-button
+                    v-auth="'tenant:hyperlink_data:import'"
+                    size="small"
+                    type="success"
+                    plain
+                    :icon="useRenderIcon(Upload)"
+                    :disabled="dataPackageImportBlocked(asDataPackage(row))"
+                    @click="openImport(asDataPackage(row))"
+                  >
+                    导入
+                  </el-button>
+                </span>
+              </el-tooltip>
+              <el-dropdown
+                v-auth="'tenant:hyperlink_data:export'"
+                trigger="click"
+                @command="
+                  command => handleSingleExport(command, asDataPackage(row))
+                "
               >
-                追加导入
-              </el-button>
-              <el-button
-                v-auth="'tenant:hyperlink_data:import'"
-                link
-                type="warning"
-                @click="openImport(asDataPackage(row), 'OVERWRITE')"
-              >
-                覆盖导入
-              </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  plain
+                  :icon="useRenderIcon(Download)"
+                >
+                  导出
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-for="option in dataPackageExportOptions"
+                      :key="option.value"
+                      :command="option.value"
+                    >
+                      {{ option.label }}
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
               <el-button
                 v-auth="'tenant:hyperlink_data:edit'"
-                link
-                type="primary"
-                @click="openEditForm(asDataPackage(row))"
+                size="small"
+                type="warning"
+                plain
+                :icon="useRenderIcon(RefreshRight)"
+                :disabled="retryableFailureCount(asDataPackage(row)) === 0"
+                @click="resetFailed(asDataPackage(row))"
               >
-                编辑
+                重置失败
               </el-button>
-              <el-button
-                v-auth="'tenant:hyperlink_data:delete'"
-                link
-                type="danger"
-                @click="removeDataPackage(asDataPackage(row))"
+              <el-dropdown
+                trigger="click"
+                @command="command => handleMore(command, asDataPackage(row))"
               >
-                删除
-              </el-button>
+                <el-button size="small" :icon="useRenderIcon(MoreFilled)">
+                  更多
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-auth="'tenant:hyperlink_data:view'"
+                      command="view"
+                    >
+                      查看号码
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      v-auth="'tenant:hyperlink_data:edit'"
+                      command="rename"
+                    >
+                      重命名
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      v-auth="'tenant:hyperlink_data:delete'"
+                      command="delete"
+                      divided
+                    >
+                      删除数据包
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
           </el-table-column>
 
@@ -319,9 +470,6 @@ onMounted(() => {
       v-model:page="phonePage"
       v-model:page-size="phonePageSize"
       v-model:phone="phoneFilters.phone"
-      v-model:pool-status="phoneFilters.poolStatus"
-      v-model:country-iso2="phoneFilters.countryIso2"
-      :countries="countries"
       :data-package="phoneTarget"
       :error-message="phoneErrorMessage"
       :loading="phoneLoading"
@@ -331,6 +479,48 @@ onMounted(() => {
       @reset="resetPhoneFilters"
       @search="searchPhoneRows"
     />
+
+    <el-dialog
+      v-model="visitTrendVisible"
+      :title="`访问趋势 · ${visitTarget?.name ?? '-'}`"
+      width="760px"
+    >
+      <div v-if="visitTarget" class="trend-summary">
+        <el-statistic
+          title="发送成功"
+          :value="
+            visitTarget.metrics.sentCount + visitTarget.metrics.deliveredCount
+          "
+        />
+        <el-statistic
+          title="双钩"
+          :value="visitTarget.metrics.deliveredCount"
+        />
+        <el-statistic
+          title="点击 UV"
+          :value="visitTarget.metrics.clickUvCount"
+        />
+      </div>
+      <el-empty description="暂无按时间聚合的访问趋势数据" />
+      <el-alert
+        type="info"
+        :closable="false"
+        title="超链任务产生点击明细后，这里将显示访问趋势。"
+      />
+    </el-dialog>
+
+    <el-dialog
+      v-model="clickAnalysisVisible"
+      title="超链点击分析"
+      width="760px"
+    >
+      <el-empty description="暂无超链任务点击明细" />
+      <el-alert
+        type="info"
+        :closable="false"
+        title="当前数据包模块仅保存号码投递汇总；接入超链任务点击事实后可按时间、国家和设备分析。"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -339,30 +529,45 @@ onMounted(() => {
   padding: 16px;
 }
 
-.search-card,
 .page-alert {
   margin-bottom: 12px;
 }
 
-.search-card :deep(.el-card__body) {
-  padding-bottom: 2px;
-}
-
-.name-filter {
-  width: 220px;
-}
-
-.date-filter {
-  width: 300px;
-}
-
-.country-filter {
-  width: 260px;
-}
-
-.country-tags {
+.table-actions,
+.management-title,
+.trend-summary {
   display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.table-actions {
   flex-wrap: wrap;
-  gap: 4px;
+}
+
+.management-title strong {
+  margin-right: 2px;
+  font-size: 16px;
+}
+
+.management-table :deep(> .flex) {
+  flex-wrap: wrap;
+  gap: 10px;
+  height: auto;
+  min-height: 60px;
+}
+
+.package-id {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.data-package-page :deep(.el-table .cell) {
+  overflow: visible;
+}
+
+.trend-summary {
+  justify-content: space-around;
+  margin-bottom: 16px;
 }
 </style>

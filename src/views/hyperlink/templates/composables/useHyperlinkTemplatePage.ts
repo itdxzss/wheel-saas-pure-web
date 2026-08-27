@@ -24,12 +24,11 @@ import {
   type HyperlinkTemplateForm
 } from "../domain/template-form";
 
-export type HyperlinkTemplateDrawerMode = "create" | "edit" | "preview";
+export type HyperlinkTemplateDrawerMode = "create" | "edit";
 
 export interface HyperlinkTemplateSearchForm {
   name: string;
   messageType: "" | SupportedHyperlinkMessageType;
-  createdRange: string[];
 }
 
 const PAGE_SIZE = 20;
@@ -41,8 +40,7 @@ function isCancel(error: unknown): boolean {
 export function useHyperlinkTemplatePage() {
   const searchForm = ref<HyperlinkTemplateSearchForm>({
     name: "",
-    messageType: "",
-    createdRange: []
+    messageType: ""
   });
   const rows = ref<HyperlinkTemplateListItem[]>([]);
   const loading = ref(false);
@@ -65,18 +63,12 @@ export function useHyperlinkTemplatePage() {
   let imageSelectionRequestId = 0;
 
   const columns: TableColumnList = [
-    { label: "ID", prop: "id", width: 90 },
-    { label: "模板名称", prop: "name", minWidth: 180 },
-    { label: "消息类型", prop: "messageType", width: 120 },
-    { label: "标题", prop: "title", minWidth: 180 },
-    { label: "任务引用", prop: "taskRefCount", width: 100 },
-    { label: "版本", prop: "version", width: 90 },
+    { label: "模板名称 / 类型", prop: "name", minWidth: 260 },
     { label: "更新时间", prop: "updatedAt", width: 180 }
   ];
 
   const drawerTitle = computed(() => {
     if (drawerMode.value === "edit") return "编辑超链营销模板";
-    if (drawerMode.value === "preview") return "模板详情与预览";
     return "创建超链营销模板";
   });
 
@@ -132,14 +124,11 @@ export function useHyperlinkTemplatePage() {
     loading.value = true;
     errorMessage.value = "";
     try {
-      const [createdFromValue, createdToValue] = searchForm.value.createdRange;
       const result = await listHyperlinkTemplates({
         page: page.value,
-        pageSize: PAGE_SIZE,
+        pageSize: pageSize.value,
         name: searchForm.value.name.trim() || undefined,
-        messageType: searchForm.value.messageType || undefined,
-        createdFrom: createdFromValue ? Number(createdFromValue) : undefined,
-        createdTo: createdToValue ? Number(createdToValue) : undefined
+        messageType: searchForm.value.messageType || undefined
       });
       rows.value = result.list;
       page.value = result.page;
@@ -160,7 +149,7 @@ export function useHyperlinkTemplatePage() {
   }
 
   async function resetSearch(): Promise<void> {
-    searchForm.value = { name: "", messageType: "", createdRange: [] };
+    searchForm.value = { name: "", messageType: "" };
     await search();
   }
 
@@ -172,10 +161,7 @@ export function useHyperlinkTemplatePage() {
     drawerVisible.value = true;
   }
 
-  async function openDetail(
-    row: HyperlinkTemplateListItem,
-    mode: Exclude<HyperlinkTemplateDrawerMode, "create">
-  ): Promise<void> {
+  async function openDetail(row: HyperlinkTemplateListItem): Promise<void> {
     if (row.messageType === 2) {
       ElMessage.warning("一期暂不支持双图文");
       return;
@@ -183,7 +169,7 @@ export function useHyperlinkTemplatePage() {
     releaseImagePreview();
     form.value = createEmptyHyperlinkTemplateForm();
     editingId.value = row.id;
-    drawerMode.value = mode;
+    drawerMode.value = "edit";
     drawerVisible.value = true;
     detailLoading.value = true;
     const requestId = ++detailRequestId;
@@ -207,7 +193,6 @@ export function useHyperlinkTemplatePage() {
   }
 
   async function save(): Promise<void> {
-    if (drawerMode.value === "preview") return;
     const validationMessage = validateHyperlinkTemplateForm(form.value);
     if (validationMessage) {
       ElMessage.warning(validationMessage);

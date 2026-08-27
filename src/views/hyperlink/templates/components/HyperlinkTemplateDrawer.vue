@@ -27,14 +27,19 @@ const emit = defineEmits<{
 }>();
 
 const fileList = ref<UploadUserFile[]>([]);
-const isPreview = computed(() => props.mode === "preview");
 const imageRequired = computed(() => form.value.messageType === 1);
 const imageLabel = computed(() =>
-  form.value.messageType === 1 ? "链接预览图" : "正文主图 / 卡片头图"
+  form.value.messageType === 1
+    ? "链接预览图"
+    : form.value.messageType === 4
+      ? "卡片图片"
+      : "正文主图"
 );
-const contentMaxLength = computed(() =>
-  form.value.messageType === 1 ? 2000 : 200
-);
+const contentLabel = computed(() => {
+  if (form.value.messageType === 3) return "底部小字";
+  if (form.value.messageType === 4) return "副标题";
+  return "正文";
+});
 
 async function onImageChange(file: UploadFile): Promise<void> {
   if (!file.raw) return;
@@ -65,7 +70,7 @@ watch(visible, opened => {
 
       <el-form :model="form" label-position="top" class="template-form">
         <el-alert
-          title="一期支持单图文、普通按钮和卡片按钮；CTA 仅支持一个 URL 按钮。"
+          title="支持单图文、普通按钮和卡片按钮；CTA 仅支持 1 个 URL 按钮。"
           type="info"
           show-icon
           :closable="false"
@@ -78,7 +83,6 @@ watch(visible, opened => {
               v-model="form.name"
               maxlength="128"
               show-word-limit
-              :disabled="isPreview"
               placeholder="请输入模板名称"
             />
           </el-form-item>
@@ -86,7 +90,6 @@ watch(visible, opened => {
             <el-select
               v-model="form.messageType"
               class="full-width"
-              :disabled="isPreview"
               @change="onMessageTypeChange"
             >
               <el-option
@@ -97,15 +100,6 @@ watch(visible, opened => {
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="备注">
-            <el-input
-              v-model="form.remark"
-              maxlength="255"
-              show-word-limit
-              :disabled="isPreview"
-              placeholder="可选"
-            />
-          </el-form-item>
         </el-card>
 
         <el-card shadow="never">
@@ -115,22 +109,23 @@ watch(visible, opened => {
               v-model="form.title"
               maxlength="512"
               show-word-limit
-              :disabled="isPreview"
               placeholder="请输入消息标题"
             />
           </el-form-item>
-          <el-form-item label="正文" :required="form.messageType === 1">
+          <el-form-item
+            :label="contentLabel"
+            :required="form.messageType === 1"
+          >
             <el-input
               v-model="form.content"
               type="textarea"
               :rows="4"
-              :maxlength="contentMaxLength"
+              :maxlength="2000"
               show-word-limit
-              :disabled="isPreview"
               :placeholder="
                 form.messageType === 1
                   ? '请输入消息正文'
-                  : '可选，最多 200 个字符'
+                  : `请输入${contentLabel}`
               "
             />
           </el-form-item>
@@ -141,7 +136,6 @@ watch(visible, opened => {
                 v-model="form.linkDescription"
                 maxlength="512"
                 show-word-limit
-                :disabled="isPreview"
                 placeholder="请输入链接卡片描述"
               />
             </el-form-item>
@@ -149,7 +143,6 @@ watch(visible, opened => {
               <el-input
                 v-model="form.promotionLink"
                 maxlength="2048"
-                :disabled="isPreview"
                 placeholder="https://example.com/promo"
               />
             </el-form-item>
@@ -157,7 +150,6 @@ watch(visible, opened => {
 
           <el-form-item :label="imageLabel" :required="imageRequired">
             <el-upload
-              v-if="!isPreview"
               v-model:file-list="fileList"
               class="full-width"
               drag
@@ -181,21 +173,11 @@ watch(visible, opened => {
               />
               <div class="image-meta">
                 <span>{{ form.imageName }}</span>
-                <el-button
-                  v-if="!isPreview"
-                  link
-                  type="danger"
-                  @click="clearImage"
-                >
+                <el-button link type="danger" @click="clearImage">
                   移除图片
                 </el-button>
               </div>
             </el-card>
-            <el-empty
-              v-else-if="isPreview"
-              :image-size="72"
-              description="未配置图片"
-            />
           </el-form-item>
 
           <template v-if="form.messageType === 3 || form.messageType === 4">
@@ -205,7 +187,6 @@ watch(visible, opened => {
                 v-model="form.button.displayText"
                 maxlength="20"
                 show-word-limit
-                :disabled="isPreview"
                 placeholder="例如：立即查看"
               />
             </el-form-item>
@@ -213,32 +194,23 @@ watch(visible, opened => {
               <el-input
                 v-model="form.button.targetValue"
                 maxlength="2048"
-                :disabled="isPreview"
                 placeholder="https://example.com/promo"
               />
             </el-form-item>
             <el-form-item label="默认使用短链">
-              <el-switch
-                v-model="form.button.useShortLink"
-                :disabled="isPreview"
-              />
+              <el-switch v-model="form.button.useShortLink" />
               <span class="field-tip"
                 >仅保存模板意图，不在模板阶段生成短码。</span
               >
             </el-form-item>
           </template>
 
-          <el-form-item
-            v-if="form.messageType === 4"
-            label="卡片底部文字"
-            required
-          >
+          <el-form-item v-if="form.messageType === 4" label="卡片正文" required>
             <el-input
               v-model="form.cardText"
               maxlength="500"
               show-word-limit
-              :disabled="isPreview"
-              placeholder="请输入卡片底部文字"
+              placeholder="显示在卡片图片下方的正文"
             />
           </el-form-item>
         </el-card>
@@ -246,11 +218,8 @@ watch(visible, opened => {
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">{{
-        isPreview ? "关闭" : "取消"
-      }}</el-button>
+      <el-button @click="visible = false">取消</el-button>
       <el-button
-        v-if="!isPreview"
         type="primary"
         :loading="loading"
         :disabled="detailLoading"

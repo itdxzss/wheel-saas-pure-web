@@ -8,17 +8,14 @@ const source = readFileSync(
 );
 
 describe("data package phone drawer", () => {
-  it("shows contract phone fields and server-side filters", () => {
-    for (const label of [
-      "手机号",
-      "国家",
-      "池状态",
-      "导入批次",
-      "代次",
-      "导入时间"
-    ]) {
+  it("matches the competitor phone drawer fields and server pagination", () => {
+    for (const label of ["#", "手机号", "入库时间"]) {
       assert.match(source, new RegExp(label));
     }
+    assert.doesNotMatch(source, /label="国家"/);
+    assert.doesNotMatch(source, /label="池状态"/);
+    assert.doesNotMatch(source, /label="导入批次"/);
+    assert.doesNotMatch(source, /label="代次"/);
     assert.match(source, /v-model:current-page="currentPage"/);
     assert.match(source, /v-model:page-size="currentPageSize"/);
     assert.match(source, /:page-sizes="\[50, 100, 200\]"/);

@@ -5,14 +5,18 @@ import {
   resetArmadaMock,
   resetArmadaMockQueue
 } from "./__tests__/armada-test-double";
+import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   createDataPackage,
   deleteDataPackage,
+  exportDataPackagePhones,
+  exportDataPackagePhonesBatch,
   getDataPackage,
   importDataPackagePhones,
   listDataPackageCountries,
   listDataPackagePhones,
   listDataPackages,
+  resetDataPackageFailed,
   updateDataPackage
 } from "./hyperlink-data-package";
 
@@ -32,6 +36,8 @@ describe("hyperlink data package API", () => {
       name: "  菲律宾  ",
       createdFrom: 1787846400000,
       createdTo: 1787932799999,
+      minUvPercent: 2.5,
+      maxUvPercent: 50,
       countryIso2s: ["ph", " UNKNOWN ", "PH", "id"],
       forTask: false
     });
@@ -47,6 +53,8 @@ describe("hyperlink data package API", () => {
             name: "菲律宾",
             createdFrom: 1787846400000,
             createdTo: 1787932799999,
+            minUvPercent: 2.5,
+            maxUvPercent: 50,
             countryIso2s: "PH,UNKNOWN,ID",
             forTask: false
           }
@@ -155,6 +163,52 @@ describe("hyperlink data package API", () => {
         method: "delete",
         url: "/api/data-packages/11",
         opts: undefined
+      }
+    ]);
+  });
+
+  it("resets failures and exports single or selected packages as raw TXT", async () => {
+    resetArmadaMock(2);
+    await resetDataPackageFailed(11);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/data-packages/11/reset-failed",
+        opts: undefined
+      }
+    ]);
+
+    const blob = new Blob(["639123456789\n"], { type: "text/plain" });
+    resetHttpMock(blob, {
+      "content-disposition":
+        "attachment; filename*=UTF-8''philippines_success.txt",
+      "x-export-count": "1"
+    });
+    const single = await exportDataPackagePhones(11, "success");
+    const batch = await exportDataPackagePhonesBatch([11, 12], "unused");
+
+    assert.equal(single.filename, "philippines_success.txt");
+    assert.equal(single.exportedCount, 1);
+    assert.equal(single.blob, blob);
+    assert.equal(batch.filename, "philippines_success.txt");
+    assert.deepEqual(httpCalls(), [
+      {
+        method: "get",
+        url: "/api/data-packages/11/export",
+        opts: {
+          params: { usageStatus: "success" },
+          responseType: "blob"
+        },
+        configKeys: ["beforeResponseCallback"]
+      },
+      {
+        method: "post",
+        url: "/api/data-packages/export",
+        opts: {
+          data: { ids: [11, 12], usageStatus: "unused" },
+          responseType: "blob"
+        },
+        configKeys: ["beforeResponseCallback"]
       }
     ]);
   });

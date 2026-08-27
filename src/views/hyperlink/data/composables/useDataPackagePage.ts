@@ -3,10 +3,13 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import {
   createDataPackage,
   deleteDataPackage,
+  exportDataPackagePhones,
+  exportDataPackagePhonesBatch,
   importDataPackagePhones,
   listDataPackageCountries,
   listDataPackagePhones,
   listDataPackages,
+  resetDataPackageFailed,
   updateDataPackage,
   type DataPackageCountryOption,
   type DataPackageCreateInput,
@@ -15,54 +18,55 @@ import {
   type DataPackageImportResult,
   type DataPackageListItem,
   type DataPackagePhoneItem,
-  type DataPackagePoolStatus
+  type DataPackageUsageStatus
 } from "@/api/hyperlink-data-package";
 import { apiErrorMessage } from "@/utils/api-error";
+import { downloadBlobFile } from "@/utils/download";
 
 export interface DataPackageSearchForm {
   name: string;
   createdRange: [Date, Date] | null;
+  minUvPercent: number | undefined;
+  maxUvPercent: number | undefined;
   countryIso2s: string[];
 }
 
 export interface DataPackagePhoneFilters {
   phone: string;
-  poolStatus: DataPackagePoolStatus | "";
-  countryIso2: string;
 }
 
 export interface DataPackageTableColumn {
   label: string;
   prop: string;
+  hide?: boolean;
   minWidth?: number;
   width?: number;
   fixed?: "left" | "right";
 }
 
-export const dataPackagePoolStatusOptions: Array<{
+export interface DataPackageExportOption {
   label: string;
-  value: DataPackagePoolStatus;
-}> = [
-  { label: "未使用", value: "UNUSED" },
-  { label: "已领取", value: "CLAIMED" },
-  { label: "发送成功（单钩）", value: "SENT" },
-  { label: "已送达", value: "DELIVERED" },
-  { label: "可重试失败", value: "RETRYABLE_FAILED" },
-  { label: "未注册", value: "UNREGISTERED" }
+  value: DataPackageUsageStatus;
+}
+
+export const dataPackageExportOptions: DataPackageExportOption[] = [
+  { label: "全部号码", value: "all" },
+  { label: "未使用号码", value: "unused" },
+  { label: "发送成功号码", value: "success" },
+  { label: "单钩号码", value: "single" },
+  { label: "双钩号码", value: "double" },
+  { label: "失败号码", value: "failed" },
+  { label: "404 号码", value: "fail_404" }
 ];
+
+const restrictedImportIso2s = new Set(["MY", "SG", "CN", "HK", "MO", "TW"]);
 
 export function createDataPackageTableColumns(): DataPackageTableColumn[] {
   return [
-    { label: "数据包名称", prop: "name", minWidth: 180, fixed: "left" },
-    { label: "国家", prop: "countries", minWidth: 150 },
-    { label: "总数", prop: "metrics.totalCount", width: 105 },
-    { label: "未使用", prop: "metrics.unusedCount", width: 105 },
-    { label: "已使用", prop: "metrics.usedCount", width: 105 },
-    { label: "发送成功", prop: "metrics.sentCount", width: 105 },
-    { label: "已送达", prop: "metrics.deliveredCount", width: 105 },
-    { label: "失败", prop: "metrics.failedCount", width: 95 },
-    { label: "未注册", prop: "metrics.unregisteredCount", width: 95 },
-    { label: "点击 UV", prop: "metrics.clickUvCount", width: 100 },
+    { label: "ID", prop: "id", width: 80, fixed: "left" },
+    { label: "数据包", prop: "dataPackage", minWidth: 340, fixed: "left" },
+    { label: "号码使用", prop: "phoneUsage", minWidth: 280 },
+    { label: "投递漏斗", prop: "deliveryFunnel", minWidth: 250 },
     { label: "创建时间", prop: "createdAt", width: 180 }
   ];
 }
@@ -84,30 +88,33 @@ export function dataPackageCountryLabel(
   return countryIso2 ?? "未识别";
 }
 
-export function dataPackagePoolStatusLabel(
-  status: DataPackagePoolStatus
-): string {
-  return (
-    dataPackagePoolStatusOptions.find(option => option.value === status)
-      ?.label ?? status
+export function dataPackageCountryFlag(countryIso2: string | null): string {
+  const normalized = countryIso2?.trim().toUpperCase();
+  if (!normalized || !/^[A-Z]{2}$/.test(normalized)) return "🌐";
+  return String.fromCodePoint(
+    ...[...normalized].map(letter => 127397 + letter.charCodeAt(0))
   );
 }
 
-export function dataPackagePoolStatusTagType(
-  status: DataPackagePoolStatus
-): "success" | "warning" | "danger" | "info" | "primary" {
-  if (status === "UNUSED") return "success";
-  if (status === "CLAIMED" || status === "SENT") return "warning";
-  if (status === "DELIVERED") return "primary";
-  if (status === "RETRYABLE_FAILED" || status === "UNREGISTERED") {
-    return "danger";
-  }
-  return "info";
+export function retryableFailureCount(row: DataPackageListItem): number {
+  return Math.max(0, row.metrics.failedCount - row.metrics.unregisteredCount);
+}
+
+export function dataPackageImportBlocked(row: DataPackageListItem): boolean {
+  return row.countries.some(
+    countryIso2 => countryIso2 && restrictedImportIso2s.has(countryIso2)
+  );
+}
+
+export function percentage(numerator: number, denominator: number): string {
+  if (denominator <= 0) return "0.00%";
+  return `${((numerator * 100) / denominator).toFixed(2)}%`;
 }
 
 export function useDataPackagePage() {
   const columns = createDataPackageTableColumns();
   const rows = ref<DataPackageListItem[]>([]);
+  const selectedRows = ref<DataPackageListItem[]>([]);
   const countries = ref<DataPackageCountryOption[]>([]);
   const loading = ref(false);
   const countryLoading = ref(false);
@@ -119,6 +126,8 @@ export function useDataPackagePage() {
   const searchForm = ref<DataPackageSearchForm>({
     name: "",
     createdRange: null,
+    minUvPercent: undefined,
+    maxUvPercent: undefined,
     countryIso2s: []
   });
 
@@ -140,11 +149,11 @@ export function useDataPackagePage() {
   const phonePage = ref(1);
   const phonePageSize = ref(50);
   const phoneTotal = ref(0);
-  const phoneFilters = ref<DataPackagePhoneFilters>({
-    phone: "",
-    poolStatus: "",
-    countryIso2: ""
-  });
+  const phoneFilters = ref<DataPackagePhoneFilters>({ phone: "" });
+
+  const visitTrendVisible = ref(false);
+  const visitTarget = ref<DataPackageListItem | null>(null);
+  const clickAnalysisVisible = ref(false);
 
   async function refreshDataPackages(): Promise<void> {
     loading.value = true;
@@ -156,16 +165,20 @@ export function useDataPackagePage() {
         name: searchForm.value.name,
         createdFrom: range?.[0].getTime(),
         createdTo: range?.[1].getTime(),
+        minUvPercent: searchForm.value.minUvPercent,
+        maxUvPercent: searchForm.value.maxUvPercent,
         countryIso2s: searchForm.value.countryIso2s,
         forTask: false
       });
       rows.value = result.list;
+      selectedRows.value = [];
       page.value = result.page;
       pageSize.value = result.pageSize;
       total.value = result.total;
       errorMessage.value = "";
     } catch (error) {
       rows.value = [];
+      selectedRows.value = [];
       total.value = 0;
       errorMessage.value = apiErrorMessage(error, "数据包列表加载失败");
       ElMessage.error(errorMessage.value);
@@ -196,14 +209,33 @@ export function useDataPackagePage() {
   }
 
   async function searchDataPackages(): Promise<void> {
+    const { minUvPercent, maxUvPercent } = searchForm.value;
+    if (
+      minUvPercent !== undefined &&
+      maxUvPercent !== undefined &&
+      minUvPercent > maxUvPercent
+    ) {
+      ElMessage.warning("UV 占比最小值不能大于最大值");
+      return;
+    }
     page.value = 1;
     await refreshDataPackages();
   }
 
   async function resetSearchForm(): Promise<void> {
-    searchForm.value = { name: "", createdRange: null, countryIso2s: [] };
+    searchForm.value = {
+      name: "",
+      createdRange: null,
+      minUvPercent: undefined,
+      maxUvPercent: undefined,
+      countryIso2s: []
+    };
     page.value = 1;
     await refreshDataPackages();
+  }
+
+  function setSelectedRows(selection: DataPackageListItem[]): void {
+    selectedRows.value = selection;
   }
 
   function openCreateForm(): void {
@@ -239,8 +271,12 @@ export function useDataPackagePage() {
 
   function openImport(
     row: DataPackageListItem,
-    mode: DataPackageImportMode
+    mode: DataPackageImportMode = "APPEND"
   ): void {
+    if (dataPackageImportBlocked(row)) {
+      ElMessage.warning("该数据包主要国家禁止上传（导入）号码");
+      return;
+    }
     importTarget.value = row;
     importMode.value = mode;
     importResult.value = null;
@@ -271,9 +307,7 @@ export function useDataPackagePage() {
       const result = await listDataPackagePhones(phoneTarget.value.id, {
         page: phonePage.value,
         pageSize: phonePageSize.value,
-        phone: phoneFilters.value.phone,
-        poolStatus: phoneFilters.value.poolStatus || undefined,
-        countryIso2: phoneFilters.value.countryIso2
+        phone: phoneFilters.value.phone
       });
       phoneRows.value = result.list;
       phonePage.value = result.page;
@@ -294,7 +328,7 @@ export function useDataPackagePage() {
     phoneTarget.value = row;
     phonePage.value = 1;
     phonePageSize.value = 50;
-    phoneFilters.value = { phone: "", poolStatus: "", countryIso2: "" };
+    phoneFilters.value = { phone: "" };
     phoneDrawerVisible.value = true;
     await refreshPhoneRows();
   }
@@ -310,9 +344,120 @@ export function useDataPackagePage() {
   }
 
   async function resetPhoneFilters(): Promise<void> {
-    phoneFilters.value = { phone: "", poolStatus: "", countryIso2: "" };
+    phoneFilters.value = { phone: "" };
     phonePage.value = 1;
     await refreshPhoneRows();
+  }
+
+  async function exportOne(
+    row: DataPackageListItem,
+    usageStatus: DataPackageUsageStatus
+  ): Promise<void> {
+    try {
+      const result = await exportDataPackagePhones(row.id, usageStatus);
+      downloadBlobFile(result.filename, result.blob);
+      ElMessage.success(`已导出 ${result.exportedCount} 个号码`);
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "号码导出失败"));
+    }
+  }
+
+  async function exportSelected(
+    usageStatus: DataPackageUsageStatus
+  ): Promise<void> {
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning("请先选择要导出的数据包");
+      return;
+    }
+    try {
+      const result = await exportDataPackagePhonesBatch(
+        selectedRows.value.map(row => row.id),
+        usageStatus
+      );
+      downloadBlobFile(result.filename, result.blob);
+      ElMessage.success(`已导出 ${result.exportedCount} 个号码`);
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "批量导出失败"));
+    }
+  }
+
+  async function resetFailed(row: DataPackageListItem): Promise<void> {
+    const retryable = retryableFailureCount(row);
+    if (retryable <= 0) {
+      ElMessage.info("当前数据包没有可重置的失败号码");
+      return;
+    }
+    try {
+      await ElMessageBox.confirm(
+        `确认将“${row.name}”中的 ${retryable} 个可重试失败号码恢复为未使用吗？`,
+        "重置失败号码",
+        { type: "warning" }
+      );
+      const resetCount = await resetDataPackageFailed(row.id);
+      ElMessage.success(`已重置 ${resetCount} 个失败号码`);
+      await refreshDataPackages();
+    } catch (error) {
+      if (error === "cancel" || error === "close") return;
+      ElMessage.error(apiErrorMessage(error, "失败号码重置失败"));
+    }
+  }
+
+  function openVisitTrend(row: DataPackageListItem): void {
+    visitTarget.value = row;
+    visitTrendVisible.value = true;
+  }
+
+  function openClickAnalysis(): void {
+    clickAnalysisVisible.value = true;
+  }
+
+  function exportClickRecords(format: "xlsx" | "csv"): void {
+    const label = format.toUpperCase();
+    ElMessage.info(
+      `当前环境尚未接入超链任务点击明细，暂无可导出的 ${label} 点击记录`
+    );
+  }
+
+  function exportCurrentPageCsv(): void {
+    const values = rows.value.map(row => [
+      row.id,
+      row.name,
+      row.primaryCountryIso2 ?? "UNKNOWN",
+      row.metrics.totalCount,
+      row.metrics.unusedCount,
+      row.metrics.usedCount,
+      row.metrics.sentCount + row.metrics.deliveredCount,
+      row.metrics.deliveredCount,
+      row.metrics.clickUvCount,
+      row.metrics.failedCount,
+      row.metrics.unregisteredCount,
+      new Date(row.createdAt).toISOString()
+    ]);
+    const csvRows = [
+      [
+        "ID",
+        "数据包",
+        "主要国家",
+        "总数",
+        "未使用",
+        "已使用",
+        "发送成功",
+        "双钩",
+        "点击UV",
+        "发送失败",
+        "未开通WS",
+        "创建时间"
+      ],
+      ...values
+    ];
+    const csv = csvRows
+      .map(row => row.map(value => csvCell(String(value))).join(","))
+      .join("\r\n");
+    downloadBlobFile(
+      `超链数据包_第${page.value}页.csv`,
+      new Blob(["\uFEFF", csv], { type: "text/csv;charset=UTF-8" })
+    );
+    ElMessage.success(`已导出本页 ${values.length} 个数据包`);
   }
 
   async function removeDataPackage(row: DataPackageListItem): Promise<void> {
@@ -332,6 +477,7 @@ export function useDataPackagePage() {
   }
 
   return {
+    clickAnalysisVisible,
     columns,
     countries,
     countryErrorMessage,
@@ -359,21 +505,36 @@ export function useDataPackagePage() {
     rows,
     saving,
     searchForm,
+    selectedRows,
     total,
+    visitTarget,
+    visitTrendVisible,
+    exportClickRecords,
+    exportCurrentPageCsv,
+    exportOne,
+    exportSelected,
     initialize,
+    openClickAnalysis,
     openCreateForm,
     openEditForm,
     openImport,
     openPhoneDrawer,
+    openVisitTrend,
     refreshCountryOptions,
     refreshDataPackages,
     refreshPhoneRows,
     removeDataPackage,
+    resetFailed,
     resetPhoneFilters,
     resetSearchForm,
     saveMetadata,
     searchDataPackages,
     searchPhoneRows,
+    setSelectedRows,
     submitImport
   };
+}
+
+function csvCell(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
 }
