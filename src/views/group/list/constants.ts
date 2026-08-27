@@ -10,8 +10,7 @@ export const groupStatusOptions = [
 export const groupTypeOptions = [
   { label: "全部群组", value: "" },
   { label: "历史群", value: "HISTORICAL" },
-  { label: "上控后群", value: "POST_CONTROL" },
-  { label: "同时属于两类", value: "BOTH" }
+  { label: "上控后群", value: "POST_CONTROL" }
 ];
 
 export const availableAdminOptions = [
