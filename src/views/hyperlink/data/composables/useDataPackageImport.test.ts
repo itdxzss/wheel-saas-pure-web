@@ -7,16 +7,25 @@ import {
 } from "./useDataPackageImport";
 
 describe("data package TXT inspection", () => {
-  it("allows UTF-8 BOM and counts only non-empty rows", async () => {
+  it("parses, deduplicates and classifies forbidden-country phones", async () => {
     const file = new File(
-      ["\uFEFF639123456789\n\n  628123456789  \r\n"],
+      [
+        "\uFEFF66812345678\n\n 66812345678 \n+66812345678\n60123456789\n65987654321\n"
+      ],
       "phones.txt",
       { type: "text/plain" }
     );
 
     assert.deepEqual(await inspectDataPackageTxt(file), {
       filename: "phones.txt",
-      nonEmptyRowCount: 2
+      nonEmptyRowCount: 5,
+      validPhoneCount: 3,
+      invalidRowCount: 1,
+      duplicatedRowCount: 1,
+      forbiddenCountries: [
+        { count: 1, label: "马来西亚", prefix: "60" },
+        { count: 1, label: "新加坡", prefix: "65" }
+      ]
     });
   });
 
@@ -35,8 +44,17 @@ describe("data package TXT inspection", () => {
     ).join("\n");
     await assert.rejects(
       inspectDataPackageTxt(new File([rows], "phones.txt")),
-      /单次最多导入 5000 条/
+      /单次最多导入 100,000 条/
     );
+  });
+
+  it("accepts exactly one hundred thousand non-empty rows", async () => {
+    const rows = "66812345678\n".repeat(DATA_PACKAGE_IMPORT_MAX_ROWS);
+
+    const result = await inspectDataPackageTxt(new File([rows], "phones.txt"));
+
+    assert.equal(DATA_PACKAGE_IMPORT_MAX_ROWS, 100_000);
+    assert.equal(result.nonEmptyRowCount, 100_000);
   });
 
   it("keeps the two fixed import mode labels", () => {
