@@ -5,6 +5,7 @@ import {
   deleteDataPackage,
   exportDataPackagePhones,
   exportDataPackagePhonesBatch,
+  exportDataPackageClickRecords,
   importDataPackagePhones,
   listDataPackageCountries,
   listDataPackagePhones,
@@ -16,6 +17,7 @@ import {
   type DataPackageImportInput,
   type DataPackageImportMode,
   type DataPackageImportResult,
+  type DataPackageClickExportFormat,
   type DataPackageListItem,
   type DataPackagePhoneItem,
   type DataPackageUsageStatus
@@ -411,11 +413,25 @@ export function useDataPackagePage() {
     clickAnalysisVisible.value = true;
   }
 
-  function exportClickRecords(format: "xlsx" | "csv"): void {
-    const label = format.toUpperCase();
-    ElMessage.info(
-      `当前环境尚未接入超链任务点击明细，暂无可导出的 ${label} 点击记录`
-    );
+  async function exportClickRecords(
+    format: DataPackageClickExportFormat
+  ): Promise<void> {
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning("请先选择要导出点击记录的数据包");
+      return;
+    }
+    try {
+      const result = await exportDataPackageClickRecords(
+        selectedRows.value.map(row => row.id),
+        format
+      );
+      downloadBlobFile(result.filename, result.blob);
+      ElMessage.success(
+        `已批量导出 ${selectedRows.value.length} 个数据包的点击记录（${format.toUpperCase()}）`
+      );
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "点击记录导出失败"));
+    }
   }
 
   function exportCurrentPageCsv(): void {

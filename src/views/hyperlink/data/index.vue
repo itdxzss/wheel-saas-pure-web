@@ -15,6 +15,7 @@ import RefreshRight from "~icons/ep/refresh-right";
 import MoreFilled from "~icons/ep/more-filled";
 import FileExcel from "~icons/ri/file-excel-2-line";
 import Cursor from "~icons/ri/cursor-line";
+import ClickAnalysisDrawer from "./components/ClickAnalysisDrawer.vue";
 import DataPackageFormDialog from "./components/DataPackageFormDialog.vue";
 import DataPackageFunnelCell from "./components/DataPackageFunnelCell.vue";
 import DataPackageIdentityCell from "./components/DataPackageIdentityCell.vue";
@@ -248,8 +249,12 @@ onMounted(() => {
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="xlsx">导出 XLSX</el-dropdown-item>
-                <el-dropdown-item command="csv">导出 CSV</el-dropdown-item>
+                <el-dropdown-item command="txt">
+                  TXT（仅收件人手机号）
+                </el-dropdown-item>
+                <el-dropdown-item command="csv">
+                  CSV（含数据包名称等字段）
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -509,18 +514,10 @@ onMounted(() => {
       />
     </el-dialog>
 
-    <el-dialog
+    <ClickAnalysisDrawer
       v-model="clickAnalysisVisible"
-      title="超链点击分析"
-      width="760px"
-    >
-      <el-empty description="暂无超链任务点击明细" />
-      <el-alert
-        type="info"
-        :closable="false"
-        title="当前数据包模块仅保存号码投递汇总；接入超链任务点击事实后可按时间、国家和设备分析。"
-      />
-    </el-dialog>
+      :countries="countries"
+    />
   </div>
 </template>
 

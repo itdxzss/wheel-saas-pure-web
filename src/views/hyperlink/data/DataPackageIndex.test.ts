@@ -23,6 +23,10 @@ const funnelCell = readFileSync(
   new URL("./components/DataPackageFunnelCell.vue", import.meta.url),
   "utf8"
 );
+const clickAnalysisDrawer = readFileSync(
+  new URL("./components/ClickAnalysisDrawer.vue", import.meta.url),
+  "utf8"
+);
 const composable = readFileSync(
   new URL("./composables/useDataPackagePage.ts", import.meta.url),
   "utf8"
@@ -95,5 +99,37 @@ describe("hyperlink data package index", () => {
   it("does not introduce production mocks or direct request clients", () => {
     assert.doesNotMatch(source, /\bmock\b/i);
     assert.doesNotMatch(source, /axios|armadaRequest|@\/utils\/http/);
+  });
+
+  it("matches the competitor click export menu and detailed right drawer", () => {
+    assert.match(source, /TXT（仅收件人手机号）/);
+    assert.match(source, /CSV（含数据包名称等字段）/);
+    assert.doesNotMatch(source, /导出 XLSX/);
+    assert.match(source, /ClickAnalysisDrawer/);
+    assert.doesNotMatch(source, /<el-dialog[\s\S]*title="超链点击分析"/);
+
+    for (const label of [
+      "按号码的点击表现挑出号码并导出",
+      "一次最多看 90 天",
+      "今天",
+      "昨天",
+      "近 7 天",
+      "受众国家",
+      "更多国家",
+      "按国家分组",
+      "从来不点的号码",
+      "点击率高的号码",
+      "收到几次都没点",
+      "点击比例最低多少",
+      "恢复默认",
+      "成功发送去重号码",
+      "导出号码"
+    ]) {
+      assert.match(clickAnalysisDrawer, new RegExp(label));
+    }
+    assert.match(clickAnalysisDrawer, /<el-drawer/);
+    assert.match(clickAnalysisDrawer, /size="880px"/);
+    assert.match(clickAnalysisDrawer, /defaultThresholds/);
+    assert.match(clickAnalysisDrawer, /5, 10, 15, 20/);
   });
 });

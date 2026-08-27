@@ -62,6 +62,15 @@ describe("normal-link create prototype layout", () => {
     assert.match(planSource, /待建群/);
   });
 
+  it("shows executable online counts for every execution account group", () => {
+    assert.match(settingsSource, /可执行在线/);
+    assert.equal(
+      settingsSource.match(/:label="accountGroupOptionLabel\(group\)"/g)
+        ?.length,
+      4
+    );
+  });
+
   it("groups the approved normal-link fields like the prototype", () => {
     for (const heading of [
       "模式选择",

@@ -11,7 +11,10 @@ import {
   deleteDataPackage,
   exportDataPackagePhones,
   exportDataPackagePhonesBatch,
+  exportHyperlinkClickAnalysis,
+  exportDataPackageClickRecords,
   getDataPackage,
+  getHyperlinkClickAnalysis,
   importDataPackagePhones,
   listDataPackageCountries,
   listDataPackagePhones,
@@ -211,5 +214,135 @@ describe("hyperlink data package API", () => {
         configKeys: ["beforeResponseCallback"]
       }
     ]);
+  });
+
+  it("uses the competitor click-record TXT/CSV export contract", async () => {
+    const blob = new Blob([], { type: "text/plain" });
+    resetHttpMock(blob, {
+      "content-disposition":
+        "attachment; filename*=UTF-8''data_package_clicks.txt",
+      "x-export-count": "0"
+    });
+
+    await exportDataPackageClickRecords([11, 12], "txt");
+    await exportDataPackageClickRecords([11, 12], "csv");
+
+    assert.deepEqual(httpCalls(), [
+      {
+        method: "post",
+        url: "/api/data-packages/clicks/export",
+        opts: {
+          data: { ids: [11, 12], format: "txt" },
+          responseType: "blob"
+        },
+        configKeys: ["beforeResponseCallback"]
+      },
+      {
+        method: "post",
+        url: "/api/data-packages/clicks/export",
+        opts: {
+          data: { ids: [11, 12], format: "csv" },
+          responseType: "blob"
+        },
+        configKeys: ["beforeResponseCallback"]
+      }
+    ]);
+  });
+
+  it("uses both click-analysis modes and per-threshold TXT export endpoints", async () => {
+    const query = {
+      dateFrom: 1787270400000,
+      dateTo: 1787875199999,
+      thresholds: [5, 10, 20],
+      dimension: "recipient_country" as const,
+      countryIso2: "ph"
+    };
+    resetArmadaMock({
+      mode: "never-click",
+      totalPhones: 0,
+      buckets: [],
+      countries: [],
+      factSourceReady: false
+    });
+
+    await getHyperlinkClickAnalysis("never-click", query);
+    await getHyperlinkClickAnalysis("uv-ratio", {
+      ...query,
+      dimension: undefined
+    });
+
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "get",
+        url: "/api/hyperlink-tasks/click-analysis/never-click",
+        opts: {
+          params: {
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo,
+            thresholds: "5,10,20",
+            dimension: "recipient_country",
+            countryIso2: "PH"
+          }
+        }
+      },
+      {
+        method: "get",
+        url: "/api/hyperlink-tasks/click-analysis/uv-ratio",
+        opts: {
+          params: {
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo,
+            thresholds: "5,10,20",
+            dimension: undefined,
+            countryIso2: "PH"
+          }
+        }
+      }
+    ]);
+
+    const blob = new Blob([], { type: "text/plain" });
+    resetHttpMock(blob, { "x-export-count": "0" });
+    await exportHyperlinkClickAnalysis("never-click", {
+      ...query,
+      threshold: 10
+    });
+    await exportHyperlinkClickAnalysis("uv-ratio", {
+      ...query,
+      threshold: 20,
+      countryIso2: undefined
+    });
+    assert.deepEqual(
+      httpCalls().map(call => [call.method, call.url, call.opts]),
+      [
+        [
+          "post",
+          "/api/hyperlink-tasks/click-analysis/never-click/export",
+          {
+            data: {
+              dateFrom: query.dateFrom,
+              dateTo: query.dateTo,
+              threshold: 10,
+              countryIso2: "PH",
+              format: "txt"
+            },
+            responseType: "blob"
+          }
+        ],
+        [
+          "post",
+          "/api/hyperlink-tasks/click-analysis/uv-ratio/export",
+          {
+            data: {
+              dateFrom: query.dateFrom,
+              dateTo: query.dateTo,
+              threshold: 20,
+              countryIso2: undefined,
+              format: "txt"
+            },
+            responseType: "blob"
+          }
+        ]
+      ]
+    );
   });
 });

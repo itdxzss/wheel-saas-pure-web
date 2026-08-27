@@ -2,6 +2,9 @@ import { armadaRequest } from "@/api/armada";
 import { http } from "@/utils/http";
 
 export type DataPackageImportMode = "APPEND" | "OVERWRITE";
+export type DataPackageClickExportFormat = "txt" | "csv";
+export type HyperlinkClickAnalysisMode = "never-click" | "uv-ratio";
+export type HyperlinkClickAnalysisDimension = "recipient_country";
 export type DataPackageUsageStatus =
   | "all"
   | "unused"
@@ -97,6 +100,41 @@ export interface DataPackageExportResult {
   blob: Blob;
   filename: string;
   exportedCount: number;
+}
+
+export interface HyperlinkClickAnalysisBucket {
+  threshold: number;
+  count: number;
+  percent: number;
+}
+
+export interface HyperlinkClickAnalysisCountry {
+  countryIso2: string;
+  totalPhones: number;
+  buckets: HyperlinkClickAnalysisBucket[];
+}
+
+export interface HyperlinkClickAnalysisResult {
+  mode: HyperlinkClickAnalysisMode;
+  totalPhones: number;
+  buckets: HyperlinkClickAnalysisBucket[];
+  countries: HyperlinkClickAnalysisCountry[];
+  factSourceReady: boolean;
+}
+
+export interface HyperlinkClickAnalysisQuery {
+  dateFrom: number;
+  dateTo: number;
+  thresholds: number[];
+  dimension?: HyperlinkClickAnalysisDimension;
+  countryIso2?: string;
+}
+
+export interface HyperlinkClickAnalysisExportInput {
+  dateFrom: number;
+  dateTo: number;
+  threshold: number;
+  countryIso2?: string;
 }
 
 export interface DataPackagePhoneQuery {
@@ -265,6 +303,57 @@ export function exportDataPackagePhonesBatch(
     "/api/data-packages/export",
     { data: { ids, usageStatus } },
     `data_packages_${usageStatus}.txt`
+  );
+}
+
+export function exportDataPackageClickRecords(
+  ids: number[],
+  format: DataPackageClickExportFormat
+): Promise<DataPackageExportResult> {
+  return requestDataPackageExport(
+    "post",
+    "/api/data-packages/clicks/export",
+    { data: { ids, format } },
+    `data_package_click_records.${format}`
+  );
+}
+
+export function getHyperlinkClickAnalysis(
+  mode: HyperlinkClickAnalysisMode,
+  query: HyperlinkClickAnalysisQuery
+): Promise<HyperlinkClickAnalysisResult> {
+  return armadaRequest<HyperlinkClickAnalysisResult>(
+    "get",
+    `/api/hyperlink-tasks/click-analysis/${mode}`,
+    {
+      params: {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        thresholds: query.thresholds.join(","),
+        dimension: query.dimension,
+        countryIso2: optionalTrimmed(query.countryIso2)?.toUpperCase()
+      }
+    }
+  );
+}
+
+export function exportHyperlinkClickAnalysis(
+  mode: HyperlinkClickAnalysisMode,
+  input: HyperlinkClickAnalysisExportInput
+): Promise<DataPackageExportResult> {
+  return requestDataPackageExport(
+    "post",
+    `/api/hyperlink-tasks/click-analysis/${mode}/export`,
+    {
+      data: {
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        threshold: input.threshold,
+        countryIso2: optionalTrimmed(input.countryIso2)?.toUpperCase(),
+        format: "txt"
+      }
+    },
+    `hyperlink_click_analysis_${mode}_${input.threshold}.txt`
   );
 }
 

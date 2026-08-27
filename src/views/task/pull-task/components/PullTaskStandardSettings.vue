@@ -28,6 +28,12 @@ function nonNegativeCount(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+function accountGroupOptionLabel(group: AccountGroupApiRow): string {
+  const executableOnline =
+    group.executableOnlineAccounts ?? group.onlineAccounts;
+  return `${group.name}（可执行在线 ${executableOnline}）`;
+}
+
 const stationDemand = computed(() => {
   const pullStationCount = nonNegativeCount(form.value.stationCountPerCall);
   const initialStationCount =
@@ -142,7 +148,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-option
                   v-for="group in accountGroups"
                   :key="group.id"
-                  :label="`${group.name}（可执行在线 ${group.executableOnlineAccounts ?? group.onlineAccounts}）`"
+                  :label="accountGroupOptionLabel(group)"
                   :value="group.id"
                 />
               </el-select>
@@ -297,7 +303,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-option
                   v-for="group in accountGroups"
                   :key="group.id"
-                  :label="group.name"
+                  :label="accountGroupOptionLabel(group)"
                   :value="group.id"
                 />
               </el-select>
@@ -312,7 +318,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-option
                   v-for="group in accountGroups"
                   :key="group.id"
-                  :label="group.name"
+                  :label="accountGroupOptionLabel(group)"
                   :value="group.id"
                 />
               </el-select>
@@ -327,7 +333,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-option
                   v-for="group in accountGroups"
                   :key="group.id"
-                  :label="group.name"
+                  :label="accountGroupOptionLabel(group)"
                   :value="group.id"
                 />
               </el-select>
