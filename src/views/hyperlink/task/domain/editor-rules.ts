@@ -59,6 +59,8 @@ export function createEmptyAccountFilter(
     source: null,
     friendCountMin: null,
     friendCountMax: null,
+    contactNamedNumMin: null,
+    contactNamedNumMax: null,
     retentionDaysMin: null,
     retentionDaysMax: null,
     registerDaysMin: null,
