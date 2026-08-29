@@ -291,6 +291,49 @@ const hyperlinkRouter = {
   ]
 };
 
+// 仅用于本地开发预览；生产菜单与按钮权限由 /api/tenant/me/menus 返回。
+// 路由路径、component 与权限节点逐字对齐后端 V159__contact_marketing_menu_rbac.sql。
+const contactRouter = {
+  path: "/contact",
+  meta: {
+    title: "通讯录营销",
+    icon: "ep:phone",
+    rank: 8,
+    module_key: "contact_marketing"
+  },
+  children: [
+    {
+      path: "/contact/hyperlink",
+      component: "contact/hyperlink/index",
+      name: "ContactHyperlinkTask",
+      meta: {
+        title: "通讯录超链任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "contact_task",
+        perm_key: "tenant:contact_task:view",
+        auths: [
+          "tenant:contact_task:create",
+          "tenant:contact_task:edit",
+          "tenant:contact_task:operate"
+        ]
+      }
+    },
+    {
+      path: "/contact/script",
+      component: "contact/script/index",
+      name: "ContactScriptTask",
+      meta: {
+        title: "通讯录剧本任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "contact_task",
+        perm_key: "tenant:contact_task:view"
+      }
+    }
+  ]
+};
+
 const systemRouter = {
   path: "/system",
   meta: {
@@ -371,6 +414,7 @@ export default defineFakeRoute([
           materialRouter,
           resourceRouter,
           hyperlinkRouter,
+          contactRouter,
           systemRouter
         ]
       };

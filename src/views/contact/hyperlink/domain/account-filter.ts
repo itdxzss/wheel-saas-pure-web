@@ -81,7 +81,7 @@ function isMeaningful(value: unknown): boolean {
 export function toAccountFilterJson(form: AccountFilterForm): string {
   const payload: Record<string, unknown> = {};
   for (const key of EFFECTIVE_FILTER_KEYS) {
-    const value = (form as Record<string, unknown>)[key];
+    const value = (form as unknown as Record<string, unknown>)[key];
     if (isMeaningful(value)) {
       payload[key] = typeof value === "string" ? value.trim() : value;
     }
@@ -136,7 +136,7 @@ export function parseAccountFilter(
   for (const key of Object.keys(STORED_KEYS) as (keyof AccountFilterForm)[]) {
     const value = source[STORED_KEYS[key]];
     if (value !== undefined && value !== null) {
-      (form as Record<string, unknown>)[key] = value;
+      (form as unknown as Record<string, unknown>)[key] = value;
     }
   }
   return form;
