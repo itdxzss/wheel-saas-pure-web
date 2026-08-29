@@ -287,6 +287,24 @@ const hyperlinkRouter = {
           "tenant:hyperlink_template:delete"
         ]
       }
+    },
+    {
+      path: "/hyperlink/library",
+      component: "hyperlink/library/index",
+      name: "HyperlinkResourceAsset",
+      meta: {
+        title: "图片素材",
+        icon: "solar:gallery-wide-bold-duotone",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_resource_asset",
+        perm_key: "tenant:resource_asset:view",
+        auths: [
+          "tenant:resource_asset:upload",
+          "tenant:resource_asset:edit",
+          "tenant:resource_asset:delete"
+        ]
+      }
     }
   ]
 };

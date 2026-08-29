@@ -41,7 +41,6 @@ const {
   searchForm,
   total,
   changeMessageType,
-  clearImage,
   copy,
   openCreate,
   openDetail,
@@ -49,8 +48,7 @@ const {
   remove,
   resetSearch,
   save,
-  search,
-  selectImage
+  search
 } = useHyperlinkTemplatePage();
 
 const buttonTemplateCount = computed(
@@ -297,9 +295,7 @@ onMounted(() => {
       :loading="saving"
       :detail-loading="detailLoading"
       :image-loading="imageLoading"
-      :on-image-select="selectImage"
       @save="save"
-      @clear-image="clearImage"
       @message-type-change="changeMessageType"
     />
   </div>

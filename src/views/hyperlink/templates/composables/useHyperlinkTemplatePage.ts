@@ -4,14 +4,13 @@ import {
   copyHyperlinkTemplate,
   createHyperlinkTemplate,
   deleteHyperlinkTemplate,
-  downloadHyperlinkTemplateImage,
   getHyperlinkTemplate,
   listHyperlinkTemplates,
   updateHyperlinkTemplate,
-  uploadHyperlinkTemplateImage,
   type HyperlinkTemplateListItem,
   type SupportedHyperlinkMessageType
 } from "@/api/hyperlink-template";
+import { downloadResourceAsset, getResourceAsset } from "@/api/resource-asset";
 import { apiErrorMessage } from "@/utils/api-error";
 import { createImageObjectUrlController } from "../domain/image-object-url";
 import {
@@ -19,7 +18,6 @@ import {
   toHyperlinkTemplateForm,
   toHyperlinkTemplateUpdateRequest,
   toHyperlinkTemplateWriteRequest,
-  validateHyperlinkImageFile,
   validateHyperlinkTemplateForm,
   type HyperlinkTemplateForm
 } from "../domain/template-form";
@@ -60,7 +58,6 @@ export function useHyperlinkTemplatePage() {
   const objectUrlController = createImageObjectUrlController();
   let detailRequestId = 0;
   let imageRequestId = 0;
-  let imageSelectionRequestId = 0;
 
   const columns: TableColumnList = [
     { label: "模板名称 / 类型", prop: "name", minWidth: 260 },
@@ -74,7 +71,6 @@ export function useHyperlinkTemplatePage() {
 
   function releaseImagePreview(): void {
     imageRequestId += 1;
-    imageSelectionRequestId += 1;
     objectUrlController.clear();
     form.value.imageUrl = "";
     imageLoading.value = false;
@@ -84,7 +80,6 @@ export function useHyperlinkTemplatePage() {
     releaseImagePreview();
     form.value.assetId = null;
     form.value.imageName = "";
-    form.value.imageFile = null;
   }
 
   async function loadImage(assetId: number | null): Promise<void> {
@@ -92,8 +87,12 @@ export function useHyperlinkTemplatePage() {
     const requestId = ++imageRequestId;
     imageLoading.value = true;
     try {
-      const blob = await downloadHyperlinkTemplateImage(assetId);
+      const [blob, asset] = await Promise.all([
+        downloadResourceAsset(assetId),
+        getResourceAsset(assetId)
+      ]);
       if (requestId !== imageRequestId) return;
+      form.value.imageName = asset.assetName;
       form.value.imageUrl = objectUrlController.replace(blob);
     } catch (error) {
       if (requestId !== imageRequestId) return;
@@ -102,22 +101,6 @@ export function useHyperlinkTemplatePage() {
     } finally {
       if (requestId === imageRequestId) imageLoading.value = false;
     }
-  }
-
-  async function selectImage(file: File): Promise<boolean> {
-    const requestId = ++imageSelectionRequestId;
-    const result = await validateHyperlinkImageFile(file);
-    if (requestId !== imageSelectionRequestId) return false;
-    if (!result.valid) {
-      ElMessage.warning(result.message);
-      return false;
-    }
-    releaseImagePreview();
-    form.value.assetId = null;
-    form.value.imageName = file.name;
-    form.value.imageFile = file;
-    form.value.imageUrl = objectUrlController.replace(file);
-    return true;
   }
 
   async function refresh(): Promise<void> {
@@ -178,7 +161,6 @@ export function useHyperlinkTemplatePage() {
       if (requestId !== detailRequestId) return;
       if (detail.messageType === 2) throw new Error("一期暂不支持双图文");
       form.value = toHyperlinkTemplateForm(detail);
-      await loadImage(form.value.assetId);
     } catch (error) {
       if (requestId !== detailRequestId) return;
       drawerVisible.value = false;
@@ -200,14 +182,6 @@ export function useHyperlinkTemplatePage() {
     }
     saving.value = true;
     try {
-      if (form.value.imageFile) {
-        const uploaded = await uploadHyperlinkTemplateImage(
-          form.value.imageFile
-        );
-        form.value.assetId = uploaded.id;
-        form.value.imageName = uploaded.originalFilename;
-        form.value.imageFile = null;
-      }
       if (drawerMode.value === "edit") {
         if (editingId.value == null)
           throw new Error("模板 ID 无效，请刷新后重试");
@@ -265,6 +239,14 @@ export function useHyperlinkTemplatePage() {
     releaseImagePreview();
   });
 
+  watch(
+    () => form.value.assetId,
+    assetId => {
+      releaseImagePreview();
+      if (assetId != null) void loadImage(assetId);
+    }
+  );
+
   onBeforeUnmount(() => {
     detailRequestId += 1;
     releaseImagePreview();
@@ -287,7 +269,6 @@ export function useHyperlinkTemplatePage() {
     searchForm,
     total,
     changeMessageType,
-    clearImage,
     copy,
     openCreate,
     openDetail,
@@ -295,7 +276,6 @@ export function useHyperlinkTemplatePage() {
     remove,
     resetSearch,
     save,
-    search,
-    selectImage
+    search
   };
 }
