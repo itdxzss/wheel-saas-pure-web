@@ -253,6 +253,24 @@ const hyperlinkRouter = {
   },
   children: [
     {
+      path: "/hyperlink/tasks",
+      component: "hyperlink/task/index",
+      name: "HyperlinkTaskList",
+      meta: {
+        title: "超链任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_task",
+        perm_key: "tenant:hyperlink_task:view",
+        auths: [
+          "tenant:hyperlink_task:create",
+          "tenant:hyperlink_task:edit",
+          "tenant:hyperlink_task:action",
+          "tenant:hyperlink_task:export"
+        ]
+      }
+    },
+    {
       path: "/hyperlink/data",
       component: "hyperlink/data/index",
       name: "HyperlinkDataPackage",
