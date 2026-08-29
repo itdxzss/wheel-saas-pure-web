@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   EFFECTIVE_FILTER_KEYS,
   emptyAccountFilterForm,
+  hasAnyFilter,
   parseAccountFilter,
   toAccountFilterJson
 } from "./account-filter";
@@ -9,7 +11,7 @@ import {
 describe("contact account filter", () => {
   it("only exposes filters the backend actually applies", () => {
     // 后端 AccountFilterCriteria 只实现了这些；画出不生效的控件比没有更糟
-    expect(EFFECTIVE_FILTER_KEYS).toEqual([
+    assert.deepEqual(Array.from(EFFECTIVE_FILTER_KEYS), [
       "country_iso2s",
       "exclude_country_iso2s",
       "group_ids",
@@ -25,12 +27,14 @@ describe("contact account filter", () => {
 
   it("never exposes the mutual friend count filter", () => {
     // 交接文档 §5.3 硬约束：双向好友标记两套协议都拿不到，恒为 0
-    expect(EFFECTIVE_FILTER_KEYS).not.toContain("friend_count_min");
-    expect(EFFECTIVE_FILTER_KEYS).not.toContain("friend_count_max");
+    const keys = Array.from(EFFECTIVE_FILTER_KEYS) as string[];
+    assert.ok(!keys.includes("friend_count_min"));
+    assert.ok(!keys.includes("friend_count_max"));
   });
 
   it("submits {} when nothing is filtered, meaning all valid accounts", () => {
-    expect(toAccountFilterJson(emptyAccountFilterForm())).toBe("{}");
+    assert.equal(toAccountFilterJson(emptyAccountFilterForm()), "{}");
+    assert.equal(hasAnyFilter(emptyAccountFilterForm()), false);
   });
 
   it("injects the forced keys only when a real condition exists", () => {
@@ -41,8 +45,8 @@ describe("contact account filter", () => {
       })
     );
 
-    expect(json.account_status).toBe("normal");
-    expect(json.is_exported).toBe(false);
+    assert.equal(json.account_status, "normal");
+    assert.equal(json.is_exported, false);
   });
 
   it("does not inject stranger_muted", () => {
@@ -54,7 +58,7 @@ describe("contact account filter", () => {
       })
     );
 
-    expect(json).not.toHaveProperty("stranger_muted");
+    assert.equal("stranger_muted" in json, false);
   });
 
   it("drops empty values so the backend does not read them as conditions", () => {
@@ -69,7 +73,7 @@ describe("contact account filter", () => {
       })
     );
 
-    expect(Object.keys(json).sort()).toEqual([
+    assert.deepEqual(Object.keys(json).sort(), [
       "account_status",
       "account_type",
       "is_exported"
@@ -84,7 +88,7 @@ describe("contact account filter", () => {
       })
     );
 
-    expect(json.group_invite_allowed).toBe(false);
+    assert.equal(json.group_invite_allowed, false);
   });
 
   it("round-trips a stored filter back into form values", () => {
@@ -99,20 +103,16 @@ describe("contact account filter", () => {
       })
     );
 
-    expect(form.country_iso2s).toEqual(["CN", "US"]);
-    expect(form.exclude_country_iso2s).toEqual(["IN"]);
-    expect(form.phone).toBe("861");
-    expect(form.account_type).toBe(2);
-    expect(form.group_invite_allowed).toBe(true);
-    expect(form.register_days_min).toBe(3);
+    assert.deepEqual(form.country_iso2s, ["CN", "US"]);
+    assert.deepEqual(form.exclude_country_iso2s, ["IN"]);
+    assert.equal(form.phone, "861");
+    assert.equal(form.account_type, 2);
+    assert.equal(form.group_invite_allowed, true);
+    assert.equal(form.register_days_min, 3);
   });
 
   it("survives a malformed stored filter instead of blowing up the drawer", () => {
-    expect(parseAccountFilter("not json")).toEqual(emptyAccountFilterForm());
-    expect(parseAccountFilter(null)).toEqual(emptyAccountFilterForm());
-  });
-
-  it("reports whether the filter limits anything, for the account range block", () => {
-    expect(toAccountFilterJson(emptyAccountFilterForm())).toBe("{}");
+    assert.deepEqual(parseAccountFilter("not json"), emptyAccountFilterForm());
+    assert.deepEqual(parseAccountFilter(null), emptyAccountFilterForm());
   });
 });
