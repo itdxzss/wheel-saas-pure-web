@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import WheelPagination from "@/components/WheelPagination/index.vue";
-import { formatAssetBytes } from "./domain/resource-asset";
-import ResourceAssetThumbnail from "./components/ResourceAssetThumbnail.vue";
+import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import Gallery from "~icons/solar/gallery-wide-bold-duotone";
+import ResourceAssetCard from "./components/ResourceAssetCard.vue";
 import ResourceAssetUploadDialog from "./components/ResourceAssetUploadDialog.vue";
 import { useResourceAssetLibrary } from "./composables/useResourceAssetLibrary";
 
@@ -35,14 +36,21 @@ const {
 <template>
   <div class="asset-library-page">
     <el-card shadow="never" class="intro-card">
-      <div class="intro-title">
-        WhatsApp 素材库
-        <el-tag type="success" effect="plain" round>Library</el-tag>
+      <div class="intro-content">
+        <div class="intro-icon" aria-hidden="true">
+          <component :is="useRenderIcon(Gallery)" />
+        </div>
+        <div class="intro-copy">
+          <div class="intro-title">
+            WhatsApp 素材库
+            <el-tag class="intro-badge" effect="plain" round>Library</el-tag>
+          </div>
+          <p>
+            统一管理上传的图片素材；支持 JPG，单张不超过
+            500KB。超链模板新建和编辑时可直接引用，避免重复上传。
+          </p>
+        </div>
       </div>
-      <p>
-        统一管理上传的图片素材；支持 JPG，单张不超过
-        500KB。超链模板新建和编辑时可直接引用，避免重复上传。
-      </p>
     </el-card>
 
     <el-card shadow="never" class="filter-card">
@@ -89,90 +97,30 @@ const {
       class="error-alert"
     />
 
-    <div v-loading="loading" class="asset-grid">
-      <el-card
-        v-for="asset in rows"
-        :key="asset.id"
-        shadow="hover"
-        class="asset-card"
-      >
-        <div class="asset-image">
-          <ResourceAssetThumbnail :asset-id="asset.id" :alt="asset.assetName" />
-        </div>
-        <div class="asset-name" :title="asset.assetName">
-          {{ asset.assetName }}
-        </div>
-        <div class="asset-id">#{{ asset.id }}</div>
-        <div class="asset-tags">
-          <template v-if="asset.tags.length">
-            <el-tag
-              v-for="tag in asset.tags.slice(0, 3)"
-              :key="tag"
-              size="small"
-            >
-              {{ tag }}
-            </el-tag>
-            <el-tag v-if="asset.tags.length > 3" size="small" type="info">
-              +{{ asset.tags.length - 3 }}
-            </el-tag>
-          </template>
-          <span v-else>无标签</span>
-        </div>
-        <div class="asset-meta">
-          <span>{{
-            asset.width && asset.height
-              ? `${asset.width} × ${asset.height}`
-              : "-"
-          }}</span>
-          <span>{{ formatAssetBytes(asset.sizeBytes) }}</span>
-          <span>引用 {{ asset.referenceCount }}</span>
-        </div>
-        <div class="asset-actions">
-          <el-button
-            v-auth="'tenant:resource_asset:edit'"
-            link
-            type="primary"
-            @click="openEdit(asset)"
-          >
-            编辑
-          </el-button>
-          <el-tooltip
-            :disabled="asset.referenceCount === 0"
-            :content="`仍被 ${asset.referenceCount} 处模板或任务引用，不能删除`"
-          >
-            <span>
-              <el-popconfirm
-                title="确认删除该素材？"
-                confirm-button-text="删除"
-                cancel-button-text="取消"
-                :disabled="asset.referenceCount > 0"
-                @confirm="remove(asset)"
-              >
-                <template #reference>
-                  <el-button
-                    v-auth="'tenant:resource_asset:delete'"
-                    link
-                    type="danger"
-                    :disabled="asset.referenceCount > 0"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-popconfirm>
-            </span>
-          </el-tooltip>
-        </div>
-      </el-card>
-      <el-empty v-if="!loading && !rows.length" description="暂无图片素材" />
-    </div>
+    <el-card
+      shadow="never"
+      class="asset-list-card"
+      body-class="asset-list-card__body"
+    >
+      <div v-loading="loading" class="asset-grid">
+        <ResourceAssetCard
+          v-for="asset in rows"
+          :key="asset.id"
+          :asset="asset"
+          @edit="openEdit"
+          @remove="remove"
+        />
+        <el-empty v-if="!loading && !rows.length" description="暂无图片素材" />
+      </div>
 
-    <WheelPagination
-      v-model:current-page="page"
-      v-model:page-size="pageSize"
-      :page-sizes="[12, 24, 48, 96]"
-      :total="total"
-      @change="refresh"
-    />
+      <WheelPagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="[12, 24, 48, 96]"
+        :total="total"
+        @change="refresh"
+      />
+    </el-card>
 
     <ResourceAssetUploadDialog
       v-model="uploadVisible"
@@ -230,84 +178,87 @@ const {
   margin-bottom: 12px;
 }
 
-.intro-title {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  font-size: 20px;
-  font-weight: 650;
+.intro-card {
+  color: #fff;
+  background: linear-gradient(
+    110deg,
+    var(--el-color-primary) 0%,
+    var(--el-color-primary-dark-2) 100%
+  );
+  border: 0;
+  box-shadow: 0 8px 22px rgb(64 158 255 / 16%);
 }
 
-.intro-card p {
-  margin: 8px 0 0;
-  color: var(--el-text-color-secondary);
+.intro-card :deep(.el-card__body) {
+  padding: 18px 22px;
+}
+
+.intro-content,
+.intro-title {
+  display: flex;
+  align-items: center;
+}
+
+.intro-content {
+  gap: 16px;
+}
+
+.intro-icon {
+  display: flex;
+  flex: 0 0 54px;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  color: #fff;
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid rgb(255 255 255 / 36%);
+  border-radius: 12px;
+}
+
+.intro-icon :deep(svg) {
+  width: 30px;
+  height: 30px;
+}
+
+.intro-copy {
+  min-width: 0;
+}
+
+.intro-title {
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.intro-badge {
+  font-weight: 600;
+  color: var(--el-color-primary-dark-2);
+  background: rgb(255 255 255 / 92%);
+  border-color: rgb(255 255 255 / 48%);
+}
+
+.intro-copy p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgb(255 255 255 / 92%);
 }
 
 .tag-filter {
   width: 260px;
 }
 
+.asset-list-card :deep(.asset-list-card__body) {
+  padding: 12px;
+}
+
 .asset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
   min-height: 300px;
-  margin-bottom: 16px;
-}
-
-.asset-card :deep(.el-card__body) {
-  padding: 0 0 12px;
-}
-
-.asset-image {
-  aspect-ratio: 5 / 4;
-  margin-bottom: 10px;
-}
-
-.asset-name,
-.asset-id,
-.asset-tags,
-.asset-meta,
-.asset-actions {
-  padding: 0 12px;
-}
-
-.asset-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.asset-id {
-  margin-top: 3px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.asset-tags {
-  display: flex;
-  gap: 4px;
-  min-height: 24px;
-  margin-top: 9px;
-  overflow: hidden;
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
-}
-
-.asset-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.asset-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
-  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .full-width {

@@ -71,7 +71,14 @@ onBeforeUnmount(() => {
 }
 
 .asset-thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   background: var(--el-fill-color-light);
+}
+
+.asset-thumbnail :deep(.el-empty) {
+  padding: 0;
 }
 </style>

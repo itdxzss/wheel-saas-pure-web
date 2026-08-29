@@ -1,6 +1,6 @@
 # 变更记录：超链图片素材库前端
 
-- 日期：2026-08-29
+- 日期：2026-08-30
 - 目标分支：`1.0.3-snapshot`
 - 后端设计：`../armada/docs/superpowers/specs/2026-08-29-hyperlink-image-asset-library-implementation-design.md`
 - 状态：本地实现与自动化验证完成，尚未部署
@@ -12,6 +12,7 @@
 - 超链模板图片字段切换为稳定 Asset ID 选择，不再在保存模板前临时上传。
 - 标签大小写敏感精确去重，最多 20 个；批量上传最多 100 张 JPEG，每张不超过 500KB。
 - 移除超链模板旧直传 API 封装、表单文件状态和重复 JPEG 校验，保留唯一素材库上传路径。
+- 素材库页头改为系统主题蓝色识别区；筛选区交互保持不变，素材卡片改为 16:9 缩略图和分行元数据，提升同屏浏览效率。
 
 ## 影响模块
 
@@ -23,7 +24,7 @@
 
 ## 关键设计决策
 
-- 管理页逻辑拆到 `useResourceAssetLibrary`，页面 322 行、composable 167 行，均低于仓库 400 行拆分阈值。
+- 管理页逻辑拆到 `useResourceAssetLibrary`，单卡片拆到 `ResourceAssetCard`；页面 276 行、卡片 206 行，均低于仓库 400 行拆分阈值。
 - 管理页和选择器复用既有 `WheelPagination`；不自造分页基础组件。
 - 批量上传由可测试的 `uploadResourceAssetBatch` 串行执行；成功项立即移出，失败项保留重试。
 - 标签加载失败给出可见消息，不静默吞异常；Blob Object URL 在替换、关闭和卸载时释放。
@@ -35,6 +36,7 @@
 - `pnpm typecheck`：TypeScript 与 Vue TypeScript 均通过。
 - 本次文件 ESLint、Stylelint、Prettier 检查：通过。
 - `pnpm build`：生产构建通过；只有仓库既有 Browserslist 数据过期提示。
+- 本次视觉调整直相关测试：18 条通过；1920×1080 浏览器预览确认 7 列两行完整可见且分页不被挤出首屏。
 - 全量 Node 测试仍有 5 个与本次无关的既有失败：`group.test.ts` 1 个、`GroupMemberDrawer.test.ts` 1 个、`useGroupPermissions.test.ts` 3 个；本次未修改这些文件。
 - `git diff --check`：通过。
 

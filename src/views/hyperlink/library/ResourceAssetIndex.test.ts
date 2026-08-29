@@ -9,6 +9,10 @@ const pageSource = readFileSync(
   fileURLToPath(new URL("./index.vue", import.meta.url)),
   "utf8"
 );
+const cardSource = readFileSync(
+  fileURLToPath(new URL("./components/ResourceAssetCard.vue", import.meta.url)),
+  "utf8"
+);
 const uploadSource = readFileSync(
   fileURLToPath(
     new URL("./components/ResourceAssetUploadDialog.vue", import.meta.url)
@@ -41,7 +45,7 @@ describe("hyperlink image asset library", () => {
   it("contains management, serial upload and picker contracts", () => {
     assert.match(pageSource, /WhatsApp 素材库/);
     assert.match(pageSource, /tenant:resource_asset:upload/);
-    assert.match(pageSource, /确认删除该素材/);
+    assert.match(cardSource, /确认删除该素材/);
     assert.match(uploadSource, /uploadResourceAssetBatch/);
     assert.doesNotMatch(uploadSource, /Promise\.all\([^)]*uploadResourceAsset/);
     assert.match(pickerSource, /从素材库选择/);
@@ -49,6 +53,22 @@ describe("hyperlink image asset library", () => {
     assert.match(pickerSource, /使用该素材/);
     assert.match(pickerSource, /暂无符合条件的图片素材/);
     assert.match(pickerSource, /pendingSelection/);
+  });
+
+  it("uses a blue branded intro and compact scannable asset cards", () => {
+    assert.match(pageSource, /class="intro-content"/);
+    assert.match(pageSource, /class="asset-list-card"/);
+    assert.match(cardSource, /class="asset-heading"/);
+    assert.match(cardSource, />尺寸</);
+    assert.match(cardSource, />大小</);
+    assert.match(cardSource, />引用</);
+    assert.match(cardSource, /: "未知"/);
+    assert.match(cardSource, /aspect-ratio:\s*16\s*\/\s*9/);
+    assert.match(cardSource, /min-height:\s*0/);
+    assert.match(
+      pageSource,
+      /background:\s*linear-gradient\([\s\S]*?var\(--el-color-primary\)/
+    );
   });
 
   it("uploads one file at a time and keeps only failed items for retry", async () => {
