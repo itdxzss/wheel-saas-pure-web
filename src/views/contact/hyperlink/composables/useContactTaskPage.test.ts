@@ -40,9 +40,10 @@ describe("contact task page composable", () => {
   });
 
   it("previews the matched account count whenever the filter changes", () => {
+    // 不钉死折行：prettier 会在参数处换行，正则跟着断掉
     assert.match(
       source,
-      /previewContactTaskAccounts\(toAccountFilterJson\(filter\)\)/
+      /previewContactTaskAccounts\(\s*toAccountFilterJson\(filter\)\s*\)/
     );
     assert.match(
       source,
