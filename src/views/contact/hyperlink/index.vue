@@ -69,12 +69,6 @@ function rangeTags(row: ContactTaskListItem): RangeTag[] {
   if (filter.register_days_max != null) {
     tags.push({ text: `注册≤${filter.register_days_max}天`, excluded: false });
   }
-  if (filter.group_invite_allowed != null) {
-    tags.push({
-      text: filter.group_invite_allowed ? "可被邀请进群" : "不可被邀请进群",
-      excluded: false
-    });
-  }
   return tags;
 }
 

@@ -18,8 +18,7 @@ describe("contact account filter dialog", () => {
       "draft.account_type",
       "draft.phone",
       "draft.register_days_min",
-      "draft.register_days_max",
-      "draft.group_invite_allowed"
+      "draft.register_days_max"
     ]) {
       assert.ok(source.includes(key), `missing control for ${key}`);
     }
@@ -40,7 +39,8 @@ describe("contact account filter dialog", () => {
       "error_code",
       "error_desc",
       "logged_in",
-      "retention_days"
+      "retention_days",
+      "group_invite_allowed"
     ]) {
       assert.ok(!source.includes(dead), `${dead} is stored but never applied`);
     }

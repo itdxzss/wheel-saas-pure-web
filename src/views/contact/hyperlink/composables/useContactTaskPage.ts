@@ -5,6 +5,7 @@ import {
   createContactTask,
   getContactTask,
   listContactTasks,
+  previewContactTaskAccounts,
   updateContactTask,
   type ContactTaskAction,
   type ContactTaskDetail,
@@ -13,6 +14,7 @@ import {
 } from "@/api/contact-task";
 import {
   emptyAccountFilterForm,
+  toAccountFilterJson,
   type AccountFilterForm
 } from "../domain/account-filter";
 
@@ -34,7 +36,7 @@ export function useContactTaskPage() {
   const drawerMode = ref<DrawerMode>("create");
   const drawerDetail = ref<ContactTaskDetail | null>(null);
   const submitting = ref(false);
-  /** 账号范围试算命中数；后端暂无试算接口时保持 undefined，界面就不显示计数 */
+  /** 账号范围试算命中数；未试算或试算失败时为 undefined，界面就不显示计数 */
   const matchedAccountCount = ref<number | undefined>(undefined);
 
   const accountDrawerVisible = ref(false);
@@ -91,8 +93,9 @@ export function useContactTaskPage() {
   function openCreate() {
     drawerMode.value = "create";
     drawerDetail.value = null;
-    matchedAccountCount.value = undefined;
     drawerVisible.value = true;
+    // 新建时筛选为空，先试算一次「全部有效账号」有多少
+    onFilterChange(emptyAccountFilterForm());
   }
 
   async function openDetail(id: number, mode: DrawerMode) {
@@ -101,6 +104,7 @@ export function useContactTaskPage() {
       drawerMode.value = mode;
       matchedAccountCount.value = undefined;
       drawerVisible.value = true;
+      // 抽屉挂载后会用回填的筛选条件回调 onFilterChange，这里不重复试算
     } catch (error) {
       message((error as Error)?.message ?? "任务详情加载失败", {
         type: "error"
@@ -142,11 +146,21 @@ export function useContactTaskPage() {
     }
   }
 
-  /** 抽屉里改了筛选条件后回传，用于账号范围试算。 */
-  function onFilterChange(_filter: AccountFilterForm) {
-    // 后端暂未提供试算接口；保留钩子，接口就位后在这里补一次查询。
-    void _filter;
-    matchedAccountCount.value = undefined;
+  /**
+   * 抽屉里改了筛选条件后回传，实时试算命中账号数。
+   *
+   * 试算失败时把计数清空而不是显示 0：0 会让抽屉误判「没命中任何账号」并阻止启用，
+   * 把一次网络抖动变成一个假的业务错误。
+   */
+  async function onFilterChange(filter: AccountFilterForm) {
+    try {
+      const preview = await previewContactTaskAccounts(
+        toAccountFilterJson(filter)
+      );
+      matchedAccountCount.value = preview.matchedAccountCount;
+    } catch {
+      matchedAccountCount.value = undefined;
+    }
   }
 
   onMounted(load);

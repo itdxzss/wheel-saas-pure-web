@@ -100,7 +100,7 @@ function confirm() {
           filterable
           allow-create
           default-first-option
-          placeholder="按渠道 ID 限定"
+          placeholder="按渠道 ID 限定；armada 与分组归一到同一维度，同时设置会取交集"
           class="filter-control"
         />
       </el-form-item>
@@ -151,17 +151,6 @@ function confirm() {
             placeholder="最大"
           />
         </div>
-      </el-form-item>
-      <el-form-item label="可被邀请进群">
-        <el-select
-          v-model="draft.group_invite_allowed"
-          clearable
-          placeholder="不限"
-          class="filter-control"
-        >
-          <el-option label="是" :value="true" />
-          <el-option label="否" :value="false" />
-        </el-select>
       </el-form-item>
     </el-form>
 

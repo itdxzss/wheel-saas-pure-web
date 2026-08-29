@@ -10,6 +10,7 @@ import {
   getContactTask,
   listContactTaskAccountData,
   listContactTasks,
+  previewContactTaskAccounts,
   updateContactTask,
   uploadContactTaskImage,
   type ContactTaskWriteRequest
@@ -191,6 +192,20 @@ describe("contact task API", () => {
         method: "get",
         url: "/api/marketing-template-files/77/content",
         opts: { responseType: "blob" }
+      }
+    ]);
+  });
+  it("previews the matched account count through the shared filter contract", async () => {
+    resetArmadaMock({ matchedAccountCount: 42 });
+
+    const result = await previewContactTaskAccounts('{"country_iso2s":["CN"]}');
+
+    assert.equal(result.matchedAccountCount, 42);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/contact-tasks/account-preview",
+        opts: { data: { accountFilterJson: '{"country_iso2s":["CN"]}' } }
       }
     ]);
   });

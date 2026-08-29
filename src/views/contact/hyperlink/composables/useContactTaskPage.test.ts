@@ -39,12 +39,26 @@ describe("contact task page composable", () => {
     assert.doesNotMatch(source, /deleteContactTask/);
   });
 
-  it("leaves the matched account count undefined until a real estimate exists", () => {
-    // 没有试算接口就不显示计数，比显示一个编的数字好
+  it("previews the matched account count whenever the filter changes", () => {
     assert.match(
       source,
-      /matchedAccountCount = ref<number \| undefined>\(undefined\)/
+      /previewContactTaskAccounts\(toAccountFilterJson\(filter\)\)/
     );
-    assert.match(source, /后端暂未提供试算接口/);
+    assert.match(
+      source,
+      /matchedAccountCount\.value = preview\.matchedAccountCount/
+    );
+  });
+
+  it("clears the count instead of showing zero when the preview fails", () => {
+    // 显示 0 会让抽屉误判「没命中任何账号」并阻止启用，把网络抖动变成假的业务错误
+    assert.match(
+      source,
+      /catch \{\s*\n\s*matchedAccountCount\.value = undefined;/
+    );
+  });
+
+  it("previews once when opening a blank create drawer", () => {
+    assert.match(source, /onFilterChange\(emptyAccountFilterForm\(\)\)/);
   });
 });

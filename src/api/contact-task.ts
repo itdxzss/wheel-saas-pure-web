@@ -160,6 +160,26 @@ export function actContactTask(
   });
 }
 
+export interface ContactAccountPreview {
+  matchedAccountCount: number;
+}
+
+/**
+ * 试算账号范围命中数。
+ *
+ * 走的是与任务启用时圈号完全相同的归一化与 SQL 条件，因此界面显示的数字
+ * 就是真正会被圈到的号数。
+ */
+export function previewContactTaskAccounts(
+  accountFilterJson: string
+): Promise<ContactAccountPreview> {
+  return armadaRequest<ContactAccountPreview>(
+    "post",
+    "/api/contact-tasks/account-preview",
+    { data: { accountFilterJson } }
+  );
+}
+
 export function listContactTaskAccountData(
   id: number,
   query: ContactTaskAccountDataQuery = {}

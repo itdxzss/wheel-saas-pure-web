@@ -5,8 +5,10 @@
  * 但真正参与圈号 SQL 的 `AccountFilterCriteria` 只实现了下面这些。画出一个存了却不生效的
  * 控件，比没有这个控件更糟——用户以为筛了，实际没筛。
  *
- * 另外 `friend_count_min|max`（双向好友数）**永远不渲染**：两套协议都不暴露双向好友标记，
- * 该值恒为 0，筛出来的结果没有意义（交接文档 §5.3 硬约束）。
+ * 另外两类**永远不渲染**：
+ * - `friend_count_min|max`（双向好友数）：两套协议都不暴露该标记，值恒为 0（交接文档 §5.3）
+ * - `group_invite_allowed`：`AccountFilterSelectionMapper.xml` 的注释写明「armada 没有落列，
+ *   故意没有条件」，criteria 解析了但 SQL 从不使用，画出来就是骗人
  *
  * 提交用 snake_case，后端归一化后落库为 camelCase，因此回填要按 camelCase 读。
  */
@@ -21,8 +23,7 @@ export const EFFECTIVE_FILTER_KEYS = [
   "account_type",
   "phone",
   "register_days_min",
-  "register_days_max",
-  "group_invite_allowed"
+  "register_days_max"
 ] as const;
 
 export interface AccountFilterForm {
@@ -35,7 +36,6 @@ export interface AccountFilterForm {
   phone: string;
   register_days_min: number | null;
   register_days_max: number | null;
-  group_invite_allowed: boolean | null;
 }
 
 /** 空表单：语义是「未限制（全部有效账号）」。 */
@@ -49,8 +49,7 @@ export function emptyAccountFilterForm(): AccountFilterForm {
     account_type: null,
     phone: "",
     register_days_min: null,
-    register_days_max: null,
-    group_invite_allowed: null
+    register_days_max: null
   };
 }
 
@@ -104,8 +103,7 @@ const STORED_KEYS: Record<keyof AccountFilterForm, string> = {
   account_type: "accountType",
   phone: "phone",
   register_days_min: "registerDaysMin",
-  register_days_max: "registerDaysMax",
-  group_invite_allowed: "groupInviteAllowed"
+  register_days_max: "registerDaysMax"
 };
 
 /**

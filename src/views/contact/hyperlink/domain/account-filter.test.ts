@@ -20,8 +20,7 @@ describe("contact account filter", () => {
       "account_type",
       "phone",
       "register_days_min",
-      "register_days_max",
-      "group_invite_allowed"
+      "register_days_max"
     ]);
   });
 
@@ -80,15 +79,10 @@ describe("contact account filter", () => {
     ]);
   });
 
-  it("keeps a false boolean because false is a real condition", () => {
-    const json = JSON.parse(
-      toAccountFilterJson({
-        ...emptyAccountFilterForm(),
-        group_invite_allowed: false
-      })
-    );
-
-    assert.equal(json.group_invite_allowed, false);
+  it("never exposes a filter the selection sql does not apply", () => {
+    // XML 注释写明 groupInviteAllowed「armada 没有落列，故意没有条件」
+    const keys = Array.from(EFFECTIVE_FILTER_KEYS) as string[];
+    assert.ok(!keys.includes("group_invite_allowed"));
   });
 
   it("round-trips a stored filter back into form values", () => {
@@ -98,7 +92,6 @@ describe("contact account filter", () => {
         excludeCountryIso2s: ["IN"],
         phone: "861",
         accountType: 2,
-        groupInviteAllowed: true,
         registerDaysMin: 3
       })
     );
@@ -107,7 +100,6 @@ describe("contact account filter", () => {
     assert.deepEqual(form.exclude_country_iso2s, ["IN"]);
     assert.equal(form.phone, "861");
     assert.equal(form.account_type, 2);
-    assert.equal(form.group_invite_allowed, true);
     assert.equal(form.register_days_min, 3);
   });
 
