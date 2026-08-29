@@ -4,17 +4,16 @@ import { ElMessage, type UploadFile, type UploadInstance } from "element-plus";
 import type {
   DataPackageImportInput,
   DataPackageImportMode,
-  DataPackageImportResult,
   DataPackageListItem
 } from "@/api/hyperlink-data-package";
 import { downloadBlobFile } from "@/utils/download";
 import {
   DATA_PACKAGE_IMPORT_MAX_ROWS,
   DATA_PACKAGE_IMPORT_SAMPLE,
-  dataPackageImportModeLabel,
   inspectDataPackageTxt,
   type DataPackageTxtInspection
 } from "../composables/useDataPackageImport";
+import DataPackageImportConfirmDialog from "./DataPackageImportConfirmDialog.vue";
 import DataPackageImportGuide from "./DataPackageImportGuide.vue";
 import Close from "~icons/ep/close";
 import Document from "~icons/ep/document";
@@ -26,7 +25,6 @@ const props = defineProps<{
   dataPackage: DataPackageListItem | null;
   defaultMode: DataPackageImportMode;
   modelValue: boolean;
-  result: DataPackageImportResult | null;
   submitting: boolean;
 }>();
 
@@ -44,6 +42,7 @@ const mode = ref<DataPackageImportMode>("APPEND");
 const file = ref<File | null>(null);
 const inspection = ref<DataPackageTxtInspection | null>(null);
 const inspecting = ref(false);
+const confirmationVisible = ref(false);
 const modeOptions: Array<{
   description: string;
   label: string;
@@ -104,6 +103,7 @@ async function handleUploadChange(uploadFile: UploadFile): Promise<void> {
   uploadRef.value?.clearFiles();
   file.value = raw;
   inspection.value = null;
+  confirmationVisible.value = false;
   inspecting.value = true;
   try {
     inspection.value = await inspectDataPackageTxt(raw);
@@ -122,6 +122,7 @@ async function handleUploadChange(uploadFile: UploadFile): Promise<void> {
 function removeFile(): void {
   file.value = null;
   inspection.value = null;
+  confirmationVisible.value = false;
   uploadRef.value?.clearFiles();
 }
 
@@ -146,12 +147,22 @@ function submit(): void {
     );
     return;
   }
+  confirmationVisible.value = true;
+}
+
+function confirmUpload(): void {
+  if (!file.value) {
+    confirmationVisible.value = false;
+    ElMessage.warning("请选择符合规则的 TXT 文件");
+    return;
+  }
   emit("submit", { mode: mode.value, file: file.value });
 }
 
 watch(
   () => props.modelValue,
   value => {
+    confirmationVisible.value = false;
     if (!value) return;
     mode.value = props.defaultMode;
     file.value = null;
@@ -169,173 +180,139 @@ watch(
     destroy-on-close
     :close-on-click-modal="!submitting"
   >
-    <template v-if="result">
-      <el-result icon="success" title="导入完成">
-        <template #sub-title>
-          {{ dataPackageImportModeLabel(result.mode) }}，当前代次
-          {{ result.generation }}
-        </template>
-        <template #extra>
-          <el-descriptions :column="2" border class="import-result">
-            <el-descriptions-item label="导入批次">
-              {{ result.importId }}
-            </el-descriptions-item>
-            <el-descriptions-item label="文件非空行">
-              {{ result.totalRows }}
-            </el-descriptions-item>
-            <el-descriptions-item label="成功导入">
-              {{ result.acceptedRows }}
-            </el-descriptions-item>
-            <el-descriptions-item label="非法号码">
-              {{ result.invalidRows }}
-            </el-descriptions-item>
-            <el-descriptions-item label="重复号码">
-              {{ result.duplicatedRows }}
-            </el-descriptions-item>
-            <el-descriptions-item label="导入后号码总数">
-              {{ result.phoneCountAfterImport }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </template>
-      </el-result>
-    </template>
+    <DataPackageImportGuide
+      :data-package="dataPackage"
+      :formatted-max-rows="formattedMaxRows"
+      @download-template="downloadTemplate"
+    />
 
-    <template v-else>
-      <DataPackageImportGuide
-        :data-package="dataPackage"
-        :formatted-max-rows="formattedMaxRows"
-        @download-template="downloadTemplate"
-      />
-
-      <el-form label-position="top">
-        <el-form-item label="导入模式" required>
-          <el-radio-group v-model="mode" class="mode-grid">
-            <el-radio
-              v-for="option in modeOptions"
-              :key="option.value"
-              :value="option.value"
-              border
-              class="mode-card"
-            >
-              <span class="mode-card__copy">
-                <strong>{{ option.label }}</strong>
-                <span>{{ option.description }}</span>
-              </span>
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <el-form-item class="upload-item" label="TXT 文件" required>
-          <el-upload
-            ref="uploadRef"
-            drag
-            accept=".txt,text/plain"
-            :auto-upload="false"
-            :class="{ 'has-file': file }"
-            :show-file-list="false"
-            :on-change="handleUploadChange"
+    <el-form label-position="top">
+      <el-form-item label="导入模式" required>
+        <el-radio-group v-model="mode" class="mode-grid">
+          <el-radio
+            v-for="option in modeOptions"
+            :key="option.value"
+            :value="option.value"
+            border
+            class="mode-card"
           >
-            <div v-if="file" class="selected-file">
-              <span class="selected-file__icon">
-                <el-icon><Document /></el-icon>
-              </span>
-              <span class="selected-file__copy">
-                <strong :title="file.name">{{ file.name }}</strong>
-                <span>
-                  {{ formatFileSize(file.size) }} · 点击或拖拽重新选择
-                </span>
-              </span>
-              <el-button
-                class="selected-file__remove"
-                text
-                circle
-                aria-label="移除文件"
-                @click.stop="removeFile"
-              >
-                <el-icon><Close /></el-icon>
-              </el-button>
-            </div>
-            <template v-else>
-              <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-              <div class="el-upload__text">
-                将 TXT 文件拖到此处，或 <em>点击选择</em>
-              </div>
-            </template>
-            <template #tip>
-              <div v-if="!file" class="el-upload__tip">
-                仅支持 .txt 格式，必须使用 UTF-8 编码；单次最多
-                {{ formattedMaxRows }} 个非空行。
-              </div>
-            </template>
-          </el-upload>
-        </el-form-item>
+            <span class="mode-card__copy">
+              <strong>{{ option.label }}</strong>
+              <span>{{ option.description }}</span>
+            </span>
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
 
-        <el-alert
-          v-if="inspection"
-          class="inspection-alert"
-          type="success"
-          show-icon
-          :closable="false"
-          :title="`共解析到 ${formatCount(inspection.validPhoneCount)} 个有效手机号`"
-        />
-        <el-alert
-          v-if="inspection?.exceedsMaxRows"
-          class="inspection-alert"
-          type="error"
-          show-icon
-          :closable="false"
-          :title="`本次解析 ${formatCount(inspection.nonEmptyRowCount)} 条，已超过单次最大 ${formattedMaxRows} 条限制，请拆分文件后再上传`"
-        />
-        <el-alert
-          v-if="inspection?.forbiddenCountries.length"
-          class="inspection-alert"
-          type="error"
-          show-icon
-          :closable="false"
-          :title="`检测到禁止上传国家的号码：${forbiddenCountryMessage}`"
-        />
-        <el-alert
-          v-if="inspection?.brazilRisk"
-          class="brazil-risk-alert inspection-alert"
-          type="warning"
-          show-icon
-          :closable="false"
+      <el-form-item class="upload-item" label="TXT 文件" required>
+        <el-upload
+          ref="uploadRef"
+          drag
+          accept=".txt,text/plain"
+          :auto-upload="false"
+          :class="{ 'has-file': file }"
+          :show-file-list="false"
+          :on-change="handleUploadChange"
         >
-          <template #title>
-            <strong>巴西号码风险提醒</strong>
-          </template>
-          <div class="brazil-risk-copy">
-            <p>
-              抽样检测到本次上传的号码<strong
-                >疑似全部为巴西号码（55 开头）</strong
-              >。巴西手机号存在<strong>「+9 / 去9」</strong>两种格式（如
-              <code>5511987654321</code> 与
-              <code>551187654321</code> 可能指向同一 WhatsApp 账号）。
-            </p>
-            <p>
-              <strong>请务必确认：</strong
-              >您上传的号码已经过第三方平台的筛选/映射处理，否则可能出现大量号码无法识别或重复发送，造成营销资源浪费。
-            </p>
-            <div class="brazil-risk-samples">
-              <span>本次抽样：</span>
-              <code
-                v-for="phone in inspection.brazilRisk.samplePhones"
-                :key="phone"
-              >
-                {{ phone }}
-              </code>
-            </div>
+          <div v-if="file" class="selected-file">
+            <span class="selected-file__icon">
+              <el-icon><Document /></el-icon>
+            </span>
+            <span class="selected-file__copy">
+              <strong :title="file.name">{{ file.name }}</strong>
+              <span>
+                {{ formatFileSize(file.size) }} · 点击或拖拽重新选择
+              </span>
+            </span>
+            <el-button
+              class="selected-file__remove"
+              text
+              circle
+              aria-label="移除文件"
+              @click.stop="removeFile"
+            >
+              <el-icon><Close /></el-icon>
+            </el-button>
           </div>
-        </el-alert>
-      </el-form>
-    </template>
+          <template v-else>
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">
+              将 TXT 文件拖到此处，或 <em>点击选择</em>
+            </div>
+          </template>
+          <template #tip>
+            <div v-if="!file" class="el-upload__tip">
+              仅支持 .txt 格式，必须使用 UTF-8 编码；单次最多
+              {{ formattedMaxRows }} 个非空行。
+            </div>
+          </template>
+        </el-upload>
+      </el-form-item>
+
+      <el-alert
+        v-if="inspection"
+        class="inspection-alert"
+        type="success"
+        show-icon
+        :closable="false"
+        :title="`共解析到 ${formatCount(inspection.validPhoneCount)} 个有效手机号`"
+      />
+      <el-alert
+        v-if="inspection?.exceedsMaxRows"
+        class="inspection-alert"
+        type="error"
+        show-icon
+        :closable="false"
+        :title="`本次解析 ${formatCount(inspection.nonEmptyRowCount)} 条，已超过单次最大 ${formattedMaxRows} 条限制，请拆分文件后再上传`"
+      />
+      <el-alert
+        v-if="inspection?.forbiddenCountries.length"
+        class="inspection-alert"
+        type="error"
+        show-icon
+        :closable="false"
+        :title="`检测到禁止上传国家的号码：${forbiddenCountryMessage}`"
+      />
+      <el-alert
+        v-if="inspection?.brazilRisk"
+        class="brazil-risk-alert inspection-alert"
+        type="warning"
+        show-icon
+        :closable="false"
+      >
+        <template #title>
+          <strong>巴西号码风险提醒</strong>
+        </template>
+        <div class="brazil-risk-copy">
+          <p>
+            抽样检测到本次上传的号码<strong
+              >疑似全部为巴西号码（55 开头）</strong
+            >。巴西手机号存在<strong>「+9 / 去9」</strong>两种格式（如
+            <code>5511987654321</code> 与 <code>551187654321</code> 可能指向同一
+            WhatsApp 账号）。
+          </p>
+          <p>
+            <strong>请务必确认：</strong
+            >您上传的号码已经过第三方平台的筛选/映射处理，否则可能出现大量号码无法识别或重复发送，造成营销资源浪费。
+          </p>
+          <div class="brazil-risk-samples">
+            <span>本次抽样：</span>
+            <code
+              v-for="phone in inspection.brazilRisk.samplePhones"
+              :key="phone"
+            >
+              {{ phone }}
+            </code>
+          </div>
+        </div>
+      </el-alert>
+    </el-form>
 
     <template #footer>
       <el-button :disabled="submitting" @click="visible = false">
-        {{ result ? "关闭" : "取消" }}
+        取消
       </el-button>
       <el-button
-        v-if="!result"
         type="primary"
         :loading="submitting || inspecting"
         :disabled="!canSubmit"
@@ -346,6 +323,14 @@ watch(
       </el-button>
     </template>
   </el-dialog>
+  <DataPackageImportConfirmDialog
+    v-model="confirmationVisible"
+    :data-package="dataPackage"
+    :inspection="inspection"
+    :mode="mode"
+    :submitting="submitting"
+    @confirm="confirmUpload"
+  />
 </template>
 
 <style scoped>
@@ -395,8 +380,7 @@ watch(
 }
 
 .upload-item :deep(.el-upload),
-.upload-item :deep(.el-upload-dragger),
-.import-result {
+.upload-item :deep(.el-upload-dragger) {
   width: 100%;
 }
 

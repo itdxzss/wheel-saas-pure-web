@@ -16,7 +16,6 @@ import {
   type DataPackageCreateInput,
   type DataPackageImportInput,
   type DataPackageImportMode,
-  type DataPackageImportResult,
   type DataPackageClickExportFormat,
   type DataPackageListItem,
   type DataPackagePhoneItem,
@@ -140,7 +139,6 @@ export function useDataPackagePage() {
   const importVisible = ref(false);
   const importTarget = ref<DataPackageListItem | null>(null);
   const importMode = ref<DataPackageImportMode>("APPEND");
-  const importResult = ref<DataPackageImportResult | null>(null);
   const importing = ref(false);
 
   const phoneDrawerVisible = ref(false);
@@ -281,7 +279,6 @@ export function useDataPackagePage() {
     }
     importTarget.value = row;
     importMode.value = mode;
-    importResult.value = null;
     importVisible.value = true;
   }
 
@@ -289,10 +286,8 @@ export function useDataPackagePage() {
     if (!importTarget.value) return;
     importing.value = true;
     try {
-      importResult.value = await importDataPackagePhones(
-        importTarget.value.id,
-        input
-      );
+      await importDataPackagePhones(importTarget.value.id, input);
+      importVisible.value = false;
       ElMessage.success("号码导入完成");
       await refreshDataPackages();
     } catch (error) {
@@ -502,7 +497,6 @@ export function useDataPackagePage() {
     errorMessage,
     formVisible,
     importMode,
-    importResult,
     importTarget,
     importVisible,
     importing,

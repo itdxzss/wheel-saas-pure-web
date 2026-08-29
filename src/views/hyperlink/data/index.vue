@@ -44,7 +44,6 @@ const {
   errorMessage,
   formVisible,
   importMode,
-  importResult,
   importTarget,
   importVisible,
   importing,
@@ -466,7 +465,6 @@ onMounted(() => {
       v-model="importVisible"
       :data-package="importTarget"
       :default-mode="importMode"
-      :result="importResult"
       :submitting="importing"
       @submit="submitImport"
     />
