@@ -151,7 +151,11 @@ describe("contact task write request", () => {
     const body = toWriteRequest(imageForm(), emptyAccountFilterForm());
 
     assert.equal(typeof body.accountFilterJson, "string");
-    assert.equal(body.accountFilterJson, "{}");
+    // 空条件也按共用契约的完整形状提交，schema 版本由前端补齐
+    const parsed = JSON.parse(body.accountFilterJson);
+    assert.equal(parsed.filterSchemaVersion, 1);
+    assert.deepEqual(parsed.countryIso2s, []);
+    assert.equal(parsed.continent, null);
   });
 
   it("normalizes the interval to one decimal and keeps max above min", () => {

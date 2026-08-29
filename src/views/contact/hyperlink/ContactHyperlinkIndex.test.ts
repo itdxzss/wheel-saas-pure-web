@@ -102,7 +102,14 @@ describe("contact hyperlink task list", () => {
   });
 
   it("labels every filter that can appear in the range column", () => {
-    for (const label of ["好友≥", "在线", "安卓", "错误码", "限定创建时间"]) {
+    for (const label of [
+      "好友≥",
+      "在线",
+      "存活≥",
+      "允许拉群",
+      "批次 ",
+      "限定创建时间"
+    ]) {
       assert.ok(source.includes(label), `range column cannot show ${label}`);
     }
   });

@@ -1,83 +1,58 @@
 /**
- * 通讯录任务的账号筛选条件：表单值 ↔ 提交 JSON。
+ * 通讯录任务的账号筛选条件。
  *
- * **只暴露后端真正会应用的条件。** `ContactAccountFilterNormalizer` 的白名单放行约 20 个键，
- * 但真正参与圈号 SQL 的 `AccountFilterCriteria` 只实现了下面这些。画出一个存了却不生效的
- * 控件，比没有这个控件更糟——用户以为筛了，实际没筛。
+ * **直接复用超链任务的筛选契约** `HyperlinkAccountFilter`：后端两个菜单已经共用同一个
+ * `AccountHyperlinkCandidateService`，所有条件都真下推 SQL，前端再自建一套 snake_case
+ * 形状只会让两边漂移。字段名、枚举取值、schema 版本一律以那份契约为准。
  *
- * `friend_count_min|max` 的口径是**通讯录里有名字的联系人数**（打在 `contact_named_num`），
- * 不是双向好友——双向好友两套协议都拿不到，恒为 0，拿它筛号任何下界都会命中 0 个。
- * 控件必须叫「通讯录好友数」，叫「双向好友」就是骗人。
+ * 两处口径必须分清：
+ * - `friendCountMin|Max` 是**双向好友**，两套协议都不暴露互加关系，`account_profile.friend_count`
+ *   至今没有采集源，拿它筛号任何下界都会命中 0 个，**因此不渲染这个控件**。
+ * - `contactNamedNumMin|Max` 是**通讯录里有名字的联系人数**，由通讯录全量快照落库时写进
+ *   `account_profile.contact_named_num`，是本菜单唯一有真值的好友口径。
  *
- * 以下键 armada 没有对应列，**永远不渲染**：`continent`、`wid_type`、
- * `retention_days_*`、`logged_in_*`、`error_desc`、`group_invite_allowed`
- *
- * 提交用 snake_case，后端归一化后落库为 camelCase，因此回填要按 camelCase 读。
+ * 不再注入 `account_status` / `is_exported`：上游圈号的基线 WHERE 已经强制
+ * `account_state = 2`（正常且未导出）。
  */
 
-/** 后端会真正应用的筛选键，提交时用的 snake_case 形态。 */
-export const EFFECTIVE_FILTER_KEYS = [
-  "country_iso2s",
-  "exclude_country_iso2s",
-  "group_ids",
-  "channel_ids",
-  "protocol_id",
-  "account_type",
-  "phone",
-  "register_days_min",
-  "register_days_max",
-  "friend_count_min",
-  "friend_count_max",
-  "online_status",
-  "device_os",
-  "error_code",
-  "created_at_from",
-  "created_at_to"
-] as const;
+import type { HyperlinkAccountFilter } from "@/api/hyperlink-task";
+import { createEmptyAccountFilter } from "@/views/hyperlink/task/domain/editor-rules";
 
-export interface AccountFilterForm {
-  country_iso2s: string[];
-  exclude_country_iso2s: string[];
-  group_ids: number[];
-  channel_ids: number[];
-  protocol_id: string;
-  account_type: number | null;
-  phone: string;
-  register_days_min: number | null;
-  register_days_max: number | null;
-  /** 通讯录里有名字的联系人数，不是双向好友 */
-  friend_count_min: number | null;
-  friend_count_max: number | null;
-  /** 1 在线 / 2 离线 */
-  online_status: number | null;
-  /** 1 安卓 / 2 苹果 */
-  device_os: number | null;
-  error_code: string;
-  created_at_from: number | null;
-  created_at_to: number | null;
-}
+/** 通讯录任务的筛选表单值，就是超链任务那份契约本身。 */
+export type AccountFilterForm = HyperlinkAccountFilter;
 
 /** 空表单：语义是「未限制（全部有效账号）」。 */
 export function emptyAccountFilterForm(): AccountFilterForm {
-  return {
-    country_iso2s: [],
-    exclude_country_iso2s: [],
-    group_ids: [],
-    channel_ids: [],
-    protocol_id: "",
-    account_type: null,
-    phone: "",
-    register_days_min: null,
-    register_days_max: null,
-    friend_count_min: null,
-    friend_count_max: null,
-    online_status: null,
-    device_os: null,
-    error_code: "",
-    created_at_from: null,
-    created_at_to: null
-  };
+  return createEmptyAccountFilter();
 }
+
+/** 除 schema 版本外的全部条件键，用于判空与摘要。 */
+const CONDITION_KEYS: (keyof AccountFilterForm)[] = [
+  "countryIso2s",
+  "excludeCountryIso2s",
+  "continent",
+  "groupIds",
+  "channelIds",
+  "protocolId",
+  "onlineStatus",
+  "rotationStatus",
+  "accountType",
+  "platform",
+  "widType",
+  "importMode",
+  "groupInviteAllowed",
+  "phone",
+  "importBatchId",
+  "source",
+  "contactNamedNumMin",
+  "contactNamedNumMax",
+  "retentionDaysMin",
+  "retentionDaysMax",
+  "registerDaysMin",
+  "registerDaysMax",
+  "createdAtFrom",
+  "createdAtTo"
+];
 
 function isMeaningful(value: unknown): boolean {
   if (value === null || value === undefined) {
@@ -89,55 +64,42 @@ function isMeaningful(value: unknown): boolean {
   if (Array.isArray(value)) {
     return value.length > 0;
   }
-  // false 是一个真实条件，不能被当成空值丢掉
+  // false 是一个真实条件（例如「禁止拉群」），不能被当成空值丢掉
   return true;
+}
+
+/**
+ * 是否设置了任何条件。
+ *
+ * @param form 表单值
+ * @returns 有任意一个真实条件时为 true
+ */
+export function hasAnyFilter(form: AccountFilterForm): boolean {
+  return CONDITION_KEYS.some(key => isMeaningful(form[key]));
 }
 
 /**
  * 把表单值转成提交用的 JSON 字符串。
  *
- * 条件全空时返回 `"{}"`，语义是「未限制」。只要有一个真实条件，就必须强制注入
- * `account_status: 'normal'` 与 `is_exported: false`。
- * **不注入 `stranger_muted`**——这是与超链任务的真实差异，不是笔误。
+ * 空字符串统一收敛成 null，避免把「没填」当成「筛了个空串」。
  *
  * @param form 表单值
  * @returns 提交用的 JSON 字符串
  */
 export function toAccountFilterJson(form: AccountFilterForm): string {
-  const payload: Record<string, unknown> = {};
-  for (const key of EFFECTIVE_FILTER_KEYS) {
-    const value = (form as unknown as Record<string, unknown>)[key];
-    if (isMeaningful(value)) {
-      payload[key] = typeof value === "string" ? value.trim() : value;
-    }
+  const payload: Record<string, unknown> = { filterSchemaVersion: 1 };
+  for (const key of CONDITION_KEYS) {
+    const value = form[key];
+    payload[key] = isMeaningful(value)
+      ? typeof value === "string"
+        ? value.trim()
+        : value
+      : Array.isArray(value)
+        ? []
+        : null;
   }
-  if (Object.keys(payload).length === 0) {
-    return "{}";
-  }
-  payload.account_status = "normal";
-  payload.is_exported = false;
   return JSON.stringify(payload);
 }
-
-/** 提交键 → 落库键的对应；后端归一化输出 camelCase。 */
-const STORED_KEYS: Record<keyof AccountFilterForm, string> = {
-  country_iso2s: "countryIso2s",
-  exclude_country_iso2s: "excludeCountryIso2s",
-  group_ids: "groupIds",
-  channel_ids: "channelIds",
-  protocol_id: "protocolId",
-  account_type: "accountType",
-  phone: "phone",
-  register_days_min: "registerDaysMin",
-  register_days_max: "registerDaysMax",
-  friend_count_min: "friendCountMin",
-  friend_count_max: "friendCountMax",
-  online_status: "onlineStatus",
-  device_os: "deviceOs",
-  error_code: "errorCode",
-  created_at_from: "createdAtFrom",
-  created_at_to: "createdAtTo"
-};
 
 /**
  * 把落库的筛选 JSON 回填成表单值。
@@ -147,9 +109,7 @@ const STORED_KEYS: Record<keyof AccountFilterForm, string> = {
  * @param raw 落库的 JSON 字符串
  * @returns 表单值
  */
-export function parseAccountFilter(
-  raw: string | null | undefined
-): AccountFilterForm {
+export function parseAccountFilter(raw: string | null): AccountFilterForm {
   const form = emptyAccountFilterForm();
   if (!raw) {
     return form;
@@ -164,21 +124,15 @@ export function parseAccountFilter(
     return form;
   }
   const source = parsed as Record<string, unknown>;
-  for (const key of Object.keys(STORED_KEYS) as (keyof AccountFilterForm)[]) {
-    const value = source[STORED_KEYS[key]];
-    if (value !== undefined && value !== null) {
-      (form as unknown as Record<string, unknown>)[key] = value;
+  for (const key of CONDITION_KEYS) {
+    const value = source[key];
+    if (value === undefined || value === null) {
+      continue;
     }
+    if (Array.isArray(form[key]) && !Array.isArray(value)) {
+      continue;
+    }
+    (form as unknown as Record<string, unknown>)[key] = value;
   }
   return form;
-}
-
-/**
- * 该筛选是否限定了范围，供「账号范围」区块判断要不要显示「全部有效账号」。
- *
- * @param form 表单值
- * @returns 有任一真实条件时为 true
- */
-export function hasAnyFilter(form: AccountFilterForm): boolean {
-  return toAccountFilterJson(form) !== "{}";
 }

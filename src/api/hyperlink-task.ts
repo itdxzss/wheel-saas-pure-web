@@ -56,6 +56,10 @@ export interface HyperlinkAccountFilter {
   source: 0 | 1 | 2 | 3 | 4 | null;
   friendCountMin: number | null;
   friendCountMax: number | null;
+  /** 通讯录中有名字的联系人数下限；与双向好友是两个口径 */
+  contactNamedNumMin: number | null;
+  /** 通讯录中有名字的联系人数上限；与双向好友是两个口径 */
+  contactNamedNumMax: number | null;
   retentionDaysMin: number | null;
   retentionDaysMax: number | null;
   registerDaysMin: number | null;
