@@ -175,7 +175,7 @@ describe("hyperlink data package page state", () => {
     });
   });
 
-  it("keeps the backend import counters after an overwrite import", async () => {
+  it("closes the import dialog and refreshes after an overwrite import", async () => {
     const result = {
       importId: 9001,
       mode: "OVERWRITE" as const,
@@ -195,7 +195,7 @@ describe("hyperlink data package page state", () => {
       file: new File(["639123456789"], "phones.txt")
     });
 
-    assert.deepEqual(state.importResult.value, result);
+    assert.equal(state.importVisible.value, false);
     const form = (armadaCalls()[0].opts as { data: FormData }).data;
     assert.equal(form.get("mode"), "OVERWRITE");
     assert.deepEqual(

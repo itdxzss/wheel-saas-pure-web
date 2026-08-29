@@ -53,7 +53,7 @@ const props = {
 export default defineComponent({
   name: "PureTableBar",
   props,
-  emits: ["refresh", "fullscreen"],
+  emits: ["refresh", "fullscreen", "columns-change"],
   setup(props, { emit, slots, attrs }) {
     const size = ref("default");
     const loading = ref(false);
@@ -131,11 +131,16 @@ export default defineComponent({
     }
 
     function handleCheckAllChange(val: boolean) {
-      checkedColumns.value = val ? checkColumnList : [];
+      checkedColumns.value = val
+        ? checkColumnList
+        : dynamicColumns.value
+            .filter(column => column.fixed)
+            .map(column => column.label);
       isIndeterminate.value = false;
       dynamicColumns.value.map(column =>
-        val ? (column.hide = false) : (column.hide = true)
+        column.fixed ? (column.hide = false) : (column.hide = !val)
       );
+      emit("columns-change", cloneDeep(dynamicColumns.value), "update");
     }
 
     function handleCheckedColumnsChange(value: string[]) {
@@ -147,7 +152,9 @@ export default defineComponent({
     }
 
     function handleCheckColumnListChange(val: boolean, label: string) {
+      if (isFixedColumn(label)) return;
       dynamicColumns.value.filter(item => item.label === label)[0].hide = !val;
+      emit("columns-change", cloneDeep(dynamicColumns.value), "update");
     }
 
     async function onReset() {
@@ -157,6 +164,7 @@ export default defineComponent({
       checkColumnList = [];
       checkColumnList = await getKeyList(cloneDeep(props?.columns), "label");
       checkedColumns.value = getKeyList(cloneDeep(filterColumns), "label");
+      emit("columns-change", cloneDeep(dynamicColumns.value), "reset");
     }
 
     const dropdown = {
@@ -214,6 +222,7 @@ export default defineComponent({
             }
             const currentRow = dynamicColumns.value.splice(oldIndex, 1)[0];
             dynamicColumns.value.splice(newIndex, 0, currentRow);
+            emit("columns-change", cloneDeep(dynamicColumns.value), "update");
           }
         });
       });
@@ -353,6 +362,7 @@ export default defineComponent({
                                 key={index}
                                 label={item}
                                 value={item}
+                                disabled={isFixedColumn(item)}
                                 onChange={value =>
                                   handleCheckColumnListChange(value, item)
                                 }
