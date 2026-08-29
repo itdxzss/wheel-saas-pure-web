@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   DATA_PACKAGE_IMPORT_MAX_ROWS,
-  dataPackageImportModeLabel,
   inspectDataPackageTxt
 } from "./useDataPackageImport";
 
@@ -21,6 +20,7 @@ describe("data package TXT inspection", () => {
       exceedsMaxRows: false,
       filename: "phones.txt",
       nonEmptyRowCount: 5,
+      previewPhones: ["66812345678", "60123456789", "65987654321"],
       validPhoneCount: 3,
       invalidRowCount: 1,
       duplicatedRowCount: 1,
@@ -65,6 +65,30 @@ describe("data package TXT inspection", () => {
     assert.deepEqual(result.brazilRisk, {
       samplePhones: ["556293501634", "557182353451", "559984344731"]
     });
+    assert.deepEqual(result.previewPhones, [
+      "556293501634",
+      "557182353451",
+      "559984344731"
+    ]);
+  });
+
+  it("keeps only the first five unique valid phones for confirmation", async () => {
+    const result = await inspectDataPackageTxt(
+      new File(
+        [
+          "66800000001\n66800000002\n66800000003\n66800000004\n66800000005\n66800000006\n66800000001\n"
+        ],
+        "phones.txt"
+      )
+    );
+
+    assert.deepEqual(result.previewPhones, [
+      "66800000001",
+      "66800000002",
+      "66800000003",
+      "66800000004",
+      "66800000005"
+    ]);
   });
 
   it("treats surrounding whitespace as invalid instead of normalizing it", async () => {
@@ -75,10 +99,5 @@ describe("data package TXT inspection", () => {
     assert.equal(result.nonEmptyRowCount, 2);
     assert.equal(result.validPhoneCount, 1);
     assert.equal(result.invalidRowCount, 1);
-  });
-
-  it("keeps the two fixed import mode labels", () => {
-    assert.equal(dataPackageImportModeLabel("APPEND"), "追加导入");
-    assert.equal(dataPackageImportModeLabel("OVERWRITE"), "覆盖导入");
   });
 });

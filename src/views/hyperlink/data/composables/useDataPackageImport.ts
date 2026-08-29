@@ -1,5 +1,3 @@
-import type { DataPackageImportMode } from "@/api/hyperlink-data-package";
-
 export const DATA_PACKAGE_IMPORT_MAX_ROWS = 100_000;
 export const DATA_PACKAGE_IMPORT_SAMPLE = `66812345678
 66887654321
@@ -24,12 +22,14 @@ export interface DataPackageTxtInspection {
   forbiddenCountries: DataPackageForbiddenCountryInspection[];
   invalidRowCount: number;
   nonEmptyRowCount: number;
+  previewPhones: string[];
   validPhoneCount: number;
 }
 
 const PHONE_PATTERN = /^\d{6,20}$/;
 const BRAZIL_PHONE_PREFIX = "55";
 const BRAZIL_SAMPLE_LIMIT = 3;
+const CONFIRMATION_PREVIEW_LIMIT = 5;
 const FORBIDDEN_COUNTRIES = [
   { prefix: "60", label: "马来西亚" },
   { prefix: "65", label: "新加坡" },
@@ -41,12 +41,6 @@ const FORBIDDEN_COUNTRIES = [
 const FORBIDDEN_COUNTRY_MATCH_ORDER = [...FORBIDDEN_COUNTRIES].sort(
   (left, right) => right.prefix.length - left.prefix.length
 );
-
-export function dataPackageImportModeLabel(
-  mode: DataPackageImportMode
-): string {
-  return mode === "APPEND" ? "追加导入" : "覆盖导入";
-}
 
 export async function inspectDataPackageTxt(
   file: File
@@ -68,6 +62,7 @@ export async function inspectDataPackageTxt(
 
   const uniquePhones = new Set<string>();
   const brazilSamples: string[] = [];
+  const previewPhones: string[] = [];
   const forbiddenCounts = new Map<string, number>();
   let allValidPhonesAreBrazil = true;
   let duplicatedRowCount = 0;
@@ -86,6 +81,9 @@ export async function inspectDataPackageTxt(
       continue;
     }
     uniquePhones.add(phone);
+    if (previewPhones.length < CONFIRMATION_PREVIEW_LIMIT) {
+      previewPhones.push(phone);
+    }
     if (phone.startsWith(BRAZIL_PHONE_PREFIX)) {
       if (brazilSamples.length < BRAZIL_SAMPLE_LIMIT) {
         brazilSamples.push(phone);
@@ -120,6 +118,7 @@ export async function inspectDataPackageTxt(
     }),
     invalidRowCount,
     nonEmptyRowCount,
+    previewPhones,
     validPhoneCount: uniquePhones.size
   };
 }
