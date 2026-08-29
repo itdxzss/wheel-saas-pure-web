@@ -10,13 +10,15 @@ describe("data package TXT inspection", () => {
   it("parses, deduplicates and classifies forbidden-country phones", async () => {
     const file = new File(
       [
-        "\uFEFF66812345678\n\n 66812345678 \n+66812345678\n60123456789\n65987654321\n"
+        "\uFEFF66812345678\n\n66812345678\n+66812345678\n60123456789\n65987654321\n"
       ],
       "phones.txt",
       { type: "text/plain" }
     );
 
     assert.deepEqual(await inspectDataPackageTxt(file), {
+      brazilRisk: null,
+      exceedsMaxRows: false,
       filename: "phones.txt",
       nonEmptyRowCount: 5,
       validPhoneCount: 3,
@@ -29,7 +31,7 @@ describe("data package TXT inspection", () => {
     });
   });
 
-  it("rejects non-TXT, empty and oversized imports before submission", async () => {
+  it("rejects non-TXT and empty imports before submission", async () => {
     await assert.rejects(
       inspectDataPackageTxt(new File(["639123456789"], "phones.csv")),
       /仅支持 UTF-8 编码的 \.txt 文件/
@@ -38,23 +40,41 @@ describe("data package TXT inspection", () => {
       inspectDataPackageTxt(new File([], "phones.txt")),
       /TXT 文件不能为空/
     );
-    const rows = Array.from(
-      { length: DATA_PACKAGE_IMPORT_MAX_ROWS + 1 },
-      (_, index) => String(600000 + index)
-    ).join("\n");
-    await assert.rejects(
-      inspectDataPackageTxt(new File([rows], "phones.txt")),
-      /单次最多导入 100,000 条/
-    );
   });
 
-  it("accepts exactly one hundred thousand non-empty rows", async () => {
-    const rows = "66812345678\n".repeat(DATA_PACKAGE_IMPORT_MAX_ROWS);
+  it("keeps the complete inspection when the file exceeds the row limit", async () => {
+    const rows = "66812345678\n".repeat(DATA_PACKAGE_IMPORT_MAX_ROWS + 1);
 
     const result = await inspectDataPackageTxt(new File([rows], "phones.txt"));
 
     assert.equal(DATA_PACKAGE_IMPORT_MAX_ROWS, 100_000);
-    assert.equal(result.nonEmptyRowCount, 100_000);
+    assert.equal(result.nonEmptyRowCount, 100_001);
+    assert.equal(result.validPhoneCount, 1);
+    assert.equal(result.duplicatedRowCount, 100_000);
+    assert.equal(result.exceedsMaxRows, true);
+  });
+
+  it("reports Brazil format risk with samples when every valid phone starts with 55", async () => {
+    const result = await inspectDataPackageTxt(
+      new File(
+        ["556293501634\n557182353451\n559984344731\ninvalid\n"],
+        "brazil.txt"
+      )
+    );
+
+    assert.deepEqual(result.brazilRisk, {
+      samplePhones: ["556293501634", "557182353451", "559984344731"]
+    });
+  });
+
+  it("treats surrounding whitespace as invalid instead of normalizing it", async () => {
+    const result = await inspectDataPackageTxt(
+      new File([" 5511987654321 \n551187654321\n"], "phones.txt")
+    );
+
+    assert.equal(result.nonEmptyRowCount, 2);
+    assert.equal(result.validPhoneCount, 1);
+    assert.equal(result.invalidRowCount, 1);
   });
 
   it("keeps the two fixed import mode labels", () => {

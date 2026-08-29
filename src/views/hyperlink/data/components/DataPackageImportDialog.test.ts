@@ -31,7 +31,15 @@ describe("data package import dialog", () => {
     assert.match(source, /accept="\.txt,text\/plain"/);
     assert.match(source, /formattedMaxRows/);
     assert.match(source, /forbiddenCountries/);
-    assert.match(source, /以后端导入结果为准/);
+    assert.match(source, /exceedsMaxRows/);
+    assert.match(source, /共解析到/);
+    assert.match(source, /已超过单次最大/);
+    assert.match(source, /巴西号码风险提醒/);
+    assert.match(source, /\+9\s*\/ 去9/);
+    assert.match(source, /samplePhones/);
+    assert.match(source, /show-file-list/);
+    assert.match(source, /formatFileSize/);
+    assert.match(source, /点击或拖拽重新选择/);
   });
 
   it("renders every server import result counter", () => {

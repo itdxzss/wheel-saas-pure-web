@@ -12,8 +12,14 @@ export interface DataPackageForbiddenCountryInspection {
   prefix: string;
 }
 
+export interface DataPackageBrazilRiskInspection {
+  samplePhones: string[];
+}
+
 export interface DataPackageTxtInspection {
+  brazilRisk: DataPackageBrazilRiskInspection | null;
   duplicatedRowCount: number;
+  exceedsMaxRows: boolean;
   filename: string;
   forbiddenCountries: DataPackageForbiddenCountryInspection[];
   invalidRowCount: number;
@@ -22,6 +28,8 @@ export interface DataPackageTxtInspection {
 }
 
 const PHONE_PATTERN = /^\d{6,20}$/;
+const BRAZIL_PHONE_PREFIX = "55";
+const BRAZIL_SAMPLE_LIMIT = 3;
 const FORBIDDEN_COUNTRIES = [
   { prefix: "60", label: "马来西亚" },
   { prefix: "65", label: "新加坡" },
@@ -59,19 +67,16 @@ export async function inspectDataPackageTxt(
   }
 
   const uniquePhones = new Set<string>();
+  const brazilSamples: string[] = [];
   const forbiddenCounts = new Map<string, number>();
+  let allValidPhonesAreBrazil = true;
   let duplicatedRowCount = 0;
   let invalidRowCount = 0;
   let nonEmptyRowCount = 0;
   for (const sourceLine of text.replace(/^\uFEFF/, "").split(/\r?\n/)) {
-    const phone = sourceLine.trim();
+    const phone = sourceLine;
     if (!phone) continue;
     nonEmptyRowCount += 1;
-    if (nonEmptyRowCount > DATA_PACKAGE_IMPORT_MAX_ROWS) {
-      throw new Error(
-        `单次最多导入 ${DATA_PACKAGE_IMPORT_MAX_ROWS.toLocaleString("en-US")} 条`
-      );
-    }
     if (!PHONE_PATTERN.test(phone)) {
       invalidRowCount += 1;
       continue;
@@ -81,6 +86,13 @@ export async function inspectDataPackageTxt(
       continue;
     }
     uniquePhones.add(phone);
+    if (phone.startsWith(BRAZIL_PHONE_PREFIX)) {
+      if (brazilSamples.length < BRAZIL_SAMPLE_LIMIT) {
+        brazilSamples.push(phone);
+      }
+    } else {
+      allValidPhonesAreBrazil = false;
+    }
     const forbiddenCountry = FORBIDDEN_COUNTRY_MATCH_ORDER.find(country =>
       phone.startsWith(country.prefix)
     );
@@ -95,7 +107,12 @@ export async function inspectDataPackageTxt(
     throw new Error("TXT 文件不能为空");
   }
   return {
+    brazilRisk:
+      uniquePhones.size > 0 && allValidPhonesAreBrazil
+        ? { samplePhones: brazilSamples }
+        : null,
     duplicatedRowCount,
+    exceedsMaxRows: nonEmptyRowCount > DATA_PACKAGE_IMPORT_MAX_ROWS,
     filename: file.name,
     forbiddenCountries: FORBIDDEN_COUNTRIES.flatMap(country => {
       const count = forbiddenCounts.get(country.prefix);

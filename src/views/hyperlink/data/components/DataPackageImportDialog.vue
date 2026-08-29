@@ -16,6 +16,8 @@ import {
   type DataPackageTxtInspection
 } from "../composables/useDataPackageImport";
 import DataPackageImportGuide from "./DataPackageImportGuide.vue";
+import Close from "~icons/ep/close";
+import Document from "~icons/ep/document";
 import UploadFilled from "~icons/ep/upload-filled";
 
 defineOptions({ name: "DataPackageImportDialog" });
@@ -68,11 +70,23 @@ const canSubmit = computed(
   () =>
     Boolean(file.value) &&
     Boolean(inspection.value?.validPhoneCount) &&
+    !inspection.value?.exceedsMaxRows &&
     !inspection.value?.forbiddenCountries.length
 );
 
 function formatCount(value: number): string {
   return value.toLocaleString("en-US");
+}
+
+function formatFileSize(value: number): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let size = value;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  return `${size.toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`;
 }
 
 function downloadTemplate(): void {
@@ -87,10 +101,12 @@ function downloadTemplate(): void {
 async function handleUploadChange(uploadFile: UploadFile): Promise<void> {
   const raw = uploadFile.raw as File | undefined;
   if (!raw) return;
+  uploadRef.value?.clearFiles();
+  file.value = raw;
+  inspection.value = null;
   inspecting.value = true;
   try {
     inspection.value = await inspectDataPackageTxt(raw);
-    file.value = raw;
   } catch (error) {
     file.value = null;
     inspection.value = null;
@@ -106,6 +122,7 @@ async function handleUploadChange(uploadFile: UploadFile): Promise<void> {
 function removeFile(): void {
   file.value = null;
   inspection.value = null;
+  uploadRef.value?.clearFiles();
 }
 
 function submit(): void {
@@ -115,6 +132,12 @@ function submit(): void {
   }
   if (!inspection.value.validPhoneCount) {
     ElMessage.warning("文件中未解析到有效手机号，请检查格式后重试");
+    return;
+  }
+  if (inspection.value.exceedsMaxRows) {
+    ElMessage.error(
+      `本次解析 ${formatCount(inspection.value.nonEmptyRowCount)} 条，已超过单次最大 ${formattedMaxRows} 条限制，请拆分文件后再上传`
+    );
     return;
   }
   if (inspection.value.forbiddenCountries.length) {
@@ -208,16 +231,38 @@ watch(
             drag
             accept=".txt,text/plain"
             :auto-upload="false"
-            :limit="1"
+            :class="{ 'has-file': file }"
+            :show-file-list="false"
             :on-change="handleUploadChange"
-            :on-remove="removeFile"
           >
-            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div class="el-upload__text">
-              将 TXT 文件拖到此处，或 <em>点击选择</em>
+            <div v-if="file" class="selected-file">
+              <span class="selected-file__icon">
+                <el-icon><Document /></el-icon>
+              </span>
+              <span class="selected-file__copy">
+                <strong :title="file.name">{{ file.name }}</strong>
+                <span>
+                  {{ formatFileSize(file.size) }} · 点击或拖拽重新选择
+                </span>
+              </span>
+              <el-button
+                class="selected-file__remove"
+                text
+                circle
+                aria-label="移除文件"
+                @click.stop="removeFile"
+              >
+                <el-icon><Close /></el-icon>
+              </el-button>
             </div>
+            <template v-else>
+              <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+              <div class="el-upload__text">
+                将 TXT 文件拖到此处，或 <em>点击选择</em>
+              </div>
+            </template>
             <template #tip>
-              <div class="el-upload__tip">
+              <div v-if="!file" class="el-upload__tip">
                 仅支持 .txt 格式，必须使用 UTF-8 编码；单次最多
                 {{ formattedMaxRows }} 个非空行。
               </div>
@@ -225,37 +270,63 @@ watch(
           </el-upload>
         </el-form-item>
 
-        <el-descriptions v-if="inspection" :column="2" border>
-          <el-descriptions-item label="文件名" :span="2">
-            {{ inspection.filename }}
-          </el-descriptions-item>
-          <el-descriptions-item label="非空行数">
-            {{ formatCount(inspection.nonEmptyRowCount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="有效号码">
-            {{ formatCount(inspection.validPhoneCount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="非法行">
-            {{ formatCount(inspection.invalidRowCount) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="文件内重复">
-            {{ formatCount(inspection.duplicatedRowCount) }}
-          </el-descriptions-item>
-        </el-descriptions>
+        <el-alert
+          v-if="inspection"
+          class="inspection-alert"
+          type="success"
+          show-icon
+          :closable="false"
+          :title="`共解析到 ${formatCount(inspection.validPhoneCount)} 个有效手机号`"
+        />
+        <el-alert
+          v-if="inspection?.exceedsMaxRows"
+          class="inspection-alert"
+          type="error"
+          show-icon
+          :closable="false"
+          :title="`本次解析 ${formatCount(inspection.nonEmptyRowCount)} 条，已超过单次最大 ${formattedMaxRows} 条限制，请拆分文件后再上传`"
+        />
         <el-alert
           v-if="inspection?.forbiddenCountries.length"
-          class="forbidden-alert"
+          class="inspection-alert"
           type="error"
           show-icon
           :closable="false"
           :title="`检测到禁止上传国家的号码：${forbiddenCountryMessage}`"
         />
         <el-alert
-          class="count-tip"
-          type="info"
+          v-if="inspection?.brazilRisk"
+          class="brazil-risk-alert inspection-alert"
+          type="warning"
+          show-icon
           :closable="false"
-          title="页面行数仅用于确认文件；成功、非法和重复数量以后端导入结果为准。"
-        />
+        >
+          <template #title>
+            <strong>巴西号码风险提醒</strong>
+          </template>
+          <div class="brazil-risk-copy">
+            <p>
+              抽样检测到本次上传的号码<strong
+                >疑似全部为巴西号码（55 开头）</strong
+              >。巴西手机号存在<strong>「+9 / 去9」</strong>两种格式（如
+              <code>5511987654321</code> 与
+              <code>551187654321</code> 可能指向同一 WhatsApp 账号）。
+            </p>
+            <p>
+              <strong>请务必确认：</strong
+              >您上传的号码已经过第三方平台的筛选/映射处理，否则可能出现大量号码无法识别或重复发送，造成营销资源浪费。
+            </p>
+            <div class="brazil-risk-samples">
+              <span>本次抽样：</span>
+              <code
+                v-for="phone in inspection.brazilRisk.samplePhones"
+                :key="phone"
+              >
+                {{ phone }}
+              </code>
+            </div>
+          </div>
+        </el-alert>
       </el-form>
     </template>
 
@@ -319,8 +390,7 @@ watch(
 }
 
 .upload-item,
-.count-tip,
-.forbidden-alert {
+.inspection-alert {
   margin-top: 18px;
 }
 
@@ -328,6 +398,88 @@ watch(
 .upload-item :deep(.el-upload-dragger),
 .import-result {
   width: 100%;
+}
+
+.upload-item .has-file :deep(.el-upload-dragger) {
+  padding: 0;
+  text-align: left;
+  border-style: solid;
+}
+
+.selected-file {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 11px 13px;
+}
+
+.selected-file__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 6px;
+}
+
+.selected-file__copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.selected-file__copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+}
+
+.selected-file__copy span {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.selected-file__remove {
+  flex-shrink: 0;
+}
+
+.brazil-risk-copy {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--el-text-color-regular);
+}
+
+.brazil-risk-copy p {
+  margin: 5px 0 0;
+}
+
+.brazil-risk-copy strong {
+  color: var(--el-color-danger);
+}
+
+.brazil-risk-copy code,
+.brazil-risk-samples code {
+  padding: 1px 5px;
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-8);
+  border-radius: 4px;
+}
+
+.brazil-risk-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--el-text-color-secondary);
 }
 
 @media (width <= 720px) {
