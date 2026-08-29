@@ -69,6 +69,30 @@ function rangeTags(row: ContactTaskListItem): RangeTag[] {
   if (filter.register_days_max != null) {
     tags.push({ text: `注册≤${filter.register_days_max}天`, excluded: false });
   }
+  if (filter.friend_count_min != null) {
+    tags.push({ text: `好友≥${filter.friend_count_min}`, excluded: false });
+  }
+  if (filter.friend_count_max != null) {
+    tags.push({ text: `好友≤${filter.friend_count_max}`, excluded: false });
+  }
+  if (filter.online_status != null) {
+    tags.push({
+      text: filter.online_status === 1 ? "在线" : "离线",
+      excluded: false
+    });
+  }
+  if (filter.device_os != null) {
+    tags.push({
+      text: filter.device_os === 1 ? "安卓" : "苹果",
+      excluded: false
+    });
+  }
+  if (filter.error_code) {
+    tags.push({ text: `错误码 ${filter.error_code}`, excluded: false });
+  }
+  if (filter.created_at_from != null || filter.created_at_to != null) {
+    tags.push({ text: "限定创建时间", excluded: false });
+  }
   return tags;
 }
 
@@ -92,6 +116,16 @@ function successPercent(row: ContactTaskListItem): number {
     return 0;
   }
   return Math.min(100, Math.round((success / total) * 100));
+}
+
+/** 内容列：链接消息给标题，图文消息给文案预览。 */
+function contentPreview(row: ContactTaskListItem): string {
+  const text = row.messageType === MESSAGE_TYPE_LINK ? row.title : row.content;
+  const trimmed = (text ?? "").trim();
+  if (!trimmed) {
+    return "-";
+  }
+  return trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed;
 }
 
 function formatTime(value: number | null): string {
@@ -204,11 +238,7 @@ function runAction(row: ContactTaskListItem, action: string) {
               }}
             </div>
             <div class="cell-sub">
-              {{
-                row.messageType === MESSAGE_TYPE_LINK
-                  ? row.title || "-"
-                  : row.name || "-"
-              }}
+              {{ contentPreview(row) }}
             </div>
             <div v-if="row.messageType === MESSAGE_TYPE_LINK" class="cell-sub">
               {{ row.promotionLink || "-" }}

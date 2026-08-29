@@ -23,6 +23,8 @@ export interface ContactTaskListItem {
   name: string;
   messageType: ContactMessageType;
   title: string | null;
+  /** 正文或图文文案，列表用作内容预览 */
+  content: string | null;
   promotionLink: string | null;
   /** 归一化后的筛选 JSON 字符串，camelCase */
   accountFilter: string | null;

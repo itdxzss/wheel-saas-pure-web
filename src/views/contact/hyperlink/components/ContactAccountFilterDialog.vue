@@ -22,6 +22,18 @@ const ACCOUNT_TYPE_OPTIONS = [
   { value: 2, label: "商业号" }
 ];
 
+/** account_state.login_state：1 在线 2 离线。 */
+const ONLINE_STATUS_OPTIONS = [
+  { value: 1, label: "在线" },
+  { value: 2, label: "离线" }
+];
+
+/** account.device_os：1 安卓 2 苹果。 */
+const DEVICE_OS_OPTIONS = [
+  { value: 1, label: "安卓" },
+  { value: 2, label: "苹果" }
+];
+
 const draft = ref<AccountFilterForm>(emptyAccountFilterForm());
 
 const visible = computed({
@@ -38,6 +50,18 @@ watch(
   },
   { immediate: true }
 );
+
+/** 日期区间控件用一个数组，落到表单是两个独立字段。 */
+const createdRange = computed<[number, number] | null>(() =>
+  draft.value.created_at_from != null && draft.value.created_at_to != null
+    ? [draft.value.created_at_from, draft.value.created_at_to]
+    : null
+);
+
+function applyCreatedRange(value: [number, number] | null) {
+  draft.value.created_at_from = value ? Number(value[0]) : null;
+  draft.value.created_at_to = value ? Number(value[1]) : null;
+}
 
 function reset() {
   draft.value = emptyAccountFilterForm();
@@ -135,6 +159,77 @@ function confirm() {
           class="filter-control"
         />
       </el-form-item>
+      <el-form-item label="通讯录好友数">
+        <div class="range-row">
+          <el-input-number
+            v-model="draft.friend_count_min"
+            :min="0"
+            controls-position="right"
+            placeholder="最小"
+          />
+          <span class="range-sep">至</span>
+          <el-input-number
+            v-model="draft.friend_count_max"
+            :min="0"
+            controls-position="right"
+            placeholder="最大"
+          />
+        </div>
+        <div class="field-hint">
+          指通讯录里<b>有名字</b>的联系人数，也就是本任务实际会发送的人数；
+          不是「互加好友」——那个数两套协议都拿不到。
+        </div>
+      </el-form-item>
+      <el-form-item label="在线状态">
+        <el-select
+          v-model="draft.online_status"
+          clearable
+          placeholder="不限"
+          class="filter-control"
+        >
+          <el-option
+            v-for="option in ONLINE_STATUS_OPTIONS"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="机型">
+        <el-select
+          v-model="draft.device_os"
+          clearable
+          placeholder="不限"
+          class="filter-control"
+        >
+          <el-option
+            v-for="option in DEVICE_OS_OPTIONS"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="封号错误码">
+        <el-input
+          v-model="draft.error_code"
+          clearable
+          placeholder="如 401 / 403 / 440"
+          class="filter-control"
+        />
+      </el-form-item>
+      <el-form-item label="创建时间">
+        <el-date-picker
+          :model-value="createdRange"
+          type="datetimerange"
+          value-format="x"
+          range-separator="至"
+          start-placeholder="开始时间"
+          end-placeholder="结束时间"
+          class="filter-control"
+          @update:model-value="applyCreatedRange"
+        />
+      </el-form-item>
       <el-form-item label="注册天数">
         <div class="range-row">
           <el-input-number
@@ -180,6 +275,13 @@ function confirm() {
 }
 
 .range-sep {
+  color: var(--el-text-color-secondary);
+}
+
+.field-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 </style>

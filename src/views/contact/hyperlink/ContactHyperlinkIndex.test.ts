@@ -88,4 +88,22 @@ describe("contact hyperlink task list", () => {
     assert.match(source, /<ContactTaskDrawer/);
     assert.match(source, /<ContactTaskAccountDrawer/);
   });
+  it("previews the body text for an image message, not the task name", () => {
+    // 图文消息没有标题，内容列要给文案预览；用任务名充数等于列里没信息
+    assert.match(source, /function contentPreview/);
+    assert.match(
+      source,
+      /row\.messageType === MESSAGE_TYPE_LINK \? row\.title : row\.content/
+    );
+  });
+
+  it("truncates a long preview instead of blowing up the column", () => {
+    assert.match(source, /trimmed\.length > 40/);
+  });
+
+  it("labels every filter that can appear in the range column", () => {
+    for (const label of ["好友≥", "在线", "安卓", "错误码", "限定创建时间"]) {
+      assert.ok(source.includes(label), `range column cannot show ${label}`);
+    }
+  });
 });

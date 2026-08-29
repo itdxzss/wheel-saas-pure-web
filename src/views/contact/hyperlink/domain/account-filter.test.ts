@@ -20,15 +20,38 @@ describe("contact account filter", () => {
       "account_type",
       "phone",
       "register_days_min",
-      "register_days_max"
+      "register_days_max",
+      "friend_count_min",
+      "friend_count_max",
+      "online_status",
+      "device_os",
+      "error_code",
+      "created_at_from",
+      "created_at_to"
     ]);
   });
 
-  it("never exposes the mutual friend count filter", () => {
-    // 交接文档 §5.3 硬约束：双向好友标记两套协议都拿不到，恒为 0
+  it("exposes the friend count that is backed by a real column", () => {
+    // friendCount 打在 contact_named_num（通讯录里有名字的数），不是恒 0 的 contact_mutual_num
     const keys = Array.from(EFFECTIVE_FILTER_KEYS) as string[];
-    assert.ok(!keys.includes("friend_count_min"));
-    assert.ok(!keys.includes("friend_count_max"));
+    assert.ok(keys.includes("friend_count_min"));
+    assert.ok(keys.includes("friend_count_max"));
+  });
+
+  it("never exposes a key armada has no column for", () => {
+    const keys = Array.from(EFFECTIVE_FILTER_KEYS) as string[];
+    for (const dead of [
+      "continent",
+      "wid_type",
+      "retention_days_min",
+      "retention_days_max",
+      "logged_in_from",
+      "logged_in_to",
+      "error_desc",
+      "group_invite_allowed"
+    ]) {
+      assert.ok(!keys.includes(dead), `${dead} has no column in armada`);
+    }
   });
 
   it("submits {} when nothing is filtered, meaning all valid accounts", () => {

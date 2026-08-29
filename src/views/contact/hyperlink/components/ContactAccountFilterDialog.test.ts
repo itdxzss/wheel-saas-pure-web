@@ -18,25 +18,30 @@ describe("contact account filter dialog", () => {
       "draft.account_type",
       "draft.phone",
       "draft.register_days_min",
-      "draft.register_days_max"
+      "draft.register_days_max",
+      "draft.friend_count_min",
+      "draft.friend_count_max",
+      "draft.online_status",
+      "draft.device_os",
+      "draft.error_code",
+      "created_at_from"
     ]) {
       assert.ok(source.includes(key), `missing control for ${key}`);
     }
   });
 
-  it("never renders the mutual friend count filter", () => {
-    // 两套协议都拿不到双向好友标记，该值恒为 0，筛出来没有意义
-    assert.doesNotMatch(source, /friend_count/);
-    assert.doesNotMatch(source, /双向好友/);
+  it("names the friend count filter honestly", () => {
+    // 它打在 contact_named_num（通讯录里有名字的数），叫「双向好友」就是骗人
+    assert.match(source, /通讯录好友数/);
+    assert.match(source, /不是「互加好友」/);
+    assert.doesNotMatch(source, /label="双向好友/);
   });
 
   it("never renders a control the backend stores but ignores", () => {
     for (const dead of [
       "continent",
-      "online_status",
       "platform",
       "wid_type",
-      "error_code",
       "error_desc",
       "logged_in",
       "retention_days",

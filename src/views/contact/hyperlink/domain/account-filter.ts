@@ -5,10 +5,12 @@
  * 但真正参与圈号 SQL 的 `AccountFilterCriteria` 只实现了下面这些。画出一个存了却不生效的
  * 控件，比没有这个控件更糟——用户以为筛了，实际没筛。
  *
- * 另外两类**永远不渲染**：
- * - `friend_count_min|max`（双向好友数）：两套协议都不暴露该标记，值恒为 0（交接文档 §5.3）
- * - `group_invite_allowed`：`AccountFilterSelectionMapper.xml` 的注释写明「armada 没有落列，
- *   故意没有条件」，criteria 解析了但 SQL 从不使用，画出来就是骗人
+ * `friend_count_min|max` 的口径是**通讯录里有名字的联系人数**（打在 `contact_named_num`），
+ * 不是双向好友——双向好友两套协议都拿不到，恒为 0，拿它筛号任何下界都会命中 0 个。
+ * 控件必须叫「通讯录好友数」，叫「双向好友」就是骗人。
+ *
+ * 以下键 armada 没有对应列，**永远不渲染**：`continent`、`wid_type`、
+ * `retention_days_*`、`logged_in_*`、`error_desc`、`group_invite_allowed`
  *
  * 提交用 snake_case，后端归一化后落库为 camelCase，因此回填要按 camelCase 读。
  */
@@ -23,7 +25,14 @@ export const EFFECTIVE_FILTER_KEYS = [
   "account_type",
   "phone",
   "register_days_min",
-  "register_days_max"
+  "register_days_max",
+  "friend_count_min",
+  "friend_count_max",
+  "online_status",
+  "device_os",
+  "error_code",
+  "created_at_from",
+  "created_at_to"
 ] as const;
 
 export interface AccountFilterForm {
@@ -36,6 +45,16 @@ export interface AccountFilterForm {
   phone: string;
   register_days_min: number | null;
   register_days_max: number | null;
+  /** 通讯录里有名字的联系人数，不是双向好友 */
+  friend_count_min: number | null;
+  friend_count_max: number | null;
+  /** 1 在线 / 2 离线 */
+  online_status: number | null;
+  /** 1 安卓 / 2 苹果 */
+  device_os: number | null;
+  error_code: string;
+  created_at_from: number | null;
+  created_at_to: number | null;
 }
 
 /** 空表单：语义是「未限制（全部有效账号）」。 */
@@ -49,7 +68,14 @@ export function emptyAccountFilterForm(): AccountFilterForm {
     account_type: null,
     phone: "",
     register_days_min: null,
-    register_days_max: null
+    register_days_max: null,
+    friend_count_min: null,
+    friend_count_max: null,
+    online_status: null,
+    device_os: null,
+    error_code: "",
+    created_at_from: null,
+    created_at_to: null
   };
 }
 
@@ -103,7 +129,14 @@ const STORED_KEYS: Record<keyof AccountFilterForm, string> = {
   account_type: "accountType",
   phone: "phone",
   register_days_min: "registerDaysMin",
-  register_days_max: "registerDaysMax"
+  register_days_max: "registerDaysMax",
+  friend_count_min: "friendCountMin",
+  friend_count_max: "friendCountMax",
+  online_status: "onlineStatus",
+  device_os: "deviceOs",
+  error_code: "errorCode",
+  created_at_from: "createdAtFrom",
+  created_at_to: "createdAtTo"
 };
 
 /**
