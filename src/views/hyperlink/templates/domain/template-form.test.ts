@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES,
   createEmptyHyperlinkTemplateForm,
   toHyperlinkTemplateUpdateRequest,
   toHyperlinkTemplateWriteRequest,
-  validateHyperlinkImageFile,
   validateHyperlinkTemplateForm
 } from "./template-form";
 
@@ -114,31 +112,5 @@ describe("hyperlink template form contract", () => {
     );
     form.button.targetValue = "https://example.com";
     assert.equal(validateHyperlinkTemplateForm(form), "");
-  });
-
-  it("checks JPEG extension, MIME, size and file markers before upload", async () => {
-    const jpeg = new File(
-      [new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0xff, 0xd9])],
-      "promo.jpg",
-      { type: "image/jpeg" }
-    );
-    const disguisedPng = new File(["not jpeg"], "promo.jpg", {
-      type: "image/jpeg"
-    });
-    const tooLarge = new File(
-      [new Uint8Array(HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES + 1)],
-      "large.jpeg",
-      { type: "image/jpeg" }
-    );
-
-    assert.deepEqual(await validateHyperlinkImageFile(jpeg), {
-      valid: true,
-      message: ""
-    });
-    assert.equal((await validateHyperlinkImageFile(disguisedPng)).valid, false);
-    assert.equal(
-      (await validateHyperlinkImageFile(tooLarge)).message,
-      "图片不能超过 500KB"
-    );
   });
 });

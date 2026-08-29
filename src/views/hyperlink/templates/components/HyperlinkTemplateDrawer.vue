@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import type { UploadFile, UploadUserFile } from "element-plus";
+import { computed } from "vue";
 import type { HyperlinkTemplateDrawerMode } from "../composables/useHyperlinkTemplatePage";
 import {
   hyperlinkMessageTypeOptions,
   type HyperlinkTemplateForm
 } from "../domain/template-form";
 import HyperlinkTemplatePreview from "./HyperlinkTemplatePreview.vue";
+import ResourceAssetField from "../../library/components/ResourceAssetField.vue";
 
 const visible = defineModel<boolean>({ required: true });
 const form = defineModel<HyperlinkTemplateForm>("form", { required: true });
@@ -17,16 +17,13 @@ const props = defineProps<{
   loading: boolean;
   detailLoading: boolean;
   imageLoading: boolean;
-  onImageSelect: (file: File) => Promise<boolean>;
 }>();
 
 const emit = defineEmits<{
   (event: "save"): void;
-  (event: "clear-image"): void;
   (event: "message-type-change"): void;
 }>();
 
-const fileList = ref<UploadUserFile[]>([]);
 const imageRequired = computed(() => form.value.messageType === 1);
 const imageLabel = computed(() =>
   form.value.messageType === 1
@@ -41,25 +38,9 @@ const contentLabel = computed(() => {
   return "正文";
 });
 
-async function onImageChange(file: UploadFile): Promise<void> {
-  if (!file.raw) return;
-  const accepted = await props.onImageSelect(file.raw);
-  fileList.value = accepted ? [file] : [];
-}
-
-function clearImage(): void {
-  fileList.value = [];
-  emit("clear-image");
-}
-
 function onMessageTypeChange(): void {
-  fileList.value = [];
   emit("message-type-change");
 }
-
-watch(visible, opened => {
-  if (!opened) fileList.value = [];
-});
 </script>
 
 <template>
@@ -149,35 +130,10 @@ watch(visible, opened => {
           </template>
 
           <el-form-item :label="imageLabel" :required="imageRequired">
-            <el-upload
-              v-model:file-list="fileList"
-              class="full-width"
-              drag
-              accept=".jpg,.jpeg,image/jpeg"
-              :auto-upload="false"
-              :show-file-list="false"
-              :on-change="onImageChange"
-            >
-              <div>{{ form.imageName || "选择 JPG/JPEG 图片" }}</div>
-              <template #tip>
-                <div class="el-upload__tip">
-                  仅支持 JPEG，且不能超过 500KB。
-                </div>
-              </template>
-            </el-upload>
-            <el-card v-if="form.imageUrl" shadow="never" class="image-card">
-              <el-image
-                :src="form.imageUrl"
-                fit="cover"
-                class="image-preview"
-              />
-              <div class="image-meta">
-                <span>{{ form.imageName }}</span>
-                <el-button link type="danger" @click="clearImage">
-                  移除图片
-                </el-button>
-              </div>
-            </el-card>
+            <ResourceAssetField v-model="form.assetId" />
+            <div class="el-upload__tip">
+              仅显示可绑定的 JPEG，且不能超过 500KB。
+            </div>
           </el-form-item>
 
           <template v-if="form.messageType === 3 || form.messageType === 4">
@@ -248,30 +204,8 @@ watch(visible, opened => {
   font-weight: 600;
 }
 
-.full-width,
-:deep(.el-upload),
-:deep(.el-upload-dragger) {
+.full-width {
   width: 100%;
-}
-
-.image-card {
-  width: 100%;
-  margin-top: 10px;
-}
-
-.image-preview {
-  width: 100%;
-  height: 180px;
-  border-radius: 4px;
-}
-
-.image-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
 }
 
 .field-tip {

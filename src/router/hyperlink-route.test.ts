@@ -14,21 +14,26 @@ const templatePage = fileURLToPath(
 const taskPage = fileURLToPath(
   new URL("../views/hyperlink/task/index.vue", import.meta.url)
 );
+const libraryPage = fileURLToPath(
+  new URL("../views/hyperlink/library/index.vue", import.meta.url)
+);
 const mockRoutes = readFileSync(
   fileURLToPath(new URL("../../mock/asyncRoutes.ts", import.meta.url)),
   "utf8"
 );
 
 describe("hyperlink phase-one dynamic routes", () => {
-  it("maps backend component paths to the three real page modules", () => {
+  it("maps backend component paths to the four real page modules", () => {
     assert.equal(existsSync(dataPage), true);
     assert.equal(existsSync(templatePage), true);
     assert.equal(existsSync(taskPage), true);
+    assert.equal(existsSync(libraryPage), true);
 
     const moduleKeys = [
       "/src/views/hyperlink/data/index.vue",
       "/src/views/hyperlink/templates/index.vue",
-      "/src/views/hyperlink/task/index.vue"
+      "/src/views/hyperlink/task/index.vue",
+      "/src/views/hyperlink/library/index.vue"
     ];
     assert.equal(
       findViewModuleKey({ component: "hyperlink/data/index" }, moduleKeys),
@@ -42,6 +47,10 @@ describe("hyperlink phase-one dynamic routes", () => {
       findViewModuleKey({ component: "hyperlink/task/index" }, moduleKeys),
       moduleKeys[2]
     );
+    assert.equal(
+      findViewModuleKey({ component: "hyperlink/library/index" }, moduleKeys),
+      moduleKeys[3]
+    );
   });
 
   it("keeps the development preview menu aligned with backend RBAC", () => {
@@ -54,6 +63,7 @@ describe("hyperlink phase-one dynamic routes", () => {
     assert.match(mockRoutes, /tenant:hyperlink_task:edit/);
     assert.match(mockRoutes, /tenant:hyperlink_task:action/);
     assert.match(mockRoutes, /tenant:hyperlink_task:export/);
+    assert.match(mockRoutes, /component: "hyperlink\/library\/index"/);
     assert.match(mockRoutes, /tenant:hyperlink_data:create/);
     assert.match(mockRoutes, /tenant:hyperlink_data:import/);
     assert.match(mockRoutes, /tenant:hyperlink_data:edit/);
@@ -62,5 +72,8 @@ describe("hyperlink phase-one dynamic routes", () => {
     assert.match(mockRoutes, /tenant:hyperlink_template:edit/);
     assert.match(mockRoutes, /tenant:hyperlink_template:copy/);
     assert.match(mockRoutes, /tenant:hyperlink_template:delete/);
+    assert.match(mockRoutes, /tenant:resource_asset:upload/);
+    assert.match(mockRoutes, /tenant:resource_asset:edit/);
+    assert.match(mockRoutes, /tenant:resource_asset:delete/);
   });
 });

@@ -62,11 +62,13 @@ describe("hyperlink template page contract", () => {
     assert.match(drawer, /卡片正文/);
   });
 
-  it("uses authorized blob previews and lifecycle cleanup through the page composable", () => {
+  it("uses the shared asset picker with authorized blob previews and lifecycle cleanup", () => {
     assert.match(source, /useHyperlinkTemplatePage/);
-    assert.match(drawer, /\.jpg,\.jpeg,image\/jpeg/);
+    assert.match(drawer, /ResourceAssetField/);
+    assert.match(drawer, /v-model="form\.assetId"/);
     assert.match(drawer, /500KB/);
-    assert.match(pageComposable, /downloadHyperlinkTemplateImage/);
+    assert.match(pageComposable, /downloadResourceAsset/);
+    assert.doesNotMatch(pageComposable, /uploadHyperlinkTemplateImage/);
     assert.match(pageComposable, /onBeforeUnmount/);
     assert.match(pageComposable, /objectUrlController\.clear\(\)/);
   });

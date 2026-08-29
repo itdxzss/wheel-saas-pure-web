@@ -1,18 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
-import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   copyHyperlinkTemplate,
   createHyperlinkTemplate,
   deleteHyperlinkTemplate,
-  downloadHyperlinkTemplateImage,
   getHyperlinkTemplate,
   listHyperlinkTemplateOptions,
   listHyperlinkTemplates,
-  marketingTemplateFileContentUrl,
   updateHyperlinkTemplate,
-  uploadHyperlinkTemplateImage,
   type HyperlinkTemplateUpdateRequest
 } from "./hyperlink-template";
 
@@ -129,57 +125,6 @@ describe("hyperlink template API", () => {
         method: "delete",
         url: "/api/hyperlink-templates/302",
         opts: undefined
-      }
-    ]);
-  });
-
-  it("uploads through the existing marketing image endpoint", async () => {
-    resetArmadaMock({
-      id: 99,
-      originalFilename: "promo.jpg",
-      contentType: "image/jpeg",
-      sizeBytes: 3,
-      url: "/api/marketing-template-files/99/content"
-    });
-    const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], "promo.jpg", {
-      type: "image/jpeg"
-    });
-
-    const result = await uploadHyperlinkTemplateImage(file);
-
-    assert.equal(result.id, 99);
-    const [call] = armadaCalls();
-    assert.equal(call.url, "/api/marketing-template-files");
-    assert.ok(
-      (call.opts as { data: FormData }).data.get("file") instanceof File
-    );
-    const headers = { "Content-Type": "application/json" };
-    (
-      call.config as {
-        beforeRequestCallback: (config: { headers: typeof headers }) => void;
-      }
-    ).beforeRequestCallback({ headers });
-    assert.deepEqual(headers, {});
-  });
-
-  it("downloads image content as a raw blob through the authorized client", async () => {
-    const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], {
-      type: "image/jpeg"
-    });
-    resetHttpMock(blob);
-
-    const result = await downloadHyperlinkTemplateImage(88);
-
-    assert.equal(result, blob);
-    assert.equal(
-      marketingTemplateFileContentUrl(88),
-      "/api/marketing-template-files/88/content"
-    );
-    assert.deepEqual(httpCalls(), [
-      {
-        method: "get",
-        url: "/api/marketing-template-files/88/content",
-        opts: { responseType: "blob" }
       }
     ]);
   });

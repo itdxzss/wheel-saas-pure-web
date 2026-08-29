@@ -6,8 +6,6 @@ import type {
   SupportedHyperlinkMessageType
 } from "@/api/hyperlink-template";
 
-export const HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES = 500 * 1024;
-
 export interface HyperlinkTemplateButtonForm {
   displayText: string;
   targetValue: string;
@@ -26,14 +24,8 @@ export interface HyperlinkTemplateForm {
   assetId: number | null;
   imageName: string;
   imageUrl: string;
-  imageFile: File | null;
   remark: string;
   version: number | null;
-}
-
-export interface HyperlinkImageValidationResult {
-  valid: boolean;
-  message: string;
 }
 
 export const hyperlinkMessageTypeOptions: Array<{
@@ -62,7 +54,6 @@ export function createEmptyHyperlinkTemplateForm(): HyperlinkTemplateForm {
     assetId: null,
     imageName: "",
     imageUrl: "",
-    imageFile: null,
     remark: "",
     version: null
   };
@@ -94,7 +85,6 @@ export function toHyperlinkTemplateForm(
     assetId,
     imageName: assetId == null ? "" : "已上传图片",
     imageUrl: "",
-    imageFile: null,
     remark: detail.remark ?? "",
     version: detail.version
   };
@@ -158,8 +148,7 @@ export function validateHyperlinkTemplateForm(
     if (promotionLink.length > 2048) return "推广链接不能超过 2048 个字符";
     if (!isAbsoluteHttpUrl(promotionLink))
       return "请输入合法的 http/https 推广链接";
-    if (form.assetId == null && form.imageFile == null)
-      return "请上传链接预览图";
+    if (form.assetId == null) return "请选择链接预览图";
     return "";
   }
 
@@ -185,35 +174,6 @@ export function validateHyperlinkTemplateForm(
     if (cardTextMessage) return cardTextMessage;
   }
   return "";
-}
-
-export async function validateHyperlinkImageFile(
-  file: File
-): Promise<HyperlinkImageValidationResult> {
-  if (file.size > HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES) {
-    return { valid: false, message: "图片不能超过 500KB" };
-  }
-  if (
-    !/\.jpe?g$/i.test(file.name) ||
-    file.type.toLowerCase() !== "image/jpeg"
-  ) {
-    return { valid: false, message: "仅支持 JPG/JPEG 图片" };
-  }
-  if (file.size < 5) {
-    return { valid: false, message: "图片不是有效的 JPEG 文件" };
-  }
-
-  const header = new Uint8Array(await file.slice(0, 3).arrayBuffer());
-  const tail = new Uint8Array(await file.slice(-2).arrayBuffer());
-  const hasJpegMarkers =
-    header[0] === 0xff &&
-    header[1] === 0xd8 &&
-    header[2] === 0xff &&
-    tail[0] === 0xff &&
-    tail[1] === 0xd9;
-  return hasJpegMarkers
-    ? { valid: true, message: "" }
-    : { valid: false, message: "图片不是有效的 JPEG 文件" };
 }
 
 export function toHyperlinkTemplateWriteRequest(

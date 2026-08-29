@@ -1,5 +1,4 @@
 import { armadaRequest } from "@/api/armada";
-import { http } from "@/utils/http";
 
 export type HyperlinkMessageType = 1 | 2 | 3 | 4;
 export type SupportedHyperlinkMessageType = Exclude<HyperlinkMessageType, 2>;
@@ -69,14 +68,6 @@ export interface HyperlinkTemplateOption {
   messageType: HyperlinkMessageType;
   title: string;
   version: number;
-}
-
-export interface MarketingTemplateFileUploadResult {
-  id: number;
-  originalFilename: string;
-  contentType: string;
-  sizeBytes: number;
-  url: string;
 }
 
 export interface HyperlinkTemplateListQuery {
@@ -165,31 +156,4 @@ export function copyHyperlinkTemplate(
 
 export function deleteHyperlinkTemplate(id: number): Promise<void> {
   return armadaRequest<void>("delete", `/api/hyperlink-templates/${id}`);
-}
-
-export function marketingTemplateFileContentUrl(id: number): string {
-  return `/api/marketing-template-files/${id}/content`;
-}
-
-export function uploadHyperlinkTemplateImage(
-  file: File
-): Promise<MarketingTemplateFileUploadResult> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return armadaRequest<MarketingTemplateFileUploadResult>(
-    "post",
-    "/api/marketing-template-files",
-    { data: formData },
-    {
-      beforeRequestCallback: config => {
-        delete config.headers["Content-Type"];
-      }
-    }
-  );
-}
-
-export function downloadHyperlinkTemplateImage(id: number): Promise<Blob> {
-  return http.request<Blob>("get", marketingTemplateFileContentUrl(id), {
-    responseType: "blob"
-  });
 }
