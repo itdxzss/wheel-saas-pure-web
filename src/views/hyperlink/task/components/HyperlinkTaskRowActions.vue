@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { HyperlinkTaskListItem } from "@/api/hyperlink-task-list";
 import {
   rowActions,
   type HyperlinkTaskRowAction
 } from "../domain/list-display";
+import CopyDocument from "~icons/ep/copy-document";
+import DataAnalysis from "~icons/ep/data-analysis";
+import EditPen from "~icons/ep/edit-pen";
+import VideoPause from "~icons/ep/video-pause";
+import VideoPlay from "~icons/ep/video-play";
+import View from "~icons/ep/view";
 
 const props = defineProps<{
   row: HyperlinkTaskListItem;
@@ -47,6 +54,19 @@ function permission(action: HyperlinkTaskRowAction): string {
   }
   return "tenant:hyperlink_task:view";
 }
+
+function buttonIcon(action: HyperlinkTaskRowAction) {
+  if (action === "START" || action === "RESUME") {
+    return useRenderIcon(VideoPlay);
+  }
+  if (action === "PAUSE" || action === "STOP") {
+    return useRenderIcon(VideoPause);
+  }
+  if (action === "EDIT") return useRenderIcon(EditPen);
+  if (action === "COPY") return useRenderIcon(CopyDocument);
+  if (action === "DETAIL") return useRenderIcon(DataAnalysis);
+  return useRenderIcon(View);
+}
 </script>
 
 <template>
@@ -55,7 +75,10 @@ function permission(action: HyperlinkTaskRowAction): string {
       v-for="action in actions"
       :key="action"
       v-auth="permission(action)"
-      link
+      :plain="['START', 'PAUSE', 'RESUME', 'STOP'].includes(action)"
+      :link="!['START', 'PAUSE', 'RESUME', 'STOP'].includes(action)"
+      size="small"
+      :icon="buttonIcon(action)"
       :type="buttonType(action)"
       :loading="busyAction === action"
       :disabled="Boolean(busyAction) && busyAction !== action"
@@ -70,11 +93,12 @@ function permission(action: HyperlinkTaskRowAction): string {
 .row-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px 8px;
+  gap: 4px 6px;
 }
 
 .row-actions :deep(.el-button) {
-  justify-content: flex-start;
+  justify-content: center;
+  min-height: 26px;
   margin-left: 0;
 }
 </style>

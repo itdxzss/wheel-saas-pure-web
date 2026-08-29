@@ -13,8 +13,11 @@ function progress(value: number): number {
 
 <template>
   <div class="progress-caption">
-    <span>单钩 {{ row.successNum }}/{{ row.recipientTotal }}</span>
-    <span>失败 {{ row.failedNum }}</span>
+    <span class="success-text"
+      >✓ 单钩 {{ row.successNum.toLocaleString() }}</span
+    >
+    <span class="danger-text">失败 {{ row.failedNum.toLocaleString() }}</span>
+    <span class="muted">共 {{ row.recipientTotal.toLocaleString() }}</span>
   </div>
   <el-progress
     :percentage="progress(row.successNum)"
@@ -22,34 +25,38 @@ function progress(value: number): number {
     :show-text="false"
     status="success"
   />
-  <el-progress
-    class="failed-progress"
-    :percentage="progress(row.failedNum)"
-    :stroke-width="6"
-    :show-text="false"
-    status="exception"
-  />
-  <div class="muted">
-    未开通 WS {{ row.unregisteredNum }}（{{
-      percentage(row.unregisteredNum, row.recipientTotal)
-    }}）
+  <div class="unregistered-line">
+    未开通 WS {{ row.unregisteredNum.toLocaleString() }} ·
+    {{ percentage(row.unregisteredNum, row.recipientTotal) }}
   </div>
 </template>
 
 <style scoped>
 .progress-caption {
   display: flex;
+  gap: 10px;
   justify-content: space-between;
   margin-bottom: 4px;
   font-size: 12px;
 }
 
-.failed-progress {
-  margin-top: 4px;
+.success-text {
+  color: var(--el-color-success);
 }
 
-.muted {
+.danger-text {
+  color: var(--el-color-danger);
+}
+
+.muted,
+.unregistered-line {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.unregistered-line {
+  margin-top: 4px;
+  color: var(--el-color-danger);
+  text-align: right;
 }
 </style>

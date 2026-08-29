@@ -223,6 +223,8 @@ onMounted(() => {
 
 <style scoped>
 .hyperlink-task-page {
-  padding: 14px;
+  min-width: 1180px;
+  padding: 14px 16px;
+  background: #f4f6f9;
 }
 </style>

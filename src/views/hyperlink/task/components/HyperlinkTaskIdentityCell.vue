@@ -11,13 +11,13 @@ defineProps<{ row: HyperlinkTaskListItem }>();
 
 <template>
   <div class="task-identity">
-    <strong>{{ row.taskName }}</strong>
+    <strong class="task-name" :title="row.taskName">{{ row.taskName }}</strong>
     <div>
-      <el-tag size="small" effect="plain">{{
+      <el-tag size="small" type="success" effect="light" round>{{
         messageTypeLabel(row.messageType)
       }}</el-tag>
       <el-tooltip :content="taskModeHelp(row.taskMode)" placement="top">
-        <el-tag size="small" type="warning" effect="plain">
+        <el-tag size="small" type="info" effect="light" round>
           {{ taskModeLabel(row.taskMode) }}
         </el-tag>
       </el-tooltip>
@@ -46,6 +46,13 @@ defineProps<{ row: HyperlinkTaskListItem }>();
 .task-identity > div {
   display: flex;
   gap: 5px;
+}
+
+.task-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .promotion-link {
