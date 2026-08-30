@@ -68,9 +68,9 @@ defineEmits<{ (event: "retry"): void }>();
   margin-bottom: 12px;
   overflow: hidden;
   color: #fff;
-  background: linear-gradient(105deg, #17bf62 0%, #00a56a 48%, #07856d 100%);
+  background: linear-gradient(105deg, #409eff 0%, #2f8cff 48%, #1d6fd9 100%);
   border-radius: 12px;
-  box-shadow: 0 8px 22px rgb(0 145 91 / 14%);
+  box-shadow: 0 8px 22px rgb(47 140 255 / 18%);
 }
 
 .whatsapp-mark,
@@ -115,13 +115,13 @@ defineEmits<{ (event: "retry"): void }>();
 .hyperlink-tag,
 .price-tag {
   font-weight: 600;
-  color: #087758;
+  color: #1d6fd9;
   background: rgb(255 255 255 / 92%);
   border-color: rgb(255 255 255 / 52%);
 }
 
 .price-tag {
-  color: #086f62;
+  color: #155fc0;
 }
 
 .intro-description,
@@ -141,7 +141,7 @@ defineEmits<{ (event: "retry"): void }>();
 
 .mode-description b {
   padding: 0 5px;
-  color: #087758;
+  color: #1d6fd9;
   background: rgb(255 255 255 / 92%);
   border-radius: 9px;
 }
