@@ -42,8 +42,8 @@ export interface HyperlinkStrategyListItem extends HyperlinkStrategyPayload {
   id: number;
   version: number;
   createdBy: number | null;
-  createdAt: number | string;
-  updatedAt: number | string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export type HyperlinkStrategyDetail = HyperlinkStrategyListItem;

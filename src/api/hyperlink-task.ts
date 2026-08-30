@@ -187,11 +187,16 @@ export interface HyperlinkStrategyOption {
 
 export interface HyperlinkResourceAsset {
   id: number;
-  name: string;
+  assetName: string;
+  contentUrl: string;
   tags: string[];
-  contentType: string;
   sizeBytes: number;
-  available: boolean;
+  width: number | null;
+  height: number | null;
+  referenceCount: number;
+  createdBy: number | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface HyperlinkResourceAssetPage {
@@ -279,9 +284,9 @@ export function listHyperlinkResourceAssets(query: {
   return armadaRequest("get", "/api/resource-assets", {
     params: {
       page: query.page ?? 1,
-      pageSize: query.pageSize ?? 20,
-      keyword: query.keyword?.trim() || undefined,
-      contentType: "image/jpeg"
+      pageSize: query.pageSize ?? 24,
+      assetName: query.keyword?.trim() || undefined,
+      selectableOnly: true
     }
   });
 }

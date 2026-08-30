@@ -267,7 +267,8 @@ const hyperlinkRouter = {
           "tenant:hyperlink_task:create",
           "tenant:hyperlink_task:edit",
           "tenant:hyperlink_task:action",
-          "tenant:hyperlink_task:export"
+          "tenant:hyperlink_task:export",
+          "tenant:hyperlink_task:attribution_sensitive"
         ]
       }
     },
@@ -345,6 +346,20 @@ const hyperlinkRouter = {
           "tenant:resource_asset:edit",
           "tenant:resource_asset:delete"
         ]
+      }
+    },
+    {
+      path: "/hyperlink/analysis",
+      component: "hyperlink/analysis/index",
+      name: "HyperlinkAnalysis",
+      meta: {
+        title: "超链市场分析",
+        icon: "solar:chart-2-bold-duotone",
+        rank: 60,
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_analysis",
+        perm_key: "tenant:hyperlink_analysis:view"
       }
     }
   ]

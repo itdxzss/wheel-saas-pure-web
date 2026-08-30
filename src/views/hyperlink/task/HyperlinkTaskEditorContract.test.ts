@@ -58,6 +58,19 @@ describe("hyperlink task editor competitor surface", () => {
     }
   });
 
+  it("allows editable tasks to copy a strategy without exposing message templates", () => {
+    assert.match(
+      drawer,
+      /const allowStrategyReferences = computed\([\s\S]*mode\.value === "edit"/
+    );
+    assert.match(drawer, /:allow-references="allowTemplateReferences"/);
+    assert.match(drawer, /:allow-references="allowStrategyReferences"/);
+    assert.match(
+      composable,
+      /mode\.value === "edit"\)[\s\S]*loadDataPackageOptions\(\), loadStrategyOptions\(\)/
+    );
+  });
+
   it("contains the complete task account filter and preserves default business groups", () => {
     for (const text of [
       "所属分组",

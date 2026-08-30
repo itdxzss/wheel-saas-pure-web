@@ -371,7 +371,7 @@ export function useHyperlinkTaskEditor(
           loadStrategyOptions()
         );
       } else if (mode.value === "edit") {
-        loaders.push(loadDataPackageOptions());
+        loaders.push(loadDataPackageOptions(), loadStrategyOptions());
       }
       await Promise.all(loaders);
     });

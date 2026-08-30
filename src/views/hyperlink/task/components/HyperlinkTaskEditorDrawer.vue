@@ -19,8 +19,14 @@ const accountFilterVisible = ref(false);
 const templateId = ref<number | null>(null);
 const strategyId = ref<number | null>(null);
 
-const allowReferences = computed(
+const allowTemplateReferences = computed(
   () => editor.mode.value === "create" || editor.mode.value === "copy"
+);
+const allowStrategyReferences = computed(
+  () =>
+    editor.mode.value === "create" ||
+    editor.mode.value === "copy" ||
+    editor.mode.value === "edit"
 );
 const messageTypeDisabled = computed(
   () => editor.readonly.value || editor.mode.value === "edit"
@@ -234,7 +240,7 @@ defineExpose({
           v-model="editor.form.value"
           v-model:template-id="templateId"
           :disabled="editor.readonly.value"
-          :allow-references="allowReferences"
+          :allow-references="allowTemplateReferences"
           :templates="editor.templateOptions.value"
           :template-loading="
             editor.importingTemplate.value || editor.templateLoading.value
@@ -251,7 +257,7 @@ defineExpose({
           v-model="editor.form.value"
           v-model:strategy-id="strategyId"
           :disabled="editor.readonly.value"
-          :allow-references="allowReferences"
+          :allow-references="allowStrategyReferences"
           :strategies="editor.strategyOptions.value"
           :strategy-loading="editor.resourceLoading.value"
           :strategy-error="editor.resourceErrors.value['策略']"

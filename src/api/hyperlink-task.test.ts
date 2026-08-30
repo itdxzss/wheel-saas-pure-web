@@ -64,9 +64,9 @@ describe("hyperlink task H2/H3 API", () => {
     assert.deepEqual(armadaCalls()[0].opts, {
       params: {
         page: 1,
-        pageSize: 20,
-        keyword: "banner",
-        contentType: "image/jpeg"
+        pageSize: 24,
+        assetName: "banner",
+        selectableOnly: true
       }
     });
   });
