@@ -142,4 +142,19 @@ describe("hyperlink template form contract", () => {
       "按钮文字不能超过 30 个字符"
     );
   });
+
+  it("matches the competitor 2000-character bottom text and subtitle limit", () => {
+    const form = createEmptyHyperlinkTemplateForm();
+    form.name = "普通按钮";
+    form.title = "标题";
+    form.content = "文".repeat(2000);
+
+    assert.equal(validateHyperlinkTemplateForm(form), "");
+    form.messageType = 4;
+    form.content += "字";
+    assert.equal(
+      validateHyperlinkTemplateForm(form),
+      "副标题不能超过 2000 个字符"
+    );
+  });
 });

@@ -79,6 +79,21 @@ describe("hyperlink template page contract", () => {
     assert.match(drawer, /卡片正文/);
   });
 
+  it("keeps the exact competitor field matrix for all three message types", () => {
+    assert.match(drawer, /image: \{ 1: 1, 3: 1, 4: 3 \}/);
+    assert.match(drawer, /title: \{ 1: 2, 3: 2, 4: 1 \}/);
+    assert.match(drawer, /linkDescription: \{ 1: 3 \}/);
+    assert.match(drawer, /promotionLink: \{ 1: 4 \}/);
+    assert.match(drawer, /content: \{ 1: 5, 3: 3, 4: 2 \}/);
+    assert.match(drawer, /cardText: \{ 4: 4 \}/);
+    assert.match(drawer, /button: \{ 3: 4, 4: 5 \}/);
+    assert.match(drawer, /messageType === 3\) return "底部小字"/);
+    assert.match(drawer, /messageType === 4\) return "副标题"/);
+    assert.match(drawer, /const contentMaxLength = 2000/);
+    assert.match(drawer, /:required="imageRequired"/);
+    assert.match(drawer, /:required="form\.messageType === 1"/);
+  });
+
   it("uses the competitor editor hierarchy and renders three distinct previews", () => {
     assert.match(pageComposable, /return "新建超链模板"/);
     assert.match(pageComposable, /return "编辑超链模板"/);

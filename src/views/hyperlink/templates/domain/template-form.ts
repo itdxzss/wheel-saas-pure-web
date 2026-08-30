@@ -152,7 +152,10 @@ export function validateHyperlinkTemplateForm(
     return "";
   }
 
-  if (form.content.trim().length > 200) return "正文不能超过 200 个字符";
+  const contentLabel = form.messageType === 3 ? "底部小字" : "副标题";
+  if (form.content.trim().length > 2000) {
+    return `${contentLabel}不能超过 2000 个字符`;
+  }
   const displayTextMessage = requiredLengthMessage(
     form.button.displayText,
     "按钮文字",

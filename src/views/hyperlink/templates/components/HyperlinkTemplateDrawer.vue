@@ -52,9 +52,7 @@ const contentLabel = computed(() => {
   if (form.value.messageType === 4) return "副标题";
   return "正文";
 });
-const contentMaxLength = computed(() =>
-  form.value.messageType === 1 ? 2000 : 200
-);
+const contentMaxLength = 2000;
 
 function fieldOrder(field: ContentField): number {
   const order: Record<ContentField, Partial<Record<1 | 3 | 4, number>>> = {
