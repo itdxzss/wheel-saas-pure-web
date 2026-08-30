@@ -521,7 +521,9 @@ onMounted(() => {
 
 <style scoped>
 .data-package-page {
-  padding: 16px;
+  /* The layout shell provides 24px; keep this page 16px from the chrome. */
+  padding: 0;
+  margin: -8px;
 }
 
 .page-alert {
