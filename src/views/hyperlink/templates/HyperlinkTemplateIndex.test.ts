@@ -43,6 +43,14 @@ describe("hyperlink template page contract", () => {
     assert.match(source, /WhatsApp 超链模板/);
     assert.match(source, /模板总数/);
     assert.match(source, /本页按钮模板/);
+    assert.match(source, /当前条件汇总/);
+    assert.match(source, /condition-summary/);
+    assert.match(source, /gap: 16px/);
+    assert.match(source, /padding: 0/);
+    assert.match(source, /margin: 16px/);
+    assert.match(source, /template-table-card/);
+    assert.doesNotMatch(source, /margin: -8px/);
+    assert.doesNotMatch(source, /class="stats-card"/);
     assert.match(source, /el-radio-group/);
     assert.match(source, />全部</);
     assert.match(source, /模板管理/);
