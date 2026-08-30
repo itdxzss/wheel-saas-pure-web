@@ -2,16 +2,31 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   createEmptyHyperlinkTemplateForm,
+  hyperlinkMessageTypeOptions,
   toHyperlinkTemplateUpdateRequest,
   toHyperlinkTemplateWriteRequest,
   validateHyperlinkTemplateForm
 } from "./template-form";
 
 describe("hyperlink template form contract", () => {
+  it("starts with the competitor default normal button and type order", () => {
+    const form = createEmptyHyperlinkTemplateForm();
+
+    assert.equal(form.messageType, 3);
+    assert.deepEqual(
+      hyperlinkMessageTypeOptions.map(option => option.value),
+      [3, 4, 1]
+    );
+    assert.equal(form.button.displayText, "立即查看");
+    assert.equal(form.button.targetValue, "https://example.com/promo");
+    assert.equal(form.button.useShortLink, false);
+  });
+
   it("normalizes single-link preview content with strict null semantics", () => {
     const form = createEmptyHyperlinkTemplateForm();
     Object.assign(form, {
       name: "  单图文模板  ",
+      messageType: 1,
       title: "  新品福利  ",
       content: "  查看活动  ",
       linkDescription: "  活动详情  ",
@@ -112,5 +127,19 @@ describe("hyperlink template form contract", () => {
     );
     form.button.targetValue = "https://example.com";
     assert.equal(validateHyperlinkTemplateForm(form), "");
+  });
+
+  it("matches the backend 30-character button text contract", () => {
+    const form = createEmptyHyperlinkTemplateForm();
+    form.name = "普通按钮";
+    form.title = "标题";
+    form.button.displayText = "按".repeat(30);
+
+    assert.equal(validateHyperlinkTemplateForm(form), "");
+    form.button.displayText += "钮";
+    assert.equal(
+      validateHyperlinkTemplateForm(form),
+      "按钮文字不能超过 30 个字符"
+    );
   });
 });

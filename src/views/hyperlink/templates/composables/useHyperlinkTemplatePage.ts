@@ -65,8 +65,8 @@ export function useHyperlinkTemplatePage() {
   ];
 
   const drawerTitle = computed(() => {
-    if (drawerMode.value === "edit") return "编辑超链营销模板";
-    return "创建超链营销模板";
+    if (drawerMode.value === "edit") return "编辑超链模板";
+    return "新建超链模板";
   });
 
   function releaseImagePreview(): void {
@@ -172,6 +172,17 @@ export function useHyperlinkTemplatePage() {
 
   function changeMessageType(): void {
     clearImage();
+    if (form.value.messageType === 3 || form.value.messageType === 4) {
+      if (!form.value.button.displayText.trim()) {
+        form.value.button.displayText = "立即查看";
+      }
+      if (!form.value.button.targetValue.trim()) {
+        form.value.button.targetValue = "https://example.com/promo";
+      }
+    }
+    if (form.value.messageType === 4 && !form.value.cardText.trim()) {
+      form.value.cardText = "点击下方按钮查看详情";
+    }
   }
 
   async function save(): Promise<void> {

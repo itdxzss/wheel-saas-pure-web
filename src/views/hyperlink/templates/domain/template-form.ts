@@ -32,25 +32,25 @@ export const hyperlinkMessageTypeOptions: Array<{
   label: string;
   value: SupportedHyperlinkMessageType;
 }> = [
-  { label: "单图文", value: 1 },
   { label: "普通按钮", value: 3 },
-  { label: "卡片按钮", value: 4 }
+  { label: "卡片按钮", value: 4 },
+  { label: "单图文", value: 1 }
 ];
 
 export function createEmptyHyperlinkTemplateForm(): HyperlinkTemplateForm {
   return {
     name: "",
-    messageType: 1,
+    messageType: 3,
     title: "",
     content: "",
     linkDescription: "",
     promotionLink: "",
     button: {
       displayText: "立即查看",
-      targetValue: "",
-      useShortLink: true
+      targetValue: "https://example.com/promo",
+      useShortLink: false
     },
-    cardText: "",
+    cardText: "点击下方按钮查看详情",
     assetId: null,
     imageName: "",
     imageUrl: "",
@@ -79,7 +79,7 @@ export function toHyperlinkTemplateForm(
     button: {
       displayText: button?.displayText ?? "立即查看",
       targetValue: button?.targetValue ?? "",
-      useShortLink: button?.useShortLink ?? true
+      useShortLink: button?.useShortLink ?? false
     },
     cardText: detail.cardText ?? "",
     assetId,
@@ -156,7 +156,7 @@ export function validateHyperlinkTemplateForm(
   const displayTextMessage = requiredLengthMessage(
     form.button.displayText,
     "按钮文字",
-    20
+    30
   );
   if (displayTextMessage) return displayTextMessage;
   const targetValue = form.button.targetValue.trim();

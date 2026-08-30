@@ -13,6 +13,12 @@ const drawer = readFileSync(
   ),
   "utf8"
 );
+const preview = readFileSync(
+  fileURLToPath(
+    new URL("./components/HyperlinkTemplatePreview.vue", import.meta.url)
+  ),
+  "utf8"
+);
 const pageComposable = readFileSync(
   fileURLToPath(
     new URL("./composables/useHyperlinkTemplatePage.ts", import.meta.url)
@@ -54,12 +60,31 @@ describe("hyperlink template page contract", () => {
 
   it("does not expose message type 2 and limits CTA editing to one URL button", () => {
     assert.doesNotMatch(drawer, /option[^\n]+value="2"/);
-    assert.match(drawer, /CTA URL 按钮/);
+    assert.match(drawer, /el-radio-group/);
+    assert.match(drawer, /仅支持 1 个 URL 按钮/);
+    assert.match(drawer, /maxlength="30"/);
+    assert.match(drawer, /深度追踪/);
     assert.doesNotMatch(drawer, /添加按钮/);
     assert.doesNotMatch(drawer, /label="备注"/);
     assert.match(drawer, /底部小字/);
     assert.match(drawer, /副标题/);
     assert.match(drawer, /卡片正文/);
+  });
+
+  it("uses the competitor editor hierarchy and renders three distinct previews", () => {
+    assert.match(pageComposable, /return "新建超链模板"/);
+    assert.match(pageComposable, /return "编辑超链模板"/);
+    assert.match(drawer, /WhatsApp 真机实时预览/);
+    assert.match(drawer, /section-index/);
+    assert.match(drawer, /用于搜索、筛选和引用模板/);
+    assert.match(drawer, /填什么左侧立即可见/);
+    assert.match(drawer, /fieldOrder/);
+    assert.match(drawer, /保存模板/);
+    assert.match(preview, /WhatsApp 实时预览/);
+    assert.match(preview, /form\.messageType === 1/);
+    assert.match(preview, /form\.messageType === 3/);
+    assert.match(preview, /card-lead/);
+    assert.match(preview, /模板仅保存消息内容，不包含账号范围或数据包/);
   });
 
   it("uses the shared asset picker with authorized blob previews and lifecycle cleanup", () => {
