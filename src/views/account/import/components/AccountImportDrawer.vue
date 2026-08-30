@@ -47,7 +47,7 @@ const form = reactive({
   importKind: "json" as AccountImportKind,
   groupId: "" as "" | number,
   device: "安卓",
-  accountType: "个人",
+  accountType: "" as "" | "个人" | "商业",
   ipAllocationMode: DEFAULT_ACCOUNT_IMPORT_IP_ALLOCATION_MODE,
   remark: "",
   text: "",
@@ -74,7 +74,7 @@ function resetForm(): void {
   form.importKind = "json";
   form.groupId = "";
   form.device = "安卓";
-  form.accountType = "个人";
+  form.accountType = "";
   form.ipAllocationMode = DEFAULT_ACCOUNT_IMPORT_IP_ALLOCATION_MODE;
   form.remark = "";
   form.text = "";
@@ -175,6 +175,10 @@ function submitDrawer(): void {
     ElMessage.warning("请选择账号分组");
     return;
   }
+  if (!form.accountType) {
+    ElMessage.warning("请选择申报账号类型");
+    return;
+  }
   if (form.importKind === "json") {
     if (!form.file) {
       ElMessage.warning("请上传 JSON号 ZIP 包");
@@ -251,8 +255,12 @@ function submitDrawer(): void {
               </el-radio-group>
             </el-form-item>
 
-            <el-form-item label="账号类型" required>
-              <el-select v-model="form.accountType" class="drawer-control">
+            <el-form-item label="申报账号类型" required>
+              <el-select
+                v-model="form.accountType"
+                class="drawer-control"
+                placeholder="请选择个人或商业"
+              >
                 <el-option
                   v-for="item in accountTypeOptions"
                   :key="item"
@@ -285,6 +293,13 @@ function submitDrawer(): void {
               </el-select>
             </el-form-item>
           </div>
+
+          <el-alert
+            class="mb-4"
+            type="info"
+            :closable="false"
+            title="账号类型用于首次登录握手；账号 ONLINE 后系统会自动做一次轻量校验，并在账号列表标记已确认、已纠正或未确认。"
+          />
 
           <el-form-item label="备注">
             <el-input

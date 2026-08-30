@@ -51,9 +51,38 @@ export function riskStatusLabel(value?: number | null): string {
 }
 
 export function accountTypeDeviceLabel(
-  row: Pick<TenantAccount, "account_type" | "device_os">
+  row: Pick<
+    TenantAccount,
+    | "account_type"
+    | "declared_account_type"
+    | "account_type_verify_status"
+    | "business_verification_level"
+    | "device_os"
+  >
 ): string {
-  return compactLabels([row.account_type, row.device_os]);
+  let accountType = row.account_type?.trim() ?? "";
+  switch (row.account_type_verify_status) {
+    case 0:
+      accountType += "（校验中）";
+      break;
+    case 1:
+      accountType += "（已确认）";
+      break;
+    case 2:
+      accountType += row.declared_account_type
+        ? `（已纠正，导入${row.declared_account_type}）`
+        : "（已纠正）";
+      break;
+    case 3:
+      accountType += "（未确认）";
+      break;
+    case 4:
+      accountType += "（未校验）";
+      break;
+  }
+  const verificationBadge =
+    row.business_verification_level === 1 ? "蓝标" : null;
+  return compactLabels([accountType, row.device_os, verificationBadge]);
 }
 
 export function sourceLabel(

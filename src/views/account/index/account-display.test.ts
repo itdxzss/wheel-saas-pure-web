@@ -79,6 +79,33 @@ describe("account list display helpers", () => {
       "商业号"
     );
     assert.equal(
+      accountTypeDeviceLabel({
+        account_type: "商业号",
+        account_type_verify_status: 1,
+        business_verification_level: 1,
+        device_os: "苹果"
+      }),
+      "商业号（已确认） / 苹果 / 蓝标"
+    );
+    assert.equal(
+      accountTypeDeviceLabel({
+        account_type: "商业号",
+        declared_account_type: "个人号",
+        account_type_verify_status: 2,
+        device_os: "安卓"
+      }),
+      "商业号（已纠正，导入个人号） / 安卓"
+    );
+    assert.equal(
+      accountTypeDeviceLabel({
+        account_type: "个人号",
+        declared_account_type: "个人号",
+        account_type_verify_status: 0,
+        device_os: null
+      }),
+      "个人号（校验中）"
+    );
+    assert.equal(
       sourceLabel({ channel_name: "Google", number_source: "买量" }),
       "Google / 买量"
     );

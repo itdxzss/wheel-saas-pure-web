@@ -13,6 +13,12 @@ describe("account import drawer template", () => {
     assert.match(source, /form\.importKind\s*=\s*"json";/);
   });
 
+  it("requires an explicit declared account type", () => {
+    assert.match(source, /accountType:\s*""/);
+    assert.match(source, /form\.accountType\s*=\s*"";/);
+    assert.match(source, /请选择申报账号类型/);
+  });
+
   it("labels the compatible text area as five/six content", () => {
     assert.match(
       source,
