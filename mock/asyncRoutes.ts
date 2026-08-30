@@ -258,6 +258,7 @@ const hyperlinkRouter = {
       name: "HyperlinkTaskList",
       meta: {
         title: "超链任务",
+        rank: 10,
         roles: ["admin", "common"],
         showParent: true,
         module_key: "hyperlink_task",
@@ -276,6 +277,7 @@ const hyperlinkRouter = {
       name: "HyperlinkDataPackage",
       meta: {
         title: "超链数据包",
+        rank: 20,
         roles: ["admin", "common"],
         showParent: true,
         module_key: "hyperlink_data",
@@ -294,6 +296,7 @@ const hyperlinkRouter = {
       name: "HyperlinkTemplate",
       meta: {
         title: "超链营销模板",
+        rank: 30,
         roles: ["admin", "common"],
         showParent: true,
         module_key: "hyperlink_template",
@@ -307,12 +310,32 @@ const hyperlinkRouter = {
       }
     },
     {
+      path: "/hyperlink/strategy",
+      component: "hyperlink/strategy/index",
+      name: "HyperlinkStrategy",
+      meta: {
+        title: "超链策略",
+        icon: "solar:tuning-2-bold-duotone",
+        rank: 40,
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_strategy",
+        perm_key: "tenant:hyperlink_strategy:view",
+        auths: [
+          "tenant:hyperlink_strategy:create",
+          "tenant:hyperlink_strategy:edit",
+          "tenant:hyperlink_strategy:delete"
+        ]
+      }
+    },
+    {
       path: "/hyperlink/library",
       component: "hyperlink/library/index",
       name: "HyperlinkResourceAsset",
       meta: {
         title: "图片素材",
         icon: "solar:gallery-wide-bold-duotone",
+        rank: 50,
         roles: ["admin", "common"],
         showParent: true,
         module_key: "hyperlink_resource_asset",

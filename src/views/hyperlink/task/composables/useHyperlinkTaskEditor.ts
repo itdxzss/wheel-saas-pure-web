@@ -512,6 +512,10 @@ export function useHyperlinkTaskEditor(
   }
 
   function useStrategy(id: number | null): void {
+    if (id == null) {
+      form.value.sourceStrategyId = null;
+      return;
+    }
     const strategy = strategyOptions.value.find(item => item.id === id);
     if (!strategy) return;
     form.value = importHyperlinkStrategy(form.value, strategy);
@@ -554,7 +558,8 @@ export function useHyperlinkTaskEditor(
       taskId: null,
       dataPackageId: form.value.dataPackageId,
       taskMode: form.value.taskMode,
-      maxExecutingAccounts: form.value.maxExecutingAccounts
+      maxExecutingAccounts: form.value.maxExecutingAccounts,
+      maxUseAccounts: form.value.maxUseAccounts
     });
   }
 

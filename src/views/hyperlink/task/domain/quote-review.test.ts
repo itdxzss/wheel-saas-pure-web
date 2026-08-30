@@ -38,6 +38,8 @@ function quote(expiresAt: number): HyperlinkTaskQuote {
     dataPackageGeneration: 2,
     dataPackageName: "号码包",
     recipientCount: 10,
+    configuredMaxExecutingAccounts: 0,
+    effectiveMaxExecutingAccounts: 6,
     pricingMode: "NORMAL",
     priceCode: "normal",
     currencyCode: "USD",

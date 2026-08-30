@@ -40,6 +40,30 @@ const subtitle = computed(() => {
   return "左侧实时预览 · 右侧填写表单，所见即所得";
 });
 
+async function openCreate(): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openCreate();
+}
+
+async function openEdit(id: number): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openEdit(id);
+}
+
+async function openView(id: number): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openView(id);
+}
+
+async function openCopy(id: number): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openCopy(id);
+}
+
 async function requestClose(): Promise<void> {
   if (editor.readonly.value) {
     editor.forceClose();
@@ -70,10 +94,10 @@ function beforeClose(done: () => void): void {
 }
 
 defineExpose({
-  openCreate: editor.openCreate,
-  openEdit: editor.openEdit,
-  openView: editor.openView,
-  openCopy: editor.openCopy
+  openCreate,
+  openEdit,
+  openView,
+  openCopy
 });
 </script>
 

@@ -14,6 +14,9 @@ const templatePage = fileURLToPath(
 const taskPage = fileURLToPath(
   new URL("../views/hyperlink/task/index.vue", import.meta.url)
 );
+const strategyPage = fileURLToPath(
+  new URL("../views/hyperlink/strategy/index.vue", import.meta.url)
+);
 const libraryPage = fileURLToPath(
   new URL("../views/hyperlink/library/index.vue", import.meta.url)
 );
@@ -23,16 +26,18 @@ const mockRoutes = readFileSync(
 );
 
 describe("hyperlink phase-one dynamic routes", () => {
-  it("maps backend component paths to the four real page modules", () => {
+  it("maps backend component paths to the five real page modules", () => {
     assert.equal(existsSync(dataPage), true);
     assert.equal(existsSync(templatePage), true);
     assert.equal(existsSync(taskPage), true);
+    assert.equal(existsSync(strategyPage), true);
     assert.equal(existsSync(libraryPage), true);
 
     const moduleKeys = [
       "/src/views/hyperlink/data/index.vue",
       "/src/views/hyperlink/templates/index.vue",
       "/src/views/hyperlink/task/index.vue",
+      "/src/views/hyperlink/strategy/index.vue",
       "/src/views/hyperlink/library/index.vue"
     ];
     assert.equal(
@@ -48,8 +53,12 @@ describe("hyperlink phase-one dynamic routes", () => {
       moduleKeys[2]
     );
     assert.equal(
-      findViewModuleKey({ component: "hyperlink/library/index" }, moduleKeys),
+      findViewModuleKey({ component: "hyperlink/strategy/index" }, moduleKeys),
       moduleKeys[3]
+    );
+    assert.equal(
+      findViewModuleKey({ component: "hyperlink/library/index" }, moduleKeys),
+      moduleKeys[4]
     );
   });
 
@@ -63,6 +72,10 @@ describe("hyperlink phase-one dynamic routes", () => {
     assert.match(mockRoutes, /tenant:hyperlink_task:edit/);
     assert.match(mockRoutes, /tenant:hyperlink_task:action/);
     assert.match(mockRoutes, /tenant:hyperlink_task:export/);
+    assert.match(mockRoutes, /component: "hyperlink\/strategy\/index"/);
+    assert.match(mockRoutes, /tenant:hyperlink_strategy:create/);
+    assert.match(mockRoutes, /tenant:hyperlink_strategy:edit/);
+    assert.match(mockRoutes, /tenant:hyperlink_strategy:delete/);
     assert.match(mockRoutes, /component: "hyperlink\/library\/index"/);
     assert.match(mockRoutes, /tenant:hyperlink_data:create/);
     assert.match(mockRoutes, /tenant:hyperlink_data:import/);

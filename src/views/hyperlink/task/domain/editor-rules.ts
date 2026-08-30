@@ -94,6 +94,7 @@ export function createEmptyHyperlinkTaskForm(): HyperlinkTaskForm {
   return {
     version: null,
     sourceTaskId: null,
+    sourceStrategyId: null,
     taskName: "",
     messageType: 3,
     messageContent: createEmptyMessageContent(),
@@ -141,6 +142,7 @@ export function detailToHyperlinkTaskForm(
   const form = deepClone<HyperlinkTaskForm>({
     version: detail.version,
     sourceTaskId: null,
+    sourceStrategyId: null,
     taskName: detail.taskName,
     messageType: detail.messageType,
     messageContent: detail.messageContent,
@@ -256,6 +258,7 @@ export function importHyperlinkStrategy(
   strategy: HyperlinkStrategyOption
 ): HyperlinkTaskForm {
   const next = deepClone(form);
+  next.sourceStrategyId = strategy.id;
   next.taskMode = strategy.taskMode;
   next.accountFilter = normalizeAccountFilter(strategy.accountFilter);
   next.maxExecutingAccounts = strategy.maxExecutingAccounts;
@@ -455,9 +458,10 @@ export function validateHyperlinkTaskForm(
   }
   if (
     !Number.isSafeInteger(form.maxExecutingAccounts) ||
-    form.maxExecutingAccounts < 1
+    form.maxExecutingAccounts < 0 ||
+    form.maxExecutingAccounts > 100
   ) {
-    return "最大执行账号数必须为正整数";
+    return "最大执行账号数须为 0～100 的整数，0 表示自动均分";
   }
   if (!Number.isSafeInteger(form.maxUseAccounts) || form.maxUseAccounts < 0) {
     return "最大使用账号数必须为非负整数";
@@ -488,6 +492,7 @@ export function validateHyperlinkTaskForm(
   }
   if (
     form.maxUseAccounts > 0 &&
+    form.maxExecutingAccounts > 0 &&
     form.maxExecutingAccounts > form.maxUseAccounts
   ) {
     return "最大执行账号数不能大于最大使用账号数";

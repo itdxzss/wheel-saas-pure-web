@@ -20,6 +20,10 @@ const props = defineProps<{
   options: HyperlinkFilterOptions;
   defaultGroupIds: number[];
   optionErrors?: Record<string, string>;
+  countAccounts?: (
+    filter: HyperlinkAccountFilter,
+    signal?: AbortSignal
+  ) => Promise<HyperlinkAccountMatchCount>;
 }>();
 const emit = defineEmits<{
   (event: "confirmed", value: HyperlinkAccountFilter): void;
@@ -110,7 +114,7 @@ async function runCount(current: number): Promise<void> {
       matchError.value = filterError;
       return;
     }
-    const result = await countHyperlinkTaskAccounts(
+    const result = await (props.countAccounts ?? countHyperlinkTaskAccounts)(
       normalized,
       nextController.signal
     );
