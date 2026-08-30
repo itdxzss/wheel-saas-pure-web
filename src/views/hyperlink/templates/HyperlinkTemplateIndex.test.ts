@@ -87,6 +87,8 @@ describe("hyperlink template page contract", () => {
     assert.match(drawer, /用于搜索、筛选和引用模板/);
     assert.match(drawer, /填什么左侧立即可见/);
     assert.match(drawer, /fieldOrder/);
+    assert.match(drawer, /width: fit-content/);
+    assert.match(drawer, /min-width: 104px/);
     assert.match(drawer, /保存模板/);
     assert.match(preview, /WhatsApp 实时预览/);
     assert.match(preview, /form\.messageType === 1/);

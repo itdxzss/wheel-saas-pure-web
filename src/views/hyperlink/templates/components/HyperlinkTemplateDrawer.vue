@@ -435,16 +435,19 @@ function onMessageTypeChange(): void {
 }
 
 .message-type-group {
-  display: flex;
-  width: 100%;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .message-type-group :deep(.el-radio-button) {
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 .message-type-group :deep(.el-radio-button__inner) {
-  width: 100%;
+  min-width: 104px;
+  padding-right: 18px;
+  padding-left: 18px;
 }
 
 .asset-selector,
@@ -544,6 +547,22 @@ function onMessageTypeChange(): void {
 }
 
 @media (width <= 720px) {
+  .message-type-group {
+    display: flex;
+    width: 100%;
+  }
+
+  .message-type-group :deep(.el-radio-button) {
+    flex: 1 1 0;
+  }
+
+  .message-type-group :deep(.el-radio-button__inner) {
+    width: 100%;
+    min-width: 0;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
   .button-fields {
     grid-template-columns: 1fr;
   }
