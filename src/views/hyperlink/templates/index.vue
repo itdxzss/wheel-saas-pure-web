@@ -303,7 +303,9 @@ onMounted(() => {
 
 <style scoped>
 .hyperlink-template-page {
-  padding: 16px;
+  /* The layout shell provides 24px; keep this page 16px from the chrome. */
+  padding: 0;
+  margin: -8px;
 }
 
 .intro-card,
@@ -326,24 +328,43 @@ onMounted(() => {
   align-items: flex-start;
 }
 
+.intro-card {
+  color: #fff;
+  background: linear-gradient(105deg, #409eff 0%, #2f8cff 48%, #1d6fd9 100%);
+  border: 0;
+  box-shadow: 0 8px 22px rgb(47 140 255 / 18%);
+}
+
+.intro-card :deep(.el-card__body) {
+  padding: 18px 22px;
+}
+
 .intro-icon {
   flex: 0 0 auto;
   width: 26px;
   height: 26px;
   margin-top: 1px;
-  color: var(--el-color-primary);
+  color: #fff;
 }
 
 .intro-title {
   gap: 10px;
   font-size: 20px;
   font-weight: 700;
+  color: #fff;
 }
 
 .intro-content p {
   margin: 8px 0 0;
   line-height: 1.8;
-  color: var(--el-text-color-secondary);
+  color: rgb(255 255 255 / 92%);
+}
+
+.intro-card :deep(.el-tag) {
+  font-weight: 600;
+  color: #1d6fd9;
+  background: rgb(255 255 255 / 92%);
+  border-color: rgb(255 255 255 / 52%);
 }
 
 .stats-card :deep(.el-card__body) {
