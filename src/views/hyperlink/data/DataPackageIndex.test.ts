@@ -86,6 +86,12 @@ describe("hyperlink data package index", () => {
     assert.match(identityCell, /primaryCountryIso2/);
     assert.match(identityCell, /暂无备注/);
     assert.match(usageCell, /usage-bar/);
+    assert.match(usageCell, /usage-bar-segment--successful/);
+    assert.match(
+      usageCell,
+      /usage-bar-segment--failed"[\s\S]*?flexBasis: `\$\{percent\(row\.metrics\.failedCount\)\}%`/
+    );
+    assert.match(usageCell, /flex: 0 0 auto/);
     assert.match(usageCell, /未用/);
     assert.match(usageCell, /已使用/);
     assert.match(usageCell, /未开通 WS/);
