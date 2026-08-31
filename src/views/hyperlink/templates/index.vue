@@ -15,6 +15,8 @@ import Edit from "~icons/ep/edit";
 import CopyDocument from "~icons/ep/copy-document";
 import Delete from "~icons/ep/delete";
 import Library from "~icons/solar/library-bold-duotone";
+import SummaryChart from "~icons/solar/pie-chart-2-bold-duotone";
+import InfoCircle from "~icons/ep/info-filled";
 import HyperlinkTemplateDrawer from "./components/HyperlinkTemplateDrawer.vue";
 import { useHyperlinkTemplatePage } from "./composables/useHyperlinkTemplatePage";
 import {
@@ -41,7 +43,6 @@ const {
   searchForm,
   total,
   changeMessageType,
-  clearImage,
   copy,
   openCreate,
   openDetail,
@@ -49,8 +50,7 @@ const {
   remove,
   resetSearch,
   save,
-  search,
-  selectImage
+  search
 } = useHyperlinkTemplatePage();
 
 const buttonTemplateCount = computed(
@@ -104,24 +104,48 @@ onMounted(() => {
       </div>
     </el-card>
 
-    <el-card shadow="never" class="stats-card">
-      <div class="template-stats">
-        <div class="stat-item">
-          <span>模板总数</span>
-          <strong>{{ total.toLocaleString() }}</strong>
+    <section class="condition-summary" aria-label="当前条件汇总">
+      <div class="summary-strip">
+        <div class="summary-head">
+          <component
+            :is="useRenderIcon(SummaryChart)"
+            class="summary-head-icon"
+          />
+          <span>当前条件汇总</span>
+          <el-tooltip
+            content="模板总数来自当前筛选条件的分页汇总；按钮模板仅统计本页已加载的普通按钮与卡片按钮模板。"
+            placement="top"
+          >
+            <component
+              :is="useRenderIcon(InfoCircle)"
+              class="summary-head-tip"
+            />
+          </el-tooltip>
         </div>
-        <el-divider direction="vertical" />
-        <div class="stat-item">
-          <span>本页按钮模板</span>
-          <strong class="success-value">{{
-            buttonTemplateCount.toLocaleString()
-          }}</strong>
+        <div class="summary-list">
+          <div class="summary-item">
+            <span class="summary-label">模板总数</span>
+            <strong class="summary-value summary-value--neutral">
+              {{ total.toLocaleString() }}
+            </strong>
+          </div>
+          <span class="summary-separator" aria-hidden="true" />
+          <div class="summary-item">
+            <span class="summary-label">本页按钮模板</span>
+            <strong
+              class="summary-value"
+              :class="
+                buttonTemplateCount > 0
+                  ? 'summary-value--success'
+                  : 'summary-value--muted'
+              "
+            >
+              {{ buttonTemplateCount.toLocaleString() }}
+            </strong>
+          </div>
         </div>
-        <el-tooltip content="模板总数来自当前筛选条件；按钮模板仅统计本页数据">
-          <span class="stat-tip">?</span>
-        </el-tooltip>
       </div>
-    </el-card>
+    </section>
 
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
@@ -180,7 +204,13 @@ onMounted(() => {
       <el-button link type="primary" @click="refresh">重试</el-button>
     </el-alert>
 
-    <PureTableBar title="超链模板" :columns="columns" @refresh="refresh">
+    <PureTableBar
+      class="template-table-card"
+      style="margin-top: 0"
+      title="超链模板"
+      :columns="columns"
+      @refresh="refresh"
+    >
       <template #title>
         <div class="table-title">
           <span>模板管理</span>
@@ -297,9 +327,7 @@ onMounted(() => {
       :loading="saving"
       :detail-loading="detailLoading"
       :image-loading="imageLoading"
-      :on-image-select="selectImage"
       @save="save"
-      @clear-image="clearImage"
       @message-type-change="changeMessageType"
     />
   </div>
@@ -307,19 +335,19 @@ onMounted(() => {
 
 <style scoped>
 .hyperlink-template-page {
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 500px;
+  padding: 0;
 }
 
-.intro-card,
-.stats-card,
-.search-card,
-.error-alert {
-  margin-bottom: 12px;
+.hyperlink-template-page.main-content {
+  margin: 16px !important;
 }
 
 .intro-content,
 .intro-title,
-.template-stats,
 .template-name-line {
   display: flex;
   align-items: center;
@@ -330,60 +358,138 @@ onMounted(() => {
   align-items: flex-start;
 }
 
+.intro-card {
+  color: #fff;
+  background: linear-gradient(105deg, #409eff 0%, #2f8cff 48%, #1d6fd9 100%);
+  border: 0;
+  box-shadow: 0 8px 22px rgb(47 140 255 / 18%);
+}
+
+.intro-card :deep(.el-card__body) {
+  padding: 18px 22px;
+}
+
 .intro-icon {
   flex: 0 0 auto;
   width: 26px;
   height: 26px;
   margin-top: 1px;
-  color: var(--el-color-primary);
+  color: #fff;
 }
 
 .intro-title {
   gap: 10px;
   font-size: 20px;
   font-weight: 700;
+  color: #fff;
 }
 
 .intro-content p {
   margin: 8px 0 0;
   line-height: 1.8;
-  color: var(--el-text-color-secondary);
+  color: rgb(255 255 255 / 92%);
 }
 
-.stats-card :deep(.el-card__body) {
-  padding: 16px 20px;
+.intro-card :deep(.el-tag) {
+  font-weight: 600;
+  color: #1d6fd9;
+  background: rgb(255 255 255 / 92%);
+  border-color: rgb(255 255 255 / 52%);
 }
 
-.template-stats {
-  gap: 24px;
+.condition-summary {
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    var(--el-color-primary-light-9) 0%,
+    var(--el-color-success-light-9) 100%
+  );
+  border: 1px solid var(--el-color-primary-light-8);
+  border-radius: 8px;
 }
 
-.stat-item {
+.summary-strip {
   display: flex;
-  gap: 10px;
-  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.summary-head {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding-right: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--el-text-color-secondary);
 }
 
-.stat-item strong {
-  font-size: 24px;
+.summary-head-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--el-color-primary);
+}
+
+.summary-head-tip {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--el-text-color-placeholder);
+  cursor: help;
+}
+
+.summary-list,
+.summary-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.summary-list {
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.summary-item {
+  gap: 6px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.summary-label {
+  font-size: 12.5px;
+  color: var(--el-text-color-secondary);
+}
+
+.summary-value {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.summary-value--neutral {
   color: var(--el-text-color-primary);
 }
 
-.stat-item .success-value {
+.summary-value--success {
   color: var(--el-color-success);
 }
 
-.stat-tip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  color: var(--el-text-color-secondary);
-  cursor: help;
-  border: 1px solid var(--el-border-color);
-  border-radius: 50%;
+.summary-value--muted {
+  font-weight: 500;
+  color: var(--el-text-color-placeholder);
+}
+
+.summary-separator {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background: var(--el-border-color);
 }
 
 .search-card :deep(.el-card__body) {
@@ -441,10 +547,6 @@ onMounted(() => {
 
   .search-card :deep(.el-form) {
     display: block;
-  }
-
-  .template-stats {
-    flex-wrap: wrap;
   }
 }
 </style>

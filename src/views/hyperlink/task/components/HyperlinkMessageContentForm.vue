@@ -33,6 +33,10 @@ const contentLabel = computed(() => {
   if (form.value.messageType === 4) return "副标题小字";
   return "正文";
 });
+
+function handleTemplateChange(value: unknown): void {
+  emit("use-template", typeof value === "number" ? value : null);
+}
 </script>
 
 <template>
@@ -53,7 +57,7 @@ const contentLabel = computed(() => {
             :loading="templateLoading"
             placeholder="搜索并引用模板..."
             class="reference-select"
-            @change="emit('use-template', templateId)"
+            @change="handleTemplateChange"
           >
             <el-option
               v-for="template in templates"

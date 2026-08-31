@@ -26,7 +26,8 @@ describe("hyperlink task H2/H3 API", () => {
       taskId: null,
       dataPackageId: 9,
       taskMode: "instant",
-      maxExecutingAccounts: 10
+      maxExecutingAccounts: 10,
+      maxUseAccounts: 0
     });
     await createHyperlinkTask(form);
     await updateHyperlinkTask(42, { ...form, version: 3 });
@@ -63,9 +64,9 @@ describe("hyperlink task H2/H3 API", () => {
     assert.deepEqual(armadaCalls()[0].opts, {
       params: {
         page: 1,
-        pageSize: 20,
-        keyword: "banner",
-        contentType: "image/jpeg"
+        pageSize: 24,
+        assetName: "banner",
+        selectableOnly: true
       }
     });
   });

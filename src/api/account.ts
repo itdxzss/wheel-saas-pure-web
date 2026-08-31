@@ -10,6 +10,7 @@ export type AccountState = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type LoginState = 1 | 2 | 3;
 export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;
+export type AccountTypeVerifyStatus = 0 | 1 | 2 | 3 | 4;
 export type NumberSource = 1 | 2 | 3;
 export type MuteStatus = 1 | 2;
 /** 账号菜单使用的营销整组占用展示类型。 */
@@ -29,6 +30,13 @@ export interface TenantAccount {
   protocol_address?: string | null;
   truth_ip?: string | null;
   account_type?: string | null;
+  declared_account_type?: string | null;
+  account_type_verify_status?: AccountTypeVerifyStatus | null;
+  account_type_verify_source?: number | null;
+  account_type_verified_at?: string | null;
+  business_verification_level?: number | null;
+  business_verification_source?: number | null;
+  business_verification_verified_at?: string | null;
   device_os?: string | null;
   number_source?: string | null;
   channel_name?: string | null;
@@ -201,6 +209,13 @@ interface ArmadaTenantAccount {
   id?: number;
   wsPhone?: string | null;
   accountType?: number | null;
+  declaredAccountType?: number | null;
+  accountTypeVerifyStatus?: AccountTypeVerifyStatus | null;
+  accountTypeVerifySource?: number | null;
+  accountTypeVerifiedAt?: number | null;
+  businessVerificationLevel?: number | null;
+  businessVerificationSource?: number | null;
+  businessVerificationVerifiedAt?: number | null;
   deviceOs?: number | null;
   numberSource?: number | null;
   channelName?: string | null;
@@ -304,6 +319,19 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     protocol_address: row.protocolId ?? null,
     truth_ip: row.truthIp ?? null,
     account_type: accountTypeLabel(row.accountType),
+    declared_account_type: accountTypeLabel(row.declaredAccountType),
+    account_type_verify_status: row.accountTypeVerifyStatus ?? null,
+    account_type_verify_source: row.accountTypeVerifySource ?? null,
+    account_type_verified_at: formatEpochMillis(
+      row.accountTypeVerifiedAt,
+      null
+    ),
+    business_verification_level: row.businessVerificationLevel ?? null,
+    business_verification_source: row.businessVerificationSource ?? null,
+    business_verification_verified_at: formatEpochMillis(
+      row.businessVerificationVerifiedAt,
+      null
+    ),
     device_os: deviceOsLabel(row.deviceOs),
     number_source: numberSourceLabel(row.numberSource),
     channel_name: row.channelName ?? null,

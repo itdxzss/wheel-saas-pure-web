@@ -6,8 +6,6 @@ import type {
   SupportedHyperlinkMessageType
 } from "@/api/hyperlink-template";
 
-export const HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES = 500 * 1024;
-
 export interface HyperlinkTemplateButtonForm {
   displayText: string;
   targetValue: string;
@@ -26,43 +24,36 @@ export interface HyperlinkTemplateForm {
   assetId: number | null;
   imageName: string;
   imageUrl: string;
-  imageFile: File | null;
   remark: string;
   version: number | null;
-}
-
-export interface HyperlinkImageValidationResult {
-  valid: boolean;
-  message: string;
 }
 
 export const hyperlinkMessageTypeOptions: Array<{
   label: string;
   value: SupportedHyperlinkMessageType;
 }> = [
-  { label: "单图文", value: 1 },
   { label: "普通按钮", value: 3 },
-  { label: "卡片按钮", value: 4 }
+  { label: "卡片按钮", value: 4 },
+  { label: "单图文", value: 1 }
 ];
 
 export function createEmptyHyperlinkTemplateForm(): HyperlinkTemplateForm {
   return {
     name: "",
-    messageType: 1,
+    messageType: 3,
     title: "",
     content: "",
     linkDescription: "",
     promotionLink: "",
     button: {
       displayText: "立即查看",
-      targetValue: "",
-      useShortLink: true
+      targetValue: "https://example.com/promo",
+      useShortLink: false
     },
-    cardText: "",
+    cardText: "点击下方按钮查看详情",
     assetId: null,
     imageName: "",
     imageUrl: "",
-    imageFile: null,
     remark: "",
     version: null
   };
@@ -88,13 +79,12 @@ export function toHyperlinkTemplateForm(
     button: {
       displayText: button?.displayText ?? "立即查看",
       targetValue: button?.targetValue ?? "",
-      useShortLink: button?.useShortLink ?? true
+      useShortLink: button?.useShortLink ?? false
     },
     cardText: detail.cardText ?? "",
     assetId,
     imageName: assetId == null ? "" : "已上传图片",
     imageUrl: "",
-    imageFile: null,
     remark: detail.remark ?? "",
     version: detail.version
   };
@@ -158,16 +148,18 @@ export function validateHyperlinkTemplateForm(
     if (promotionLink.length > 2048) return "推广链接不能超过 2048 个字符";
     if (!isAbsoluteHttpUrl(promotionLink))
       return "请输入合法的 http/https 推广链接";
-    if (form.assetId == null && form.imageFile == null)
-      return "请上传链接预览图";
+    if (form.assetId == null) return "请选择链接预览图";
     return "";
   }
 
-  if (form.content.trim().length > 200) return "正文不能超过 200 个字符";
+  const contentLabel = form.messageType === 3 ? "底部小字" : "副标题";
+  if (form.content.trim().length > 2000) {
+    return `${contentLabel}不能超过 2000 个字符`;
+  }
   const displayTextMessage = requiredLengthMessage(
     form.button.displayText,
     "按钮文字",
-    20
+    30
   );
   if (displayTextMessage) return displayTextMessage;
   const targetValue = form.button.targetValue.trim();
@@ -185,35 +177,6 @@ export function validateHyperlinkTemplateForm(
     if (cardTextMessage) return cardTextMessage;
   }
   return "";
-}
-
-export async function validateHyperlinkImageFile(
-  file: File
-): Promise<HyperlinkImageValidationResult> {
-  if (file.size > HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES) {
-    return { valid: false, message: "图片不能超过 500KB" };
-  }
-  if (
-    !/\.jpe?g$/i.test(file.name) ||
-    file.type.toLowerCase() !== "image/jpeg"
-  ) {
-    return { valid: false, message: "仅支持 JPG/JPEG 图片" };
-  }
-  if (file.size < 5) {
-    return { valid: false, message: "图片不是有效的 JPEG 文件" };
-  }
-
-  const header = new Uint8Array(await file.slice(0, 3).arrayBuffer());
-  const tail = new Uint8Array(await file.slice(-2).arrayBuffer());
-  const hasJpegMarkers =
-    header[0] === 0xff &&
-    header[1] === 0xd8 &&
-    header[2] === 0xff &&
-    tail[0] === 0xff &&
-    tail[1] === 0xd9;
-  return hasJpegMarkers
-    ? { valid: true, message: "" }
-    : { valid: false, message: "图片不是有效的 JPEG 文件" };
 }
 
 export function toHyperlinkTemplateWriteRequest(

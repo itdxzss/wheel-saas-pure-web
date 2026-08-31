@@ -42,20 +42,20 @@ export type HyperlinkTaskRowAction =
 export function createHyperlinkTaskTableColumns(): HyperlinkTaskTableColumn[] {
   return [
     { label: "ID", prop: "id", width: 82, fixed: "left" },
-    { label: "任务名称", prop: "taskName", minWidth: 300 },
+    { label: "任务名称", prop: "taskName", minWidth: 240 },
     { label: "数据包", prop: "dataPackage", minWidth: 180 },
-    { label: "账号范围", prop: "accountFilter", minWidth: 250 },
-    { label: "营销目标国家", prop: "countries", minWidth: 180 },
+    { label: "账号范围", prop: "accountFilter", minWidth: 230 },
+    { label: "营销目标国家", prop: "countries", minWidth: 140 },
     { label: "状态", prop: "status", width: 110 },
-    { label: "账号统计", prop: "accountStats", minWidth: 180 },
+    { label: "账号统计", prop: "accountStats", minWidth: 150 },
     { label: "进度", prop: "progress", minWidth: 250 },
-    { label: "双钩数/双钩率", prop: "delivery", minWidth: 160 },
-    { label: "点击 UV/点击率", prop: "click", minWidth: 160 },
-    { label: "最大执行账号数", prop: "concurrency", width: 150 },
-    { label: "已执行时长", prop: "duration", width: 130 },
-    { label: "结束/周期", prop: "schedule", minWidth: 180 },
-    { label: "创建时间", prop: "createdAt", width: 180 },
-    { label: "操作", prop: "actions", width: 238, fixed: "right" }
+    { label: "双钩数/双钩率", prop: "delivery", minWidth: 160, hide: true },
+    { label: "点击 UV/点击率", prop: "click", minWidth: 160, hide: true },
+    { label: "最大执行账号数", prop: "concurrency", width: 150, hide: true },
+    { label: "已执行时长", prop: "duration", width: 130, hide: true },
+    { label: "结束/周期", prop: "schedule", minWidth: 180, hide: true },
+    { label: "创建时间", prop: "createdAt", width: 180, hide: true },
+    { label: "操作", prop: "actions", width: 230, fixed: "right" }
   ];
 }
 
@@ -66,7 +66,11 @@ export function mergeColumnPreferences(
   const known = new Map(preferences.map(item => [item.prop, item.hide]));
   return defaults.map(column => ({
     ...column,
-    hide: column.fixed ? false : known.get(column.prop) === true
+    hide: column.fixed
+      ? false
+      : known.has(column.prop)
+        ? known.get(column.prop) === true
+        : column.hide === true
   }));
 }
 
@@ -89,7 +93,7 @@ export function currentUserTenantColumnKey(
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
   }
-  return `hyperlink-task-list-columns:v1:${username ?? "anonymous"}:${(
+  return `hyperlink-task-list-columns:v2:${username ?? "anonymous"}:${(
     hash >>> 0
   ).toString(16)}`;
 }

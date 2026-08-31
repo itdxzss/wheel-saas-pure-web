@@ -170,6 +170,7 @@ onMounted(() => {
 
     <PureTableBar
       class="management-table"
+      style="margin-top: 0"
       title="数据包管理"
       :columns="columns"
       @refresh="refreshDataPackages"
@@ -521,11 +522,15 @@ onMounted(() => {
 
 <style scoped>
 .data-package-page {
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 500px;
+  padding: 0;
 }
 
-.page-alert {
-  margin-bottom: 12px;
+.data-package-page.main-content {
+  margin: 16px !important;
 }
 
 .table-actions,

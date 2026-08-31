@@ -34,7 +34,6 @@ defineOptions({ name: "DataPackageIntro" });
 
 <style scoped>
 .data-package-intro {
-  margin-bottom: 12px;
   background: var(--el-color-primary-light-9);
   border: 0;
 }

@@ -29,7 +29,8 @@ const labels = computed(() =>
       v-for="label in labels.slice(0, 3)"
       :key="label"
       size="small"
-      effect="plain"
+      effect="light"
+      round
     >
       {{ label }}
     </el-tag>
@@ -38,7 +39,9 @@ const labels = computed(() =>
       :content="labels.join('；')"
       placement="top"
     >
-      <el-tag size="small" type="info">+{{ labels.length - 3 }}</el-tag>
+      <el-tag size="small" type="warning" effect="light" round>
+        +{{ labels.length - 3 }}
+      </el-tag>
     </el-tooltip>
   </div>
 </template>
@@ -47,7 +50,7 @@ const labels = computed(() =>
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 4px;
   align-items: center;
 }
 

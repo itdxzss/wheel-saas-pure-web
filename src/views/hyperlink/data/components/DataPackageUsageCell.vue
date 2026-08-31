@@ -27,13 +27,16 @@ const successfulUsed = computed(() =>
     </div>
     <div class="usage-bar">
       <span
-        class="unused"
-        :style="{ width: `${percent(row.metrics.unusedCount)}%` }"
+        class="usage-bar-segment usage-bar-segment--unused"
+        :style="{ flexBasis: `${percent(row.metrics.unusedCount)}%` }"
       />
-      <span class="used" :style="{ width: `${percent(successfulUsed)}%` }" />
       <span
-        class="failed"
-        :style="{ width: `${percent(row.metrics.failedCount)}%` }"
+        class="usage-bar-segment usage-bar-segment--successful"
+        :style="{ flexBasis: `${percent(successfulUsed)}%` }"
+      />
+      <span
+        class="usage-bar-segment usage-bar-segment--failed"
+        :style="{ flexBasis: `${percent(row.metrics.failedCount)}%` }"
       />
     </div>
     <div class="usage-breakdown">
@@ -103,16 +106,22 @@ const successfulUsed = computed(() =>
   border-radius: 5px;
 }
 
-.unused {
-  background: var(--el-color-info-light-5);
+.usage-bar-segment {
+  display: block;
+  flex: 0 0 auto;
+  height: 100%;
 }
 
-.used {
-  background: var(--el-color-success);
+.usage-bar-segment--unused {
+  background-color: var(--el-color-info-light-5);
 }
 
-.failed {
-  background: var(--el-color-danger);
+.usage-bar-segment--successful {
+  background-color: var(--el-color-success);
+}
+
+.usage-bar-segment--failed {
+  background-color: var(--el-color-danger, #f56c6c);
 }
 
 .usage-breakdown {

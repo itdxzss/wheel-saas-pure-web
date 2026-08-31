@@ -40,7 +40,7 @@ async function loadPage(nextPage: number, append: boolean): Promise<void> {
   try {
     const result = await listHyperlinkResourceAssets({
       page: nextPage,
-      pageSize: 20,
+      pageSize: 24,
       keyword: keyword.value
     });
     if (version !== searchVersion) return;
@@ -96,8 +96,8 @@ async function upload(file: UploadFile): Promise<void> {
 }
 
 function useAsset(): void {
-  if (!selected.value?.available) {
-    ElMessage.warning("该素材已不可用，请重新选择");
+  if (!selected.value) {
+    ElMessage.warning("请先选择素材");
     return;
   }
   assetId.value = selected.value.id;
@@ -189,17 +189,15 @@ watch(assetId, () => {
             />
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="素材名称" min-width="180" />
+        <el-table-column prop="assetName" label="素材名称" min-width="180" />
         <el-table-column label="标签" min-width="180">
           <template #default="{ row }">{{
             row.tags.join("、") || "-"
           }}</template>
         </el-table-column>
         <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="row.available ? 'success' : 'danger'">
-              {{ row.available ? "可用" : "已失效" }}
-            </el-tag>
+          <template #default>
+            <el-tag type="success">可用</el-tag>
           </template>
         </el-table-column>
       </el-table>

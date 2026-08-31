@@ -241,6 +241,13 @@ describe("account operation API", () => {
         {
           id: 100,
           accountType: 1,
+          declaredAccountType: 2,
+          accountTypeVerifyStatus: 2,
+          accountTypeVerifySource: 3,
+          accountTypeVerifiedAt: 1782705600000,
+          businessVerificationLevel: 1,
+          businessVerificationSource: 3,
+          businessVerificationVerifiedAt: 1782705600000,
           deviceOs: 1,
           numberSource: 1,
           friendsNum: 0,
@@ -256,6 +263,15 @@ describe("account operation API", () => {
     const result = await listTenantAccounts();
 
     assert.equal(result.list?.[0]?.account_type, "个人号");
+    assert.equal(result.list?.[0]?.declared_account_type, "商业号");
+    assert.equal(result.list?.[0]?.account_type_verify_status, 2);
+    assert.equal(result.list?.[0]?.account_type_verify_source, 3);
+    assert.equal(result.list?.[0]?.business_verification_level, 1);
+    assert.equal(result.list?.[0]?.business_verification_source, 3);
+    assert.equal(
+      result.list?.[0]?.account_type_verified_at,
+      "2026-06-29 12:00:00"
+    );
     assert.equal(result.list?.[0]?.device_os, "安卓");
     assert.equal(result.list?.[0]?.number_source, "买量");
     assert.equal(result.list?.[0]?.friends_num, 0);

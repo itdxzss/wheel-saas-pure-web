@@ -6,6 +6,7 @@ import type { HyperlinkTaskListItem } from "@/api/hyperlink-task-list";
 import { formatEpochMillis } from "@/utils/time";
 import Plus from "~icons/ep/plus";
 import Download from "~icons/ep/download";
+import RefreshRight from "~icons/ep/refresh-right";
 import {
   average,
   countryLabel,
@@ -85,6 +86,7 @@ function onColumnsChange(
 
   <PureTableBar
     :key="columnKey"
+    class="hyperlink-table-bar"
     title="超链任务"
     :columns="columns"
     table-key="hyperlink-task-list"
@@ -93,12 +95,12 @@ function onColumnsChange(
   >
     <template #title>
       <div class="table-title">
-        <strong>超链任务</strong>
-        <el-tag type="primary" effect="light" round>
-          运行中 {{ rows.filter(row => row.runStatus === 1).length }}
+        <strong>超链群发任务</strong>
+        <el-tag size="small" type="primary" effect="light" round>
+          本页进行中 {{ rows.filter(row => row.runStatus === 1).length }}
         </el-tag>
-        <el-tag type="success" effect="light" round>
-          已完成 {{ rows.filter(row => row.runStatus === 2).length }}
+        <el-tag size="small" type="success" effect="light" round>
+          本页已完成 {{ rows.filter(row => row.runStatus === 2).length }}
         </el-tag>
       </div>
     </template>
@@ -106,11 +108,19 @@ function onColumnsChange(
       <div class="toolbar-buttons">
         <el-button
           v-auth="'tenant:hyperlink_task:create'"
+          class="create-button"
           type="primary"
           :icon="useRenderIcon(Plus)"
           @click="emit('create')"
         >
-          新建
+          新建超链群发任务
+        </el-button>
+        <el-button
+          class="manual-refresh-button"
+          :icon="useRenderIcon(RefreshRight)"
+          @click="emit('refresh')"
+        >
+          刷新
         </el-button>
         <el-button
           v-auth="'tenant:hyperlink_task:export'"
@@ -143,7 +153,7 @@ function onColumnsChange(
         <el-table-column
           v-if="visible(dynamicColumns, 'taskName')"
           label="任务名称"
-          min-width="300"
+          min-width="240"
         >
           <template #default="{ row }">
             <HyperlinkTaskIdentityCell :row="row" />
@@ -159,9 +169,15 @@ function onColumnsChange(
               <strong>{{
                 row.dataPackageName || `#${row.dataPackageId}`
               }}</strong>
-              <div class="muted">
-                {{ row.recipientTotal.toLocaleString() }} 个号码
-              </div>
+              <el-tag
+                class="package-count"
+                size="small"
+                type="success"
+                effect="light"
+                round
+              >
+                {{ row.recipientTotal.toLocaleString() }} 条
+              </el-tag>
             </template>
             <span v-else>-</span>
           </template>
@@ -169,7 +185,7 @@ function onColumnsChange(
         <el-table-column
           v-if="visible(dynamicColumns, 'accountFilter')"
           label="账号范围"
-          min-width="250"
+          min-width="230"
         >
           <template #default="{ row }">
             <HyperlinkTaskAccountFilterCell
@@ -183,7 +199,7 @@ function onColumnsChange(
         <el-table-column
           v-if="visible(dynamicColumns, 'countries')"
           label="营销目标国家"
-          min-width="180"
+          min-width="140"
         >
           <template #default="{ row }">
             <span v-if="row.targetCountryIso2s.length === 0">-</span>
@@ -193,7 +209,7 @@ function onColumnsChange(
                 :key="country ?? 'UNKNOWN'"
                 size="small"
               >
-                {{ countryLabel(country, countries) }}
+                🌐 {{ countryLabel(country, countries) }}
               </el-tag>
               <el-tooltip
                 v-if="row.targetCountryIso2s.length > 2"
@@ -224,13 +240,22 @@ function onColumnsChange(
         <el-table-column
           v-if="visible(dynamicColumns, 'accountStats')"
           label="账号统计"
-          min-width="180"
+          min-width="150"
         >
           <template #default="{ row }">
-            <div>使用号数：{{ row.usedAccountCount }}</div>
-            <div>封号数：{{ row.invalidAccountCount }}</div>
-            <div>
-              号均发量：{{ average(row.successNum, row.usedAccountCount) }}
+            <div class="account-stat-cell">
+              <span
+                >使用号数 <b>{{ row.usedAccountCount }}</b></span
+              >
+              <span>
+                封号数 <b class="danger-text">{{ row.invalidAccountCount }}</b>
+              </span>
+              <span>
+                号均发量
+                <b class="success-text">
+                  {{ average(row.successNum, row.usedAccountCount) }}
+                </b>
+              </span>
             </div>
           </template>
         </el-table-column>
@@ -324,7 +349,7 @@ function onColumnsChange(
         <el-table-column
           v-if="visible(dynamicColumns, 'actions')"
           label="操作"
-          width="238"
+          width="230"
           fixed="right"
         >
           <template #default="{ row }">
@@ -343,6 +368,7 @@ function onColumnsChange(
       </el-table>
 
       <WheelPagination
+        class="task-pagination"
         :current-page="page"
         :page-size="pageSize"
         :total="total"
@@ -360,6 +386,33 @@ function onColumnsChange(
   margin-bottom: 10px;
 }
 
+:global(.hyperlink-table-bar) {
+  position: relative;
+  padding-top: 28px;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 10px;
+}
+
+:global(.hyperlink-table-bar .el-table) {
+  margin: 0 8px;
+  font-size: 13px;
+}
+
+:global(.hyperlink-table-bar .el-table th.el-table__cell) {
+  height: 42px;
+  color: #374151;
+  background: #f8fafc;
+}
+
+:global(.hyperlink-table-bar .el-table td.el-table__cell) {
+  padding: 9px 0;
+}
+
+:global(.hyperlink-table-bar > .flex.justify-between > .flex:last-child) {
+  margin-left: auto;
+}
+
 .table-title,
 .toolbar-buttons,
 .tag-list {
@@ -370,6 +423,61 @@ function onColumnsChange(
 
 .tag-list {
   flex-wrap: wrap;
+}
+
+.table-title {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+
+  strong {
+    font-size: 16px;
+  }
+}
+
+.toolbar-buttons {
+  margin-bottom: -1px;
+}
+
+.create-button {
+  position: absolute;
+  top: 50px;
+  left: 16px;
+}
+
+.manual-refresh-button {
+  margin-left: 0;
+}
+
+.package-count {
+  margin-left: 6px;
+}
+
+.account-stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  span {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  b {
+    color: var(--el-color-primary);
+  }
+}
+
+.danger-text {
+  color: var(--el-color-danger) !important;
+}
+
+.success-text {
+  color: var(--el-color-success) !important;
+}
+
+.task-pagination {
+  padding: 12px 16px 8px;
 }
 
 .muted {

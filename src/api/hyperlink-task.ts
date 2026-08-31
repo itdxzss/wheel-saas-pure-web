@@ -1,5 +1,6 @@
 import { armadaRequest } from "@/api/armada";
 import { http } from "@/utils/http";
+import { listHyperlinkStrategyOptionRows } from "@/api/hyperlink-strategy";
 
 export type HyperlinkMessageType = 1 | 2 | 3 | 4;
 export type HyperlinkTaskMode = "instant" | "rolling" | "cycle";
@@ -56,6 +57,10 @@ export interface HyperlinkAccountFilter {
   source: 0 | 1 | 2 | 3 | 4 | null;
   friendCountMin: number | null;
   friendCountMax: number | null;
+  /** 通讯录中有名字的联系人数下限；与双向好友是两个口径 */
+  contactNamedNumMin: number | null;
+  /** 通讯录中有名字的联系人数上限；与双向好友是两个口径 */
+  contactNamedNumMax: number | null;
   retentionDaysMin: number | null;
   retentionDaysMax: number | null;
   registerDaysMin: number | null;
@@ -67,6 +72,8 @@ export interface HyperlinkAccountFilter {
 export interface HyperlinkTaskSaveRequest {
   version: number | null;
   sourceTaskId: number | null;
+  /** 新建任务时选中的模板策略；后端据此生成任务专属快照。 */
+  sourceStrategyId: number | null;
   taskName: string;
   messageType: HyperlinkMessageType;
   messageContent: HyperlinkMessageContent;
@@ -89,7 +96,7 @@ export interface HyperlinkTaskSaveRequest {
 export interface HyperlinkTaskDetail
   extends Omit<
     HyperlinkTaskSaveRequest,
-    "version" | "sourceTaskId" | "quoteToken"
+    "version" | "sourceTaskId" | "sourceStrategyId" | "quoteToken"
   > {
   id: number;
   version: number;
@@ -143,6 +150,8 @@ export interface HyperlinkTaskQuote {
   dataPackageGeneration: number;
   dataPackageName: string;
   recipientCount: number;
+  configuredMaxExecutingAccounts: number;
+  effectiveMaxExecutingAccounts: number;
   pricingMode: "NORMAL" | "SUPER";
   priceCode: string;
   currencyCode: string;
@@ -178,11 +187,16 @@ export interface HyperlinkStrategyOption {
 
 export interface HyperlinkResourceAsset {
   id: number;
-  name: string;
+  assetName: string;
+  contentUrl: string;
   tags: string[];
-  contentType: string;
   sizeBytes: number;
-  available: boolean;
+  width: number | null;
+  height: number | null;
+  referenceCount: number;
+  createdBy: number | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface HyperlinkResourceAssetPage {
@@ -232,6 +246,7 @@ export function quoteHyperlinkTask(data: {
   dataPackageId: number;
   taskMode: HyperlinkTaskMode;
   maxExecutingAccounts: number;
+  maxUseAccounts: number;
 }): Promise<HyperlinkTaskQuote> {
   return armadaRequest("post", "/api/hyperlink-tasks/quote", { data });
 }
@@ -258,9 +273,7 @@ export function getHyperlinkTaskProvisionStatus(
 export function listHyperlinkStrategyOptions(
   keyword?: string
 ): Promise<HyperlinkStrategyOption[]> {
-  return armadaRequest("get", "/api/hyperlink-strategies/options", {
-    params: { keyword: keyword?.trim() || undefined, enabled: true }
-  });
+  return listHyperlinkStrategyOptionRows(keyword);
 }
 
 export function listHyperlinkResourceAssets(query: {
@@ -271,9 +284,9 @@ export function listHyperlinkResourceAssets(query: {
   return armadaRequest("get", "/api/resource-assets", {
     params: {
       page: query.page ?? 1,
-      pageSize: query.pageSize ?? 20,
-      keyword: query.keyword?.trim() || undefined,
-      contentType: "image/jpeg"
+      pageSize: query.pageSize ?? 24,
+      assetName: query.keyword?.trim() || undefined,
+      selectableOnly: true
     }
   });
 }

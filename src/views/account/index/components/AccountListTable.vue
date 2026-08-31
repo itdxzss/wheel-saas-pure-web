@@ -206,7 +206,7 @@ function occupancyTagStyle(row: TenantAccount) {
         <el-table-column
           v-if="!dynamicColumns[6].hide"
           label="账号类型/设备"
-          width="140"
+          width="230"
         >
           <template #default="{ row }">
             {{ accountTypeDeviceLabel(row as TenantAccount) }}

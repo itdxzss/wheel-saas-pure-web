@@ -39,6 +39,15 @@ describe("hyperlink task editor competitor surface", () => {
     assert.match(button, /添加按钮（/);
   });
 
+  it("imports the current template selection instead of the previous model value", () => {
+    assert.match(message, /@change="handleTemplateChange"/);
+    assert.match(
+      message,
+      /emit\("use-template", typeof value === "number" \? value : null\)/
+    );
+    assert.doesNotMatch(message, /@change="[^"]*templateId/);
+  });
+
   it("contains every task strategy control and task-mode hint", () => {
     for (const text of [
       "即时群发",
@@ -56,6 +65,19 @@ describe("hyperlink task editor competitor surface", () => {
     ]) {
       assert.ok(strategy.includes(text), text);
     }
+  });
+
+  it("allows editable tasks to copy a strategy without exposing message templates", () => {
+    assert.match(
+      drawer,
+      /const allowStrategyReferences = computed\([\s\S]*mode\.value === "edit"/
+    );
+    assert.match(drawer, /:allow-references="allowTemplateReferences"/);
+    assert.match(drawer, /:allow-references="allowStrategyReferences"/);
+    assert.match(
+      composable,
+      /mode\.value === "edit"\)[\s\S]*loadDataPackageOptions\(\), loadStrategyOptions\(\)/
+    );
   });
 
   it("contains the complete task account filter and preserves default business groups", () => {

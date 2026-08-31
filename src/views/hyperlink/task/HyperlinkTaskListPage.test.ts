@@ -11,6 +11,7 @@ const intro = source("./components/HyperlinkTaskIntro.vue");
 const search = source("./components/HyperlinkTaskSearchCard.vue");
 const metrics = source("./components/HyperlinkTaskMetrics.vue");
 const table = source("./components/HyperlinkTaskTable.vue");
+const progressCell = source("./components/HyperlinkTaskProgressCell.vue");
 const actions = source("./components/HyperlinkTaskRowActions.vue");
 const composable = source("./composables/useHyperlinkTaskPage.ts");
 const domain = source("./domain/list-display.ts");
@@ -43,17 +44,18 @@ describe("hyperlink task H1 list page contract", () => {
     assert.equal((domain.match(/label: "/g) ?? []).length >= 15, true);
   });
 
-  it("keeps pricing, country pricing, three modes and lifecycle explanation", () => {
+  it("keeps the reference green pricing banner, three modes and lifecycle explanation", () => {
     for (const label of [
       "WhatsApp 超链群发",
       "普通模式",
       "超级模式",
-      "当前参考单价",
-      "国家价格",
-      "即时模式",
-      "预发布模式",
-      "周期模式",
-      "暂停、恢复或停止"
+      "单价",
+      "即时",
+      "预发布",
+      "周期",
+      "暂停",
+      "恢复",
+      "停止"
     ]) {
       assert.match(intro, new RegExp(label));
     }
@@ -63,7 +65,7 @@ describe("hyperlink task H1 list page contract", () => {
   it("keeps manual refresh, export, new, column settings and five-state entries", () => {
     assert.match(table, /@refresh="emit\('refresh'\)"/);
     assert.match(table, /导出 CSV/);
-    assert.match(table, />\s*新建\s*</);
+    assert.match(table, /新建超链群发任务/);
     assert.match(tableBar, /列设置/);
     assert.match(tableBar, /columns-change/);
     assert.match(composable, /currentUserTenantColumnKey/);
@@ -82,6 +84,15 @@ describe("hyperlink task H1 list page contract", () => {
     assert.doesNotMatch(
       `${page}\n${table}\n${actions}\n${composable}`,
       /DELETE|删除按钮|setInterval/
+    );
+  });
+
+  it("shows single-hook and double-hook counts together in each task progress cell", () => {
+    assert.match(progressCell, /single-hook[\s\S]*row\.successNum/);
+    assert.match(progressCell, /double-hook[\s\S]*row\.deliveredNum/);
+    assert.equal(
+      progressCell.indexOf("single-hook") < progressCell.indexOf("double-hook"),
+      true
     );
   });
 

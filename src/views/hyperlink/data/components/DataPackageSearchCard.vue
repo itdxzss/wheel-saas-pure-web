@@ -198,10 +198,6 @@ function selectDatePreset(value: string | number | boolean | undefined): void {
 </template>
 
 <style scoped>
-.search-card {
-  margin-bottom: 12px;
-}
-
 .search-card :deep(.el-card__body) {
   padding: 18px 20px;
 }

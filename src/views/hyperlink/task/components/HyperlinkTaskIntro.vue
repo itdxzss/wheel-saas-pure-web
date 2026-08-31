@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { HyperlinkTaskCreateContext } from "@/api/hyperlink-task-list";
+import Whatsapp from "~icons/ri/whatsapp-fill";
 
 defineProps<{
   context: HyperlinkTaskCreateContext | null;
@@ -11,163 +13,160 @@ defineEmits<{ (event: "retry"): void }>();
 </script>
 
 <template>
-  <el-card class="intro-card" shadow="never">
-    <div class="intro-heading">
-      <div>
-        <div class="intro-title">
-          <h2>WhatsApp 超链群发</h2>
-          <el-tag type="primary" effect="dark" round>Hyperlink</el-tag>
+  <section class="intro-card">
+    <div class="whatsapp-mark" aria-hidden="true">
+      <component :is="useRenderIcon(Whatsapp)" />
+    </div>
+    <div class="intro-copy">
+      <div class="intro-title">
+        <h2>WhatsApp 超链群发</h2>
+        <el-tag class="hyperlink-tag" effect="plain" round>Hyperlink</el-tag>
+        <template v-if="context">
           <el-tag
-            v-if="context"
+            class="price-tag"
             :type="context.pricingMode === 'SUPER' ? 'danger' : 'success'"
-            effect="light"
+            effect="plain"
             round
           >
-            {{ context.pricingMode === "SUPER" ? "超级模式" : "普通模式" }}
+            {{
+              context.pricingMode === "SUPER" ? "超级模式" : "普通模式"
+            }}单价： {{ context.referenceUnitPrice
+            }}{{ context.currencyCode }}/条
           </el-tag>
-        </div>
-        <p class="intro-description">
-          一个任务 = 一个数据包 + 一组账号筛选 + 一条 WhatsApp 消息
-        </p>
-      </div>
-      <div v-loading="loading" class="price-panel">
-        <template v-if="context">
-          <span>当前参考单价</span>
-          <strong>
-            {{ context.currencyCode }} {{ context.referenceUnitPrice }}
-          </strong>
-          <el-tag size="small" effect="plain">{{ context.priceCode }}</el-tag>
         </template>
-        <el-button
-          v-else-if="errorMessage"
-          link
-          type="danger"
-          @click="$emit('retry')"
-        >
-          价格加载失败，点击重试
-        </el-button>
       </div>
+      <p class="intro-description">
+        一个任务 = 一个数据包 + 一组账号筛选条件 + 一条 WhatsApp
+        消息模板；系统按「发送间隔 /
+        并发账号」自动从筛选出的「有效号」中调度发送。
+      </p>
+      <p class="mode-description">
+        支持三种模式：
+        <b>即时</b><span>按计划快速发完整个数据包</span> <b>预发布</b
+        ><span>到指定时间结束，期间符合筛选的新号自动加入</span> <b>周期</b
+        ><span>定时循环发送，监测各国不同阶段的账号封控规律</span>
+        <span>。运行中可随时</span><b>暂停</b><b>恢复</b><span>或</span
+        ><b>停止</b><span>。</span>
+      </p>
     </div>
-
-    <el-alert
-      v-if="context?.pricingMode === 'SUPER'"
-      class="super-alert"
-      type="warning"
-      :closable="false"
-      show-icon
-      title="超级模式已开启：任务使用加速价码与更高优先级，最终费用以服务端报价为准。"
-    />
-
-    <div class="mode-grid">
-      <div class="mode-item">
-        <strong>即时模式</strong>
-        <span>一次性发送当前冻结的数据包受众。</span>
-      </div>
-      <div class="mode-item">
-        <strong>预发布模式</strong>
-        <span>计划结束前允许符合条件的新账号加入执行。</span>
-      </div>
-      <div class="mode-item">
-        <strong>周期模式</strong>
-        <span>按固定周期选择账号，持续处理剩余受众。</span>
-      </div>
-      <div class="mode-item country-price">
-        <strong>国家价格</strong>
-        <span>创建或启动报价按目标国家分别返回；不以参考价替代国家报价。</span>
-      </div>
+    <div v-loading="loading" class="context-state">
+      <el-button v-if="!context && errorMessage" link @click="$emit('retry')">
+        价格加载失败，点击重试
+      </el-button>
     </div>
-    <p class="lifecycle-tip">运行中任务可暂停、恢复或停止；停止后不可恢复。</p>
-  </el-card>
+  </section>
 </template>
 
 <style scoped lang="scss">
 .intro-card {
+  position: relative;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  min-height: 110px;
+  padding: 18px 22px;
   margin-bottom: 12px;
-  border: 1px solid var(--el-border-color-light);
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(105deg, #409eff 0%, #2f8cff 48%, #1d6fd9 100%);
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgb(47 140 255 / 18%);
 }
 
-.intro-heading,
+.whatsapp-mark,
 .intro-title,
-.mode-grid,
-.price-panel {
+.mode-description {
   display: flex;
   align-items: center;
 }
 
-.intro-heading {
-  gap: 20px;
-  justify-content: space-between;
+.whatsapp-mark {
+  flex: 0 0 64px;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  color: #fff;
+  background: rgb(255 255 255 / 15%);
+  border: 1px solid rgb(255 255 255 / 42%);
+  border-radius: 12px;
+
+  :deep(svg) {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+.intro-copy {
+  min-width: 0;
 }
 
 .intro-title {
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 
   h2 {
     margin: 0;
-    font-size: 22px;
+    font-size: 23px;
+    line-height: 1.2;
+    color: #fff;
   }
+}
+
+.hyperlink-tag,
+.price-tag {
+  font-weight: 600;
+  color: #1d6fd9;
+  background: rgb(255 255 255 / 92%);
+  border-color: rgb(255 255 255 / 52%);
+}
+
+.price-tag {
+  color: #155fc0;
 }
 
 .intro-description,
-.lifecycle-tip {
-  margin: 8px 0 0;
-  color: var(--el-text-color-secondary);
+.mode-description {
+  margin: 7px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 94%);
 }
 
-.price-panel {
-  gap: 8px;
-  justify-content: flex-end;
-  min-width: 250px;
-  min-height: 54px;
+.mode-description {
+  flex-wrap: wrap;
+  gap: 3px 5px;
+  margin-top: 2px;
+}
 
-  strong {
-    font-size: 20px;
-    color: var(--el-color-primary);
+.mode-description b {
+  padding: 0 5px;
+  color: #1d6fd9;
+  background: rgb(255 255 255 / 92%);
+  border-radius: 9px;
+}
+
+.context-state {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  min-width: 20px;
+  min-height: 20px;
+
+  :deep(.el-button) {
+    color: #fff;
   }
-}
-
-.super-alert {
-  margin-top: 14px;
-}
-
-.mode-grid {
-  gap: 10px;
-  align-items: stretch;
-  margin-top: 16px;
-}
-
-.mode-item {
-  flex: 1;
-  min-width: 0;
-  padding: 12px;
-  background: var(--el-fill-color-light);
-  border-radius: 8px;
-
-  strong,
-  span {
-    display: block;
-  }
-
-  span {
-    margin-top: 5px;
-    line-height: 1.5;
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.country-price {
-  background: var(--el-color-primary-light-9);
 }
 
 @media (width <= 900px) {
-  .intro-heading,
-  .mode-grid {
-    flex-direction: column;
-    align-items: stretch;
+  .intro-card {
+    align-items: flex-start;
   }
 
-  .price-panel {
-    justify-content: flex-start;
+  .whatsapp-mark {
+    flex-basis: 50px;
+    width: 50px;
+    height: 50px;
   }
 }
 </style>

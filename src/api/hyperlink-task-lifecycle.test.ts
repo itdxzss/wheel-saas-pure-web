@@ -21,14 +21,16 @@ describe("hyperlink task H3 lifecycle API", () => {
       taskId: null,
       dataPackageId: 21,
       taskMode: "instant",
-      maxExecutingAccounts: 30
+      maxExecutingAccounts: 30,
+      maxUseAccounts: 50
     });
     await quoteHyperlinkTask({
       purpose: "START",
       taskId: 11,
       dataPackageId: null,
       taskMode: null,
-      maxExecutingAccounts: null
+      maxExecutingAccounts: null,
+      maxUseAccounts: null
     });
 
     assert.deepEqual(armadaCalls(), [
@@ -41,7 +43,8 @@ describe("hyperlink task H3 lifecycle API", () => {
             taskId: null,
             dataPackageId: 21,
             taskMode: "instant",
-            maxExecutingAccounts: 30
+            maxExecutingAccounts: 30,
+            maxUseAccounts: 50
           }
         }
       },
@@ -54,7 +57,8 @@ describe("hyperlink task H3 lifecycle API", () => {
             taskId: 11,
             dataPackageId: null,
             taskMode: null,
-            maxExecutingAccounts: null
+            maxExecutingAccounts: null,
+            maxUseAccounts: null
           }
         }
       }

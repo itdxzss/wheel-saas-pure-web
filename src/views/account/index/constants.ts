@@ -5,7 +5,7 @@ export const accountListColumns: TableColumnList = [
   { label: "账号状态", prop: "account_state", width: 120 },
   { label: "登录", prop: "login_state", width: 100 },
   { label: "IP来源", prop: "ip_source", minWidth: 140 },
-  { label: "账号类型/设备", prop: "account_type", width: 140 },
+  { label: "账号类型/设备", prop: "account_type", width: 230 },
   { label: "协议", prop: "protocol_address", minWidth: 160 },
   { label: "IP地址", prop: "truth_ip", minWidth: 160 },
   { label: "渠道/来源", prop: "channel_name", minWidth: 150 },

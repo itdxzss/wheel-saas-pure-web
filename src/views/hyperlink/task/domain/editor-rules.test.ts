@@ -29,6 +29,7 @@ describe("hyperlink task editor rules", () => {
     );
     assert.equal(form.messageContent.buttons.length, 1);
     assert.equal(form.accountFilter.filterSchemaVersion, 1);
+    assert.equal(form.sourceStrategyId, null);
   });
 
   it("restores server-resolved public and hyperlink groups on init or clear", () => {
@@ -121,6 +122,7 @@ describe("hyperlink task editor rules", () => {
     assert.equal(copy.dataPackageId, null);
     assert.equal(copy.version, null);
     assert.equal(copy.sourceTaskId, 88);
+    assert.equal(copy.sourceStrategyId, null);
   });
 
   it("imports only the frozen strategy whitelist", () => {
@@ -144,6 +146,7 @@ describe("hyperlink task editor rules", () => {
     assert.equal(result.dataPackageId, 5);
     assert.equal(result.taskMode, "cycle");
     assert.equal(result.maxUseAccounts, 5);
+    assert.equal(result.sourceStrategyId, 1);
   });
 
   it("clears inactive message fields only when building the wire request", () => {
@@ -239,6 +242,8 @@ describe("hyperlink task editor rules", () => {
       validateHyperlinkTaskForm(form, context),
       "最大执行账号数不能超过 10"
     );
+    form.maxExecutingAccounts = 0;
+    assert.equal(validateHyperlinkTaskForm(form, context), "");
     form.maxExecutingAccounts = 10;
     form.maxUseAccounts = 1.2;
     assert.equal(

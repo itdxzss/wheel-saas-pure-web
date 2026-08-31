@@ -1,13 +1,16 @@
 import { armadaRequest } from "@/api/armada";
+import type {
+  HyperlinkTaskMutationReceipt,
+  HyperlinkTaskQuote
+} from "@/api/hyperlink-task";
+
+export type {
+  HyperlinkTaskMutationReceipt,
+  HyperlinkTaskQuote
+} from "@/api/hyperlink-task";
 
 export type HyperlinkTaskMode = "instant" | "rolling" | "cycle";
 export type HyperlinkTaskAction = "START" | "PAUSE" | "RESUME" | "STOP";
-export type HyperlinkProvisionStatus =
-  | "NOT_REQUIRED"
-  | "PROCESSING"
-  | "READY"
-  | "FAILED";
-
 export type HyperlinkTaskQuoteRequest =
   | {
       purpose: "CREATE";
@@ -15,6 +18,7 @@ export type HyperlinkTaskQuoteRequest =
       dataPackageId: number;
       taskMode: HyperlinkTaskMode;
       maxExecutingAccounts: number;
+      maxUseAccounts: number;
     }
   | {
       purpose: "START";
@@ -22,43 +26,8 @@ export type HyperlinkTaskQuoteRequest =
       dataPackageId: null;
       taskMode: null;
       maxExecutingAccounts: null;
+      maxUseAccounts: null;
     };
-
-export interface HyperlinkTaskQuoteBreakdown {
-  recipientCountryIso2: string | null;
-  recipientCount: number;
-  unitPrice: number;
-  amount: number;
-}
-
-export interface HyperlinkTaskQuote {
-  quoteToken: string;
-  expiresAt: number;
-  dataPackageId: number;
-  dataPackageGeneration: number;
-  dataPackageName: string;
-  recipientCount: number;
-  pricingMode: "NORMAL" | "SUPER";
-  priceCode: string;
-  currencyCode: string;
-  unitPrice: number | null;
-  pricingBreakdown: HyperlinkTaskQuoteBreakdown[];
-  estimatedAmount: number;
-  accountBalance: number;
-  giftBalance: number;
-  availableBalance: number;
-}
-
-export interface HyperlinkTaskMutationReceipt {
-  taskId: number;
-  provisionStatus: HyperlinkProvisionStatus;
-  enabled: boolean;
-  runStatus: 0 | 1 | 2 | 3 | 4;
-  version: number;
-  pollAfterMs: number | null;
-  failureCode: number | null;
-  failureReason: string | null;
-}
 
 export interface HyperlinkTaskActionRequest {
   action: HyperlinkTaskAction;

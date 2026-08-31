@@ -107,7 +107,7 @@ describe("hyperlink task H1 list display", () => {
     ]);
     assert.equal(merged.find(column => column.prop === "id")?.hide, false);
     assert.equal(merged.find(column => column.prop === "taskName")?.hide, true);
-    assert.equal(merged.find(column => column.prop === "click")?.hide, false);
+    assert.equal(merged.find(column => column.prop === "click")?.hide, true);
     assert.equal(toColumnPreferences(merged).length, 15);
   });
 
@@ -213,7 +213,7 @@ describe("hyperlink task H1 list display", () => {
 
   it("scopes column persistence to the current user-session without exposing the token", () => {
     const key = currentUserTenantColumnKey("operator", "tenant-scoped-secret");
-    assert.match(key, /^hyperlink-task-list-columns:v1:operator:/);
+    assert.match(key, /^hyperlink-task-list-columns:v2:operator:/);
     assert.doesNotMatch(key, /tenant-scoped-secret/);
   });
 });

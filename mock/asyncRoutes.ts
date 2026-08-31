@@ -281,6 +281,7 @@ const hyperlinkRouter = {
       name: "HyperlinkTaskList",
       meta: {
         title: "超链任务",
+        rank: 10,
         roles: ["admin", "common"],
         showParent: true,
         module_key: "hyperlink_task",
@@ -289,7 +290,8 @@ const hyperlinkRouter = {
           "tenant:hyperlink_task:create",
           "tenant:hyperlink_task:edit",
           "tenant:hyperlink_task:action",
-          "tenant:hyperlink_task:export"
+          "tenant:hyperlink_task:export",
+          "tenant:hyperlink_task:attribution_sensitive"
         ]
       }
     },
@@ -299,6 +301,7 @@ const hyperlinkRouter = {
       name: "HyperlinkDataPackage",
       meta: {
         title: "超链数据包",
+        rank: 20,
         roles: ["admin", "common"],
         showParent: true,
         module_key: "hyperlink_data",
@@ -317,6 +320,7 @@ const hyperlinkRouter = {
       name: "HyperlinkTemplate",
       meta: {
         title: "超链营销模板",
+        rank: 30,
         roles: ["admin", "common"],
         showParent: true,
         module_key: "hyperlink_template",
@@ -327,6 +331,101 @@ const hyperlinkRouter = {
           "tenant:hyperlink_template:copy",
           "tenant:hyperlink_template:delete"
         ]
+      }
+    },
+    {
+      path: "/hyperlink/strategy",
+      component: "hyperlink/strategy/index",
+      name: "HyperlinkStrategy",
+      meta: {
+        title: "超链策略",
+        icon: "solar:tuning-2-bold-duotone",
+        rank: 40,
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_strategy",
+        perm_key: "tenant:hyperlink_strategy:view",
+        auths: [
+          "tenant:hyperlink_strategy:create",
+          "tenant:hyperlink_strategy:edit",
+          "tenant:hyperlink_strategy:delete"
+        ]
+      }
+    },
+    {
+      path: "/hyperlink/library",
+      component: "hyperlink/library/index",
+      name: "HyperlinkResourceAsset",
+      meta: {
+        title: "图片素材",
+        icon: "solar:gallery-wide-bold-duotone",
+        rank: 50,
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_resource_asset",
+        perm_key: "tenant:resource_asset:view",
+        auths: [
+          "tenant:resource_asset:upload",
+          "tenant:resource_asset:edit",
+          "tenant:resource_asset:delete"
+        ]
+      }
+    },
+    {
+      path: "/hyperlink/analysis",
+      component: "hyperlink/analysis/index",
+      name: "HyperlinkAnalysis",
+      meta: {
+        title: "超链市场分析",
+        icon: "solar:chart-2-bold-duotone",
+        rank: 60,
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "hyperlink_analysis",
+        perm_key: "tenant:hyperlink_analysis:view"
+      }
+    }
+  ]
+};
+
+// 仅用于本地开发预览；生产菜单与按钮权限由 /api/tenant/me/menus 返回。
+// 路由路径、component 与权限节点逐字对齐后端 V159__contact_marketing_menu_rbac.sql。
+const contactRouter = {
+  path: "/contact",
+  meta: {
+    title: "通讯录营销",
+    icon: "ep:phone",
+    rank: 8,
+    module_key: "contact_marketing"
+  },
+  children: [
+    {
+      path: "/contact/hyperlink",
+      component: "contact/hyperlink/index",
+      name: "ContactHyperlinkTask",
+      meta: {
+        title: "通讯录超链任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "contact_task",
+        perm_key: "tenant:contact_task:view",
+        auths: [
+          "tenant:contact_task:create",
+          "tenant:contact_task:edit",
+          "tenant:contact_task:operate"
+        ]
+      }
+    },
+    {
+      path: "/contact/script",
+      component: "contact/script/index",
+      name: "ContactScriptTask",
+      meta: {
+        title: "通讯录剧本任务",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "contact_task",
+        perm_key: "tenant:contact_task:view"
       }
     }
   ]
@@ -412,6 +511,7 @@ export default defineFakeRoute([
           materialRouter,
           resourceRouter,
           hyperlinkRouter,
+          contactRouter,
           systemRouter
         ]
       };

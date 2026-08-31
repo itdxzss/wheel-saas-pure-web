@@ -114,6 +114,12 @@ onBeforeUnmount(stopTimer);
       <el-descriptions-item label="匹配账号"
         >{{ match?.availableAccountCount ?? 0 }} 个</el-descriptions-item
       >
+      <el-descriptions-item label="执行账号">
+        {{ quote?.configuredMaxExecutingAccounts ?? form.maxExecutingAccounts }}
+        <template v-if="quote?.configuredMaxExecutingAccounts === 0">
+          （均分）→ 当前解析 {{ quote.effectiveMaxExecutingAccounts }} 个
+        </template>
+      </el-descriptions-item>
       <el-descriptions-item label="推广链接"
         ><span class="link-text">{{
           targetLink || "-"

@@ -247,14 +247,13 @@ function clearFilter(): void {
         <el-form-item label="最大执行账号数" required>
           <el-input-number
             v-model="form.maxExecutingAccounts"
-            :min="1"
-            :max="
-              match?.maxConcurrentNum ?? createContext?.maxConcurrentNum ?? 500
-            "
+            :min="0"
+            :max="100"
             :precision="0"
             :disabled="disabled"
             class="full-width"
           />
+          <small>0 = 按当前账号和协议容量自动均分；固定值范围 1～100</small>
         </el-form-item>
       </el-col>
       <el-col :span="8">

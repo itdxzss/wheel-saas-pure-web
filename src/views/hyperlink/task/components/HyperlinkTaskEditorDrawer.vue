@@ -19,8 +19,14 @@ const accountFilterVisible = ref(false);
 const templateId = ref<number | null>(null);
 const strategyId = ref<number | null>(null);
 
-const allowReferences = computed(
+const allowTemplateReferences = computed(
   () => editor.mode.value === "create" || editor.mode.value === "copy"
+);
+const allowStrategyReferences = computed(
+  () =>
+    editor.mode.value === "create" ||
+    editor.mode.value === "copy" ||
+    editor.mode.value === "edit"
 );
 const messageTypeDisabled = computed(
   () => editor.readonly.value || editor.mode.value === "edit"
@@ -39,6 +45,30 @@ const subtitle = computed(() => {
   }
   return "左侧实时预览 · 右侧填写表单，所见即所得";
 });
+
+async function openCreate(): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openCreate();
+}
+
+async function openEdit(id: number): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openEdit(id);
+}
+
+async function openView(id: number): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openView(id);
+}
+
+async function openCopy(id: number): Promise<void> {
+  templateId.value = null;
+  strategyId.value = null;
+  await editor.openCopy(id);
+}
 
 async function requestClose(): Promise<void> {
   if (editor.readonly.value) {
@@ -70,10 +100,10 @@ function beforeClose(done: () => void): void {
 }
 
 defineExpose({
-  openCreate: editor.openCreate,
-  openEdit: editor.openEdit,
-  openView: editor.openView,
-  openCopy: editor.openCopy
+  openCreate,
+  openEdit,
+  openView,
+  openCopy
 });
 </script>
 
@@ -210,7 +240,7 @@ defineExpose({
           v-model="editor.form.value"
           v-model:template-id="templateId"
           :disabled="editor.readonly.value"
-          :allow-references="allowReferences"
+          :allow-references="allowTemplateReferences"
           :templates="editor.templateOptions.value"
           :template-loading="
             editor.importingTemplate.value || editor.templateLoading.value
@@ -227,7 +257,7 @@ defineExpose({
           v-model="editor.form.value"
           v-model:strategy-id="strategyId"
           :disabled="editor.readonly.value"
-          :allow-references="allowReferences"
+          :allow-references="allowStrategyReferences"
           :strategies="editor.strategyOptions.value"
           :strategy-loading="editor.resourceLoading.value"
           :strategy-error="editor.resourceErrors.value['策略']"

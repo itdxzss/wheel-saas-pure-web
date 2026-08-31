@@ -1,19 +1,32 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES,
   createEmptyHyperlinkTemplateForm,
+  hyperlinkMessageTypeOptions,
   toHyperlinkTemplateUpdateRequest,
   toHyperlinkTemplateWriteRequest,
-  validateHyperlinkImageFile,
   validateHyperlinkTemplateForm
 } from "./template-form";
 
 describe("hyperlink template form contract", () => {
+  it("starts with the competitor default normal button and type order", () => {
+    const form = createEmptyHyperlinkTemplateForm();
+
+    assert.equal(form.messageType, 3);
+    assert.deepEqual(
+      hyperlinkMessageTypeOptions.map(option => option.value),
+      [3, 4, 1]
+    );
+    assert.equal(form.button.displayText, "立即查看");
+    assert.equal(form.button.targetValue, "https://example.com/promo");
+    assert.equal(form.button.useShortLink, false);
+  });
+
   it("normalizes single-link preview content with strict null semantics", () => {
     const form = createEmptyHyperlinkTemplateForm();
     Object.assign(form, {
       name: "  单图文模板  ",
+      messageType: 1,
       title: "  新品福利  ",
       content: "  查看活动  ",
       linkDescription: "  活动详情  ",
@@ -116,29 +129,32 @@ describe("hyperlink template form contract", () => {
     assert.equal(validateHyperlinkTemplateForm(form), "");
   });
 
-  it("checks JPEG extension, MIME, size and file markers before upload", async () => {
-    const jpeg = new File(
-      [new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0xff, 0xd9])],
-      "promo.jpg",
-      { type: "image/jpeg" }
-    );
-    const disguisedPng = new File(["not jpeg"], "promo.jpg", {
-      type: "image/jpeg"
-    });
-    const tooLarge = new File(
-      [new Uint8Array(HYPERLINK_TEMPLATE_IMAGE_MAX_BYTES + 1)],
-      "large.jpeg",
-      { type: "image/jpeg" }
-    );
+  it("matches the backend 30-character button text contract", () => {
+    const form = createEmptyHyperlinkTemplateForm();
+    form.name = "普通按钮";
+    form.title = "标题";
+    form.button.displayText = "按".repeat(30);
 
-    assert.deepEqual(await validateHyperlinkImageFile(jpeg), {
-      valid: true,
-      message: ""
-    });
-    assert.equal((await validateHyperlinkImageFile(disguisedPng)).valid, false);
+    assert.equal(validateHyperlinkTemplateForm(form), "");
+    form.button.displayText += "钮";
     assert.equal(
-      (await validateHyperlinkImageFile(tooLarge)).message,
-      "图片不能超过 500KB"
+      validateHyperlinkTemplateForm(form),
+      "按钮文字不能超过 30 个字符"
+    );
+  });
+
+  it("matches the competitor 2000-character bottom text and subtitle limit", () => {
+    const form = createEmptyHyperlinkTemplateForm();
+    form.name = "普通按钮";
+    form.title = "标题";
+    form.content = "文".repeat(2000);
+
+    assert.equal(validateHyperlinkTemplateForm(form), "");
+    form.messageType = 4;
+    form.content += "字";
+    assert.equal(
+      validateHyperlinkTemplateForm(form),
+      "副标题不能超过 2000 个字符"
     );
   });
 });

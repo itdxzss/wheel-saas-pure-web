@@ -60,7 +60,8 @@ async function loadQuote(): Promise<void> {
       taskId: task.id,
       dataPackageId: null,
       taskMode: null,
-      maxExecutingAccounts: null
+      maxExecutingAccounts: null,
+      maxUseAccounts: null
     });
     startTimer();
   } catch (error) {
@@ -166,6 +167,12 @@ onBeforeUnmount(stopTimer);
         <el-descriptions-item label="预计收信人">{{
           quote.recipientCount
         }}</el-descriptions-item>
+        <el-descriptions-item label="执行账号">
+          {{ quote.configuredMaxExecutingAccounts }}
+          <template v-if="quote.configuredMaxExecutingAccounts === 0">
+            （均分）→ 当前解析 {{ quote.effectiveMaxExecutingAccounts }} 个
+          </template>
+        </el-descriptions-item>
         <el-descriptions-item label="计价模式">{{
           quote.pricingMode === "SUPER" ? "超级模式" : "普通模式"
         }}</el-descriptions-item>

@@ -71,6 +71,13 @@ describe("hyperlink data package index", () => {
     assert.match(source, /v-model:page-size="pageSize"/);
     assert.match(source, /<el-empty description="暂无符合条件的数据包"/);
     assert.match(source, /v-if="errorMessage"/);
+    assert.match(source, /gap: 16px/);
+    assert.match(source, /padding: 0/);
+    assert.match(source, /margin: 16px/);
+    assert.match(source, /style="margin-top: 0"/);
+    assert.doesNotMatch(source, /margin: -8px/);
+    assert.doesNotMatch(intro, /margin-bottom: 12px/);
+    assert.doesNotMatch(searchCard, /margin-bottom: 12px/);
   });
 
   it("renders the competitor-style combined information cells", () => {
@@ -79,6 +86,12 @@ describe("hyperlink data package index", () => {
     assert.match(identityCell, /primaryCountryIso2/);
     assert.match(identityCell, /暂无备注/);
     assert.match(usageCell, /usage-bar/);
+    assert.match(usageCell, /usage-bar-segment--successful/);
+    assert.match(
+      usageCell,
+      /usage-bar-segment--failed"[\s\S]*?flexBasis: `\$\{percent\(row\.metrics\.failedCount\)\}%`/
+    );
+    assert.match(usageCell, /flex: 0 0 auto/);
     assert.match(usageCell, /未用/);
     assert.match(usageCell, /已使用/);
     assert.match(usageCell, /未开通 WS/);
