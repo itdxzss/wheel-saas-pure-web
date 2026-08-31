@@ -45,8 +45,7 @@ function statusType(status: string): "success" | "info" | "warning" | "danger" |
 function statusLabel(status: string): string {
   return (
     { pending: "待发送", sending: "发送中", sent: "已发送", success: "成功", failed: "失败", retrying: "重试中" }[status] ??
-    status ||
-    "-"
+    (status || "-")
   );
 }
 </script>
