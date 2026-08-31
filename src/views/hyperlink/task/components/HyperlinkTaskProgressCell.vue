@@ -13,8 +13,11 @@ function progress(value: number): number {
 
 <template>
   <div class="progress-caption">
-    <span class="success-text"
+    <span class="single-hook"
       >✓ 单钩 {{ row.successNum.toLocaleString() }}</span
+    >
+    <span class="double-hook"
+      >✓✓ 双钩 {{ row.deliveredNum.toLocaleString() }}</span
     >
     <span class="danger-text">失败 {{ row.failedNum.toLocaleString() }}</span>
     <span class="muted">共 {{ row.recipientTotal.toLocaleString() }}</span>
@@ -34,14 +37,19 @@ function progress(value: number): number {
 <style scoped>
 .progress-caption {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  justify-content: space-between;
+  align-items: center;
   margin-bottom: 4px;
   font-size: 12px;
 }
 
-.success-text {
+.single-hook {
   color: var(--el-color-success);
+}
+
+.double-hook {
+  color: var(--el-color-primary);
 }
 
 .danger-text {

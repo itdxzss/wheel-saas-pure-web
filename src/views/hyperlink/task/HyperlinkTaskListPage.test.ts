@@ -11,6 +11,7 @@ const intro = source("./components/HyperlinkTaskIntro.vue");
 const search = source("./components/HyperlinkTaskSearchCard.vue");
 const metrics = source("./components/HyperlinkTaskMetrics.vue");
 const table = source("./components/HyperlinkTaskTable.vue");
+const progressCell = source("./components/HyperlinkTaskProgressCell.vue");
 const actions = source("./components/HyperlinkTaskRowActions.vue");
 const composable = source("./composables/useHyperlinkTaskPage.ts");
 const domain = source("./domain/list-display.ts");
@@ -83,6 +84,15 @@ describe("hyperlink task H1 list page contract", () => {
     assert.doesNotMatch(
       `${page}\n${table}\n${actions}\n${composable}`,
       /DELETE|删除按钮|setInterval/
+    );
+  });
+
+  it("shows single-hook and double-hook counts together in each task progress cell", () => {
+    assert.match(progressCell, /single-hook[\s\S]*row\.successNum/);
+    assert.match(progressCell, /double-hook[\s\S]*row\.deliveredNum/);
+    assert.equal(
+      progressCell.indexOf("single-hook") < progressCell.indexOf("double-hook"),
+      true
     );
   });
 
