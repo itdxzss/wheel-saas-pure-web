@@ -96,6 +96,23 @@ describe("hyperlink task H1 list page contract", () => {
     );
   });
 
+  it("renders success and failure as separate progress-bar segments", () => {
+    assert.doesNotMatch(progressCell, /<el-progress/);
+    assert.match(
+      progressCell,
+      /task-progress-segment--success"[\s\S]*?progress\(row\.successNum\)/
+    );
+    assert.match(
+      progressCell,
+      /task-progress-segment--failed"[\s\S]*?progress\(row\.failedNum\)/
+    );
+    assert.match(
+      progressCell,
+      /task-progress-segment--failed[\s\S]*?var\(--el-color-danger/
+    );
+    assert.match(progressCell, /flex: 0 0 auto/);
+  });
+
   it("connects H2 H4 H5 H6 and the H3 START confirmation boundary", () => {
     assert.match(page, /event: "open-editor"/);
     assert.match(page, /event: "open-detail"/);
