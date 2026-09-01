@@ -34,7 +34,7 @@ describe("normal-link create prototype layout", () => {
     assert.match(drawerSource, /新建拉群任务/);
     assert.match(drawerSource, /新群模式/);
     assert.match(drawerSource, /群链接模式/);
-    assert.match(drawerSource, /资源池模式/);
+    assert.doesNotMatch(drawerSource, /资源池模式/);
     assert.match(drawerSource, /速拉模式/);
     assert.match(drawerSource, /name="NEW_GROUP"/);
     assert.doesNotMatch(drawerSource, /name="NEW_GROUP"[^>]*disabled/);
@@ -44,12 +44,12 @@ describe("normal-link create prototype layout", () => {
     );
   });
 
-  it("adds resource-pool mode without removing the existing pasted-link flow", () => {
+  it("keeps group-folder fallback inside the pasted-link flow", () => {
     assert.match(drawerSource, /name="PASTED_LINK" label="群链接模式"/);
-    assert.match(drawerSource, /name="RESOURCE_POOL" label="资源池模式"/);
+    assert.doesNotMatch(drawerSource, /name="RESOURCE_POOL"/);
     assert.match(resourcesSource, /自定义粘贴链接/);
-    assert.match(settingsSource, /群组资源池/);
-    assert.match(resourcesSource, /具体群组在任务执行时从资源池动态分配/);
+    assert.match(settingsSource, /群组分组/);
+    assert.match(settingsSource, /群被封禁，将自动换用分组内下一个可用群/);
   });
 
   it("exposes the approved new-group inputs and one-TXT-per-group rule", () => {

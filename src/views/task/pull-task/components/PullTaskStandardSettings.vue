@@ -90,27 +90,14 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
           v-if="form.creationMode !== 'NEW_GROUP'"
           class="setting-block link-source-block"
         >
-          <h3>
-            {{
-              form.creationMode === "RESOURCE_POOL"
-                ? "群组资源池"
-                : "群链接配置"
-            }}
-          </h3>
-          <el-form-item
-            label="群组分组"
-            :required="form.creationMode === 'RESOURCE_POOL'"
-          >
+          <h3>群链接配置</h3>
+          <el-form-item label="群组分组">
             <el-select
               v-model="form.groupFolderId"
               clearable
               filterable
               class="full-width"
-              :placeholder="
-                form.creationMode === 'RESOURCE_POOL'
-                  ? '请选择自定义群组分组'
-                  : '请选择分组'
-              "
+              placeholder="请选择分组"
             >
               <el-option
                 v-for="folder in groupFolders"
@@ -121,8 +108,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
             </el-select>
           </el-form-item>
           <el-alert
-            v-if="form.creationMode === 'RESOURCE_POOL'"
-            title="任务运行时动态消费该分组中的可用群；资源不足时补群后需手动点击继续。"
+            title="选择群组分组后，如群被封禁，将自动换用分组内下一个可用群；成功群自动移入已使用群组。"
             type="info"
             :closable="false"
             show-icon

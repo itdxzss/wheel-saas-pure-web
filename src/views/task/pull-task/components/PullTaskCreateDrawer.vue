@@ -47,11 +47,7 @@ function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
 }
 
 function changeCreationMode(mode: string): void {
-  if (
-    mode !== "PASTED_LINK" &&
-    mode !== "RESOURCE_POOL" &&
-    mode !== "NEW_GROUP"
-  ) {
+  if (mode !== "PASTED_LINK" && mode !== "NEW_GROUP") {
     return;
   }
   if (mode === "NEW_GROUP" && form.value.creationMode !== "NEW_GROUP") {
@@ -98,7 +94,6 @@ function changeCreationMode(mode: string): void {
           data-testid="pull-task-new-group-mode-tab"
         />
         <el-tab-pane name="PASTED_LINK" label="群链接模式" />
-        <el-tab-pane name="RESOURCE_POOL" label="资源池模式" />
         <el-tab-pane name="fast" label="速拉模式（后期）" disabled />
       </el-tabs>
 
