@@ -354,6 +354,30 @@ describe("marketing template page state", () => {
     );
   });
 
+  it("allows an image text template without a promotion link", async () => {
+    resetArmadaMock({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 10
+    });
+    const pageState = useMarketingTemplatePage();
+    pageState.openCreateDrawer();
+    pageState.templateForm.value.templateName = "无链接图文模板";
+    pageState.templateForm.value.linkMode = "IMAGE_TEXT";
+    pageState.templateForm.value.content = "标题";
+
+    await pageState.saveTemplate();
+
+    const calls = armadaCalls();
+    assert.equal(calls[0].method, "post");
+    assert.equal(
+      (calls[0].opts as { data: { promotionLink: string | null } }).data
+        .promotionLink,
+      null
+    );
+  });
+
   it("ignores hidden invalid promotion URL in button mode", async () => {
     resetArmadaMock({
       list: [],

@@ -35,9 +35,11 @@ let currentObjectUrl = "";
 const promotionLinkRules: FormItemRule[] = [
   {
     validator: (_rule, value: unknown, callback) => {
-      const message = validateMarketingPromotionLink(
-        typeof value === "string" ? value : ""
-      );
+      const promotionLink = typeof value === "string" ? value : "";
+      const message =
+        form.value.linkMode === "NORMAL" && !promotionLink.trim()
+          ? "请输入推广链接"
+          : validateMarketingPromotionLink(promotionLink);
       callback(message ? new Error(message) : undefined);
     },
     trigger: ["blur", "change"]
@@ -245,7 +247,7 @@ watch(visible, opened => {
             label="推广链接"
             prop="promotionLink"
             :rules="promotionLinkRules"
-            required
+            :required="form.linkMode === 'NORMAL'"
           >
             <el-input
               v-model="form.promotionLink"

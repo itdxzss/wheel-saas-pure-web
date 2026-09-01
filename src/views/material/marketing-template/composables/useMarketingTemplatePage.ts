@@ -250,22 +250,23 @@ export function validateMarketingButtonLink(
 
 export type MarketingPromotionLinkValidationMessage =
   | ""
-  | "请输入推广链接"
   | "请输入标准的推广链接";
 
 export function validateMarketingPromotionLink(
   value: string
 ): MarketingPromotionLinkValidationMessage {
+  if (!value.trim()) return "";
   const message = validateMarketingButtonLink(value);
   if (!message) return "";
-  return message === "请输入跳转链接"
-    ? "请输入推广链接"
-    : "请输入标准的推广链接";
+  return "请输入标准的推广链接";
 }
 
 function validateForm(form: MarketingTemplateForm): string {
   if (!form.templateName.trim()) return "请填写模版名称";
   if (!form.content.trim()) return "请填写内容";
+  if (form.linkMode === "NORMAL" && !form.promotionLink.trim()) {
+    return "请输入推广链接";
+  }
   if (form.linkMode !== "BUTTON") {
     const promotionLinkValidation = validateMarketingPromotionLink(
       form.promotionLink
