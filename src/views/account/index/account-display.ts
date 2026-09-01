@@ -12,6 +12,12 @@ export interface AccountStatCard {
   subItems?: Array<{ label: string; value: number }>;
 }
 
+export interface BusinessRestrictionLine {
+  key: "message" | "pulling";
+  label: string;
+  until?: string | null;
+}
+
 function compactLabels(values: Array<string | null | undefined>): string {
   const labels = values.map(value => value?.trim()).filter(Boolean);
   return labels.length > 0 ? labels.join(" / ") : "-";
@@ -20,7 +26,6 @@ function compactLabels(values: Array<string | null | undefined>): string {
 export function accountStatusTagType(
   row: Pick<TenantAccount, "account_state" | "mute_status">
 ): AccountTagType {
-  if (row.mute_status) return "danger";
   if (row.account_state === 2 || row.account_state === 4) return "success";
   if (row.account_state === 3 || row.account_state === 5) return "danger";
   if (
@@ -30,6 +35,31 @@ export function accountStatusTagType(
   )
     return "warning";
   return "info";
+}
+
+/** 把两类业务风控按各自截止时间展开，不与账号生命周期混用。 */
+export function businessRestrictionLines(
+  row: Pick<
+    TenantAccount,
+    "mute_status" | "message_restriction_until" | "pulling_restriction_until"
+  >
+): BusinessRestrictionLine[] {
+  const lines: BusinessRestrictionLine[] = [];
+  if (row.mute_status === 1 || row.mute_status === 3) {
+    lines.push({
+      key: "message",
+      label: "超链发送",
+      until: row.message_restriction_until
+    });
+  }
+  if (row.mute_status === 2 || row.mute_status === 3) {
+    lines.push({
+      key: "pulling",
+      label: "拉手拉人",
+      until: row.pulling_restriction_until
+    });
+  }
+  return lines;
 }
 
 /** 将协议原因码转换为业务可读文案；未知原因仍保留原码，便于排查。 */
@@ -135,7 +165,8 @@ export function canDeleteAccount(
   return (
     (row.account_state === 3 ||
       row.account_state === 4 ||
-      row.account_state === 5) &&
+      row.account_state === 5 ||
+      row.account_state === 6) &&
     !row.dispatched_at
   );
 }

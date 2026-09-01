@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
+  batchClearTenantAccountOperationRestrictions,
   batchDeleteTenantAccounts,
   batchMigrateTenantAccountsToGroup,
   batchOfflineTenantAccounts,
@@ -235,6 +236,23 @@ describe("account operation API", () => {
     ]);
   });
 
+  it("posts manual business restriction clear requests to armada", async () => {
+    resetArmadaMock({ requested: 2, cleared: 2 });
+
+    const result = await batchClearTenantAccountOperationRestrictions([
+      100, 101
+    ]);
+
+    assert.equal(result.cleared, 2);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/accounts/batch-clear-operation-restrictions",
+        opts: { data: { ids: [100, 101] } }
+      }
+    ]);
+  });
+
   it("maps device and dispatch fields from account list rows", async () => {
     resetArmadaMock({
       list: [
@@ -254,7 +272,9 @@ describe("account operation API", () => {
           groupsNum: 2,
           country: "印度",
           countryFlag: "🇮🇳",
-          dispatchedAt: 1782705600000
+          dispatchedAt: 1782705600000,
+          messageRestrictionUntil: 1782792000000,
+          pullingRestrictionUntil: 1782878400000
         }
       ],
       total: 1
@@ -279,6 +299,14 @@ describe("account operation API", () => {
     assert.equal(result.list?.[0]?.country, "印度");
     assert.equal(result.list?.[0]?.country_flag, "🇮🇳");
     assert.equal(result.list?.[0]?.dispatched_at, "2026-06-29 12:00:00");
+    assert.equal(
+      result.list?.[0]?.message_restriction_until,
+      "2026-06-30 12:00:00"
+    );
+    assert.equal(
+      result.list?.[0]?.pulling_restriction_until,
+      "2026-07-01 12:00:00"
+    );
   });
 
   it("maps marketing occupancy facts returned by the account list", async () => {

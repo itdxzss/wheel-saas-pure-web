@@ -35,8 +35,15 @@ function assertOrdered(content: string, markers: string[]): void {
 }
 
 describe("AccountListTable business actions", () => {
-  it("places group, account status and login directly after account", () => {
-    const orderedLabels = ["账号", "分组", "账号状态", "登录", "IP来源"];
+  it("places business risk between account status and login", () => {
+    const orderedLabels = [
+      "账号",
+      "分组",
+      "账号状态",
+      "业务风控",
+      "登录",
+      "IP来源"
+    ];
     assertOrdered(
       columnsSource,
       orderedLabels.map(label => `{ label: "${label}"`)
@@ -45,6 +52,24 @@ describe("AccountListTable business actions", () => {
     assertOrdered(
       tableSource,
       orderedLabels.map(label => `label="${label}"`)
+    );
+  });
+
+  it("renders separate business restrictions and exposes manual bulk clear", () => {
+    assert.match(source, /businessRestrictionLines\(row as TenantAccount\)/);
+    assert.match(source, /item\.label/);
+    assert.match(source, /受限/);
+    assert.match(source, /预计.*formatDate\(item\.until\).*恢复/s);
+    assert.match(source, /未受限/);
+    assert.match(source, /command="clear-operation-restrictions"/);
+    assert.match(source, /手动移除风控时间限制/);
+    assert.match(
+      composableSource,
+      /batchClearTenantAccountOperationRestrictions/
+    );
+    assert.match(
+      composableSource,
+      /command === "clear-operation-restrictions"/
     );
   });
 
@@ -84,7 +109,7 @@ describe("AccountListTable business actions", () => {
   it("wires the guarded WS phone export flow below takeover", () => {
     assert.match(
       source,
-      /command="takeover"[\s\S]*command="export-ws-phones"[\s\S]*导出WS号[\s\S]*command="delete"/
+      /command="takeover"[\s\S]*command="export-ws-phones"[\s\S]*导出WS号[\s\S]*command="clear-operation-restrictions"[\s\S]*command="delete"/
     );
     assert.match(source, /wsExporting: boolean/);
     assert.match(

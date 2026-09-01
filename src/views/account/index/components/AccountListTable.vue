@@ -6,10 +6,10 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { TenantAccount } from "@/api/account";
 import MoreFilled from "~icons/ep/more-filled";
 import {
-  accountRestrictionReasonLabel,
   accountStatusLabel,
   accountStatusTagType,
   accountTypeDeviceLabel,
+  businessRestrictionLines,
   canDeleteAccount,
   loginStateLabel,
   loginStateTagType,
@@ -118,9 +118,14 @@ function occupancyTagStyle(row: TenantAccount) {
             >
               导出WS号
             </el-dropdown-item>
-            <el-dropdown-item command="delete" divided
-              >批量删除</el-dropdown-item
+            <el-dropdown-item
+              command="clear-operation-restrictions"
+              :disabled="selectedCount === 0 || batchSubmitting"
+              divided
             >
+              手动移除风控时间限制
+            </el-dropdown-item>
+            <el-dropdown-item command="delete">批量删除</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -179,26 +184,40 @@ function occupancyTagStyle(row: TenantAccount) {
         <el-table-column
           v-if="!dynamicColumns[3].hide"
           label="账号状态"
-          width="230"
+          width="120"
         >
           <template #default="{ row }">
-            <div class="account-status-cell">
-              <el-tag size="small" :type="accountStatusTagType(row)">
-                {{ accountStatusLabel(row) }}
-              </el-tag>
-              <template v-if="row.mute_status">
-                <small>
-                  原因：{{
-                    accountRestrictionReasonLabel(row.restriction_reason_code)
-                  }}
-                </small>
-                <small> 预计恢复：{{ formatDate(row.cooldown_until) }} </small>
-              </template>
-            </div>
+            <el-tag size="small" :type="accountStatusTagType(row)">
+              {{ accountStatusLabel(row) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[4].hide"
+          label="业务风控"
+          width="250"
+        >
+          <template #default="{ row }">
+            <div
+              v-if="businessRestrictionLines(row as TenantAccount).length"
+              class="business-restriction-cell"
+            >
+              <div
+                v-for="item in businessRestrictionLines(row as TenantAccount)"
+                :key="item.key"
+                class="business-restriction-line"
+              >
+                <el-tag size="small" type="danger">
+                  {{ item.label }}：受限
+                </el-tag>
+                <small>预计 {{ formatDate(item.until) }} 恢复</small>
+              </div>
+            </div>
+            <span v-else class="unrestricted-text">未受限</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[5].hide"
           label="登录"
           width="100"
         >
@@ -209,13 +228,13 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[5].hide"
+          v-if="!dynamicColumns[6].hide"
           prop="ip_source"
           label="IP来源"
           min-width="140"
         />
         <el-table-column
-          v-if="!dynamicColumns[6].hide"
+          v-if="!dynamicColumns[7].hide"
           label="账号类型/设备"
           width="230"
         >
@@ -224,29 +243,29 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[7].hide"
+          v-if="!dynamicColumns[8].hide"
           prop="protocol_address"
           label="协议"
           min-width="160"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!dynamicColumns[8].hide"
+          v-if="!dynamicColumns[9].hide"
           prop="truth_ip"
           label="IP地址"
           min-width="160"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!dynamicColumns[9].hide"
+          v-if="!dynamicColumns[10].hide"
           label="渠道/来源"
           min-width="150"
         >
           <template #default="{ row }">{{ sourceLabel(row) }}</template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[10].hide"
-          label="风控"
+          v-if="!dynamicColumns[11].hide"
+          label="账号风控"
           width="120"
         >
           <template #default="{ row }">
@@ -254,7 +273,7 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[11].hide"
+          v-if="!dynamicColumns[12].hide"
           label="好友 / 群"
           width="120"
         >
@@ -263,26 +282,26 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[12].hide"
+          v-if="!dynamicColumns[13].hide"
           prop="pull_into_group_count"
           label="拉人数量"
           width="110"
         />
         <el-table-column
-          v-if="!dynamicColumns[13].hide"
+          v-if="!dynamicColumns[14].hide"
           prop="hyperlink_sent_count"
           label="超链寿命"
           width="110"
         />
         <el-table-column
-          v-if="!dynamicColumns[14].hide"
+          v-if="!dynamicColumns[15].hide"
           prop="block_reason"
           label="封号错误码/封号原因"
           min-width="180"
           show-overflow-tooltip
         />
         <el-table-column
-          v-if="!dynamicColumns[15].hide"
+          v-if="!dynamicColumns[16].hide"
           label="入库时间"
           width="180"
         >
@@ -291,7 +310,7 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[16].hide"
+          v-if="!dynamicColumns[17].hide"
           label="失效时间"
           width="180"
         >
@@ -300,10 +319,10 @@ function occupancyTagStyle(row: TenantAccount) {
           </template>
         </el-table-column>
         <el-table-column
-          v-if="!dynamicColumns[17].hide"
+          v-if="!dynamicColumns[18].hide"
           label="操作"
           fixed="right"
-          width="210"
+          width="140"
         >
           <template #default="{ row }">
             <el-button
@@ -322,14 +341,6 @@ function occupancyTagStyle(row: TenantAccount) {
               "
             >
               {{ onlineActionLabel(row as TenantAccount) }}
-            </el-button>
-            <el-button
-              link
-              type="warning"
-              disabled
-              @click="emit('row-action', row as TenantAccount, '解除风控')"
-            >
-              解除风控
             </el-button>
             <el-button
               link
@@ -369,8 +380,17 @@ function occupancyTagStyle(row: TenantAccount) {
   line-height: 1;
 }
 
-.account-status-cell {
+.business-restriction-cell {
+  display: grid;
+  gap: 8px;
+}
+
+.business-restriction-line {
   line-height: 1.35;
+}
+
+.unrestricted-text {
+  color: var(--el-text-color-secondary);
 }
 
 small {

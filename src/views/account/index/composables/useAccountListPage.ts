@@ -11,6 +11,7 @@ import {
 import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
+  batchClearTenantAccountOperationRestrictions,
   batchDeleteTenantAccounts,
   batchMigrateTenantAccountsToGroup,
   batchOfflineTenantAccounts,
@@ -722,7 +723,7 @@ export function useAccountListPage(): AccountListPageState {
       ids.length === 1 ? "该账号" : `选中的 ${ids.length} 个账号`;
     if (
       !window.confirm(
-        `确认删除${deleteText}？仅封禁、导出、解绑且不在任务中的账号可删除。`
+        `确认删除${deleteText}？仅封禁、导出、解绑、被抢登且不在任务中的账号可删除。`
       )
     ) {
       return;
@@ -734,6 +735,41 @@ export function useAccountListPage(): AccountListPageState {
       await refreshAccountList();
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "删除失败"));
+    }
+  }
+
+  async function submitBatchClearOperationRestrictions(
+    ids: number[]
+  ): Promise<void> {
+    if (batchSubmitting.value) return;
+    if (ids.length === 0) {
+      ElMessage.warning("请先选择账号");
+      return;
+    }
+    batchSubmitting.value = true;
+    try {
+      await ElMessageBox.confirm(
+        `确认手动移除选中的 ${ids.length} 个账号的风控时间限制？` +
+          "将同时移除超链发送和拉手拉人的本地风控时间；" +
+          "后续新的风控结果仍会重新限制账号。",
+        "手动移除风控时间限制",
+        {
+          confirmButtonText: "确认移除",
+          cancelButtonText: "取消",
+          type: "warning"
+        }
+      );
+      const result = await batchClearTenantAccountOperationRestrictions(ids);
+      ElMessage.success(
+        `已移除 ${result.cleared}/${result.requested} 个账号的业务风控时间限制`
+      );
+      selectedRows.value = [];
+      await refreshAccountList();
+    } catch (error) {
+      if (error === "cancel" || error === "close") return;
+      ElMessage.error(apiErrorMessage(error, "手动移除风控时间限制失败"));
+    } finally {
+      batchSubmitting.value = false;
     }
   }
 
@@ -822,6 +858,10 @@ export function useAccountListPage(): AccountListPageState {
       void submitBatchTakeover(ids);
       return;
     }
+    if (command === "clear-operation-restrictions") {
+      void submitBatchClearOperationRestrictions(ids);
+      return;
+    }
     if (command === "delete") {
       void submitBatchDelete(ids);
       return;
@@ -845,7 +885,7 @@ export function useAccountListPage(): AccountListPageState {
     }
     if (action === "删除") {
       if (!canDeleteAccount(row)) {
-        ElMessage.warning("仅封禁、导出、解绑且不在任务中的账号可删除");
+        ElMessage.warning("仅封禁、导出、解绑、被抢登且不在任务中的账号可删除");
         return;
       }
       void submitBatchDelete([id]);

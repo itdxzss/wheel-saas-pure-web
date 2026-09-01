@@ -1,12 +1,9 @@
 import type { TenantAccount } from "@/api/account";
 
-/** 将账号生命周期与操作限制状态转换为统一中文标签。 */
+/** 将账号生命周期状态转换为中文标签；业务风控独立展示。 */
 export function accountStatusLabel(
   row: Pick<TenantAccount, "account_state" | "mute_status">
 ): string {
-  if (row.mute_status === 1) return "消息发送受限";
-  if (row.mute_status === 2) return "拉人受限";
-  if (row.mute_status === 3) return "消息和拉人受限";
   const map: Record<number, string> = {
     1: "新增",
     2: "正常",

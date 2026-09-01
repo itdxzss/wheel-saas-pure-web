@@ -60,6 +60,8 @@ export interface TenantAccount {
   country_flag?: string | null;
   mute_status?: MuteStatus | null;
   cooldown_until?: string | null;
+  message_restriction_until?: string | null;
+  pulling_restriction_until?: string | null;
   restriction_reason_code?: string | null;
   restriction_reported_at?: string | null;
   ip_region?: string | null;
@@ -161,6 +163,11 @@ export interface TenantAccountBatchCommandResult
   batchErrors: string[];
 }
 
+export interface TenantAccountOperationRestrictionClearResult {
+  requested: number;
+  cleared: number;
+}
+
 export type TenantAccountBatchQuery = Omit<
   BackendTenantAccountListParams,
   "page" | "pageSize"
@@ -238,6 +245,8 @@ interface ArmadaTenantAccount {
   riskStatus?: RiskStatus | null;
   riskEndTime?: number | null;
   cooldownUntil?: number | null;
+  messageRestrictionUntil?: number | null;
+  pullingRestrictionUntil?: number | null;
   muteStatus?: number | null;
   restrictionReasonCode?: string | null;
   restrictionReportedAt?: number | null;
@@ -359,6 +368,14 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     country_flag: row.countryFlag ?? null,
     mute_status: operationRestrictionStatus(row.muteStatus),
     cooldown_until: formatEpochMillis(row.cooldownUntil, null),
+    message_restriction_until: formatEpochMillis(
+      row.messageRestrictionUntil,
+      null
+    ),
+    pulling_restriction_until: formatEpochMillis(
+      row.pullingRestrictionUntil,
+      null
+    ),
     restriction_reason_code: row.restrictionReasonCode ?? null,
     restriction_reported_at: formatEpochMillis(row.restrictionReportedAt, null),
     ip_region: row.country ?? null,
@@ -481,6 +498,17 @@ export function batchDeleteTenantAccounts(ids: number[]): Promise<void> {
   return armadaRequest<void>("post", "/api/accounts/batch-delete", {
     data: { ids }
   });
+}
+
+/** 同时移除所选账号的超链发送和拉手拉人限制时间。 */
+export function batchClearTenantAccountOperationRestrictions(
+  ids: number[]
+): Promise<TenantAccountOperationRestrictionClearResult> {
+  return armadaRequest<TenantAccountOperationRestrictionClearResult>(
+    "post",
+    "/api/accounts/batch-clear-operation-restrictions",
+    { data: { ids } }
+  );
 }
 
 export async function exportTenantAccountWsPhones(

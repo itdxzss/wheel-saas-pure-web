@@ -6,6 +6,7 @@ import {
   accountRestrictionReasonLabel,
   accountTypeDeviceLabel,
   buildAccountStatCards,
+  businessRestrictionLines,
   canDeleteAccount,
   loginStateLabel,
   loginStateTagType,
@@ -20,19 +21,42 @@ describe("account list display helpers", () => {
     assert.equal(riskStatusLabel(null), "—");
   });
 
-  it("keeps operation restriction ahead of normal account state labels", () => {
+  it("keeps lifecycle status independent from business restrictions", () => {
     assert.equal(
       accountStatusLabel({ account_state: 2, mute_status: 1 }),
-      "消息发送受限"
+      "正常"
     );
     assert.equal(
       accountStatusLabel({ account_state: 2, mute_status: 2 }),
-      "拉人受限"
+      "正常"
     );
     assert.equal(
       accountStatusLabel({ account_state: 2, mute_status: 3 }),
-      "消息和拉人受限"
+      "正常"
     );
+  });
+
+  it("builds separate hyperlink and puller restriction lines", () => {
+    assert.deepEqual(
+      businessRestrictionLines({
+        mute_status: 3,
+        message_restriction_until: "2026-09-02 10:00:00",
+        pulling_restriction_until: "2026-09-03 11:00:00"
+      }),
+      [
+        {
+          key: "message",
+          label: "超链发送",
+          until: "2026-09-02 10:00:00"
+        },
+        {
+          key: "pulling",
+          label: "拉手拉人",
+          until: "2026-09-03 11:00:00"
+        }
+      ]
+    );
+    assert.deepEqual(businessRestrictionLines({ mute_status: null }), []);
   });
 
   it("shows a readable restriction reason while preserving unknown codes", () => {
@@ -67,11 +91,11 @@ describe("account list display helpers", () => {
     assert.equal(accountStatusTagType({ account_state: 7 }), "warning");
     assert.equal(
       accountStatusTagType({ account_state: 2, mute_status: 1 }),
-      "danger"
+      "success"
     );
     assert.equal(
       accountStatusTagType({ account_state: 2, mute_status: 3 }),
-      "danger"
+      "success"
     );
     assert.equal(accountStatusTagType({ account_state: 1 }), "info");
     assert.equal(accountStatusTagType({ account_state: null }), "info");
@@ -186,6 +210,10 @@ describe("account list display helpers", () => {
       true
     );
     assert.equal(
+      canDeleteAccount({ account_state: 6, dispatched_at: null }),
+      true
+    );
+    assert.equal(
       canDeleteAccount({ account_state: 2, dispatched_at: null }),
       false
     );
@@ -196,6 +224,13 @@ describe("account list display helpers", () => {
     assert.equal(
       canDeleteAccount({
         account_state: 4,
+        dispatched_at: "2026-06-29 12:00:00"
+      }),
+      false
+    );
+    assert.equal(
+      canDeleteAccount({
+        account_state: 6,
         dispatched_at: "2026-06-29 12:00:00"
       }),
       false
