@@ -52,6 +52,22 @@ describe("hyperlink template form contract", () => {
     });
   });
 
+  it("allows a single-link preview without a promotion link", () => {
+    const form = createEmptyHyperlinkTemplateForm();
+    Object.assign(form, {
+      name: "单图文模板",
+      messageType: 1,
+      title: "新品福利",
+      content: "查看活动",
+      linkDescription: "活动详情",
+      promotionLink: "   ",
+      assetId: 12
+    });
+
+    assert.equal(validateHyperlinkTemplateForm(form), "");
+    assert.equal(toHyperlinkTemplateWriteRequest(form).promotionLink, null);
+  });
+
   it("builds one CTA URL button and sends the complete update object", () => {
     const form = createEmptyHyperlinkTemplateForm();
     Object.assign(form, {

@@ -190,7 +190,6 @@ function onMessageTypeChange(): void {
             <el-form-item
               v-if="form.messageType === 1"
               label="推广链接"
-              required
               :style="{ order: fieldOrder('promotionLink') }"
             >
               <el-input
