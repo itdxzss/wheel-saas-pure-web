@@ -14,9 +14,12 @@ describe("account status filter mapping", () => {
     assert.deepEqual(accountStatusToQuery("账号受限"), { accountState: 8 });
   });
 
-  it("maps mute status without accountState", () => {
-    assert.deepEqual(accountStatusToQuery("禁言6小时"), { muteStatus: 1 });
-    assert.deepEqual(accountStatusToQuery("禁言24小时"), { muteStatus: 2 });
+  it("maps operation restriction status without accountState", () => {
+    assert.deepEqual(accountStatusToQuery("消息发送受限"), { muteStatus: 1 });
+    assert.deepEqual(accountStatusToQuery("拉人受限"), { muteStatus: 2 });
+    assert.deepEqual(accountStatusToQuery("消息和拉人受限"), {
+      muteStatus: 3
+    });
   });
 
   it("maps empty status to empty query patch", () => {

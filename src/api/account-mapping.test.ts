@@ -19,7 +19,7 @@ describe("account list mapping", () => {
         account_state: 2,
         login_state: 1,
         risk_status: 2,
-        mute_status: "6h",
+        mute_status: 3,
         accountGroupId: 7,
         country: "印度",
         truth_ip: "203.0.113"
@@ -35,7 +35,7 @@ describe("account list mapping", () => {
         accountState: 2,
         loginState: 1,
         riskStatus: 2,
-        muteStatus: 1,
+        muteStatus: 3,
         accountGroupId: 7,
         country: "印度",
         truthIp: "203.0.113"

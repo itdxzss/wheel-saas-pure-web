@@ -14,10 +14,22 @@ import {
 
 describe("account takeover helpers", () => {
   it("accepts only login replaced accounts without mute status", () => {
-    assert.equal(isTakeoverCandidate({ account_state: 6, mute_status: null }), true);
-    assert.equal(isTakeoverCandidate({ account_state: 6, mute_status: "6h" }), false);
-    assert.equal(isTakeoverCandidate({ account_state: 7, mute_status: null }), false);
-    assert.equal(isTakeoverCandidate({ account_state: 2, mute_status: null }), false);
+    assert.equal(
+      isTakeoverCandidate({ account_state: 6, mute_status: null }),
+      true
+    );
+    assert.equal(
+      isTakeoverCandidate({ account_state: 6, mute_status: 1 }),
+      false
+    );
+    assert.equal(
+      isTakeoverCandidate({ account_state: 7, mute_status: null }),
+      false
+    );
+    assert.equal(
+      isTakeoverCandidate({ account_state: 2, mute_status: null }),
+      false
+    );
   });
 
   it("returns disabled tips for empty or mixed takeover selections", () => {
@@ -55,7 +67,10 @@ describe("account takeover helpers", () => {
       singleOnlineBlockedTip({ account_state: 3 }),
       TERMINAL_ONLINE_BLOCKED_MESSAGE
     );
-    assert.equal(onlineBlockedTip([{ account_state: 2 }, { account_state: 3 }]), "");
+    assert.equal(
+      onlineBlockedTip([{ account_state: 2 }, { account_state: 3 }]),
+      ""
+    );
   });
 
   it("filters terminal account states from batch online submission", () => {

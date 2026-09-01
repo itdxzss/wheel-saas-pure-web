@@ -6,6 +6,7 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { TenantAccount } from "@/api/account";
 import MoreFilled from "~icons/ep/more-filled";
 import {
+  accountRestrictionReasonLabel,
   accountStatusLabel,
   accountStatusTagType,
   accountTypeDeviceLabel,
@@ -178,12 +179,22 @@ function occupancyTagStyle(row: TenantAccount) {
         <el-table-column
           v-if="!dynamicColumns[3].hide"
           label="账号状态"
-          width="120"
+          width="230"
         >
           <template #default="{ row }">
-            <el-tag size="small" :type="accountStatusTagType(row)">
-              {{ accountStatusLabel(row) }}
-            </el-tag>
+            <div class="account-status-cell">
+              <el-tag size="small" :type="accountStatusTagType(row)">
+                {{ accountStatusLabel(row) }}
+              </el-tag>
+              <template v-if="row.mute_status">
+                <small>
+                  原因：{{
+                    accountRestrictionReasonLabel(row.restriction_reason_code)
+                  }}
+                </small>
+                <small> 预计恢复：{{ formatDate(row.cooldown_until) }} </small>
+              </template>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
@@ -356,6 +367,10 @@ function occupancyTagStyle(row: TenantAccount) {
   flex: none;
   font-size: 18px;
   line-height: 1;
+}
+
+.account-status-cell {
+  line-height: 1.35;
 }
 
 small {

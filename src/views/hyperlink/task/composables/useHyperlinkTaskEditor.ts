@@ -660,6 +660,13 @@ export function useHyperlinkTaskEditor(
       provisionTaskId.value = receipt.taskId;
       taskId.value = receipt.taskId;
       form.value.version = receipt.version;
+      if (mode.value === "create" || mode.value === "copy") {
+        clearTimers();
+        visible.value = false;
+        ElMessage.success(`任务 #${receipt.taskId} 已创建，正在准备`);
+        emit("submitted", receipt);
+        return;
+      }
       if (firstProcessingReceipt) {
         ElMessage.info("任务正在准备，完成后进入列表");
       }

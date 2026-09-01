@@ -12,7 +12,8 @@ export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;
 export type AccountTypeVerifyStatus = 0 | 1 | 2 | 3 | 4;
 export type NumberSource = 1 | 2 | 3;
-export type MuteStatus = 1 | 2;
+/** 账号操作限制：1=消息发送，2=拉人，3=消息发送和拉人。 */
+export type MuteStatus = 1 | 2 | 3;
 /** 账号菜单使用的营销整组占用展示类型。 */
 export type MarketingOccupancyDisplayType =
   | "FREE"
@@ -57,7 +58,10 @@ export interface TenantAccount {
   remark?: string | null;
   country?: string | null;
   country_flag?: string | null;
-  mute_status?: string | null;
+  mute_status?: MuteStatus | null;
+  cooldown_until?: string | null;
+  restriction_reason_code?: string | null;
+  restriction_reported_at?: string | null;
   ip_region?: string | null;
   ip_source?: string | null;
   ip_group_name?: string | null;
@@ -90,8 +94,8 @@ export interface TenantAccountListQuery {
   loginState?: LoginState | "";
   risk_status?: RiskStatus | "";
   riskStatus?: RiskStatus | "";
-  mute_status?: MuteStatus | "6h" | "24h" | "";
-  muteStatus?: MuteStatus | "6h" | "24h" | "";
+  mute_status?: MuteStatus | "";
+  muteStatus?: MuteStatus | "";
   group_id?: number | "";
   accountGroupId?: number | "";
   assigned_service?: string;
@@ -233,7 +237,10 @@ interface ArmadaTenantAccount {
   loginState?: LoginState | null;
   riskStatus?: RiskStatus | null;
   riskEndTime?: number | null;
+  cooldownUntil?: number | null;
   muteStatus?: number | null;
+  restrictionReasonCode?: string | null;
+  restrictionReportedAt?: number | null;
   blockErrorCode?: string | null;
   blockReason?: string | null;
   truthIp?: string | null;
@@ -267,10 +274,8 @@ function deviceOsLabel(value?: number | null): string | null {
   return null;
 }
 
-function muteStatusLabel(value?: number | null): string | null {
-  if (value === 1) return "6h";
-  if (value === 2) return "24h";
-  return null;
+function operationRestrictionStatus(value?: number | null): MuteStatus | null {
+  return value === 1 || value === 2 || value === 3 ? value : null;
 }
 
 function exportHeaderValue(headers: unknown, name: string): string | undefined {
@@ -352,7 +357,10 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     remark: null,
     country: row.country ?? null,
     country_flag: row.countryFlag ?? null,
-    mute_status: muteStatusLabel(row.muteStatus),
+    mute_status: operationRestrictionStatus(row.muteStatus),
+    cooldown_until: formatEpochMillis(row.cooldownUntil, null),
+    restriction_reason_code: row.restrictionReasonCode ?? null,
+    restriction_reported_at: formatEpochMillis(row.restrictionReportedAt, null),
     ip_region: row.country ?? null,
     ip_source: row.ipSource ?? null,
     ip_group_name: null,

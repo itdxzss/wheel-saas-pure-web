@@ -120,6 +120,8 @@ export function currentPageMetrics(
 export function rowActions(
   row: HyperlinkTaskListItem
 ): HyperlinkTaskRowAction[] {
+  if (row.provisionStatus === "PROCESSING") return ["VIEW"];
+  if (row.provisionStatus === "FAILED") return ["EDIT", "VIEW", "COPY"];
   const common: HyperlinkTaskRowAction[] = ["DETAIL", "COPY"];
   if (row.runStatus === 0) return ["START", "EDIT", ...common];
   if (row.runStatus === 1) return ["PAUSE", "STOP", "VIEW", ...common];
@@ -210,6 +212,12 @@ export function taskStatus(row: HyperlinkTaskListItem): {
   label: string;
   type: "info" | "primary" | "success" | "warning" | "danger";
 } {
+  if (row.provisionStatus === "PROCESSING") {
+    return { label: "准备中", type: "warning" };
+  }
+  if (row.provisionStatus === "FAILED") {
+    return { label: "准备失败", type: "danger" };
+  }
   if (!row.enabled) return { label: "已停用", type: "info" };
   return (
     {

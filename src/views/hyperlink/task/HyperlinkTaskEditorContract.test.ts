@@ -35,6 +35,7 @@ describe("hyperlink task editor competitor surface", () => {
     assert.match(message, /卡片正文/);
     assert.match(button, /还没有按钮/);
     assert.match(button, /链接跳转/);
+    assert.match(button, /maxlength="20"/);
     assert.match(button, /深度追踪/);
     assert.match(button, /添加按钮（/);
   });
@@ -159,6 +160,14 @@ describe("hyperlink task editor competitor surface", () => {
     assert.match(armadaApi, /class ArmadaApiError/);
     assert.match(drawer, /重新加载服务器版本/);
     assert.match(drawer, /重新提交准备/);
+  });
+
+  it("returns create and copy submissions to the task list while provisioning", () => {
+    assert.match(
+      composable,
+      /mode\.value === "create" \|\| mode\.value === "copy"[\s\S]*visible\.value = false[\s\S]*emit\("submitted", receipt\)/
+    );
+    assert.match(composable, /任务 #\$\{receipt\.taskId\} 已创建，正在准备/);
   });
 
   it("uses full continent values and explains the current group-tag fact boundary", () => {

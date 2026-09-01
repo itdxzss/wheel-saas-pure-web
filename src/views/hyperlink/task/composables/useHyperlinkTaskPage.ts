@@ -210,6 +210,7 @@ export function useHyperlinkTaskPage() {
               ...item,
               enabled: receipt.enabled,
               runStatus: receipt.runStatus,
+              provisionStatus: receipt.provisionStatus,
               version: receipt.version
             }
           : item

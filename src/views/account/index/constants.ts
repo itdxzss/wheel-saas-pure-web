@@ -2,7 +2,7 @@ export const accountListColumns: TableColumnList = [
   { label: "头像", prop: "avatar_url", width: 82 },
   { label: "账号", prop: "ws_phone", minWidth: 160 },
   { label: "分组", prop: "group_name", minWidth: 140 },
-  { label: "账号状态", prop: "account_state", width: 120 },
+  { label: "账号状态", prop: "account_state", width: 230 },
   { label: "登录", prop: "login_state", width: 100 },
   { label: "IP来源", prop: "ip_source", minWidth: 140 },
   { label: "账号类型/设备", prop: "account_type", width: 230 },

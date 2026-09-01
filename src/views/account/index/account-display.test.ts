@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   accountStatusLabel,
   accountStatusTagType,
+  accountRestrictionReasonLabel,
   accountTypeDeviceLabel,
   buildAccountStatCards,
   canDeleteAccount,
@@ -19,15 +20,32 @@ describe("account list display helpers", () => {
     assert.equal(riskStatusLabel(null), "—");
   });
 
-  it("keeps mute status ahead of normal account state labels", () => {
+  it("keeps operation restriction ahead of normal account state labels", () => {
     assert.equal(
-      accountStatusLabel({ account_state: 2, mute_status: "6h" }),
-      "禁言6小时"
+      accountStatusLabel({ account_state: 2, mute_status: 1 }),
+      "消息发送受限"
     );
     assert.equal(
-      accountStatusLabel({ account_state: 2, mute_status: "24h" }),
-      "禁言24小时"
+      accountStatusLabel({ account_state: 2, mute_status: 2 }),
+      "拉人受限"
     );
+    assert.equal(
+      accountStatusLabel({ account_state: 2, mute_status: 3 }),
+      "消息和拉人受限"
+    );
+  });
+
+  it("shows a readable restriction reason while preserving unknown codes", () => {
+    assert.equal(accountRestrictionReasonLabel("RATE_LIMITED"), "频率受限");
+    assert.equal(
+      accountRestrictionReasonLabel("ACCOUNT_REACHOUT_RESTRICTED"),
+      "账号触达受限"
+    );
+    assert.equal(
+      accountRestrictionReasonLabel("custom_reason"),
+      "custom_reason"
+    );
+    assert.equal(accountRestrictionReasonLabel(null), "—");
   });
 
   it("maps login replaced takeover account status labels", () => {
@@ -48,11 +66,11 @@ describe("account list display helpers", () => {
     assert.equal(accountStatusTagType({ account_state: 6 }), "warning");
     assert.equal(accountStatusTagType({ account_state: 7 }), "warning");
     assert.equal(
-      accountStatusTagType({ account_state: 2, mute_status: "6h" }),
+      accountStatusTagType({ account_state: 2, mute_status: 1 }),
       "danger"
     );
     assert.equal(
-      accountStatusTagType({ account_state: 2, mute_status: "24h" }),
+      accountStatusTagType({ account_state: 2, mute_status: 3 }),
       "danger"
     );
     assert.equal(accountStatusTagType({ account_state: 1 }), "info");
@@ -148,7 +166,7 @@ describe("account list display helpers", () => {
     assert.deepEqual(cards[1].subItems, [
       { label: "封禁", value: 1 },
       { label: "解绑", value: 2 },
-      { label: "禁言", value: 3 },
+      { label: "操作受限", value: 3 },
       { label: "导出", value: 4 },
       { label: "受限", value: 5 }
     ]);

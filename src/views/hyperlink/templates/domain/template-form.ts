@@ -153,13 +153,14 @@ export function validateHyperlinkTemplateForm(
   }
 
   const contentLabel = form.messageType === 3 ? "底部小字" : "副标题";
-  if (form.content.trim().length > 2000) {
-    return `${contentLabel}不能超过 2000 个字符`;
+  const contentMaxLength = form.messageType === 4 ? 60 : 1024;
+  if (form.content.trim().length > contentMaxLength) {
+    return `${contentLabel}不能超过 ${contentMaxLength} 个字符`;
   }
   const displayTextMessage = requiredLengthMessage(
     form.button.displayText,
     "按钮文字",
-    30
+    20
   );
   if (displayTextMessage) return displayTextMessage;
   const targetValue = form.button.targetValue.trim();
@@ -171,7 +172,7 @@ export function validateHyperlinkTemplateForm(
   if (form.messageType === 4) {
     const cardTextMessage = requiredLengthMessage(
       form.cardText,
-      "卡片底部文字",
+      "卡片正文",
       500
     );
     if (cardTextMessage) return cardTextMessage;

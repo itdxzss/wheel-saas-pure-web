@@ -414,8 +414,10 @@ export function validateHyperlinkTaskForm(
     const content = required(form.messageContent.content, "正文", 2000);
     if (content) return content;
   } else {
-    if ((form.messageContent.content?.trim().length ?? 0) > 200) {
-      return "底部小字不能超过 200 个字符";
+    const contentLabel = form.messageType === 4 ? "副标题小字" : "底部小字";
+    const contentMaxLength = form.messageType === 4 ? 60 : 200;
+    if ((form.messageContent.content?.trim().length ?? 0) > contentMaxLength) {
+      return `${contentLabel}不能超过 ${contentMaxLength} 个字符`;
     }
     if (form.messageType === 4) {
       const card = required(form.messageContent.cardText, "卡片正文", 500);
@@ -423,7 +425,7 @@ export function validateHyperlinkTaskForm(
     }
     if (form.messageContent.buttons.length !== 1) return "请添加 1 个消息按钮";
     const button = form.messageContent.buttons[0];
-    const buttonText = required(button.displayText, "按钮文字", 30);
+    const buttonText = required(button.displayText, "按钮文字", 20);
     if (buttonText) return buttonText;
     const buttonUrl = required(button.url, "按钮跳转链接", 2048);
     if (buttonUrl) return buttonUrl;

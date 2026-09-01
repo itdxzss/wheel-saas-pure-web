@@ -43,11 +43,9 @@ function numberToUndefined<T extends number>(
 }
 
 function muteStatusToCode(
-  value?: MuteStatus | "6h" | "24h" | "" | null
+  value?: MuteStatus | "" | null
 ): MuteStatus | undefined {
-  if (value === 1 || value === 2) return value;
-  if (value === "6h") return 1;
-  if (value === "24h") return 2;
+  if (value === 1 || value === 2 || value === 3) return value;
   return undefined;
 }
 

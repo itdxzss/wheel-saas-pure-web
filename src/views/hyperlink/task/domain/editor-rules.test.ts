@@ -362,4 +362,56 @@ describe("hyperlink task editor rules", () => {
       "链接描述不能超过 512 个字符"
     );
   });
+
+  it("enforces card footer and interactive button text limits", () => {
+    const form = createEmptyHyperlinkTaskForm();
+    form.enabled = false;
+    form.messageType = 4;
+    form.maxExecutingAccounts = 0;
+    form.taskName = "任务";
+    form.messageContent.title = "标题";
+    form.messageContent.cardText = "卡片正文";
+    form.messageContent.content = "副".repeat(60);
+    form.messageContent.buttons[0].displayText = "按".repeat(20);
+    form.messageContent.buttons[0].url = "https://example.com";
+    const context: HyperlinkValidationContext = {
+      mode: "create",
+      createContext: {
+        pricingMode: "NORMAL",
+        priceCode: "P1",
+        currencyCode: "USDT",
+        referenceUnitPrice: 0,
+        accountBalance: 0,
+        giftBalance: 0,
+        availableBalance: 0,
+        protocolCount: 0,
+        maxConcurrentNum: 0,
+        accountSendConcurrency: 20,
+        defaultSubTaskNum: 50,
+        defaultAccountGroupIds: [],
+        groupOptions: [],
+        countryOptions: [],
+        channelOptions: [],
+        protocolOptions: []
+      },
+      matchedAccountCount: null,
+      matchedMaxConcurrentNum: null,
+      matching: false,
+      matchError: "",
+      dataPackageAvailable: true
+    };
+
+    assert.equal(validateHyperlinkTaskForm(form, context), "");
+    form.messageContent.content += "字";
+    assert.equal(
+      validateHyperlinkTaskForm(form, context),
+      "副标题小字不能超过 60 个字符"
+    );
+    form.messageContent.content = "";
+    form.messageContent.buttons[0].displayText += "钮";
+    assert.equal(
+      validateHyperlinkTaskForm(form, context),
+      "按钮文字不能超过 20 个字符"
+    );
+  });
 });

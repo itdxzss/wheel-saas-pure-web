@@ -4,6 +4,11 @@ import { http } from "@/utils/http";
 export type HyperlinkTaskMode = "instant" | "rolling" | "cycle";
 export type HyperlinkPricingMode = "NORMAL" | "SUPER";
 export type HyperlinkTaskRunStatus = 0 | 1 | 2 | 3 | 4;
+export type HyperlinkProvisionStatus =
+  | "NOT_REQUIRED"
+  | "PROCESSING"
+  | "READY"
+  | "FAILED";
 export type HyperlinkTaskAction = "PAUSE" | "RESUME" | "STOP";
 
 export interface PageResult<T> {
@@ -73,6 +78,7 @@ export interface HyperlinkTaskListItem {
   taskMode: HyperlinkTaskMode;
   enabled: boolean;
   runStatus: HyperlinkTaskRunStatus;
+  provisionStatus: HyperlinkProvisionStatus;
   shortLinkEnabled: boolean;
   version: number;
   promotionLink: string | null;
@@ -112,7 +118,7 @@ export interface HyperlinkTaskListQuery {
 
 export interface HyperlinkTaskMutationReceipt {
   taskId: number;
-  provisionStatus: "NOT_REQUIRED" | "PROCESSING" | "READY" | "FAILED";
+  provisionStatus: HyperlinkProvisionStatus;
   enabled: boolean;
   runStatus: HyperlinkTaskRunStatus;
   version: number;

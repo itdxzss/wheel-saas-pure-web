@@ -42,7 +42,7 @@ function removeButton(): void {
       <el-form-item label="按钮文字" required>
         <el-input
           v-model="button.displayText"
-          maxlength="30"
+          maxlength="20"
           show-word-limit
           :disabled="disabled"
           placeholder="例如：立即查看"

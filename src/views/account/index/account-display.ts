@@ -20,9 +20,7 @@ function compactLabels(values: Array<string | null | undefined>): string {
 export function accountStatusTagType(
   row: Pick<TenantAccount, "account_state" | "mute_status">
 ): AccountTagType {
-  if (row.mute_status === "6h" || row.mute_status === "24h") {
-    return "danger";
-  }
+  if (row.mute_status) return "danger";
   if (row.account_state === 2 || row.account_state === 4) return "success";
   if (row.account_state === 3 || row.account_state === 5) return "danger";
   if (
@@ -32,6 +30,20 @@ export function accountStatusTagType(
   )
     return "warning";
   return "info";
+}
+
+/** 将协议原因码转换为业务可读文案；未知原因仍保留原码，便于排查。 */
+export function accountRestrictionReasonLabel(value?: string | null): string {
+  if (!value) return "—";
+  const labels: Record<string, string> = {
+    RATE_LIMITED: "频率受限",
+    ACCOUNT_REACHOUT_RESTRICTED: "账号触达受限",
+    CHAT_SUSPENDED: "会话发送受限",
+    MESSAGE_SENDING_RESTRICTED: "消息发送受限",
+    PULLING_RESTRICTED: "拉人受限",
+    PULLER_HISTORY_RESTRICTION: "历史拉人限制"
+  };
+  return labels[value] ?? value;
 }
 
 export function loginStateTagType(value?: number | null): AccountTagType {
@@ -103,7 +115,7 @@ export function buildAccountStatCards(
       subItems: [
         { label: "封禁", value: summary.banned },
         { label: "解绑", value: summary.unbound },
-        { label: "禁言", value: summary.muted },
+        { label: "操作受限", value: summary.muted },
         { label: "导出", value: summary.exported },
         { label: "受限", value: summary.restricted }
       ]

@@ -16,7 +16,7 @@ type OnlineSubmittableAccount = Pick<TenantAccount, "id" | "account_state">;
 /**
  * 一键抢登只允许从“被抢登”事实状态进入“抢登中”。
  *
- * 禁言账号虽然底层 account_state 可能仍是被抢登，但列表展示优先显示禁言，
+ * 操作受限账号虽然底层 account_state 可能仍是被抢登，但列表优先显示受限状态，
  * 后端也会按 mute_status 拦截，所以前端保持同样口径。
  */
 export function isTakeoverCandidate(row: TakeoverSelectableAccount): boolean {
@@ -45,7 +45,8 @@ export function onlineBlockedTip(rows: OnlineGuardAccount[]): string {
 }
 
 export function singleOnlineBlockedTip(row: OnlineGuardAccount): string {
-  if (isTerminalOnlineBlockedAccount(row)) return TERMINAL_ONLINE_BLOCKED_MESSAGE;
+  if (isTerminalOnlineBlockedAccount(row))
+    return TERMINAL_ONLINE_BLOCKED_MESSAGE;
   return onlineBlockedTip([row]);
 }
 

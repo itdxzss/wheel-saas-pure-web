@@ -8,6 +8,7 @@ import {
   currentUserTenantColumnKey,
   mergeColumnPreferences,
   rowActions,
+  taskStatus,
   toColumnPreferences
 } from "./list-display";
 
@@ -22,6 +23,7 @@ function row(
     taskMode: "instant",
     enabled: true,
     runStatus,
+    provisionStatus: "READY",
     shortLinkEnabled: true,
     version: 1,
     promotionLink: null,
@@ -152,6 +154,22 @@ describe("hyperlink task H1 list display", () => {
     ]);
     assert.deepEqual(rowActions(row(4)), ["VIEW", "DETAIL", "COPY"]);
     assert.equal(rowActions(row(1)).includes("DELETE" as never), false);
+  });
+
+  it("shows preparation states and blocks lifecycle actions until ready", () => {
+    const processing = row(0, { provisionStatus: "PROCESSING" });
+    const failed = row(0, { provisionStatus: "FAILED" });
+
+    assert.deepEqual(taskStatus(processing), {
+      label: "准备中",
+      type: "warning"
+    });
+    assert.deepEqual(rowActions(processing), ["VIEW"]);
+    assert.deepEqual(taskStatus(failed), {
+      label: "准备失败",
+      type: "danger"
+    });
+    assert.deepEqual(rowActions(failed), ["EDIT", "VIEW", "COPY"]);
   });
 
   it("renders every account filter family with stable unknown fallbacks", () => {

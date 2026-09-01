@@ -33,6 +33,9 @@ const contentLabel = computed(() => {
   if (form.value.messageType === 4) return "副标题小字";
   return "正文";
 });
+const contentMaxLength = computed(() =>
+  isLinkCard.value ? 2000 : form.value.messageType === 4 ? 60 : 200
+);
 
 function handleTemplateChange(value: unknown): void {
   emit("use-template", typeof value === "number" ? value : null);
@@ -139,7 +142,7 @@ function handleTemplateChange(value: unknown): void {
         v-model="form.messageContent.content"
         type="textarea"
         :rows="4"
-        :maxlength="isLinkCard ? 2000 : 200"
+        :maxlength="contentMaxLength"
         show-word-limit
         :disabled="disabled"
         :placeholder="`请输入${contentLabel}`"

@@ -129,32 +129,37 @@ describe("hyperlink template form contract", () => {
     assert.equal(validateHyperlinkTemplateForm(form), "");
   });
 
-  it("matches the backend 30-character button text contract", () => {
+  it("matches the 20-character interactive button text contract", () => {
     const form = createEmptyHyperlinkTemplateForm();
     form.name = "普通按钮";
     form.title = "标题";
-    form.button.displayText = "按".repeat(30);
+    form.button.displayText = "按".repeat(20);
 
     assert.equal(validateHyperlinkTemplateForm(form), "");
     form.button.displayText += "钮";
     assert.equal(
       validateHyperlinkTemplateForm(form),
-      "按钮文字不能超过 30 个字符"
+      "按钮文字不能超过 20 个字符"
     );
   });
 
-  it("matches the competitor 2000-character bottom text and subtitle limit", () => {
+  it("matches interactive body and footer limits", () => {
     const form = createEmptyHyperlinkTemplateForm();
     form.name = "普通按钮";
     form.title = "标题";
-    form.content = "文".repeat(2000);
+    form.content = "文".repeat(1024);
 
     assert.equal(validateHyperlinkTemplateForm(form), "");
-    form.messageType = 4;
     form.content += "字";
     assert.equal(
       validateHyperlinkTemplateForm(form),
-      "副标题不能超过 2000 个字符"
+      "底部小字不能超过 1024 个字符"
+    );
+    form.messageType = 4;
+    form.content = "副".repeat(61);
+    assert.equal(
+      validateHyperlinkTemplateForm(form),
+      "副标题不能超过 60 个字符"
     );
   });
 });

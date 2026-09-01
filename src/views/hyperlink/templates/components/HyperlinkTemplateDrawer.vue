@@ -52,7 +52,9 @@ const contentLabel = computed(() => {
   if (form.value.messageType === 4) return "副标题";
   return "正文";
 });
-const contentMaxLength = 2000;
+const contentMaxLength = computed(() =>
+  form.value.messageType === 1 ? 2000 : form.value.messageType === 4 ? 60 : 1024
+);
 
 function fieldOrder(field: ContentField): number {
   const order: Record<ContentField, Partial<Record<1 | 3 | 4, number>>> = {
@@ -258,7 +260,7 @@ function onMessageTypeChange(): void {
                       <span>按钮文字</span>
                       <el-input
                         v-model="form.button.displayText"
-                        maxlength="30"
+                        maxlength="20"
                         show-word-limit
                         placeholder="例如：立即查看"
                       />

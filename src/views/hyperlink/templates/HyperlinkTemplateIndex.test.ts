@@ -70,7 +70,7 @@ describe("hyperlink template page contract", () => {
     assert.doesNotMatch(drawer, /option[^\n]+value="2"/);
     assert.match(drawer, /el-radio-group/);
     assert.match(drawer, /仅支持 1 个 URL 按钮/);
-    assert.match(drawer, /maxlength="30"/);
+    assert.match(drawer, /maxlength="20"/);
     assert.match(drawer, /深度追踪/);
     assert.doesNotMatch(drawer, /添加按钮/);
     assert.doesNotMatch(drawer, /label="备注"/);
@@ -89,7 +89,10 @@ describe("hyperlink template page contract", () => {
     assert.match(drawer, /button: \{ 3: 4, 4: 5 \}/);
     assert.match(drawer, /messageType === 3\) return "底部小字"/);
     assert.match(drawer, /messageType === 4\) return "副标题"/);
-    assert.match(drawer, /const contentMaxLength = 2000/);
+    assert.match(
+      drawer,
+      /form\.value\.messageType === 4[\s\S]*\? 60[\s\S]*: 1024/
+    );
     assert.match(drawer, /:required="imageRequired"/);
     assert.match(drawer, /:required="form\.messageType === 1"/);
   });
