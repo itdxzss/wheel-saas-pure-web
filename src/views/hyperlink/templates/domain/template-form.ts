@@ -144,11 +144,10 @@ export function validateHyperlinkTemplateForm(
     );
     if (descriptionMessage) return descriptionMessage;
     const promotionLink = form.promotionLink.trim();
-    if (promotionLink) {
-      if (promotionLink.length > 2048) return "推广链接不能超过 2048 个字符";
-      if (!isAbsoluteHttpUrl(promotionLink))
-        return "请输入合法的 http/https 推广链接";
-    }
+    if (!promotionLink) return "请填写推广链接";
+    if (promotionLink.length > 2048) return "推广链接不能超过 2048 个字符";
+    if (!isAbsoluteHttpUrl(promotionLink))
+      return "请输入合法的 http/https 推广链接";
     if (form.assetId == null) return "请选择链接预览图";
     return "";
   }
