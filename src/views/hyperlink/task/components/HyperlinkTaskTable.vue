@@ -6,6 +6,7 @@ import type { HyperlinkTaskListItem } from "@/api/hyperlink-task-list";
 import { formatEpochMillis } from "@/utils/time";
 import Plus from "~icons/ep/plus";
 import Download from "~icons/ep/download";
+import InfoFilled from "~icons/ep/info-filled";
 import RefreshRight from "~icons/ep/refresh-right";
 import {
   average,
@@ -13,6 +14,7 @@ import {
   formatCycleInterval,
   formatDuration,
   percentage,
+  taskScheduleDisplay,
   taskStatus,
   type HyperlinkTaskRowAction,
   type HyperlinkTaskTableColumn
@@ -69,6 +71,19 @@ function onColumnsChange(
   reason: "update" | "reset"
 ): void {
   emit("columns-change", columns, reason);
+}
+
+function metricRateClass(
+  numerator: number,
+  denominator: number,
+  successThreshold: number,
+  warningThreshold: number
+): string {
+  if (denominator <= 0) return "metric-rate--muted";
+  const rate = (numerator / denominator) * 100;
+  if (rate >= successThreshold) return "metric-rate--success";
+  if (rate >= warningThreshold) return "metric-rate--warning";
+  return "metric-rate--danger";
 }
 </script>
 
@@ -147,8 +162,8 @@ function onColumnsChange(
           v-if="visible(dynamicColumns, 'id')"
           label="ID"
           prop="id"
-          width="82"
-          fixed="left"
+          width="80"
+          align="center"
         />
         <el-table-column
           v-if="visible(dynamicColumns, 'taskName')"
@@ -163,6 +178,7 @@ function onColumnsChange(
           v-if="visible(dynamicColumns, 'dataPackage')"
           label="数据包"
           min-width="180"
+          align="center"
         >
           <template #default="{ row }">
             <template v-if="row.dataPackageId">
@@ -200,6 +216,7 @@ function onColumnsChange(
           v-if="visible(dynamicColumns, 'countries')"
           label="营销目标国家"
           min-width="140"
+          align="center"
         >
           <template #default="{ row }">
             <span v-if="row.targetCountryIso2s.length === 0">-</span>
@@ -230,6 +247,7 @@ function onColumnsChange(
           v-if="visible(dynamicColumns, 'status')"
           label="状态"
           width="110"
+          align="center"
         >
           <template #default="{ row }">
             <el-tag :type="taskStatus(row).type">{{
@@ -241,6 +259,7 @@ function onColumnsChange(
           v-if="visible(dynamicColumns, 'accountStats')"
           label="账号统计"
           min-width="150"
+          align="center"
         >
           <template #default="{ row }">
             <div class="account-stat-cell">
@@ -263,6 +282,7 @@ function onColumnsChange(
           v-if="visible(dynamicColumns, 'progress')"
           label="进度"
           min-width="250"
+          align="center"
         >
           <template #default="{ row }">
             <HyperlinkTaskProgressCell :row="row" />
@@ -270,77 +290,177 @@ function onColumnsChange(
         </el-table-column>
         <el-table-column
           v-if="visible(dynamicColumns, 'delivery')"
-          label="双钩数/双钩率"
-          min-width="160"
+          min-width="150"
+          align="center"
         >
+          <template #header>
+            <el-tooltip
+              content="双钩表示消息已送达对方设备，回执可能延迟"
+              placement="top"
+            >
+              <span class="metric-header">
+                双钩数 / 双钩率
+                <component :is="useRenderIcon(InfoFilled)" />
+              </span>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
             <el-tooltip
               content="双钩表示送达设备，可能延迟；预计落地率≈双钩率+20个百分点，仅作参考"
             >
-              <div class="delivery-cell">
-                <strong>{{ row.deliveredNum.toLocaleString() }}</strong>
-                <span>{{
-                  percentage(row.deliveredNum, row.successNum, "-")
-                }}</span>
+              <div class="metric-stack">
+                <strong class="metric-primary">
+                  <span class="metric-symbol">✓✓</span>
+                  {{ row.deliveredNum.toLocaleString() }}
+                </strong>
+                <span
+                  class="metric-rate"
+                  :class="
+                    metricRateClass(row.deliveredNum, row.successNum, 60, 30)
+                  "
+                  >{{ percentage(row.deliveredNum, row.successNum, "-") }}</span
+                >
               </div>
             </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column
           v-if="visible(dynamicColumns, 'click')"
-          label="点击 UV/点击率"
-          min-width="160"
+          min-width="150"
+          align="center"
         >
+          <template #header>
+            <el-tooltip
+              content="点击率 = 点击 UV ÷ 开启短链的单钩数"
+              placement="top"
+            >
+              <span class="metric-header">
+                点击 UV / 点击率
+                <component :is="useRenderIcon(InfoFilled)" />
+              </span>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
-            <span v-if="!row.shortLinkEnabled">-</span>
+            <el-tooltip
+              v-if="!row.shortLinkEnabled"
+              content="该任务未启用短链，无法统计点击"
+              placement="top"
+            >
+              <span class="empty-value">-</span>
+            </el-tooltip>
             <el-button
               v-else
+              class="click-metric-button"
               link
               type="primary"
               @click="emit('visit-trend', row)"
             >
-              {{ row.clickUvNum.toLocaleString() }} /
-              {{ percentage(row.clickUvNum, row.successNum, "-") }}
+              <strong class="metric-primary">
+                <span class="metric-symbol">◎</span>
+                {{ row.clickUvNum.toLocaleString() }}
+              </strong>
+              <span
+                class="metric-rate"
+                :class="metricRateClass(row.clickUvNum, row.successNum, 5, 1)"
+              >
+                {{ percentage(row.clickUvNum, row.successNum, "-") }}
+              </span>
             </el-button>
           </template>
         </el-table-column>
         <el-table-column
           v-if="visible(dynamicColumns, 'concurrency')"
-          label="最大执行账号数"
-          width="150"
+          width="130"
+          align="center"
         >
-          <template #default="{ row }">{{
-            row.actualConcurrency || "-"
-          }}</template>
+          <template #header>
+            <el-tooltip
+              content="当前运行轮次实际同时执行的账号数"
+              placement="top"
+            >
+              <span class="metric-header">
+                最大执行账号数
+                <component :is="useRenderIcon(InfoFilled)" />
+              </span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <strong class="plain-metric">{{ row.actualConcurrency }}</strong>
+          </template>
         </el-table-column>
         <el-table-column
           v-if="visible(dynamicColumns, 'duration')"
-          label="已执行时长"
-          width="130"
+          width="110"
+          align="center"
         >
-          <template #default="{ row }">{{
-            formatDuration(row.executionDurationSec)
-          }}</template>
+          <template #header>
+            <el-tooltip
+              content="累计实际运行时长，暂停期间不计时"
+              placement="top"
+            >
+              <span class="metric-header">
+                已执行时长
+                <component :is="useRenderIcon(InfoFilled)" />
+              </span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <span :class="{ 'empty-value': row.executionDurationSec <= 0 }">
+              {{ formatDuration(row.executionDurationSec) }}
+            </span>
+          </template>
         </el-table-column>
         <el-table-column
           v-if="visible(dynamicColumns, 'schedule')"
-          label="结束/周期"
-          min-width="180"
+          min-width="170"
+          align="center"
         >
+          <template #header>
+            <el-tooltip
+              content="终态显示实际结束时间；运行中显示计划结束时间或周期间隔"
+              placement="top"
+            >
+              <span class="metric-header">
+                结束 / 周期
+                <component :is="useRenderIcon(InfoFilled)" />
+              </span>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
-            <span v-if="row.taskMode === 'instant'">-</span>
-            <span v-else-if="row.taskMode === 'rolling'">
-              {{ formatEpochMillis(row.plannedEndAt) }}
-            </span>
-            <span v-else>{{
-              formatCycleInterval(row.cycleIntervalMinutes)
-            }}</span>
+            <el-tooltip
+              v-if="taskScheduleDisplay(row).kind === 'finished'"
+              content="实际结束时间"
+              placement="top"
+            >
+              <span class="schedule-time schedule-time--finished">
+                {{ formatEpochMillis(row.finishedAt) }}
+              </span>
+            </el-tooltip>
+            <el-tooltip
+              v-else-if="taskScheduleDisplay(row).kind === 'planned'"
+              content="计划结束时间"
+              placement="top"
+            >
+              <span class="schedule-time schedule-time--planned">
+                {{ formatEpochMillis(row.plannedEndAt) }}
+              </span>
+            </el-tooltip>
+            <el-tag
+              v-else-if="taskScheduleDisplay(row).kind === 'cycle'"
+              type="warning"
+              effect="light"
+              round
+            >
+              {{ formatCycleInterval(row.cycleIntervalMinutes) }}
+            </el-tag>
+            <span v-else class="empty-value">-</span>
           </template>
         </el-table-column>
         <el-table-column
           v-if="visible(dynamicColumns, 'createdAt')"
           label="创建时间"
-          width="180"
+          width="160"
+          align="center"
         >
           <template #default="{ row }">{{
             formatEpochMillis(row.createdAt)
@@ -349,7 +469,8 @@ function onColumnsChange(
         <el-table-column
           v-if="visible(dynamicColumns, 'actions')"
           label="操作"
-          width="230"
+          width="220"
+          align="center"
           fixed="right"
         >
           <template #default="{ row }">
@@ -381,113 +502,4 @@ function onColumnsChange(
   </PureTableBar>
 </template>
 
-<style scoped lang="scss">
-.table-error {
-  margin-bottom: 10px;
-}
-
-:global(.hyperlink-table-bar) {
-  position: relative;
-  padding-top: 28px;
-  overflow: hidden;
-  background: #fff;
-  border-radius: 10px;
-}
-
-:global(.hyperlink-table-bar .el-table) {
-  margin: 0 8px;
-  font-size: 13px;
-}
-
-:global(.hyperlink-table-bar .el-table th.el-table__cell) {
-  height: 42px;
-  color: #374151;
-  background: #f8fafc;
-}
-
-:global(.hyperlink-table-bar .el-table td.el-table__cell) {
-  padding: 9px 0;
-}
-
-:global(.hyperlink-table-bar > .flex.justify-between > .flex:last-child) {
-  margin-left: auto;
-}
-
-.table-title,
-.toolbar-buttons,
-.tag-list {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-}
-
-.tag-list {
-  flex-wrap: wrap;
-}
-
-.table-title {
-  position: absolute;
-  top: 14px;
-  left: 16px;
-
-  strong {
-    font-size: 16px;
-  }
-}
-
-.toolbar-buttons {
-  margin-bottom: -1px;
-}
-
-.create-button {
-  position: absolute;
-  top: 50px;
-  left: 16px;
-}
-
-.manual-refresh-button {
-  margin-left: 0;
-}
-
-.package-count {
-  margin-left: 6px;
-}
-
-.account-stat-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  span {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  b {
-    color: var(--el-color-primary);
-  }
-}
-
-.danger-text {
-  color: var(--el-color-danger) !important;
-}
-
-.success-text {
-  color: var(--el-color-success) !important;
-}
-
-.task-pagination {
-  padding: 12px 16px 8px;
-}
-
-.muted {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.delivery-cell {
-  display: flex;
-  flex-direction: column;
-  color: var(--el-color-primary);
-}
-</style>
+<style scoped lang="scss" src="./HyperlinkTaskTable.scss"></style>

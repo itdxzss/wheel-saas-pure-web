@@ -29,6 +29,12 @@ export interface HyperlinkTaskPageMetrics {
   clickRate: string;
 }
 
+export type HyperlinkTaskScheduleDisplay =
+  | { kind: "finished"; timestamp: number }
+  | { kind: "planned"; timestamp: number }
+  | { kind: "cycle"; label: string }
+  | { kind: "empty" };
+
 export type HyperlinkTaskRowAction =
   | "START"
   | "PAUSE"
@@ -41,7 +47,7 @@ export type HyperlinkTaskRowAction =
 
 export function createHyperlinkTaskTableColumns(): HyperlinkTaskTableColumn[] {
   return [
-    { label: "ID", prop: "id", width: 82, fixed: "left" },
+    { label: "ID", prop: "id", width: 80 },
     { label: "任务名称", prop: "taskName", minWidth: 240 },
     { label: "数据包", prop: "dataPackage", minWidth: 180 },
     { label: "账号范围", prop: "accountFilter", minWidth: 230 },
@@ -49,13 +55,13 @@ export function createHyperlinkTaskTableColumns(): HyperlinkTaskTableColumn[] {
     { label: "状态", prop: "status", width: 110 },
     { label: "账号统计", prop: "accountStats", minWidth: 150 },
     { label: "进度", prop: "progress", minWidth: 250 },
-    { label: "双钩数/双钩率", prop: "delivery", minWidth: 160, hide: true },
-    { label: "点击 UV/点击率", prop: "click", minWidth: 160, hide: true },
-    { label: "最大执行账号数", prop: "concurrency", width: 150, hide: true },
-    { label: "已执行时长", prop: "duration", width: 130, hide: true },
-    { label: "结束/周期", prop: "schedule", minWidth: 180, hide: true },
-    { label: "创建时间", prop: "createdAt", width: 180, hide: true },
-    { label: "操作", prop: "actions", width: 230, fixed: "right" }
+    { label: "双钩数 / 双钩率", prop: "delivery", minWidth: 150 },
+    { label: "点击 UV / 点击率", prop: "click", minWidth: 150 },
+    { label: "最大执行账号数", prop: "concurrency", width: 130 },
+    { label: "已执行时长", prop: "duration", width: 110 },
+    { label: "结束 / 周期", prop: "schedule", minWidth: 170 },
+    { label: "创建时间", prop: "createdAt", width: 160 },
+    { label: "操作", prop: "actions", width: 220, fixed: "right" }
   ];
 }
 
@@ -93,7 +99,7 @@ export function currentUserTenantColumnKey(
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
   }
-  return `hyperlink-task-list-columns:v2:${username ?? "anonymous"}:${(
+  return `hyperlink-task-list-columns:v3:${username ?? "anonymous"}:${(
     hash >>> 0
   ).toString(16)}`;
 }
@@ -232,15 +238,35 @@ export function taskStatus(row: HyperlinkTaskListItem): {
 
 export function formatDuration(seconds: number): string {
   const value = Math.max(0, Math.floor(seconds));
+  if (value === 0) return "-";
   if (value < 60) return `${value}s`;
   if (value < 3600) return `${Math.floor(value / 60)}m ${value % 60}s`;
   return `${Math.floor(value / 3600)}h ${Math.floor((value % 3600) / 60)}m`;
 }
 
 export function formatCycleInterval(minutes: number): string {
+  if (minutes <= 0) return "-";
   if (minutes % 1440 === 0) return `每 ${minutes / 1440} 天`;
   if (minutes % 60 === 0) return `每 ${minutes / 60} 小时`;
   return `每 ${minutes} 分钟`;
+}
+
+export function taskScheduleDisplay(
+  row: HyperlinkTaskListItem
+): HyperlinkTaskScheduleDisplay {
+  if ((row.runStatus === 2 || row.runStatus === 4) && row.finishedAt != null) {
+    return { kind: "finished", timestamp: row.finishedAt };
+  }
+  if (row.taskMode === "rolling" && row.plannedEndAt != null) {
+    return { kind: "planned", timestamp: row.plannedEndAt };
+  }
+  if (row.taskMode === "cycle" && row.cycleIntervalMinutes > 0) {
+    return {
+      kind: "cycle",
+      label: formatCycleInterval(row.cycleIntervalMinutes)
+    };
+  }
+  return { kind: "empty" };
 }
 
 export function countryLabel(

@@ -102,6 +102,7 @@ export interface HyperlinkTaskListItem {
   clickTotal: number;
   actualConcurrency: number;
   executionDurationSec: number;
+  finishedAt: number | null;
   metricsUpdatedAt: number | null;
 }
 

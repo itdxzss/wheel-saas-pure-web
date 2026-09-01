@@ -11,6 +11,7 @@ const intro = source("./components/HyperlinkTaskIntro.vue");
 const search = source("./components/HyperlinkTaskSearchCard.vue");
 const metrics = source("./components/HyperlinkTaskMetrics.vue");
 const table = source("./components/HyperlinkTaskTable.vue");
+const tableStyle = source("./components/HyperlinkTaskTable.scss");
 const progressCell = source("./components/HyperlinkTaskProgressCell.vue");
 const actions = source("./components/HyperlinkTaskRowActions.vue");
 const composable = source("./composables/useHyperlinkTaskPage.ts");
@@ -94,6 +95,18 @@ describe("hyperlink task H1 list page contract", () => {
       progressCell.indexOf("single-hook") < progressCell.indexOf("double-hook"),
       true
     );
+  });
+
+  it("shows actual finish time and keeps the metric block visually aligned", () => {
+    assert.match(table, /taskScheduleDisplay\(row\)\.kind === 'finished'/);
+    assert.match(table, /formatEpochMillis\(row\.finishedAt\)/);
+    assert.doesNotMatch(table, /fixed="left"/);
+    assert.doesNotMatch(table, /row\.actualConcurrency \|\| "-"/);
+    assert.match(table, /双钩数 \/ 双钩率/);
+    assert.match(table, /点击 UV \/ 点击率/);
+    assert.match(table, /累计实际运行时长，暂停期间不计时/);
+    assert.match(tableStyle, /metric-rate--success/);
+    assert.match(tableStyle, /schedule-time--finished/);
   });
 
   it("renders success and failure as separate progress-bar segments", () => {

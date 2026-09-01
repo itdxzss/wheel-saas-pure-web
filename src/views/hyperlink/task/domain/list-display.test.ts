@@ -6,8 +6,10 @@ import {
   createHyperlinkTaskTableColumns,
   currentPageMetrics,
   currentUserTenantColumnKey,
+  formatDuration,
   mergeColumnPreferences,
   rowActions,
+  taskScheduleDisplay,
   taskStatus,
   toColumnPreferences
 } from "./list-display";
@@ -59,6 +61,7 @@ function row(
     targetCountryIso2s: ["BR"],
     plannedEndAt: null,
     cycleIntervalMinutes: 0,
+    finishedAt: null,
     createdAt: 1,
     recipientTotal: 100,
     sendTotal: 90,
@@ -79,7 +82,7 @@ function row(
 }
 
 describe("hyperlink task H1 list display", () => {
-  it("defines all fifteen logical columns and keeps fixed columns visible", () => {
+  it("defines all fifteen logical columns with only actions fixed", () => {
     const defaults = createHyperlinkTaskTableColumns();
     assert.equal(defaults.length, 15);
     assert.deepEqual(
@@ -93,11 +96,11 @@ describe("hyperlink task H1 list display", () => {
         "状态",
         "账号统计",
         "进度",
-        "双钩数/双钩率",
-        "点击 UV/点击率",
+        "双钩数 / 双钩率",
+        "点击 UV / 点击率",
         "最大执行账号数",
         "已执行时长",
-        "结束/周期",
+        "结束 / 周期",
         "创建时间",
         "操作"
       ]
@@ -107,10 +110,50 @@ describe("hyperlink task H1 list display", () => {
       { prop: "taskName", hide: true },
       { prop: "removed-column", hide: true }
     ]);
-    assert.equal(merged.find(column => column.prop === "id")?.hide, false);
+    assert.equal(merged.find(column => column.prop === "id")?.hide, true);
     assert.equal(merged.find(column => column.prop === "taskName")?.hide, true);
-    assert.equal(merged.find(column => column.prop === "click")?.hide, true);
+    assert.equal(
+      defaults.find(column => column.prop === "id")?.fixed,
+      undefined
+    );
+    assert.equal(
+      defaults.find(column => column.prop === "actions")?.fixed,
+      "right"
+    );
+    for (const prop of [
+      "delivery",
+      "click",
+      "concurrency",
+      "duration",
+      "schedule",
+      "createdAt"
+    ]) {
+      assert.equal(merged.find(column => column.prop === prop)?.hide, false);
+    }
     assert.equal(toColumnPreferences(merged).length, 15);
+  });
+
+  it("uses real finish time for terminal tasks and keeps plan or cycle before finish", () => {
+    assert.deepEqual(
+      taskScheduleDisplay(row(2, { finishedAt: 5_000, plannedEndAt: 9_000 })),
+      { kind: "finished", timestamp: 5_000 }
+    );
+    assert.deepEqual(
+      taskScheduleDisplay(row(1, { taskMode: "rolling", plannedEndAt: 9_000 })),
+      { kind: "planned", timestamp: 9_000 }
+    );
+    assert.deepEqual(
+      taskScheduleDisplay(
+        row(1, { taskMode: "cycle", cycleIntervalMinutes: 120 })
+      ),
+      { kind: "cycle", label: "每 2 小时" }
+    );
+    assert.deepEqual(taskScheduleDisplay(row(0)), { kind: "empty" });
+  });
+
+  it("renders zero execution duration as an empty value", () => {
+    assert.equal(formatDuration(0), "-");
+    assert.equal(formatDuration(9), "9s");
   });
 
   it("computes six cards from the current page and excludes untracked success from click rate", () => {
@@ -231,7 +274,7 @@ describe("hyperlink task H1 list display", () => {
 
   it("scopes column persistence to the current user-session without exposing the token", () => {
     const key = currentUserTenantColumnKey("operator", "tenant-scoped-secret");
-    assert.match(key, /^hyperlink-task-list-columns:v2:operator:/);
+    assert.match(key, /^hyperlink-task-list-columns:v3:operator:/);
     assert.doesNotMatch(key, /tenant-scoped-secret/);
   });
 });
