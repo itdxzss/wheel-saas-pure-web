@@ -8,6 +8,11 @@ const source = readFileSync(
 );
 
 describe("account import table template", () => {
+  it("offers authenticated pairing-code login beside file import", () => {
+    assert.match(source, /@click="emit\('pairing'\)"/);
+    assert.match(source, />\s*认证码登录\s*<\/el-button>/);
+  });
+
   it("aligns row operation links in one action container", () => {
     assert.match(
       source,

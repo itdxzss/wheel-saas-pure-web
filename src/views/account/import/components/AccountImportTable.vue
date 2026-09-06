@@ -29,6 +29,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: "create"): void;
+  (event: "pairing"): void;
   (event: "detail", row: AccountImportTask): void;
   (
     event: "export",
@@ -83,6 +84,9 @@ function exportRow(row: AccountImportTask, command: string): void {
         @click="emit('create')"
       >
         导入协议号
+      </el-button>
+      <el-button type="success" plain @click="emit('pairing')">
+        认证码登录
       </el-button>
       <el-button :icon="useRenderIcon(RefreshRight)" @click="emit('refresh')">
         刷新

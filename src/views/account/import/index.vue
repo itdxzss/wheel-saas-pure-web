@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import AccountImportDetailDrawer from "./components/AccountImportDetailDrawer.vue";
 import AccountImportDrawer from "./components/AccountImportDrawer.vue";
+import AccountPairingDialog from "./components/AccountPairingDialog.vue";
 import AccountImportTable from "./components/AccountImportTable.vue";
 import {
   accountImportColumns,
@@ -19,6 +21,8 @@ import RefreshRight from "~icons/ep/refresh-right";
 defineOptions({
   name: "AccountImport"
 });
+
+const showPairingDialog = ref(false);
 
 const {
   accountGroups,
@@ -204,6 +208,7 @@ async function handleSubmitImport(
       :rows="rows"
       :total="total"
       @create="showImportDrawer = true"
+      @pairing="showPairingDialog = true"
       @detail="openDetailDrawer"
       @export="exportTask"
       @refresh="refreshAccountImportList"
@@ -216,6 +221,12 @@ async function handleSubmitImport(
       :submitting="submittingImport"
       :create-group="createImportAccountGroup"
       @submit="handleSubmitImport"
+    />
+
+    <AccountPairingDialog
+      v-model="showPairingDialog"
+      :groups="accountGroups"
+      :group-loading="groupLoading"
     />
 
     <AccountImportDetailDrawer
