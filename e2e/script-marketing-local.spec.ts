@@ -6,6 +6,8 @@ const permissions = ["view", "create", "edit", "operate"].map(
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(
     ({ permissions }) => {
+      // 普通 HTTP 环境没有此 API；localhost 默认可用，会掩盖线上兼容性问题。
+      Object.defineProperty(crypto, "randomUUID", { value: undefined });
       const session = {
         accessToken: "local-fixture",
         expires: Date.now() + 3600000,
@@ -137,6 +139,28 @@ test("default roles, additional promoter and ordered save stay independent", asy
     .getByRole("option", { name: "15550000003 · #3", exact: true })
     .click();
   await third.locator("textarea").first().fill("第二位推手消息");
+  await third.getByText("按钮消息", { exact: true }).click();
+  await third.getByPlaceholder("按钮文字").fill("查看详情");
+  await third.getByPlaceholder("链接或复制内容").fill("https://example.com");
+  await third.getByRole("button", { name: "添加按钮", exact: true }).click();
+  await expect(third.getByPlaceholder("按钮文字")).toHaveCount(2);
+  await third.getByPlaceholder("按钮文字").nth(1).fill("联系团队");
+  await third
+    .getByPlaceholder("链接或复制内容")
+    .nth(1)
+    .fill("https://example.com/contact");
+  await third.getByRole("button", { name: "复制此项", exact: true }).click();
+  const copied = drawer.locator(".el-collapse-item").nth(3);
+  await copied.locator(".el-collapse-item__header").click();
+  await expect(copied.getByPlaceholder("按钮文字").first()).toHaveValue(
+    "查看详情"
+  );
+  await copied.getByPlaceholder("按钮文字").first().fill("独立副本");
+  await copied.getByRole("button", { name: "删除", exact: true }).click();
+  await third.locator(".el-collapse-item__header").click();
+  await expect(third.getByPlaceholder("按钮文字").first()).toHaveValue(
+    "查看详情"
+  );
   await third.getByRole("button", { name: "上移", exact: true }).click();
   await drawer.locator(".el-drawer__body").evaluate(element => {
     element.scrollTop = 0;

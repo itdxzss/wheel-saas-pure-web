@@ -9,6 +9,7 @@ import {
 import type { ResourceAsset } from "@/api/resource-asset";
 import { apiErrorMessage } from "@/utils/api-error";
 import ResourceAssetPicker from "@/views/hyperlink/library/components/ResourceAssetPicker.vue";
+import { nextEditorKey } from "../form";
 
 const model = defineModel<ScriptMessage>({ required: true });
 const templates = ref<MarketingTemplateRow[]>([]);
@@ -18,7 +19,7 @@ const asset = ref<ResourceAsset | null>(null);
 const templateLoading = ref(false);
 const buttonKeys = new WeakMap<object, string>();
 function buttonKey(button: object) {
-  if (!buttonKeys.has(button)) buttonKeys.set(button, crypto.randomUUID());
+  if (!buttonKeys.has(button)) buttonKeys.set(button, nextEditorKey());
   return buttonKeys.get(button)!;
 }
 async function searchTemplates(keyword = "") {
@@ -205,8 +206,8 @@ function changeMode() {
 .message-preview {
   width: 100%;
   padding: 12px;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
   background: var(--el-fill-color-light);
   border-radius: 6px;
 }

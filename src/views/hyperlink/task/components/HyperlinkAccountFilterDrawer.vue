@@ -187,7 +187,7 @@ onBeforeUnmount(stopPending);
     <template #header>
       <div class="drawer-header">
         <b>账号范围筛选</b>
-        <el-tag type="success" effect="plain">仅圈定有效账号</el-tag>
+        <el-tag type="success" effect="plain">正常 / 被抢登 / 抢登中</el-tag>
       </div>
     </template>
 

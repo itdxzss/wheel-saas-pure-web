@@ -166,6 +166,18 @@ export interface ContactAccountPreview {
   matchedAccountCount: number;
 }
 
+/** 当前租户的真实分组和推广渠道，与账号筛选字段分别对应。 */
+export interface ContactAccountOptions {
+  groups: Array<{ id: number; name: string }>;
+  channels: Array<{ id: number; name: string }>;
+}
+
+export function getContactAccountOptions(
+  signal?: AbortSignal
+): Promise<ContactAccountOptions> {
+  return armadaRequest("get", "/api/contact-tasks/account-options", { signal });
+}
+
 /**
  * 试算账号范围命中数。
  *

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useContactAccountOptions } from "../composables/useContactAccountOptions";
 import {
   emptyAccountFilterForm,
   type AccountFilterForm
@@ -84,6 +85,25 @@ const visible = computed({
   set: value => emit("update:modelValue", value)
 });
 
+const {
+  options,
+  loading: optionsLoading,
+  error: optionsError,
+  reload: reloadOptions
+} = useContactAccountOptions(visible);
+
+// 历史筛选中的已删除/停用项仍保留 ID，避免编辑时悄悄扩大账号范围。
+const unavailableGroups = computed(() =>
+  draft.value.groupIds.filter(
+    id => !options.value.groups.some(o => o.id === id)
+  )
+);
+const unavailableChannels = computed(() =>
+  draft.value.channelIds.filter(
+    id => !options.value.channels.some(o => o.id === id)
+  )
+);
+
 watch(
   () => props.modelValue,
   open => {
@@ -126,6 +146,19 @@ function confirm() {
       title="不设置任何条件即为「全部有效账号」。筛选条件与超链任务共用同一套下推 SQL，列出的每一项都真的会生效。"
     />
 
+    <el-alert
+      v-if="optionsError"
+      type="error"
+      :closable="false"
+      show-icon
+      class="filter-tip"
+      :title="optionsError"
+    >
+      <el-button link type="primary" @click="reloadOptions">
+        重新加载
+      </el-button>
+    </el-alert>
+
     <el-form :disabled="readonly" label-width="110px">
       <el-form-item label="包含国家">
         <el-select
@@ -154,22 +187,52 @@ function confirm() {
           v-model="draft.groupIds"
           multiple
           filterable
-          allow-create
-          default-first-option
-          placeholder="按分组 ID 限定"
+          :loading="optionsLoading"
+          :disabled="optionsLoading || Boolean(optionsError)"
+          placeholder="请选择账号分组，可搜索名称"
+          no-data-text="暂无账号分组"
           class="filter-control"
-        />
+        >
+          <el-option
+            v-for="option in options.groups"
+            :key="option.id"
+            :label="option.name"
+            :value="option.id"
+          />
+          <el-option
+            v-for="id in unavailableGroups"
+            :key="id"
+            :label="`已选分组 #${id}（当前不可选）`"
+            :value="id"
+            disabled
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="渠道">
         <el-select
           v-model="draft.channelIds"
           multiple
           filterable
-          allow-create
-          default-first-option
-          placeholder="按渠道 ID 限定；armada 与分组归一到同一维度，同时设置会取交集"
+          :loading="optionsLoading"
+          :disabled="optionsLoading || Boolean(optionsError)"
+          placeholder="请选择推广渠道，可搜索名称"
+          no-data-text="暂无可用推广渠道"
           class="filter-control"
-        />
+        >
+          <el-option
+            v-for="option in options.channels"
+            :key="option.id"
+            :label="option.name"
+            :value="option.id"
+          />
+          <el-option
+            v-for="id in unavailableChannels"
+            :key="id"
+            :label="`已选渠道 #${id}（当前不可选）`"
+            :value="id"
+            disabled
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="协议">
         <el-input

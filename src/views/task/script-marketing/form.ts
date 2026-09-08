@@ -1,9 +1,15 @@
 import type { ScriptSave, ScriptStep } from "@/api/script-marketing";
 
+let editorKey = 0;
+// 仅用于页面渲染，不发送到后端；普通 HTTP 也必须能创建配置项。
+export function nextEditorKey(): string {
+  return `script-editor-${++editorKey}`;
+}
+
 export type EditableStep = ScriptStep & { key: string };
 export function newStep(role: ScriptStep["role"] = "PROMOTER"): EditableStep {
   return {
-    key: crypto.randomUUID(),
+    key: nextEditorKey(),
     role,
     accountId: null,
     message: {
@@ -19,7 +25,7 @@ export function newStep(role: ScriptStep["role"] = "PROMOTER"): EditableStep {
   };
 }
 export function copyStep(step: ScriptStep): EditableStep {
-  return { ...JSON.parse(JSON.stringify(step)), key: crypto.randomUUID() };
+  return { ...JSON.parse(JSON.stringify(step)), key: nextEditorKey() };
 }
 export function mayRemove(steps: ScriptStep[], index: number): boolean {
   return steps.filter(step => step.role === steps[index]?.role).length > 1;
