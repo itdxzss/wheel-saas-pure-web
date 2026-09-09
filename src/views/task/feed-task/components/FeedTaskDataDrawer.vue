@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { hasPerms } from "@/utils/auth";
+import { audienceLabel, audienceSource, canPrepareAudience } from "../audience";
 import type { FeedTaskAccountRow } from "@/api/feed-task";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { formatFeedTaskTime } from "../constants";
@@ -15,6 +17,7 @@ const props = defineProps<{
   page: number;
   pageSize: number;
   accountPhone: string;
+  audienceRefreshingId: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -23,6 +26,7 @@ const emit = defineEmits<{
   (event: "update:pageSize", value: number): void;
   (event: "update:accountPhone", value: string): void;
   (event: "search"): void;
+  (event: "refreshAudience", row: FeedTaskAccountRow): void;
 }>();
 
 const currentPage = computed({
@@ -63,9 +67,17 @@ function statusLabel(status: string): string {
   <el-drawer
     :model-value="modelValue"
     :title="`账号发送数据 · ${taskName}`"
-    size="1080px"
+    size="90%"
     @update:model-value="emit('update:modelValue', $event)"
   >
+    <el-alert
+      title="当前候选受众"
+      description="优先使用具名通讯录；Android 缺少通讯录时自动准备云端 LID。候选人数不代表实际可见或送达人数，发送时还会按账号隐私设置过滤。重新准备不会重发已完成或已失败的任务。"
+      type="info"
+      :closable="false"
+      show-icon
+      class="audience-notice"
+    />
     <div class="data-toolbar">
       <el-input
         :model-value="accountPhone"
@@ -75,11 +87,47 @@ function statusLabel(status: string): string {
         @update:model-value="emit('update:accountPhone', $event)"
         @keyup.enter="emit('search')"
       />
-      <el-button type="primary" @click="emit('search')">搜索</el-button>
+      <el-button type="primary" :loading="loading" @click="emit('search')"
+        >搜索 / 刷新</el-button
+      >
     </div>
     <el-table v-loading="loading" :data="rows" border>
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="accountPhone" label="发送账号" min-width="190" />
+      <el-table-column label="候选受众" min-width="250">
+        <template #default="{ row }">
+          <div>
+            {{ audienceLabel(row.audience) }} ·
+            {{ audienceSource(row.audience) }}
+          </div>
+          <div v-if="row.audience?.status === 'READY'">
+            {{ row.audience.count }} 人
+          </div>
+          <div v-if="row.audience?.failReason" class="audience-failure">
+            <span v-if="row.audience.failCode"
+              >[{{ row.audience.failCode }}] </span
+            >{{ row.audience.failReason }}
+          </div>
+          <div v-if="row.audience?.updatedAt" class="audience-updated">
+            更新于
+            {{
+              formatFeedTaskTime(new Date(row.audience.updatedAt).toISOString())
+            }}
+          </div>
+          <el-button
+            v-if="
+              hasPerms('tenant:feed_task:operate') &&
+              canPrepareAudience(row.audience)
+            "
+            link
+            type="primary"
+            :loading="audienceRefreshingId === row.id"
+            :disabled="audienceRefreshingId !== null"
+            @click="emit('refreshAudience', row)"
+            >重新准备</el-button
+          >
+        </template>
+      </el-table-column>
       <el-table-column label="发送状态" width="110" align="center"
         ><template #default="{ row }"
           ><el-tag
@@ -126,11 +174,26 @@ function statusLabel(status: string): string {
 </template>
 
 <style scoped>
+.audience-notice {
+  margin-bottom: 16px;
+}
+
+.audience-failure {
+  font-size: 12px;
+  color: var(--el-color-danger);
+}
+
+.audience-updated {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
 .data-toolbar {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
 }
+
 .phone-search {
   width: 260px;
 }

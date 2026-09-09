@@ -105,11 +105,22 @@ export interface FeedTaskWrite {
   taskPlannedEndAt?: string | null;
 }
 
+/** 与后端 StatusAudienceView 对齐；人数为当前候选快照。 */
+export interface FeedStatusAudience {
+  status: "PENDING" | "SYNCING" | "READY" | "EMPTY" | "FAILED" | "UNAVAILABLE";
+  source: "ADDRESS_BOOK" | "CLOUD_LID" | "NONE";
+  count: number;
+  updatedAt?: number | null;
+  failCode?: string | null;
+  failReason?: string | null;
+}
+
 export interface FeedTaskAccountRow {
   id: number;
   accountId: number;
   accountPhone: string;
   sendStatus: string;
+  audience?: FeedStatusAudience | null;
   retryNum: number;
   retryMax: number;
   sendAt?: string | null;
@@ -247,4 +258,15 @@ export async function countFeedTaskAccounts(
 ): Promise<number> {
   const result = await listTenantAccounts(toAccountCountQuery(filter));
   return result.total ?? 0;
+}
+
+/** 仅重新准备当前任务账号的受众，不重发终态消息。 */
+export function refreshFeedTaskAudience(
+  taskId: number,
+  accountRowId: number
+): Promise<FeedStatusAudience> {
+  return armadaRequest<FeedStatusAudience>(
+    "post",
+    `/api/feed-tasks/${taskId}/data/${accountRowId}/audience/refresh`
+  );
 }

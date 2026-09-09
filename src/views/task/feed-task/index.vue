@@ -188,6 +188,8 @@ onUnmounted(() => {
       :page="pageState.accountDataPage.value"
       :page-size="pageState.accountDataPageSize.value"
       :account-phone="pageState.accountPhone.value"
+      :audience-refreshing-id="pageState.audienceRefreshingId.value"
+      @refresh-audience="pageState.refreshAudience"
       @update:page="handleAccountPageChange"
       @update:page-size="handleAccountPageSizeChange"
       @update:account-phone="pageState.accountPhone.value = $event"
@@ -200,22 +202,28 @@ onUnmounted(() => {
 .feed-task-page {
   min-height: 100%;
 }
+
 .page-search {
   padding: 16px 16px 0;
   margin-bottom: 16px;
 }
+
 .page-search :deep(.el-form-item) {
   margin-bottom: 16px;
 }
+
 .search-name {
   width: 240px;
 }
+
 .search-status {
   width: 150px;
 }
+
 .search-date {
   width: 190px;
 }
+
 .date-separator {
   margin: 0 8px;
   color: var(--el-text-color-secondary);

@@ -116,7 +116,8 @@ function requestClose(done?: () => void): void {
           </div>
         </div>
         <el-alert
-          title="命中账号后，每个账号都会以 Status 形式发布同一条动态。"
+          title="每个命中账号都会发布同一条动态"
+          description="受众优先取自具名通讯录；Android 没有通讯录时会自动准备云端 LID，准备中不消耗发送重试次数。保存并启用后，在账号发送数据中查看受众状态；仅保存的草稿尚未圈定账号。"
           type="success"
           :closable="false"
           show-icon
@@ -359,63 +360,74 @@ function requestClose(done?: () => void): void {
   grid-template-columns: 360px minmax(0, 1fr);
   gap: 24px;
 }
+
 .feed-preview-panel {
   position: sticky;
   top: 0;
   align-self: start;
 }
+
 .preview-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 }
+
 .preview-title {
   font-size: 16px;
   font-weight: 600;
 }
+
 .status-preview {
-  overflow: hidden;
   padding-bottom: 18px;
+  overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
 }
+
 .status-preview-image {
   display: block;
   width: 100%;
   height: 180px;
   object-fit: cover;
 }
+
 .status-preview-title,
 .status-preview-description,
 .status-preview-content,
 .status-preview-link {
   padding: 0 16px;
 }
+
 .status-preview-title {
   padding-top: 16px;
   font-size: 18px;
   font-weight: 700;
 }
+
 .status-preview-description {
   padding-top: 4px;
   font-size: 13px;
   opacity: 0.8;
 }
+
 .status-preview-content {
   padding-top: 18px;
-  white-space: pre-wrap;
   line-height: 1.6;
+  white-space: pre-wrap;
 }
+
 .status-preview-link {
   display: inline-block;
-  margin: 14px 16px 0;
   padding: 4px 8px;
-  border-radius: 999px;
-  background: rgb(0 0 0 / 16%);
+  margin: 14px 16px 0;
   font-size: 11px;
   word-break: break-all;
+  background: rgb(0 0 0 / 16%);
+  border-radius: 999px;
 }
+
 .account-filter-summary {
   display: flex;
   align-items: center;
@@ -425,52 +437,62 @@ function requestClose(done?: () => void): void {
   border: 1px solid var(--el-border-color);
   border-radius: 6px;
 }
+
 .account-filter-summary > div {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   min-width: 0;
 }
+
 .account-filter-summary span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .image-upload-row {
   display: flex;
-  align-items: center;
   gap: 16px;
+  align-items: center;
 }
+
 .upload-preview {
   width: 128px;
   height: 72px;
-  border-radius: 6px;
   object-fit: cover;
+  border-radius: 6px;
 }
+
 .field-tip {
   margin-top: 6px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
+
 .theme-options {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
 }
+
 .theme-option {
   padding: 6px 12px;
+  cursor: pointer;
   border: 2px solid transparent;
   border-radius: 6px;
-  cursor: pointer;
 }
+
 .theme-option.active {
   border-color: var(--el-color-primary);
 }
-@media (max-width: 900px) {
+
+@media (width <= 900px) {
   .feed-editor-layout {
     grid-template-columns: 1fr;
   }
+
   .feed-preview-panel {
     position: static;
   }

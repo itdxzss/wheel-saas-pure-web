@@ -1,7 +1,8 @@
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch, onScopeDispose } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   actionFeedTask,
+  refreshFeedTaskAudience,
   countFeedTaskAccounts,
   createFeedTask,
   getFeedTask,
@@ -109,6 +110,24 @@ export function useFeedTaskPage() {
   const accountCountLoading = ref(false);
   const filterVisible = ref(false);
   const dataVisible = ref(false);
+  const audienceRefreshingId = ref<number | null>(null);
+  let dataRequestId = 0;
+  let dataPollTimer: ReturnType<typeof setTimeout> | undefined;
+  function clearDataPoll(): void {
+    clearTimeout(dataPollTimer);
+    dataPollTimer = undefined;
+  }
+  watch(dataVisible, visible => {
+    if (!visible) {
+      clearDataPoll();
+      dataRequestId++;
+      accountDataLoading.value = false;
+    }
+  });
+  onScopeDispose(() => {
+    clearDataPoll();
+    dataRequestId++;
+  });
   const dataTaskId = ref<number | null>(null);
   const dataTaskName = ref("");
   const accountRows = ref<FeedTaskAccountRow[]>([]);
@@ -334,7 +353,10 @@ export function useFeedTaskPage() {
   }
 
   async function loadAccountData(): Promise<void> {
-    if (!dataTaskId.value) return;
+    if (!dataTaskId.value || !dataVisible.value) return;
+    clearDataPoll();
+    const requestId = ++dataRequestId;
+    const taskId = dataTaskId.value;
     accountDataLoading.value = true;
     try {
       const result = await listFeedTaskAccounts(dataTaskId.value, {
@@ -342,14 +364,58 @@ export function useFeedTaskPage() {
         pageSize: accountDataPageSize.value,
         accountPhone: accountPhone.value.trim() || undefined
       });
+      if (
+        requestId !== dataRequestId ||
+        taskId !== dataTaskId.value ||
+        !dataVisible.value
+      )
+        return;
       accountRows.value = result.list ?? [];
       accountDataTotal.value = result.total ?? 0;
     } catch (error) {
+      if (requestId !== dataRequestId || !dataVisible.value) return;
       accountRows.value = [];
       accountDataTotal.value = 0;
       ElMessage.error(apiErrorMessage(error, "账号发送数据加载失败"));
     } finally {
-      accountDataLoading.value = false;
+      if (requestId === dataRequestId) {
+        accountDataLoading.value = false;
+        if (
+          dataVisible.value &&
+          accountRows.value.some(
+            row =>
+              ["pending", "sending", "sent", "retrying"].includes(
+                row.sendStatus
+              ) || row.audience?.status === "SYNCING"
+          )
+        ) {
+          dataPollTimer = setTimeout(() => void loadAccountData(), 5000);
+        }
+      }
+    }
+  }
+
+  async function refreshAudience(row: FeedTaskAccountRow): Promise<void> {
+    if (!dataTaskId.value || audienceRefreshingId.value !== null) return;
+    const taskId = dataTaskId.value;
+    audienceRefreshingId.value = row.id;
+    try {
+      const audience = await refreshFeedTaskAudience(taskId, row.id);
+      if (dataTaskId.value !== taskId || !dataVisible.value) return;
+      if (["FAILED", "EMPTY", "UNAVAILABLE"].includes(audience.status)) {
+        ElMessage.warning(audience.failReason || "受众尚不可用");
+      } else {
+        ElMessage.success(
+          audience.status === "READY"
+            ? "候选受众已就绪"
+            : "已提交受众准备，明细会自动刷新"
+        );
+      }
+      await loadAccountData();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "受众准备失败"));
+    } finally {
+      audienceRefreshingId.value = null;
     }
   }
 
@@ -370,6 +436,8 @@ export function useFeedTaskPage() {
   }
 
   return {
+    audienceRefreshingId,
+    refreshAudience,
     accountCountLoading,
     accountDataLoading,
     accountDataPage,
