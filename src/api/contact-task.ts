@@ -10,6 +10,13 @@ export type ContactTaskStartMode = "now" | "scheduled";
 /** 任务动作，与后端 ContactTaskAction 一一对应。 */
 export type ContactTaskAction = "start" | "pause" | "resume" | "stop";
 
+/** 批量软删除任务，返回实际删除数量；整批失败时由统一请求层抛出业务错误。 */
+export function batchDeleteContactTasks(ids: number[]): Promise<number> {
+  return armadaRequest("post", "/api/contact-tasks/batch-delete", {
+    data: { ids }
+  });
+}
+
 export interface PageResult<T> {
   list: T[];
   page: number;

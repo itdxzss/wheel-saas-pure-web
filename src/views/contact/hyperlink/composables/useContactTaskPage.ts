@@ -1,7 +1,9 @@
 import { computed, onMounted, ref } from "vue";
+import { ElMessageBox, type TableInstance } from "element-plus";
 import { message } from "@/utils/message";
 import {
   actContactTask,
+  batchDeleteContactTasks,
   createContactTask,
   getContactTask,
   listContactTasks,
@@ -17,6 +19,7 @@ import {
   toAccountFilterJson,
   type AccountFilterForm
 } from "../domain/account-filter";
+import { canDeleteTask } from "../domain/task-status";
 
 type DrawerMode = "create" | "edit" | "view";
 
@@ -27,6 +30,10 @@ export function useContactTaskPage() {
   const page = ref(1);
   const pageSize = ref(20);
   const loading = ref(false);
+  const deleting = ref(false);
+  const selectedRows = ref<ContactTaskListItem[]>([]);
+  const tableRef = ref<TableInstance>();
+  let loadVersion = 0;
 
   const searchName = ref("");
   const searchRunStatus = ref<number | null>(null);
@@ -46,7 +53,10 @@ export function useContactTaskPage() {
   const hasRows = computed(() => rows.value.length > 0);
 
   async function load() {
+    const version = ++loadVersion;
     loading.value = true;
+    selectedRows.value = [];
+    tableRef.value?.clearSelection();
     try {
       const result = await listContactTasks({
         page: page.value,
@@ -56,14 +66,60 @@ export function useContactTaskPage() {
         createdAtStart: searchCreatedRange.value?.[0],
         createdAtEnd: searchCreatedRange.value?.[1]
       });
+      if (version !== loadVersion) return;
+      const lastPage = Math.max(
+        1,
+        Math.ceil((result.total ?? 0) / pageSize.value)
+      );
+      if (page.value > lastPage) {
+        page.value = lastPage;
+        await load();
+        return;
+      }
       rows.value = result.list ?? [];
       total.value = result.total ?? 0;
     } catch (error) {
+      if (version !== loadVersion) return;
+      rows.value = [];
+      total.value = 0;
       message((error as Error)?.message ?? "任务列表加载失败", {
         type: "error"
       });
     } finally {
-      loading.value = false;
+      if (version === loadVersion) loading.value = false;
+    }
+  }
+
+  /** 表头全选只包含本页状态允许删除的任务。 */
+  function selectable(row: ContactTaskListItem): boolean {
+    return !loading.value && !deleting.value && canDeleteTask(row.runStatus);
+  }
+
+  function onSelectionChange(selection: ContactTaskListItem[]) {
+    selectedRows.value = selection.filter(selectable);
+  }
+
+  /** 冻结本次确认的 ID，阻止重复提交；失败保留列表并展示服务端原因。 */
+  async function deleteSelected() {
+    if (deleting.value || loading.value || selectedRows.value.length === 0)
+      return;
+    const ids = selectedRows.value.map(row => row.id);
+    deleting.value = true;
+    try {
+      await ElMessageBox.confirm(
+        `确认删除选中的 ${ids.length} 个任务？删除后任务将从列表移除，发送明细保留。`,
+        "批量删除任务",
+        { type: "warning", confirmButtonText: "删除", cancelButtonText: "取消" }
+      );
+      const count = await batchDeleteContactTasks(ids);
+      message(`已删除 ${count} 个任务`, { type: "success" });
+      await load();
+    } catch (error) {
+      if (error !== "cancel" && error !== "close") {
+        message((error as Error)?.message ?? "批量删除失败", { type: "error" });
+      }
+    } finally {
+      deleting.value = false;
     }
   }
 
@@ -171,6 +227,12 @@ export function useContactTaskPage() {
     page,
     pageSize,
     loading,
+    deleting,
+    selectedRows,
+    tableRef,
+    selectable,
+    onSelectionChange,
+    deleteSelected,
     hasRows,
     searchName,
     searchRunStatus,

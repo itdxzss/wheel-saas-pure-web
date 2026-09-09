@@ -35,10 +35,6 @@ describe("contact task page composable", () => {
     assert.doesNotMatch(source, /catch \{\s*\}/);
   });
 
-  it("never exposes a delete action", () => {
-    assert.doesNotMatch(source, /deleteContactTask/);
-  });
-
   it("previews the matched account count whenever the filter changes", () => {
     // 不钉死折行：prettier 会在参数处换行，正则跟着断掉
     assert.match(

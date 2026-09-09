@@ -12,6 +12,7 @@ import { rowActions, statusLabel, statusTagType } from "./domain/task-status";
 defineOptions({ name: "ContactHyperlinkTask" });
 
 const page = useContactTaskPage();
+const { tableRef } = page;
 
 /** 账号范围列最多平铺 3 个标签，其余折叠成 +N。 */
 const RANGE_TAG_LIMIT = 3;
@@ -287,17 +288,46 @@ function runAction(row: ContactTaskListItem, action: string) {
     <el-card shadow="never">
       <div class="table-toolbar">
         <el-button type="primary" @click="page.openCreate">新建任务</el-button>
+        <el-button
+          v-perms="['tenant:contact_task:delete']"
+          type="danger"
+          plain
+          :loading="page.deleting.value"
+          :disabled="page.loading.value || !page.selectedRows.value.length"
+          @click="page.deleteSelected"
+        >
+          批量删除（{{ page.selectedRows.value.length }}）
+        </el-button>
         <el-button :disabled="!page.hasRows.value" @click="exportCsv">
           导出本页 CSV
         </el-button>
+        <span v-perms="['tenant:contact_task:delete']" class="cell-sub">
+          进行中、已暂停的任务需先停止后删除
+        </span>
       </div>
 
       <el-table
+        ref="tableRef"
         v-loading="page.loading.value"
         :data="page.rows.value"
+        row-key="id"
         border
         stripe
+        @selection-change="page.onSelectionChange"
       >
+        <el-table-column
+          type="selection"
+          width="48"
+          fixed="left"
+          :selectable="page.selectable"
+        />
+        <el-table-column prop="id" label="ID" min-width="100" />
+        <el-table-column
+          prop="name"
+          label="任务名称"
+          min-width="180"
+          show-overflow-tooltip
+        />
         <el-table-column label="消息类型 / 内容" min-width="240">
           <template #default="{ row }">
             <div class="cell-strong">

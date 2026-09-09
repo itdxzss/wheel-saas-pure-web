@@ -5,8 +5,10 @@ import { describe, it } from "node:test";
 const source = readFileSync(new URL("./index.vue", import.meta.url), "utf8");
 
 describe("contact hyperlink task list", () => {
-  it("renders the seven competitor columns", () => {
+  it("renders task identity and existing business columns", () => {
     for (const label of [
+      "ID",
+      "任务名称",
       "消息类型 / 内容",
       "状态",
       "进度（成功 / 计划）",
@@ -60,8 +62,11 @@ describe("contact hyperlink task list", () => {
     assert.match(source, /停止后任务将被终止，且无法恢复/);
   });
 
-  it("has no delete action anywhere", () => {
-    assert.doesNotMatch(source, /删除/);
+  it("offers permission-gated batch deletion with page selection", () => {
+    assert.match(source, /批量删除/);
+    assert.match(source, /tenant:contact_task:delete/);
+    assert.match(source, /selection-change/);
+    assert.match(source, /row-key="id"/);
   });
 
   it("opens the new task drawer because we un-gate what the competitor disabled", () => {
