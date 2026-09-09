@@ -270,10 +270,9 @@ function runAction(row: ContactTaskListItem, action: string) {
         <el-tag type="success" effect="plain" round>好友群发</el-tag>
       </div>
       <p>
-        每个账号会向自己通讯录中的
-        <b>LID 联系人</b>
-        及<b>有名字的其他联系人</b>发送同一条消息。通讯录由协议层定期推送全量快照，
-        任务启用时固化收件人名单，之后按轮次逐条发送。
+        Android 账号自动获取自己的<b>云端 LID 联系人</b>，无需等待通讯录同步；
+        Web 账号使用已有通讯录中的 LID 联系人及有名字的其他联系人。
+        名单准备完成后固定本次收件人，按配置间隔逐条发送。准备状态和失败原因可在账号数据中查看。
       </p>
     </el-card>
 

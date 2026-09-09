@@ -28,6 +28,15 @@ const loading = ref(false);
 /** 三个数值列走服务端排序；其余列后端会忽略，不给排序入口。 */
 const SORTABLE_COLUMNS = ["needSendNum", "sentNum", "failNum"];
 
+const ACCOUNT_STATES: Record<string, string> = {
+  PREPARING: "准备联系人",
+  PENDING: "待发送",
+  RUNNING: "发送中",
+  DONE: "已完成",
+  FAILED: "失败",
+  SKIPPED: "已跳过"
+};
+
 const visible = computed({
   get: () => props.modelValue,
   set: value => emit("update:modelValue", value)
@@ -123,6 +132,7 @@ watch(
           <div class="account-phone">
             <span>{{ row.accountPhone || "-" }}</span>
             <el-tag
+              v-if="row.state !== 'PREPARING'"
               :type="row.accountStatus === 'valid' ? 'success' : 'danger'"
               size="small"
               effect="plain"
@@ -130,6 +140,11 @@ watch(
               {{ row.accountStatus === "valid" ? "有效" : "无效" }}
             </el-tag>
           </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="执行状态" width="130">
+        <template #default="{ row }">
+          {{ ACCOUNT_STATES[row.state] ?? row.state ?? "-" }}
         </template>
       </el-table-column>
       <el-table-column
