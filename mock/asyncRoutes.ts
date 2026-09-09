@@ -178,29 +178,30 @@ const taskRouter = {
         module_key: "group_creation_marketing",
         perm_key: "tenant:group_creation_marketing:view"
       }
-    },
+    }
+  ]
+};
+
+const feedMarketingRouter = {
+  path: "/task/feed",
+  meta: {
+    title: "动态营销",
+    icon: "ep:picture",
+    rank: 4.5,
+    module_key: "feed_marketing"
+  },
+  children: [
     {
-      path: "/task/feed",
+      path: "/task/feed/task",
+      component: "task/feed-task/index",
+      name: "TaskFeed",
       meta: {
-        title: "动态营销",
-        icon: "ep:picture",
+        title: "动态发布任务",
+        roles: ["admin", "common"],
         showParent: true,
-        module_key: "feed_marketing"
-      },
-      children: [
-        {
-          path: "/task/feed/task",
-          component: "task/feed-task/index",
-          name: "TaskFeed",
-          meta: {
-            title: "动态发布任务",
-            roles: ["admin", "common"],
-            showParent: true,
-            module_key: "feed_task",
-            perm_key: "tenant:feed_task:view"
-          }
-        }
-      ]
+        module_key: "feed_task",
+        perm_key: "tenant:feed_task:view"
+      }
     }
   ]
 };
@@ -508,6 +509,7 @@ export default defineFakeRoute([
           accountRouter,
           groupRouter,
           taskRouter,
+          feedMarketingRouter,
           materialRouter,
           resourceRouter,
           hyperlinkRouter,
