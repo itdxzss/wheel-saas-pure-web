@@ -270,7 +270,9 @@ function runAction(row: ContactTaskListItem, action: string) {
         <el-tag type="success" effect="plain" round>好友群发</el-tag>
       </div>
       <p>
-        每个账号会向自己<b>通讯录里有名字的联系人</b>发送同一条消息。通讯录由协议层定期推送全量快照，
+        每个账号会向自己通讯录中的
+        <b>LID 联系人</b>
+        及<b>有名字的其他联系人</b>发送同一条消息。通讯录由协议层定期推送全量快照，
         任务启用时固化收件人名单，之后按轮次逐条发送。
       </p>
     </el-card>

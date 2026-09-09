@@ -98,11 +98,11 @@ function resetFromDetail(detail: ContactTaskDetail | null) {
     promotionLink: detail.promotionLink ?? "",
     content: detail.content ?? "",
     previewImageFileId: detail.previewImageFileId ?? null,
-    msgIntervalMinSec: Number(detail.msgIntervalMinSec ?? 0.5),
-    msgIntervalMaxSec: Number(detail.msgIntervalMaxSec ?? 1),
+    msgIntervalMinSec: Number(detail.msgIntervalMinSec ?? 5),
+    msgIntervalMaxSec: Number(detail.msgIntervalMaxSec ?? 10),
     concurrency: detail.concurrency ?? 10,
     maxSendsPerAccount: detail.maxSendsPerAccount ?? 50,
-    retryMax: detail.retryMax ?? 3,
+    retryMax: 0,
     startMode: detail.startMode ?? "now",
     taskDelayMinutes: detail.taskDelayMinutes ?? 0,
     isEnabled: detail.isEnabled ?? 1
@@ -360,6 +360,9 @@ watch(
             </header>
             <div class="section-body">
               <el-form-item label="发送间隔">
+                <div class="field-tip">
+                  同一账号由协议层控制实际发送间隔，单位：秒。
+                </div>
                 <div class="interval-control">
                   <div class="interval-presets">
                     <span class="interval-presets-label">快捷预设</span>
@@ -435,16 +438,15 @@ watch(
                   :step="10"
                   controls-position="right"
                 />
-                <span class="field-tip">0 表示发给全部联系人</span>
+                <span class="field-tip"
+                  >单个任务内的上限，0 表示全部联系人</span
+                >
               </el-form-item>
-              <el-form-item label="失败重试次数">
-                <el-input-number
-                  v-model="form.retryMax"
-                  :min="0"
-                  :max="10"
-                  controls-position="right"
-                />
-              </el-form-item>
+              <el-alert
+                type="info"
+                :closable="false"
+                title="异常时停止该账号；发送结果未知时不自动重发。"
+              />
             </div>
           </section>
 
@@ -527,271 +529,4 @@ watch(
   </el-drawer>
 </template>
 
-<style scoped>
-.drawer-body {
-  display: flex;
-  gap: 18px;
-  align-items: flex-start;
-}
-
-.preview-column {
-  position: sticky;
-  top: 0;
-  flex-shrink: 0;
-}
-
-.form-column {
-  flex: 1;
-  min-width: 0;
-}
-
-.form-column.is-readonly {
-  cursor: not-allowed;
-}
-
-.form-section {
-  margin-bottom: 18px;
-  overflow: hidden;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-}
-
-.section-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 16px;
-  background: var(--el-fill-color-light);
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.section-index {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--el-color-white);
-  background: var(--el-color-primary);
-  border-radius: 6px;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.section-desc {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.section-body {
-  padding: 18px;
-}
-
-.field-tip {
-  margin-left: 10px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.account-range {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: 8px;
-}
-
-.account-range.is-error {
-  border-color: var(--el-color-danger);
-}
-
-.account-range-info {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.account-range-count {
-  padding: 2px 10px;
-  font-weight: 600;
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  border-radius: 999px;
-}
-
-.account-range-count.is-error {
-  color: var(--el-color-danger);
-  background: var(--el-color-danger-light-9);
-}
-
-.account-range-tip {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--el-color-danger);
-}
-
-.interval-control {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-.interval-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.interval-presets-label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.interval-stats {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 10px;
-  align-items: center;
-}
-
-.interval-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  background: var(--el-fill-color-light);
-  border-radius: 8px;
-}
-
-.interval-card-label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.interval-divider {
-  font-size: 16px;
-  color: var(--el-text-color-placeholder);
-}
-
-.interval-tip {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
-}
-
-.upload-block {
-  width: 100%;
-}
-
-.upload-area {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-  justify-content: center;
-  min-height: 140px;
-  padding: 24px;
-  cursor: pointer;
-  border: 2px dashed var(--el-border-color);
-  border-radius: 8px;
-}
-
-.upload-area:hover {
-  border-color: var(--el-color-primary);
-}
-
-.upload-input {
-  display: none;
-}
-
-.upload-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.upload-hint {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.file-chip {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 8px;
-}
-
-.file-thumb {
-  width: 96px;
-  border-radius: 6px;
-}
-
-.status-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  width: 100%;
-}
-
-.status-card {
-  padding: 14px;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  background: var(--el-bg-color);
-  border: 1.5px solid var(--el-border-color);
-  border-radius: 8px;
-}
-
-.status-card.is-active {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
-}
-
-.status-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.status-desc {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-@media (width <= 1100px) {
-  .drawer-body {
-    flex-direction: column;
-  }
-
-  .preview-column {
-    position: static;
-    width: 100%;
-  }
-}
-
-@media (width <= 720px) {
-  .status-toggle,
-  .interval-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .interval-divider {
-    display: none;
-  }
-}
-</style>
+<style scoped src="./ContactTaskDrawer.css"></style>

@@ -31,11 +31,11 @@ describe("contact task form defaults", () => {
     const form = defaultTaskForm();
 
     assert.equal(form.messageType, MESSAGE_TYPE_IMAGE);
-    assert.equal(form.msgIntervalMinSec, 0.5);
-    assert.equal(form.msgIntervalMaxSec, 1);
+    assert.equal(form.msgIntervalMinSec, 5);
+    assert.equal(form.msgIntervalMaxSec, 10);
     assert.equal(form.concurrency, 10);
     assert.equal(form.maxSendsPerAccount, 50);
-    assert.equal(form.retryMax, 3);
+    assert.equal(form.retryMax, 0);
     assert.equal(form.startMode, "now");
     assert.equal(form.taskDelayMinutes, 0);
     assert.equal(form.isEnabled, 1);

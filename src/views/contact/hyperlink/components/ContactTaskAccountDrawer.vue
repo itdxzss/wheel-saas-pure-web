@@ -4,6 +4,7 @@ import {
   listContactTaskAccountData,
   type ContactTaskAccountItem
 } from "@/api/contact-task";
+import ContactTaskRecipientDrawer from "./ContactTaskRecipientDrawer.vue";
 import { message } from "@/utils/message";
 
 const props = defineProps<{
@@ -15,6 +16,8 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: "update:modelValue", value: boolean): void }>();
 
 const rows = ref<ContactTaskAccountItem[]>([]);
+const selectedAccount = ref<ContactTaskAccountItem | null>(null);
+const recipientsVisible = ref(false);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
@@ -106,6 +109,7 @@ watch(
     size="960px"
     direction="rtl"
   >
+    <el-button :loading="loading" @click="load">刷新</el-button>
     <el-table
       v-loading="loading"
       :data="rows"
@@ -146,6 +150,25 @@ watch(
         width="120"
         sortable="custom"
       />
+      <el-table-column
+        prop="stopReason"
+        label="停止原因"
+        min-width="180"
+        show-overflow-tooltip
+      />
+      <el-table-column label="明细" width="100">
+        <template #default="{ row }">
+          <el-button
+            link
+            type="primary"
+            @click="
+              selectedAccount = row;
+              recipientsVisible = true;
+            "
+            >查看</el-button
+          >
+        </template>
+      </el-table-column>
       <el-table-column label="进度" min-width="200">
         <template #default="{ row }">
           <el-progress
@@ -167,6 +190,11 @@ watch(
       :page-sizes="[10, 20, 50, 100, 200]"
       @current-change="changePage"
       @size-change="changePageSize"
+    />
+    <ContactTaskRecipientDrawer
+      v-model="recipientsVisible"
+      :task-id="taskId"
+      :account="selectedAccount"
     />
   </el-drawer>
 </template>

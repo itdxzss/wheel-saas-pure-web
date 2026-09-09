@@ -69,6 +69,9 @@ export interface ContactTaskDetail {
 }
 
 export interface ContactTaskAccountItem {
+  taskAccountId: number;
+  state: string;
+  stopReason: string | null;
   accountId: number;
   accountPhone: string | null;
   accountStatus: string | null;
@@ -237,4 +240,29 @@ export function downloadContactTaskImage(id: number): Promise<Blob> {
   return http.request<Blob>("get", contactTaskImageUrl(id), {
     responseType: "blob"
   });
+}
+
+export interface ContactTaskRecipient {
+  id: number;
+  contactJid: string;
+  contactPhone: string | null;
+  sendStatus: string;
+  protocolMessageId: string | null;
+  errorCode: string | null;
+  errorDesc: string | null;
+  firstSentAt: number | null;
+  deliveredAt: number | null;
+  readAt: number | null;
+}
+
+export function listContactTaskRecipients(
+  id: number,
+  taskAccountId: number,
+  page = 1
+): Promise<PageResult<ContactTaskRecipient>> {
+  return armadaRequest<PageResult<ContactTaskRecipient>>(
+    "get",
+    `/api/contact-tasks/${id}/accounts/${taskAccountId}/recipients`,
+    { params: { page, pageSize: 20 } }
+  );
 }
