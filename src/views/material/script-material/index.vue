@@ -79,7 +79,7 @@ onMounted(load);
     <el-space class="toolbar" wrap
       ><h2>剧本素材库</h2>
       <el-button
-        v-auth="'tenant:script_marketing:create'"
+        v-perms="'tenant:script_marketing:create'"
         type="primary"
         @click="edit()"
         >新建消息素材</el-button
@@ -162,14 +162,14 @@ onMounted(load);
       <el-table-column label="操作" width="160"
         ><template #default="{ row }">
           <el-button
-            v-auth="'tenant:script_marketing:edit'"
+            v-perms="'tenant:script_marketing:edit'"
             link
             type="primary"
             @click="edit(row)"
             >编辑</el-button
           >
           <el-button
-            v-auth="'tenant:script_marketing:create'"
+            v-perms="'tenant:script_marketing:create'"
             link
             @click="copy(row)"
             >复制</el-button

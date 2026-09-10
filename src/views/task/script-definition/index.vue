@@ -125,7 +125,7 @@ onMounted(load);
     <el-space class="toolbar" wrap
       ><h2>养群剧本</h2>
       <el-button
-        v-auth="'tenant:script_marketing:create'"
+        v-perms="'tenant:script_marketing:create'"
         type="primary"
         @click="edit()"
         >新建剧本</el-button
@@ -198,20 +198,20 @@ onMounted(load);
       <el-table-column label="操作" min-width="220"
         ><template #default="{ row }">
           <el-button
-            v-auth="'tenant:script_marketing:edit'"
+            v-perms="'tenant:script_marketing:edit'"
             link
             type="primary"
             @click="edit(row)"
             >编辑</el-button
           >
           <el-button
-            v-auth="'tenant:script_marketing:create'"
+            v-perms="'tenant:script_marketing:create'"
             link
             @click="edit(row, true)"
             >复制</el-button
           >
           <el-button
-            v-auth="'tenant:script_marketing:edit'"
+            v-perms="'tenant:script_marketing:edit'"
             link
             type="danger"
             @click="remove(row)"

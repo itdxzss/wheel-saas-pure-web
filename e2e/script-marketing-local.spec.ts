@@ -51,7 +51,7 @@ test("shared message material flows through the script library into a task snaps
             component,
             meta: {
               title,
-              auths: permissions,
+              auths: [],
               module_key: "task",
               perm_key: permissions[0]
             }
@@ -231,7 +231,7 @@ test("a short group shows the complete gap report and rechecking never starts a 
               component: "task/script-marketing/index",
               meta: {
                 title: "养群任务",
-                auths: permissions,
+                auths: [],
                 module_key: "task",
                 perm_key: permissions[0]
               }
@@ -347,7 +347,7 @@ test("default roles, additional promoter and ordered save stay independent", asy
               component: "task/script-marketing/index",
               meta: {
                 title: "剧本营销任务",
-                auths: permissions,
+                auths: [],
                 module_key: "task",
                 perm_key: permissions[0]
               }
@@ -519,7 +519,7 @@ for (const delayed of ["detail", "records"] as const) {
                 path: "/task/script-marketing",
                 name: "TaskScriptMarketing",
                 component: "task/script-marketing/index",
-                meta: { title: "剧本营销任务", auths: permissions }
+                meta: { title: "剧本营销任务", auths: [] }
               }
             ]
           }

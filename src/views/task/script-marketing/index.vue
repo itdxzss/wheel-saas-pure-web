@@ -215,7 +215,7 @@ onMounted(load);
         <el-space
           ><el-button :loading="loading" @click="load">刷新</el-button
           ><el-button
-            v-auth="'tenant:script_marketing:create'"
+            v-perms="'tenant:script_marketing:create'"
             type="primary"
             @click="create"
             >新建剧本任务</el-button
@@ -281,12 +281,12 @@ onMounted(load);
             >
             <el-button
               v-if="row.status === 0"
-              v-auth="'tenant:script_marketing:edit'"
+              v-perms="'tenant:script_marketing:edit'"
               link
               @click="edit(row.id)"
               >编辑</el-button
             >
-            <span v-auth="'tenant:script_marketing:operate'">
+            <span v-perms="'tenant:script_marketing:operate'">
               <el-button
                 v-if="row.status === 0"
                 link
@@ -365,7 +365,7 @@ onMounted(load);
           v-if="
             qualification?.ready && checkRow && [0, 2].includes(checkRow.status)
           "
-          v-auth="'tenant:script_marketing:operate'"
+          v-perms="'tenant:script_marketing:operate'"
           type="primary"
           :loading="operating !== undefined"
           @click="act(checkRow, checkRow.status === 0 ? 'start' : 'resume')"

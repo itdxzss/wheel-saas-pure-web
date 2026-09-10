@@ -169,7 +169,7 @@ watch(
           >
             <template #default="{ row }"
               ><el-button
-                v-auth="'tenant:script_marketing:operate'"
+                v-perms="'tenant:script_marketing:operate'"
                 link
                 type="primary"
                 :disabled="
