@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   actOnScriptTask,
   getScriptTask,
   listScriptTasks,
+  checkScriptTask,
+  qualificationFromError,
+  type ScriptQualification,
   type ScriptAction,
   type ScriptDetail,
   type ScriptTask
@@ -13,6 +17,7 @@ import { apiErrorMessage } from "@/utils/api-error";
 import { taskLabels } from "./form";
 import ScriptCreateDrawer from "./components/ScriptCreateDrawer.vue";
 import ScriptDetailDrawer from "./components/ScriptDetailDrawer.vue";
+import ScriptQualificationPanel from "./components/ScriptQualificationPanel.vue";
 
 defineOptions({ name: "TaskScriptMarketing" });
 const filters = reactive({
@@ -31,8 +36,14 @@ const editTask = ref<ScriptDetail>();
 const detailOpen = ref(false);
 const detail = ref<ScriptDetail>();
 const detailLoading = ref(false);
+const router = useRouter();
+const checkOpen = ref(false);
+const checkLoading = ref(false);
+const checkRow = ref<ScriptTask>();
+const qualification = ref<ScriptQualification>();
 let requestId = 0;
 let detailRequestId = 0;
+let checkRequestId = 0;
 async function load() {
   const request = ++requestId;
   loading.value = true;
@@ -107,14 +118,51 @@ async function act(row: ScriptTask, action: ScriptAction) {
   try {
     await actOnScriptTask(row.id, action);
     ElMessage.success("操作已保存");
+    checkOpen.value = false;
     await load();
     if (detailOpen.value && detail.value?.task.id === row.id)
       await showDetail(row.id);
   } catch (error) {
+    const report = qualificationFromError(error);
+    if (report) showQualification(row, report);
     ElMessage.error(apiErrorMessage(error, "任务操作失败"));
   } finally {
     operating.value = undefined;
   }
+}
+function showQualification(row: ScriptTask, report: ScriptQualification) {
+  checkRequestId++;
+  checkLoading.value = false;
+  checkRow.value = row;
+  qualification.value = report;
+  checkOpen.value = true;
+}
+async function check(row: ScriptTask) {
+  const request = ++checkRequestId;
+  checkRow.value = row;
+  checkLoading.value = true;
+  checkOpen.value = true;
+  qualification.value = undefined;
+  try {
+    const report = await checkScriptTask(row.id);
+    if (request === checkRequestId && checkOpen.value)
+      qualification.value = report;
+  } catch (error) {
+    if (request === checkRequestId)
+      ElMessage.error(apiErrorMessage(error, "资格检查失败"));
+  } finally {
+    if (request === checkRequestId) checkLoading.value = false;
+  }
+}
+watch(checkOpen, open => {
+  if (open) return;
+  checkRequestId++;
+  checkLoading.value = false;
+  qualification.value = undefined;
+});
+async function goToJoin() {
+  checkOpen.value = false;
+  await router.push("/task/join");
 }
 onMounted(load);
 </script>
@@ -228,6 +276,9 @@ onMounted(load);
             <el-button link type="primary" @click="showDetail(row.id)"
               >详情</el-button
             >
+            <el-button v-if="row.accountGroupId" link @click="check(row)"
+              >检查群资格</el-button
+            >
             <el-button
               v-if="row.status === 0"
               v-auth="'tenant:script_marketing:edit'"
@@ -289,7 +340,40 @@ onMounted(load);
       :detail="detail"
       :loading="detailLoading"
       @refresh="detail && showDetail(detail.task.id)"
+      @qualification="
+        report => detail && showQualification(detail.task, report)
+      "
     />
+    <el-dialog
+      v-model="checkOpen"
+      title="目标群资格检查"
+      width="960px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="checkLoading">
+        <ScriptQualificationPanel
+          v-if="qualification"
+          :report="qualification"
+          :loading="checkLoading"
+          @check="checkRow && check(checkRow)"
+          @join="goToJoin"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="checkOpen = false">返回任务</el-button>
+        <el-button
+          v-if="
+            qualification?.ready && checkRow && [0, 2].includes(checkRow.status)
+          "
+          v-auth="'tenant:script_marketing:operate'"
+          type="primary"
+          :loading="operating !== undefined"
+          @click="act(checkRow, checkRow.status === 0 ? 'start' : 'resume')"
+        >
+          {{ checkRow.status === 0 ? "启动任务" : "继续任务" }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -298,11 +382,13 @@ onMounted(load);
   padding: 20px 20px 0;
   border-radius: 8px;
 }
+
 .task-panel {
   padding: 20px;
   margin-top: 16px;
   border-radius: 8px;
 }
+
 .task-toolbar {
   display: flex;
   gap: 16px;
@@ -310,11 +396,13 @@ onMounted(load);
   justify-content: space-between;
   margin-bottom: 18px;
 }
+
 h2 {
   margin-bottom: 4px;
   font-size: 18px;
   font-weight: 600;
 }
+
 .pagination {
   justify-content: flex-end;
   margin-top: 18px;

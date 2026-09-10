@@ -12,6 +12,9 @@ export function newStep(role: ScriptStep["role"] = "PROMOTER"): EditableStep {
     key: nextEditorKey(),
     role,
     accountId: null,
+    roleKey: role === "ADMIN" ? "管理员" : `推手${editorKey}`,
+    waitMinSeconds: 10,
+    waitMaxSeconds: 10,
     message: {
       templateName: "",
       linkMode: 1,
@@ -25,7 +28,16 @@ export function newStep(role: ScriptStep["role"] = "PROMOTER"): EditableStep {
   };
 }
 export function copyStep(step: ScriptStep): EditableStep {
-  return { ...JSON.parse(JSON.stringify(step)), key: nextEditorKey() };
+  return {
+    ...JSON.parse(JSON.stringify(step)),
+    key: nextEditorKey(),
+    roleKey:
+      step.roleKey ||
+      `${step.role === "ADMIN" ? "管理员" : "推手"}${step.accountId || ""}`,
+    accountId: step.role === "ADMIN" ? step.accountId : null,
+    waitMinSeconds: step.waitMinSeconds ?? 10,
+    waitMaxSeconds: step.waitMaxSeconds ?? 10
+  };
 }
 export function mayRemove(steps: ScriptStep[], index: number): boolean {
   return steps.filter(step => step.role === steps[index]?.role).length > 1;
@@ -38,16 +50,39 @@ export function validateScript(form: ScriptSave): string | undefined {
   )
     return "发送间隔须为 1–86400 秒";
   if (!form.taskName.trim()) return "请填写任务名称";
+  if (!form.accountGroupId) return "请选择推手账号分组";
   if (!form.groupLinkIds.length) return "请选择目标群";
   if (form.steps.length < 2 || form.steps.length > 100)
     return "请配置 2–100 个发送项";
-  const roles = new Map<number, string>();
+  const roles = new Map<string, ScriptStep>();
   for (const [index, step] of form.steps.entries()) {
-    if (!step.accountId) return `第 ${index + 1} 项请选择账号`;
-    if (!step.message.content.trim()) return `第 ${index + 1} 项请填写消息内容`;
-    if (roles.has(step.accountId) && roles.get(step.accountId) !== step.role)
-      return "同一账号的角色必须一致，管理员与推手请选择不同账号";
-    roles.set(step.accountId, step.role);
+    if (!step.roleKey?.trim()) return `第 ${index + 1} 项请填写角色名称`;
+    if (step.role === "ADMIN" && !step.accountId)
+      return `第 ${index + 1} 项请选择管理员账号`;
+    if (step.role === "PROMOTER" && step.accountId)
+      return "推手由系统启动时分配，无需手动选择账号";
+    if (
+      !step.message.content.trim() &&
+      !(step.message.linkMode === 3 && step.message.imageFileId)
+    )
+      return `第 ${index + 1} 项请填写消息内容或选择图片`;
+    if (
+      step.waitMinSeconds === null ||
+      step.waitMaxSeconds === null ||
+      !Number.isInteger(step.waitMinSeconds) ||
+      !Number.isInteger(step.waitMaxSeconds) ||
+      step.waitMinSeconds < 0 ||
+      step.waitMaxSeconds > 86400 ||
+      step.waitMaxSeconds < step.waitMinSeconds
+    )
+      return `第 ${index + 1} 项等待区间须为 0–86400 秒，最大值不小于最小值`;
+    const previous = roles.get(step.roleKey);
+    if (
+      previous &&
+      (previous.role !== step.role || previous.accountId !== step.accountId)
+    )
+      return "同一角色的类型和管理员账号必须一致";
+    roles.set(step.roleKey, step);
   }
   if (
     !form.steps.some(s => s.role === "ADMIN") ||
@@ -66,6 +101,9 @@ export function toScriptSave(form: ScriptSave): ScriptSave {
     taskName: form.taskName.trim(),
     steps: form.steps.map(step => ({
       role: step.role,
+      roleKey: step.roleKey?.trim() || "",
+      waitMinSeconds: step.waitMinSeconds,
+      waitMaxSeconds: step.waitMaxSeconds,
       accountId: step.accountId,
       message: {
         ...step.message,
@@ -75,6 +113,15 @@ export function toScriptSave(form: ScriptSave): ScriptSave {
       }
     }))
   };
+}
+/** 预计每群等待时间，首条不等待，不包含发送、排队和异常耗时。 */
+export function estimatedWait(steps: ScriptStep[]): [number, number] {
+  return steps
+    .slice(1)
+    .reduce<
+      [number, number]
+    >((sum, step) => [sum[0] + (step.waitMinSeconds ?? 0), sum[1] + (step.waitMaxSeconds ?? 0)], [0,
+        0]);
 }
 export const taskLabels = [
   "草稿",

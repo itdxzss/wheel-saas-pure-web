@@ -5,17 +5,19 @@ import {
   copyStep,
   mayRemove,
   validateScript,
-  toScriptSave
+  toScriptSave,
+  estimatedWait
 } from "./form";
 
 const validForm = () => {
   const steps = [newStep("ADMIN"), newStep()];
   steps.forEach((step, index) => {
-    step.accountId = index + 1;
+    step.accountId = index === 0 ? 1 : null;
     step.message.content = `message ${index}`;
   });
   return {
     taskName: "test",
+    accountGroupId: 30,
     intervalSeconds: 10,
     startAt: null,
     endAt: null,
@@ -38,16 +40,43 @@ test("copy keeps account and role but edits do not change original content", () 
   assert.equal(copy.accountId, original.accountId);
   assert.equal(original.message.content, "message 1");
 });
-test("wire order follows screen order without UI keys; repeated same role account is allowed", () => {
+test("wire order uses stable roles and leaves promoters unbound until startup", () => {
   const form = validForm();
   form.steps.push(copyStep(form.steps[1]));
   assert.equal(validateScript(form), undefined);
   const payload = toScriptSave(form);
   assert.deepEqual(
     payload.steps.map(s => s.accountId),
-    [1, 2, 2]
+    [1, null, null]
   );
   assert.equal("key" in payload.steps[0], false);
   form.steps[1].accountId = 1;
-  assert.match(validateScript(form)!, /不同账号/);
+  assert.match(validateScript(form)!, /无需手动/);
+});
+test("first interval is excluded and repeated promoter messages do not create extra roles", () => {
+  const form = validForm();
+  form.steps[0].waitMinSeconds = 900;
+  form.steps[0].waitMaxSeconds = 1000;
+  form.steps[1].waitMinSeconds = 10;
+  form.steps[1].waitMaxSeconds = 20;
+  form.steps.push(copyStep(form.steps[1]));
+  assert.deepEqual(estimatedWait(form.steps), [20, 40]);
+  assert.equal(form.steps[1].roleKey, form.steps[2].roleKey);
+  form.steps[2].role = "ADMIN";
+  form.steps[2].accountId = 2;
+  assert.match(validateScript(form)!, /同一角色/);
+});
+test("image-only content and zero delay are allowed, missing group and inverted intervals are blocked", () => {
+  const form = validForm();
+  form.steps[1].message.content = "";
+  form.steps[1].message.linkMode = 3;
+  form.steps[1].message.imageFileId = 50;
+  form.steps[1].waitMinSeconds = 0;
+  form.steps[1].waitMaxSeconds = 0;
+  assert.equal(validateScript(form), undefined);
+  form.accountGroupId = 0;
+  assert.match(validateScript(form)!, /分组/);
+  form.accountGroupId = 30;
+  form.steps[1].waitMinSeconds = 10;
+  assert.match(validateScript(form)!, /最大值/);
 });

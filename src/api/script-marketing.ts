@@ -1,4 +1,5 @@
 import { armadaRequest } from "@/api/armada";
+import { ArmadaApiError } from "@/api/armada";
 import type { PageResponse } from "@/api/account";
 import type { GroupListRow } from "@/api/group";
 
@@ -21,8 +22,12 @@ export interface ScriptStep {
   role: "ADMIN" | "PROMOTER";
   accountId: number | null;
   message: ScriptMessage;
+  roleKey: string | null;
+  waitMinSeconds: number | null;
+  waitMaxSeconds: number | null;
 }
 export interface ScriptSave {
+  accountGroupId: number | null;
   taskName: string;
   intervalSeconds: number;
   startAt: number | null;
@@ -31,6 +36,8 @@ export interface ScriptSave {
   steps: ScriptStep[];
 }
 export interface ScriptTask {
+  accountGroupId: number | null;
+  pauseReason: string | null;
   id: number;
   taskName: string;
   status: 0 | 1 | 2 | 3 | 4;
@@ -45,6 +52,9 @@ export interface ScriptTask {
   inFlightCount: number;
 }
 export interface ScriptGroup {
+  bindingsJson: string | null;
+  paused: boolean;
+  pauseReason: string | null;
   id: number;
   taskId: number;
   groupLinkId: number;
@@ -113,8 +123,79 @@ export const scriptAccountOptions = (
     params: { keyword, page: 1, pageSize: 100 }
   });
 export const scriptGroupOptions = (
-  keyword = ""
+  accountGroupId: number,
+  keyword = "",
+  page = 1
 ): Promise<PageResponse<GroupListRow>> =>
   armadaRequest("get", `${root}/options/groups`, {
-    params: { keyword, page: 1, pageSize: 100 }
+    params: { accountGroupId, keyword, page, pageSize: 100 }
   });
+
+export interface ScriptAccountGroupOption {
+  id: number;
+  name: string;
+}
+export interface ScriptQualificationGroup {
+  groupLinkId: number;
+  groupJid: string;
+  groupName: string | null;
+  ready: boolean;
+  required: number;
+  available: number;
+  shortage: number;
+  offline: number;
+  noPermission: number;
+  unconfirmed: number;
+  reasons: string[];
+}
+export interface ScriptQualification {
+  ready: boolean;
+  accountCount: number;
+  requiredPromoters: number;
+  poolReason: string | null;
+  checkedAt: number;
+  groups: ScriptQualificationGroup[];
+}
+export const scriptAccountGroupOptions = (): Promise<
+  ScriptAccountGroupOption[]
+> => armadaRequest("get", `${root}/options/account-groups`);
+export const checkScriptDraft = (
+  data: ScriptSave
+): Promise<ScriptQualification> =>
+  armadaRequest("post", `${root}/check`, { data });
+export const checkScriptTask = (id: number): Promise<ScriptQualification> =>
+  armadaRequest("get", `${root}/${id}/check`);
+export const actOnScriptGroup = (
+  id: number,
+  groupId: number,
+  action: "pause" | "resume"
+): Promise<void> =>
+  armadaRequest("post", `${root}/${id}/groups/${groupId}/${action}`);
+
+/** 只接收后端逐群资格报告形状，其他业务错误仍使用普通错误处理。 */
+export function qualificationFromError(
+  error: unknown
+): ScriptQualification | undefined {
+  if (!(error instanceof ArmadaApiError)) return;
+  const data = error.data;
+  if (
+    !data ||
+    typeof data !== "object" ||
+    !("ready" in data) ||
+    typeof data.ready !== "boolean" ||
+    !("groups" in data) ||
+    !Array.isArray(data.groups)
+  )
+    return;
+  if (
+    !data.groups.every(
+      row =>
+        row &&
+        typeof row.groupLinkId === "number" &&
+        typeof row.shortage === "number" &&
+        Array.isArray(row.reasons)
+    )
+  )
+    return;
+  return data as ScriptQualification;
+}

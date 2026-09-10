@@ -2,17 +2,17 @@
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
 import type { ScriptMessage } from "@/api/script-marketing";
-import {
-  listMarketingTemplates,
-  type MarketingTemplateRow
-} from "@/api/marketing-template";
+import { listScriptMaterials, type ScriptMaterial } from "@/api/script-library";
 import type { ResourceAsset } from "@/api/resource-asset";
 import { apiErrorMessage } from "@/utils/api-error";
 import ResourceAssetPicker from "@/views/hyperlink/library/components/ResourceAssetPicker.vue";
 import { nextEditorKey } from "../form";
 
 const model = defineModel<ScriptMessage>({ required: true });
-const templates = ref<MarketingTemplateRow[]>([]);
+withDefaults(defineProps<{ showTemplatePicker?: boolean }>(), {
+  showTemplatePicker: true
+});
+const templates = ref<ScriptMaterial[]>([]);
 const templateId = ref<number>();
 const assetOpen = ref(false);
 const asset = ref<ResourceAsset | null>(null);
@@ -26,7 +26,7 @@ async function searchTemplates(keyword = "") {
   templateLoading.value = true;
   try {
     templates.value = (
-      await listMarketingTemplates({ keyword, page: 1, pageSize: 50 })
+      await listScriptMaterials({ keyword, page: 1, pageSize: 50 })
     ).list;
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "模板读取失败"));
@@ -45,16 +45,7 @@ function applyTemplate(id: number) {
     imageFileId: value.imageFileId ?? null,
     promotionLink: value.promotionLink || "",
     mentionAll: value.mentionAll,
-    buttons: value.buttons.map(button => ({
-      type:
-        button.type === "link"
-          ? "LINK_JUMP"
-          : button.type === "copy"
-            ? "COPY_CONTENT"
-            : "QUICK_REPLY",
-      text: button.label,
-      param: button.value
-    }))
+    buttons: value.buttons.map(button => ({ ...button }))
   };
   asset.value = null;
 }
@@ -70,7 +61,7 @@ function changeMode() {
 </script>
 
 <template>
-  <el-form-item label="填充模板">
+  <el-form-item v-if="showTemplatePicker" label="复用素材">
     <el-select
       v-model="templateId"
       clearable
@@ -78,7 +69,7 @@ function changeMode() {
       remote
       :remote-method="searchTemplates"
       :loading="templateLoading"
-      placeholder="可选：搜索模板并复制内容"
+      placeholder="可选：搜索消息素材并复制内容"
       @visible-change="open => open && searchTemplates()"
       @change="applyTemplate"
     >
@@ -93,11 +84,14 @@ function changeMode() {
   <el-form-item label="消息类型">
     <el-radio-group v-model="model.linkMode" @change="changeMode">
       <el-radio-button :value="1">文字 / 链接</el-radio-button>
-      <el-radio-button :value="3">图文</el-radio-button>
+      <el-radio-button :value="3">图片 / 图文</el-radio-button>
       <el-radio-button :value="2">按钮消息</el-radio-button>
     </el-radio-group>
   </el-form-item>
-  <el-form-item label="消息内容" required>
+  <el-form-item
+    label="消息内容"
+    :required="!(model.linkMode === 3 && model.imageFileId)"
+  >
     <el-input
       v-model="model.content"
       type="textarea"
