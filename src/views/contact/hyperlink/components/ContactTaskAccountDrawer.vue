@@ -1,228 +1,186 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import {
-  listContactTaskAccountData,
-  type ContactTaskAccountItem
+  getContactTaskStats,
+  type ContactTaskAccountItem,
+  type ContactTaskStats
 } from "@/api/contact-task";
-import ContactTaskRecipientDrawer from "./ContactTaskRecipientDrawer.vue";
-import { message } from "@/utils/message";
-
-const props = defineProps<{
-  modelValue: boolean;
-  taskId: number | null;
-  taskName: string;
+import {
+  needsReceiptRefresh,
+  type ReceiptFilter
+} from "../domain/receipt-metrics";
+import { statusLabel } from "../domain/task-status";
+import { useContactRefresh } from "../composables/useContactRefresh";
+import ContactTaskOverview from "./ContactTaskOverview.vue";
+import ContactTaskAccountTable from "./ContactTaskAccountTable.vue";
+import ContactTaskRecipientTable from "./ContactTaskRecipientTable.vue";
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    taskId: number | null;
+    taskName: string;
+    initialFilter?: ReceiptFilter;
+  }>(),
+  { initialFilter: "ALL" }
+);
+const emit = defineEmits<{
+  (event: "update:modelValue", value: boolean): void;
+  (event: "stats", stats: ContactTaskStats): void;
 }>();
-
-const emit = defineEmits<{ (e: "update:modelValue", value: boolean): void }>();
-
-const rows = ref<ContactTaskAccountItem[]>([]);
-const selectedAccount = ref<ContactTaskAccountItem | null>(null);
-const recipientsVisible = ref(false);
-const total = ref(0);
-const page = ref(1);
-const pageSize = ref(20);
-const sortBy = ref<string | undefined>(undefined);
-const sortOrder = ref<"asc" | "desc" | undefined>(undefined);
-const loading = ref(false);
-
-/** 三个数值列走服务端排序；其余列后端会忽略，不给排序入口。 */
-const SORTABLE_COLUMNS = ["needSendNum", "sentNum", "failNum"];
-
-const ACCOUNT_STATES: Record<string, string> = {
-  PREPARING: "准备联系人",
-  PENDING: "待发送",
-  RUNNING: "发送中",
-  DONE: "已完成",
-  FAILED: "失败",
-  SKIPPED: "已跳过"
-};
-
 const visible = computed({
   get: () => props.modelValue,
   set: value => emit("update:modelValue", value)
 });
-
+const stats = ref<ContactTaskStats>();
+const tab = ref("overview");
+const selectedFilter = ref<ReceiptFilter>("ALL");
+const selectedAccount = ref<number>();
+const selectedErrorCode = ref<string>();
+const selectionVersion = ref(0);
+const refreshKey = ref(0);
+const autoRefresh = ref(true);
+const loading = ref(false);
+const errorMessage = ref("");
+const refreshedAt = ref<string>();
+let version = 0;
 async function load() {
-  if (props.taskId == null) {
-    return;
-  }
+  if (!props.modelValue || props.taskId == null || loading.value) return;
+  const request = ++version;
   loading.value = true;
+  errorMessage.value = "";
   try {
-    const result = await listContactTaskAccountData(props.taskId, {
-      page: page.value,
-      pageSize: pageSize.value,
-      sortBy: sortBy.value,
-      sortOrder: sortOrder.value
-    });
-    rows.value = result.list ?? [];
-    total.value = result.total ?? 0;
+    const result = await getContactTaskStats(props.taskId);
+    if (request !== version) return;
+    stats.value = result;
+    refreshKey.value++;
+    refreshedAt.value = new Date().toLocaleTimeString();
+    emit("stats", result);
   } catch (error) {
-    message((error as Error)?.message ?? "账号发送数据加载失败", {
-      type: "error"
-    });
+    if (request === version)
+      errorMessage.value = (error as Error).message || "任务统计加载失败";
   } finally {
-    loading.value = false;
+    if (request === version) loading.value = false;
   }
 }
-
-function changeSort({ prop, order }: { prop: string; order: string | null }) {
-  if (!order || !SORTABLE_COLUMNS.includes(prop)) {
-    sortBy.value = undefined;
-    sortOrder.value = undefined;
-  } else {
-    sortBy.value = prop;
-    sortOrder.value = order === "ascending" ? "asc" : "desc";
-  }
-  page.value = 1;
-  load();
+function showRecipients(filter: ReceiptFilter, errorCode?: string) {
+  selectedAccount.value = undefined;
+  selectedFilter.value = filter;
+  selectedErrorCode.value = errorCode;
+  selectionVersion.value++;
+  tab.value = "recipients";
 }
-
-function changePage(next: number) {
-  page.value = next;
-  load();
+function showAccountRecipients(account: ContactTaskAccountItem) {
+  showRecipients("ALL");
+  selectedAccount.value = account.taskAccountId;
 }
-
-function changePageSize(next: number) {
-  pageSize.value = next;
-  page.value = 1;
-  load();
-}
-
-/** 单账号进度：已发送 / 计划发送。计划为 0 时按 0 显示，避免除零出 NaN。 */
-function progressOf(row: ContactTaskAccountItem): number {
-  const need = row.needSendNum ?? 0;
-  const sent = row.sentNum ?? 0;
-  if (need <= 0) {
-    return 0;
-  }
-  return Math.min(100, Math.round((sent / need) * 100));
-}
-
 watch(
-  () => [props.modelValue, props.taskId],
-  ([open]) => {
-    if (open) {
-      page.value = 1;
-      sortBy.value = undefined;
-      sortOrder.value = undefined;
-      load();
-    }
-  }
+  () => [props.modelValue, props.taskId, props.initialFilter],
+  () => {
+    version++;
+    stats.value = undefined;
+    refreshedAt.value = undefined;
+    loading.value = false;
+    errorMessage.value = "";
+    autoRefresh.value = true;
+    tab.value = "overview";
+    selectedAccount.value = undefined;
+    selectedErrorCode.value = undefined;
+    selectedFilter.value = props.initialFilter;
+    selectionVersion.value++;
+    if (props.initialFilter !== "ALL") tab.value = "recipients";
+    if (props.modelValue) load();
+  },
+  { immediate: true }
 );
+useContactRefresh(
+  computed(
+    () =>
+      props.modelValue && autoRefresh.value && needsReceiptRefresh(stats.value)
+  ),
+  load
+);
+onUnmounted(() => {
+  version++;
+});
 </script>
 
 <template>
   <el-drawer
     v-model="visible"
-    :title="`账号发送数据 · ${taskName}`"
-    size="960px"
-    direction="rtl"
+    :title="`任务结果 · ${taskName}`"
+    size="90%"
+    destroy-on-close
   >
-    <el-button :loading="loading" @click="load">刷新</el-button>
-    <el-table
-      v-loading="loading"
-      :data="rows"
-      border
-      stripe
-      @sort-change="changeSort"
-    >
-      <el-table-column prop="accountId" label="账号ID" width="120" />
-      <el-table-column label="账号手机号" min-width="180">
-        <template #default="{ row }">
-          <div class="account-phone">
-            <span>{{ row.accountPhone || "-" }}</span>
-            <el-tag
-              v-if="row.state !== 'PREPARING'"
-              :type="row.accountStatus === 'valid' ? 'success' : 'danger'"
-              size="small"
-              effect="plain"
-            >
-              {{ row.accountStatus === "valid" ? "有效" : "无效" }}
-            </el-tag>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="执行状态" width="130">
-        <template #default="{ row }">
-          {{ ACCOUNT_STATES[row.state] ?? row.state ?? "-" }}
-        </template>
-      </el-table-column>
-      <el-table-column
-        prop="needSendNum"
-        label="计划发送"
-        width="130"
-        sortable="custom"
+    <div class="result-toolbar">
+      <el-tag v-if="stats" effect="plain">{{
+        statusLabel(1, stats.runStatus)
+      }}</el-tag>
+      <el-tag v-if="stats?.metrics.unknownNum" type="warning" effect="plain"
+        >有结果待确认</el-tag
+      >
+      <el-button :loading="loading" @click="load">刷新</el-button>
+      <el-switch
+        v-model="autoRefresh"
+        active-text="自动刷新"
+        aria-label="自动刷新"
       />
-      <el-table-column
-        prop="sentNum"
-        label="已发送"
-        width="130"
-        sortable="custom"
-      />
-      <el-table-column
-        prop="failNum"
-        label="失败"
-        width="120"
-        sortable="custom"
-      />
-      <el-table-column
-        prop="stopReason"
-        label="停止原因"
-        min-width="180"
-        show-overflow-tooltip
-      />
-      <el-table-column label="明细" width="100">
-        <template #default="{ row }">
-          <el-button
-            link
-            type="primary"
-            @click="
-              selectedAccount = row;
-              recipientsVisible = true;
-            "
-            >查看</el-button
-          >
-        </template>
-      </el-table-column>
-      <el-table-column label="进度" min-width="200">
-        <template #default="{ row }">
-          <el-progress
-            :percentage="progressOf(row)"
-            :stroke-width="10"
-            striped
-          />
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <el-pagination
-      class="account-pagination"
-      background
-      layout="total, sizes, prev, pager, next, jumper"
-      :total="total"
-      :current-page="page"
-      :page-size="pageSize"
-      :page-sizes="[10, 20, 50, 100, 200]"
-      @current-change="changePage"
-      @size-change="changePageSize"
+      <span v-if="refreshedAt" class="result-note"
+        >最近刷新 {{ refreshedAt }}</span
+      >
+    </div>
+    <el-alert
+      type="info"
+      :closable="false"
+      title="单勾表示服务器确认；送达、已读以回执为准。任务结束后仍可更新回执，结果未知不会自动重发。"
     />
-    <ContactTaskRecipientDrawer
-      v-model="recipientsVisible"
-      :task-id="taskId"
-      :account="selectedAccount"
+    <el-alert
+      v-if="errorMessage"
+      :title="errorMessage"
+      type="error"
+      :closable="false"
+      show-icon
     />
+    <el-tabs v-model="tab">
+      <el-tab-pane label="概览" name="overview"
+        ><ContactTaskOverview
+          v-if="stats && tab === 'overview'"
+          :stats="stats"
+          @filter="showRecipients" /><el-empty
+          v-else-if="!loading && !stats"
+          description="统计暂不可用，请刷新重试"
+      /></el-tab-pane>
+      <el-tab-pane label="账号数据" name="accounts"
+        ><ContactTaskAccountTable
+          v-if="visible && taskId != null && tab === 'accounts'"
+          :task-id="taskId"
+          :refresh-key="refreshKey"
+          @recipients="showAccountRecipients"
+      /></el-tab-pane>
+      <el-tab-pane label="联系人明细" name="recipients"
+        ><ContactTaskRecipientTable
+          v-if="visible && taskId != null && tab === 'recipients'"
+          :key="selectionVersion"
+          :task-id="taskId"
+          :refresh-key="refreshKey"
+          :initial-filter="selectedFilter"
+          :initial-account-id="selectedAccount"
+          :initial-error-code="selectedErrorCode"
+      /></el-tab-pane>
+    </el-tabs>
   </el-drawer>
 </template>
 
 <style scoped>
-.account-phone {
+.result-toolbar {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
+  margin-bottom: 16px;
 }
 
-.account-pagination {
-  justify-content: flex-end;
-  margin-top: 12px;
+.result-note {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 </style>

@@ -26,6 +26,8 @@ export interface PageResult<T> {
 }
 
 export interface ContactTaskListItem {
+  /** 缺失表示后端尚未支持统计，不能按零展示。 */
+  stats?: ContactTaskStats;
   id: number;
   name: string;
   messageType: ContactMessageType;
@@ -76,6 +78,7 @@ export interface ContactTaskDetail {
 }
 
 export interface ContactTaskAccountItem {
+  metrics?: ContactTaskMetrics;
   taskAccountId: number;
   state: string;
   stopReason: string | null;
@@ -250,6 +253,8 @@ export function downloadContactTaskImage(id: number): Promise<Blob> {
 }
 
 export interface ContactTaskRecipient {
+  taskAccountId: number;
+  accountId: number;
   id: number;
   contactJid: string;
   contactPhone: string | null;
@@ -262,14 +267,64 @@ export interface ContactTaskRecipient {
   readAt: number | null;
 }
 
-export function listContactTaskRecipients(
+/** 后端 ContactTaskMetricsVO：回执计数为包含关系，处理结果为互斥集合。 */
+export interface ContactTaskMetrics {
+  scopeId: number;
+  plannedNum: number;
+  attemptedNum: number;
+  confirmedNum: number;
+  deliveredNum: number;
+  readNum: number;
+  failedNum: number;
+  unknownNum: number;
+  skippedNum: number;
+  processedNum: number;
+  pendingNum: number;
+  sendingNum: number;
+  inconsistentNum: number;
+}
+
+export interface ContactTaskStats {
+  taskId: number;
+  runStatus: number;
+  metrics: ContactTaskMetrics;
+  accounts: {
+    taskId: number;
+    selectedAccountNum: number;
+    preparingAccountNum: number;
+    readyAccountNum: number;
+    failedAccountNum: number;
+  };
+  reasons: Array<{ sendStatus: string; errorCode: string; count: number }>;
+}
+
+export type ContactReceiptStatus =
+  | "CONFIRMED"
+  | "SINGLE_ONLY"
+  | "DELIVERED"
+  | "DELIVERED_UNREAD"
+  | "READ";
+
+export interface ContactRecipientQuery {
+  page?: number;
+  pageSize?: number;
+  taskAccountId?: number;
+  sendStatus?: string;
+  receiptStatus?: ContactReceiptStatus;
+  errorCode?: string;
+}
+
+/** 查询整条任务统计，独立于联系人筛选和分页。 */
+export function getContactTaskStats(id: number): Promise<ContactTaskStats> {
+  return armadaRequest("get", `/api/contact-tasks/${id}/stats`);
+}
+
+/** 在整个任务范围内按回执/异常状态筛选，分页与总数均由服务端计算。 */
+export function queryContactTaskRecipients(
   id: number,
-  taskAccountId: number,
-  page = 1
+  query: ContactRecipientQuery
 ): Promise<PageResult<ContactTaskRecipient>> {
-  return armadaRequest<PageResult<ContactTaskRecipient>>(
-    "get",
-    `/api/contact-tasks/${id}/accounts/${taskAccountId}/recipients`,
-    { params: { page, pageSize: 20 } }
-  );
+  return armadaRequest("get", `/api/contact-tasks/${id}/recipients`, {
+    params: query
+  });
 }

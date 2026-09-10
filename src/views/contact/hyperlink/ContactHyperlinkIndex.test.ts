@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-const source = readFileSync(new URL("./index.vue", import.meta.url), "utf8");
+const source =
+  readFileSync(new URL("./index.vue", import.meta.url), "utf8") +
+  readFileSync(new URL("./domain/task-range.ts", import.meta.url), "utf8");
 
 describe("contact hyperlink task list", () => {
   it("renders task identity and existing business columns", () => {
@@ -11,7 +13,7 @@ describe("contact hyperlink task list", () => {
       "任务名称",
       "消息类型 / 内容",
       "状态",
-      "进度（成功 / 计划）",
+      "执行进度",
       "账号统计",
       "账号范围",
       "计划开始时间",
@@ -21,19 +23,14 @@ describe("contact hyperlink task list", () => {
     }
   });
 
-  it("shows a success rate progress bar", () => {
-    assert.match(source, /<el-progress/);
-    assert.match(source, /successPercent\(row\)/);
-  });
-
-  it("never divides by zero when nothing is planned", () => {
-    assert.match(source, /if \(total <= 0\)/);
-  });
-
-  it("shows all three account statistics", () => {
-    assert.match(source, /使用号数/);
-    assert.match(source, /封号数/);
-    assert.match(source, /号均发量/);
+  it("uses shared receipt and processing metrics", () => {
+    assert.match(source, /<ContactTaskProgress/);
+    assert.match(source, /<ContactTaskReceiptCell/);
+    assert.match(source, /receiptCsv\(row.stats\)/);
+    assert.doesNotMatch(source, /successPercent|封号数/);
+    assert.match(source, /执行异常账号数/);
+    assert.match(source, /row.stats\?\.accounts.readyAccountNum/);
+    assert.doesNotMatch(source, /row.usedAccountCount/);
   });
 
   it("collapses the account range tags past three", () => {
@@ -74,14 +71,9 @@ describe("contact hyperlink task list", () => {
     assert.match(source, /page\.openCreate/);
   });
 
-  it("exports the current page as twelve column csv with a bom", () => {
+  it("exports the current page with shared metrics and a bom", () => {
     assert.match(source, /导出本页 CSV/);
-    const headerBlock = source.slice(
-      source.indexOf("const csvRows"),
-      source.indexOf("/** 导出本页数据为 CSV")
-    );
-    const columns = headerBlock.match(/^\s{4}[^\s:]+:/gm) ?? [];
-    assert.equal(columns.length, 12);
+    assert.match(source, /receiptCsv\(row.stats\)/);
     assert.match(source, /\\ufeff|﻿/);
   });
 
