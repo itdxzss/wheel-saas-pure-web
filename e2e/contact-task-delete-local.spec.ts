@@ -162,3 +162,53 @@ test("view and operate permissions do not show the delete button", async ({
   await setup(page, false);
   await expect(page.getByRole("button", { name: /批量删除/ })).toHaveCount(0);
 });
+
+test("shared toolbar refreshes, changes density and columns, and enters fullscreen without a title", async ({
+  page
+}) => {
+  await setup(page);
+  const bar = page.locator(".contact-table-bar");
+  await expect(bar.locator("p.font-bold")).toHaveText("");
+  async function clickTool(name: string) {
+    const targets = bar.locator("*");
+    for (const target of await targets.all()) {
+      const content = await target.evaluate(
+        element =>
+          (
+            element as HTMLElement & {
+              _tippy?: { props: { content: unknown } };
+            }
+          )._tippy?.props.content
+      );
+      if (content === name) {
+        await target.click();
+        return;
+      }
+    }
+    throw new Error(`Missing toolbar tool: ${name}`);
+  }
+  const response = page.waitForResponse(
+    response => new URL(response.url()).pathname === "/api/contact-tasks"
+  );
+  await clickTool("刷新");
+  await response;
+  await clickTool("密度");
+  await page.getByRole("menuitem", { name: "紧凑" }).click();
+  await expect(bar.locator(".el-table")).toHaveClass(/el-table--small/);
+  await clickTool("列设置");
+  await page
+    .locator(".el-popover:visible .el-checkbox")
+    .filter({ hasText: "任务名称" })
+    .click();
+  await expect(
+    page.getByRole("columnheader", { name: "任务名称", exact: true })
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "重置", exact: true }).last().click();
+  await expect(
+    page.getByRole("columnheader", { name: "任务名称", exact: true })
+  ).toBeVisible();
+  await clickTool("全屏");
+  await expect(bar).toHaveCSS("position", "fixed");
+  await clickTool("退出全屏");
+  await expect(bar).not.toHaveCSS("position", "fixed");
+});

@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { PureTableBar } from "@/components/RePureTableBar";
+import WheelPagination from "@/components/WheelPagination/index.vue";
+import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import Plus from "~icons/ep/plus";
+import Delete from "~icons/ep/delete";
+import Download from "~icons/ep/download";
+import { contactTaskColumns } from "./domain/table-columns";
 import type { ContactTaskListItem } from "@/api/contact-task";
 import ContactTaskSearchCard from "./components/ContactTaskSearchCard.vue";
 import ContactTaskDrawer from "./components/ContactTaskDrawer.vue";
@@ -285,182 +292,241 @@ function runAction(row: ContactTaskListItem, action: string) {
       @reset="page.resetSearch"
     />
 
-    <el-card shadow="never">
-      <div class="table-toolbar">
-        <el-button type="primary" @click="page.openCreate">新建任务</el-button>
-        <el-button
-          v-perms="['tenant:contact_task:delete']"
-          type="danger"
-          plain
-          :loading="page.deleting.value"
-          :disabled="page.loading.value || !page.selectedRows.value.length"
-          @click="page.deleteSelected"
-        >
-          批量删除（{{ page.selectedRows.value.length }}）
-        </el-button>
-        <el-button :disabled="!page.hasRows.value" @click="exportCsv">
-          导出本页 CSV
-        </el-button>
-        <span v-perms="['tenant:contact_task:delete']" class="cell-sub">
-          进行中、已暂停的任务需先停止后删除
-        </span>
-      </div>
-
-      <el-table
-        ref="tableRef"
-        v-loading="page.loading.value"
-        :data="page.rows.value"
-        row-key="id"
-        border
-        stripe
-        @selection-change="page.onSelectionChange"
-      >
-        <el-table-column
-          type="selection"
-          width="48"
-          fixed="left"
-          :selectable="page.selectable"
-        />
-        <el-table-column prop="id" label="ID" min-width="100" />
-        <el-table-column
-          prop="name"
-          label="任务名称"
-          min-width="180"
-          show-overflow-tooltip
-        />
-        <el-table-column label="消息类型 / 内容" min-width="240">
-          <template #default="{ row }">
-            <div class="cell-strong">
-              {{
-                row.messageType === MESSAGE_TYPE_LINK ? "链接消息" : "图文消息"
-              }}
-            </div>
-            <div class="cell-sub">
-              {{ contentPreview(row) }}
-            </div>
-            <div v-if="row.messageType === MESSAGE_TYPE_LINK" class="cell-sub">
-              {{ row.promotionLink || "-" }}
-            </div>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="状态" width="110">
-          <template #default="{ row }">
-            <el-tag
-              :type="statusTagType(row.isEnabled, row.runStatus)"
-              effect="plain"
-            >
-              {{ statusLabel(row.isEnabled, row.runStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="进度（成功 / 计划）" min-width="200">
-          <template #default="{ row }">
-            <div class="cell-sub">
-              {{ row.successMessageNum ?? 0 }} / {{ row.totalSendNum ?? 0 }}
-            </div>
-            <el-progress
-              :percentage="successPercent(row)"
-              :stroke-width="10"
-              striped
-            />
-          </template>
-        </el-table-column>
-
-        <el-table-column label="账号统计" min-width="200">
-          <template #default="{ row }">
-            <div class="cell-sub">
-              使用号数：{{ row.usedAccountCount ?? 0 }}
-            </div>
-            <div class="cell-sub">封号数：{{ row.invalidAccountNum ?? 0 }}</div>
-            <div class="cell-sub">
-              号均发量：{{ row.avgSendPerAccount ?? 0 }}
-            </div>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="账号范围" min-width="230">
-          <template #default="{ row }">
-            <div v-if="rangeTags(row).length === 0" class="cell-sub">
-              全部有效账号
-            </div>
-            <div v-else class="range-tags">
-              <el-tag
-                v-for="tag in visibleRangeTags(row)"
-                :key="tag.text"
-                size="small"
-                effect="plain"
-                :type="tag.excluded ? 'danger' : 'info'"
+    <PureTableBar
+      class="contact-table-bar"
+      title=""
+      :columns="contactTaskColumns"
+      table-key="contact-hyperlink-task-list"
+      @refresh="page.load"
+    >
+      <template #buttons>
+        <div class="table-toolbar">
+          <el-button
+            type="primary"
+            :icon="useRenderIcon(Plus)"
+            @click="page.openCreate"
+            >新建任务</el-button
+          >
+          <el-button
+            v-perms="['tenant:contact_task:delete']"
+            type="danger"
+            :icon="useRenderIcon(Delete)"
+            plain
+            :loading="page.deleting.value"
+            :disabled="page.loading.value || !page.selectedRows.value.length"
+            @click="page.deleteSelected"
+          >
+            批量删除（{{ page.selectedRows.value.length }}）
+          </el-button>
+          <el-button
+            :icon="useRenderIcon(Download)"
+            :disabled="!page.hasRows.value"
+            @click="exportCsv"
+          >
+            导出本页 CSV
+          </el-button>
+        </div>
+      </template>
+      <template #default="{ size, dynamicColumns }">
+        <div class="table-content">
+          <span v-perms="['tenant:contact_task:delete']" class="cell-sub">
+            进行中、已暂停的任务需先停止后删除
+          </span>
+          <el-table
+            ref="tableRef"
+            v-loading="page.loading.value"
+            :size="size"
+            :data="page.rows.value"
+            row-key="id"
+            border
+            stripe
+            @selection-change="page.onSelectionChange"
+          >
+            <template v-for="column in dynamicColumns" :key="column.prop">
+              <el-table-column
+                v-if="column.prop === 'selection' && !column.hide"
+                type="selection"
+                width="48"
+                fixed="left"
+                :selectable="page.selectable"
+              />
+              <el-table-column
+                v-if="column.prop === 'id' && !column.hide"
+                prop="id"
+                label="ID"
+                min-width="100"
+              />
+              <el-table-column
+                v-if="column.prop === 'name' && !column.hide"
+                prop="name"
+                label="任务名称"
+                min-width="180"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                v-if="column.prop === 'content' && !column.hide"
+                label="消息类型 / 内容"
+                min-width="240"
               >
-                <img
-                  v-if="tag.iso2"
-                  :src="flagUrl(tag.iso2)"
-                  alt=""
-                  class="range-flag"
-                />
-                {{ tag.text }}
-              </el-tag>
-              <el-tooltip
-                v-if="hiddenRangeCount(row) > 0"
-                :content="
-                  rangeTags(row)
-                    .map(t => t.text)
-                    .join('、')
-                "
+                <template #default="{ row }">
+                  <div class="cell-strong">
+                    {{
+                      row.messageType === MESSAGE_TYPE_LINK
+                        ? "链接消息"
+                        : "图文消息"
+                    }}
+                  </div>
+                  <div class="cell-sub">
+                    {{ contentPreview(row) }}
+                  </div>
+                  <div
+                    v-if="row.messageType === MESSAGE_TYPE_LINK"
+                    class="cell-sub"
+                  >
+                    {{ row.promotionLink || "-" }}
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column
+                v-if="column.prop === 'status' && !column.hide"
+                label="状态"
+                width="110"
               >
-                <el-tag size="small" effect="plain">
-                  +{{ hiddenRangeCount(row) }}
-                </el-tag>
-              </el-tooltip>
-            </div>
-          </template>
-        </el-table-column>
+                <template #default="{ row }">
+                  <el-tag
+                    :type="statusTagType(row.isEnabled, row.runStatus)"
+                    effect="plain"
+                  >
+                    {{ statusLabel(row.isEnabled, row.runStatus) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column
+                v-if="column.prop === 'progress' && !column.hide"
+                label="进度（成功 / 计划）"
+                min-width="200"
+              >
+                <template #default="{ row }">
+                  <div class="cell-sub">
+                    {{ row.successMessageNum ?? 0 }} /
+                    {{ row.totalSendNum ?? 0 }}
+                  </div>
+                  <el-progress
+                    :percentage="successPercent(row)"
+                    :stroke-width="10"
+                    striped
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column
+                v-if="column.prop === 'accountStats' && !column.hide"
+                label="账号统计"
+                min-width="200"
+              >
+                <template #default="{ row }">
+                  <div class="cell-sub">
+                    使用号数：{{ row.usedAccountCount ?? 0 }}
+                  </div>
+                  <div class="cell-sub">
+                    封号数：{{ row.invalidAccountNum ?? 0 }}
+                  </div>
+                  <div class="cell-sub">
+                    号均发量：{{ row.avgSendPerAccount ?? 0 }}
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column
+                v-if="column.prop === 'accountRange' && !column.hide"
+                label="账号范围"
+                min-width="230"
+              >
+                <template #default="{ row }">
+                  <div v-if="rangeTags(row).length === 0" class="cell-sub">
+                    全部有效账号
+                  </div>
+                  <div v-else class="range-tags">
+                    <el-tag
+                      v-for="tag in visibleRangeTags(row)"
+                      :key="tag.text"
+                      size="small"
+                      effect="plain"
+                      :type="tag.excluded ? 'danger' : 'info'"
+                    >
+                      <img
+                        v-if="tag.iso2"
+                        :src="flagUrl(tag.iso2)"
+                        alt=""
+                        class="range-flag"
+                      />
+                      {{ tag.text }}
+                    </el-tag>
+                    <el-tooltip
+                      v-if="hiddenRangeCount(row) > 0"
+                      :content="
+                        rangeTags(row)
+                          .map(t => t.text)
+                          .join('、')
+                      "
+                    >
+                      <el-tag size="small" effect="plain">
+                        +{{ hiddenRangeCount(row) }}
+                      </el-tag>
+                    </el-tooltip>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column
+                v-if="column.prop === 'taskStartAt' && !column.hide"
+                label="计划开始时间"
+                width="180"
+              >
+                <template #default="{ row }">{{
+                  formatTime(row.taskStartAt)
+                }}</template>
+              </el-table-column>
+              <el-table-column
+                v-if="column.prop === 'actions' && !column.hide"
+                label="操作"
+                width="220"
+                fixed="right"
+              >
+                <template #default="{ row }">
+                  <el-popconfirm
+                    v-for="action in rowActions(row.isEnabled, row.runStatus)"
+                    :key="action"
+                    :disabled="action !== 'stop'"
+                    title="停止后任务将被终止，且无法恢复"
+                    @confirm="runAction(row, action)"
+                  >
+                    <template #reference>
+                      <el-button
+                        link
+                        type="primary"
+                        size="small"
+                        @click="
+                          action === 'stop' ? undefined : runAction(row, action)
+                        "
+                      >
+                        {{ ACTION_LABELS[action] }}
+                      </el-button>
+                    </template>
+                  </el-popconfirm>
+                </template>
+              </el-table-column>
+            </template>
+          </el-table>
 
-        <el-table-column label="计划开始时间" width="180">
-          <template #default="{ row }">{{
-            formatTime(row.taskStartAt)
-          }}</template>
-        </el-table-column>
-
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="{ row }">
-            <el-popconfirm
-              v-for="action in rowActions(row.isEnabled, row.runStatus)"
-              :key="action"
-              :disabled="action !== 'stop'"
-              title="停止后任务将被终止，且无法恢复"
-              @confirm="runAction(row, action)"
-            >
-              <template #reference>
-                <el-button
-                  link
-                  type="primary"
-                  size="small"
-                  @click="
-                    action === 'stop' ? undefined : runAction(row, action)
-                  "
-                >
-                  {{ ACTION_LABELS[action] }}
-                </el-button>
-              </template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        class="table-pagination"
-        background
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="page.total.value"
-        :current-page="page.page.value"
-        :page-size="page.pageSize.value"
-        :page-sizes="[10, 20, 50, 100, 200]"
-        @current-change="page.changePage"
-        @size-change="page.changePageSize"
-      />
-    </el-card>
+          <WheelPagination
+            :total="page.total.value"
+            :current-page="page.page.value"
+            :page-size="page.pageSize.value"
+            :page-sizes="[10, 20, 50, 100, 200]"
+            @update:current-page="page.changePage"
+            @update:page-size="page.changePageSize"
+          />
+        </div>
+      </template>
+    </PureTableBar>
 
     <ContactTaskDrawer
       v-model="page.drawerVisible.value"
@@ -480,62 +546,4 @@ function runAction(row: ContactTaskListItem, action: string) {
   </div>
 </template>
 
-<style scoped>
-.contact-task-page {
-  padding: 16px;
-}
-
-.intro-card {
-  margin-bottom: 12px;
-}
-
-.intro-title {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.intro-card p {
-  margin: 8px 0 0;
-  line-height: 1.8;
-  color: var(--el-text-color-secondary);
-}
-
-.table-toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.cell-strong {
-  font-weight: 600;
-}
-
-.cell-sub {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--el-text-color-secondary);
-}
-
-.range-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-}
-
-.range-flag {
-  width: 14px;
-  height: 14px;
-  margin-right: 4px;
-  vertical-align: -2px;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.table-pagination {
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-</style>
+<style scoped src="./components/ContactTaskPage.css" />
