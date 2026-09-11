@@ -11,7 +11,9 @@ import {
   type ScriptRecord
 } from "@/api/script-marketing";
 import { apiErrorMessage } from "@/utils/api-error";
-import { taskLabels, recordLabels } from "../form";
+import ScriptTaskOverview from "./ScriptTaskOverview.vue";
+import ScriptSendConfiguration from "./ScriptSendConfiguration.vue";
+import ScriptSendRecords from "./ScriptSendRecords.vue";
 const visible = defineModel<boolean>({ required: true });
 const props = defineProps<{ detail?: ScriptDetail; loading: boolean }>();
 const emit = defineEmits<{
@@ -19,6 +21,7 @@ const emit = defineEmits<{
   qualification: [report: ScriptQualification];
 }>();
 const operatingGroup = ref<number>();
+const activeTab = ref("records");
 async function actGroup(group: ScriptGroup, action: "pause" | "resume") {
   if (!props.detail) return;
   operatingGroup.value = group.id;
@@ -49,8 +52,21 @@ const page = ref(1);
 const total = ref(0);
 const loadingRecords = ref(false);
 let requestId = 0;
-function time(value: number | null | undefined) {
-  return value ? new Date(value).toLocaleString() : "—";
+function groupProgress(group: ScriptGroup): number {
+  const count = props.detail?.steps.length ?? 0;
+  return count
+    ? Math.min(100, Math.max(0, Math.floor((group.nextStep / count) * 100)))
+    : 0;
+}
+function groupStatus(group: ScriptGroup): string {
+  const detail = props.detail;
+  if (!detail) return "—";
+  if (detail.steps.length && group.nextStep >= detail.steps.length)
+    return "已处理完毕";
+  if (detail.task.status === 4) return "已关闭";
+  if (group.paused || detail.task.status === 2) return "已暂停";
+  if (detail.task.status === 0) return "待启动";
+  return `待处理第 ${group.nextStep + 1} 项`;
 }
 async function loadRecords() {
   const request = ++requestId;
@@ -80,213 +96,312 @@ watch(
     void loadRecords();
   }
 );
+watch(visible, open => {
+  if (open) activeTab.value = "records";
+});
 </script>
 
 <template>
-  <el-drawer v-model="visible" title="剧本任务详情" size="900px">
-    <div v-loading="loading">
+  <el-drawer
+    v-model="visible"
+    title="剧本任务详情"
+    size="min(1040px, 100vw)"
+    class="script-detail-drawer"
+  >
+    <div v-loading="loading" class="detail-content">
       <template v-if="detail">
-        <el-space wrap
-          ><h3>{{ detail.task.taskName }}</h3>
-          <el-tag>{{ taskLabels[detail.task.status] }}</el-tag
-          ><el-button @click="emit('refresh')">刷新</el-button></el-space
-        >
+        <ScriptTaskOverview
+          :detail="detail"
+          :loading="loading"
+          @refresh="emit('refresh')"
+        />
         <el-alert
           v-if="detail.task.pauseReason"
           :title="detail.task.pauseReason"
           type="warning"
+          show-icon
           :closable="false"
-          class="spaced"
         />
         <el-alert
           v-if="detail.task.status === 2"
-          class="spaced"
           :closable="false"
           type="info"
+          show-icon
           :title="
             detail.task.inFlightCount
               ? `正在暂停：仍有 ${detail.task.inFlightCount} 项在途消息，继续跟踪原结果`
               : '已暂停，可通过现有渠道人工处理，交回时点击继续'
           "
         />
-        <el-descriptions :column="3" border class="spaced">
-          <el-descriptions-item label="成功">{{
-            detail.task.successCount
-          }}</el-descriptions-item>
-          <el-descriptions-item label="失败">{{
-            detail.task.failedCount
-          }}</el-descriptions-item>
-          <el-descriptions-item label="未知">{{
-            detail.task.unknownCount
-          }}</el-descriptions-item>
-          <el-descriptions-item label="发送间隔">{{
-            detail.task.accountGroupId
-              ? "按各项间隔，从前条提交计时"
-              : `${detail.task.intervalSeconds} 秒，旧版结果后计时`
-          }}</el-descriptions-item>
-          <el-descriptions-item label="开始时间">{{
-            time(detail.task.startAt)
-          }}</el-descriptions-item>
-          <el-descriptions-item label="截止时间">{{
-            time(detail.task.endAt)
-          }}</el-descriptions-item>
-        </el-descriptions>
-        <el-divider content-position="left">每群进度</el-divider>
-        <el-table :data="detail.groups" row-key="id" border>
-          <el-table-column label="目标群" min-width="200"
-            ><template #default="{ row }">{{
-              row.groupName || row.groupJid
-            }}</template></el-table-column
-          >
-          <el-table-column label="已处理" width="120"
-            ><template #default="{ row }"
-              >{{ row.nextStep }} / {{ detail.steps.length }}</template
-            ></el-table-column
-          >
-          <el-table-column label="进度" min-width="160"
-            ><template #default="{ row }">{{
-              row.nextStep >= detail.steps.length
-                ? "全部处理完毕"
-                : `第 ${row.nextStep + 1} 项`
-            }}</template></el-table-column
-          >
-          <el-table-column
-            v-if="detail.task.accountGroupId"
-            label="角色绑定"
-            min-width="220"
-          >
-            <template #default="{ row }">{{ bindings(row) }}</template>
-          </el-table-column>
-          <el-table-column label="异常 / 暂停" min-width="190"
-            ><template #default="{ row }">{{
-              row.pauseReason || "—"
-            }}</template></el-table-column
-          >
-          <el-table-column
-            v-if="detail.task.accountGroupId && detail.task.status === 1"
-            label="操作"
-            width="100"
-          >
-            <template #default="{ row }"
-              ><el-button
-                v-perms="'tenant:script_marketing:operate'"
-                link
-                type="primary"
-                :disabled="
-                  operatingGroup !== undefined ||
-                  (row.nextStep >= detail.steps.length && !row.paused)
-                "
-                @click="actGroup(row, row.paused ? 'resume' : 'pause')"
-                >{{ row.paused ? "继续该群" : "暂停该群" }}</el-button
-              ></template
+        <section class="detail-panel" aria-label="群执行情况">
+          <div class="section-heading">
+            <h3>
+              群执行情况 <span>{{ detail.groups.length }} 个群</span>
+            </h3>
+            <span class="section-hint"
+              >展开查看{{
+                detail.task.accountGroupId ? "角色绑定与" : ""
+              }}群详情</span
             >
-          </el-table-column>
-        </el-table>
-        <el-divider content-position="left">固定发送配置</el-divider>
-        <el-collapse>
-          <el-collapse-item
-            v-for="(step, index) in detail.steps"
-            :key="`${detail.task.id}:${index}`"
-            :title="`第 ${index + 1} 项 · ${step.roleKey || (step.role === 'ADMIN' ? '管理员' : '推手')}${step.accountId ? ' · 账号 #' + step.accountId : ' · 按群分配'}`"
+          </div>
+          <el-table
+            :data="detail.groups"
+            row-key="id"
+            class="group-table"
+            empty-text="暂无目标群"
           >
-            <div class="message-text">
-              {{ step.message.content }}<br />{{ step.message.bodyText }}
-            </div>
-            <p v-if="detail.task.accountGroupId">
-              {{
-                index === 0
-                  ? "首条不等待"
-                  : `等待 ${step.waitMinSeconds}–${step.waitMaxSeconds} 秒后提交`
-              }}
-            </p>
-            <p v-if="step.message.imageFileId">
-              图片素材 #{{ step.message.imageFileId }}
-            </p>
-            <p>{{ step.message.promotionLink }}</p>
-            <el-tag
-              v-for="button in step.message.buttons"
-              :key="button.type + button.text + button.param"
-              >{{ button.text }}</el-tag
+            <el-table-column type="expand" width="44">
+              <template #default="{ row }">
+                <dl class="group-details">
+                  <div>
+                    <dt>群 ID</dt>
+                    <dd>{{ row.groupJid }}</dd>
+                  </div>
+                  <div v-if="detail.task.accountGroupId">
+                    <dt>角色绑定</dt>
+                    <dd>{{ bindings(row) }}</dd>
+                  </div>
+                  <div>
+                    <dt>异常 / 暂停</dt>
+                    <dd>{{ row.pauseReason || "—" }}</dd>
+                  </div>
+                </dl>
+              </template>
+            </el-table-column>
+            <el-table-column label="目标群" min-width="210">
+              <template #default="{ row }"
+                ><span class="group-name">{{
+                  row.groupName || row.groupJid
+                }}</span></template
+              >
+            </el-table-column>
+            <el-table-column label="处理进度" min-width="190">
+              <template #default="{ row }">
+                <div class="group-progress-label">
+                  <span
+                    >已处理 {{ row.nextStep }} /
+                    {{ detail.steps.length }} 项</span
+                  ><span>{{ groupProgress(row) }}%</span>
+                </div>
+                <el-progress
+                  :percentage="groupProgress(row)"
+                  :show-text="false"
+                  :stroke-width="5"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="当前状态" min-width="170">
+              <template #default="{ row }">
+                <el-tag
+                  :type="
+                    row.paused || detail.task.status === 2 ? 'warning' : 'info'
+                  "
+                  effect="plain"
+                  size="small"
+                  >{{ groupStatus(row) }}</el-tag
+                >
+                <el-tooltip
+                  v-if="row.pauseReason"
+                  :content="row.pauseReason"
+                  placement="top"
+                  :show-after="250"
+                >
+                  <div class="group-reason">{{ row.pauseReason }}</div>
+                </el-tooltip>
+              </template>
+            </el-table-column>
+            <el-table-column
+              v-if="detail.task.accountGroupId && detail.task.status === 1"
+              label="操作"
+              width="105"
+              fixed="right"
             >
-          </el-collapse-item>
-        </el-collapse>
-        <el-divider content-position="left">逐项发送记录</el-divider>
-        <el-table
-          v-loading="loadingRecords"
-          :data="rows"
-          row-key="id"
-          border
-          empty-text="暂无发送记录"
-        >
-          <el-table-column label="目标群" min-width="140"
-            ><template #default="{ row }">{{
-              detail.groups.find(group => group.id === row.groupId)
-                ?.groupName || `群执行 #${row.groupId}`
-            }}</template></el-table-column
-          >
-          <el-table-column label="顺序" width="65"
-            ><template #default="{ row }">{{
-              row.stepIndex + 1
-            }}</template></el-table-column
-          >
-          <el-table-column prop="accountId" label="账号 ID" width="90" />
-          <el-table-column label="提交时间" min-width="160"
-            ><template #default="{ row }">{{
-              time(row.submittedAt)
-            }}</template></el-table-column
-          >
-          <el-table-column label="结果时间" min-width="160"
-            ><template #default="{ row }">{{
-              time(row.finishedAt)
-            }}</template></el-table-column
-          >
-          <el-table-column label="结果" width="115"
-            ><template #default="{ row }">{{
-              recordLabels[row.status]
-            }}</template></el-table-column
-          >
-          <el-table-column
-            prop="reason"
-            label="原因"
-            min-width="180"
-            show-overflow-tooltip
-          />
-          <el-table-column
-            prop="messageId"
-            label="消息 ID"
-            min-width="130"
-            show-overflow-tooltip
-          />
-          <el-table-column
-            prop="commandId"
-            label="原命令 ID"
-            min-width="150"
-            show-overflow-tooltip
-          />
-        </el-table>
-        <el-pagination
-          v-model:current-page="page"
-          class="spaced"
-          :page-size="20"
-          :total="total"
-          layout="total, prev, pager, next"
-          @current-change="loadRecords"
-        />
-        <el-text type="info"
-          >失败会继续后项；未知结果不自动重发，迟到结果会补记。执行完成表示所有项已处理。</el-text
-        >
+              <template #default="{ row }">
+                <el-button
+                  v-perms="'tenant:script_marketing:operate'"
+                  link
+                  type="primary"
+                  :loading="operatingGroup === row.id"
+                  :disabled="
+                    operatingGroup !== undefined ||
+                    (row.nextStep >= detail.steps.length && !row.paused)
+                  "
+                  @click="actGroup(row, row.paused ? 'resume' : 'pause')"
+                  >{{ row.paused ? "继续该群" : "暂停该群" }}</el-button
+                >
+              </template>
+            </el-table-column>
+          </el-table>
+        </section>
+        <section class="detail-panel supporting-detail" aria-label="发送明细">
+          <el-tabs v-model="activeTab">
+            <el-tab-pane label="发送记录" name="records">
+              <ScriptSendRecords
+                v-model:page="page"
+                :rows="rows"
+                :groups="detail.groups"
+                :loading="loadingRecords"
+                :total="total"
+                @reload="loadRecords"
+              />
+            </el-tab-pane>
+            <el-tab-pane
+              :label="`发送配置（${detail.steps.length}）`"
+              name="configuration"
+              lazy
+            >
+              <ScriptSendConfiguration :key="detail.task.id" :detail="detail" />
+            </el-tab-pane>
+          </el-tabs>
+        </section>
       </template>
+      <el-empty
+        v-else-if="!loading"
+        description="暂未读取到任务详情，请关闭后重试"
+      />
     </div>
   </el-drawer>
 </template>
 
 <style scoped>
-.spaced {
-  margin: 16px 0;
+:global(.script-detail-drawer .el-drawer__header) {
+  padding: 20px 24px;
+  margin-bottom: 0;
+  color: var(--el-text-color-primary);
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
-.message-text {
+:global(.script-detail-drawer .el-drawer__body) {
+  padding: 24px;
+  background: var(--el-fill-color-light);
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 240px;
+}
+
+.detail-panel {
+  min-width: 0;
+  padding: 20px 24px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+}
+
+.section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+h3 span {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--el-text-color-secondary);
+}
+
+.section-hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.group-table {
+  --el-table-header-bg-color: var(--el-fill-color-light);
+}
+
+.group-table :deep(.el-table__cell) {
+  padding: 15px 0;
+}
+
+.group-name {
+  font-weight: 500;
+  color: var(--el-text-color-primary);
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
+}
+
+.group-progress-label {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.group-reason {
+  margin-top: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--el-color-warning-dark-2);
+  white-space: nowrap;
+}
+
+.group-details {
+  display: grid;
+  gap: 12px;
+  padding: 20px 24px;
+  margin: 0;
+  background: var(--el-fill-color-lighter);
+}
+
+.group-details > div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
+}
+
+dt {
+  color: var(--el-text-color-secondary);
+}
+
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.supporting-detail {
+  padding-top: 8px;
+}
+
+.supporting-detail :deep(.el-tabs__item) {
+  height: 52px;
+  font-size: 14px;
+}
+
+.supporting-detail :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+}
+
+.supporting-detail :deep(.el-tabs__header) {
+  margin-bottom: 18px;
+}
+
+@media (width <= 600px) {
+  :global(.script-detail-drawer .el-drawer__body) {
+    padding: 12px;
+  }
+
+  .detail-content {
+    gap: 12px;
+  }
+
+  .detail-panel {
+    padding: 16px;
+  }
 }
 </style>

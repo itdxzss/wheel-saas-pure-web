@@ -580,6 +580,10 @@ for (const delayed of ["detail", "records"] as const) {
     await expect(
       drawer.getByRole("heading", { name: "任务 2", exact: true })
     ).toBeVisible();
+    await drawer
+      .locator(".records-table .el-table__expand-icon")
+      .first()
+      .click();
     await expect(
       drawer.getByText("message-task-2", { exact: true })
     ).toBeVisible();
