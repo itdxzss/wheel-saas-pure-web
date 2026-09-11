@@ -340,6 +340,7 @@ onMounted(load);
       :detail="detail"
       :loading="detailLoading"
       @refresh="detail && showDetail(detail.task.id)"
+      @check="detail && check(detail.task)"
       @qualification="
         report => detail && showQualification(detail.task, report)
       "

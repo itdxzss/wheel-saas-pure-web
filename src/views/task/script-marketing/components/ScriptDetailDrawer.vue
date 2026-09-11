@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import {
   listScriptRecords,
@@ -18,10 +18,22 @@ const visible = defineModel<boolean>({ required: true });
 const props = defineProps<{ detail?: ScriptDetail; loading: boolean }>();
 const emit = defineEmits<{
   refresh: [];
+  check: [];
   qualification: [report: ScriptQualification];
 }>();
 const operatingGroup = ref<number>();
 const activeTab = ref("records");
+const pausedGroupCount = computed(
+  () => props.detail?.groups.filter(group => group.paused).length ?? 0
+);
+// 暂停原因已持久化，历史任务也需要展示清楚的暂停范围和恢复方式。
+function pauseMessage(reason?: string | null): string {
+  if (reason === "原绑定账号或群资格发生变化，请查看检查结果")
+    return "该群因之前的账号或群状态检查而暂停。点击「继续该群」后，无法发送的单条消息会记为失败并跳过，后续消息继续。";
+  if (reason === "所选群资格已变化，请查看检查结果，处理后继续")
+    return "任务已暂停：所选群暂不满足发送条件。请检查群资格，处理后继续任务。";
+  return reason || "—";
+}
 async function actGroup(group: ScriptGroup, action: "pause" | "resume") {
   if (!props.detail) return;
   operatingGroup.value = group.id;
@@ -120,7 +132,7 @@ watch(visible, open => {
         />
         <el-alert
           v-if="detail.task.pauseReason"
-          :title="detail.task.pauseReason"
+          :title="pauseMessage(detail.task.pauseReason)"
           type="warning"
           show-icon
           :closable="false"
@@ -136,11 +148,26 @@ watch(visible, open => {
               : '已暂停，可通过现有渠道人工处理，交回时点击继续'
           "
         />
+        <el-alert
+          v-if="detail.task.status === 1 && pausedGroupCount"
+          :title="`${pausedGroupCount} 个群已暂停后续发送`"
+          description="未暂停的群不受影响。已发送记录会保留，暂停的群需要手动点击「继续该群」恢复。"
+          type="warning"
+          show-icon
+          :closable="false"
+        />
         <section class="detail-panel" aria-label="群执行情况">
           <div class="section-heading">
             <h3>
               群执行情况 <span>{{ detail.groups.length }} 个群</span>
             </h3>
+            <el-button
+              v-if="detail.task.accountGroupId"
+              link
+              type="primary"
+              @click="emit('check')"
+              >检查群资格</el-button
+            >
             <span class="section-hint"
               >展开查看{{
                 detail.task.accountGroupId ? "角色绑定与" : ""
@@ -166,7 +193,7 @@ watch(visible, open => {
                   </div>
                   <div>
                     <dt>异常 / 暂停</dt>
-                    <dd>{{ row.pauseReason || "—" }}</dd>
+                    <dd>{{ pauseMessage(row.pauseReason) }}</dd>
                   </div>
                 </dl>
               </template>
@@ -193,7 +220,7 @@ watch(visible, open => {
                 />
               </template>
             </el-table-column>
-            <el-table-column label="当前状态" min-width="170">
+            <el-table-column label="当前状态" min-width="230">
               <template #default="{ row }">
                 <el-tag
                   :type="
@@ -203,14 +230,9 @@ watch(visible, open => {
                   size="small"
                   >{{ groupStatus(row) }}</el-tag
                 >
-                <el-tooltip
-                  v-if="row.pauseReason"
-                  :content="row.pauseReason"
-                  placement="top"
-                  :show-after="250"
-                >
-                  <div class="group-reason">{{ row.pauseReason }}</div>
-                </el-tooltip>
+                <div v-if="row.pauseReason" class="group-reason">
+                  {{ pauseMessage(row.pauseReason) }}
+                </div>
               </template>
             </el-table-column>
             <el-table-column
@@ -347,11 +369,11 @@ h3 span {
 
 .group-reason {
   margin-top: 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 12px;
+  line-height: 1.6;
   color: var(--el-color-warning-dark-2);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .group-details {

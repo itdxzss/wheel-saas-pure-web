@@ -25,7 +25,7 @@ function resultType(status: ScriptRecord["status"]) {
 <template>
   <div class="send-records">
     <p class="section-hint">
-      失败后继续后续项；未知结果不自动重发，迟到结果会补记。
+      单条消息检查或发送失败会记为失败并跳过，不暂停群；后续消息按配置间隔继续。未知结果不自动重发，迟到结果会补记。
     </p>
     <el-table
       v-loading="loading"
