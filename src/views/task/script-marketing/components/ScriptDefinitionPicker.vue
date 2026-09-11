@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount, ref, shallowRef } from "vue";
 import { ElMessage } from "element-plus";
 import {
   listScriptDefinitions,
@@ -8,6 +8,8 @@ import {
   type ScriptDefinitionSummary
 } from "@/api/script-library";
 import { apiErrorMessage } from "@/utils/api-error";
+import { estimatedWait } from "../form";
+import ScriptDefinitionPreview from "./ScriptDefinitionPreview.vue";
 const emit = defineEmits<{
   select: [definition: ScriptDefinition];
   clear: [];
@@ -15,6 +17,17 @@ const emit = defineEmits<{
 const selecting = defineModel<boolean>("loading", { default: false });
 const selected = ref<number>();
 const appliedSelection = ref<number>();
+const appliedDefinition = shallowRef<ScriptDefinition>();
+const previewOpen = ref(false);
+const roleCount = computed(
+  () =>
+    new Set(
+      appliedDefinition.value?.steps.map(step => step.roleKey || step.role)
+    ).size
+);
+const wait = computed(() =>
+  estimatedWait(appliedDefinition.value?.steps || [])
+);
 const rows = ref<ScriptDefinitionSummary[]>([]);
 const loading = ref(false);
 const page = ref(1);
@@ -46,9 +59,11 @@ async function search(value = "", append = false) {
 }
 async function choose(id?: number) {
   const request = ++selectionRequestId;
+  previewOpen.value = false;
   if (typeof id !== "number") {
     selected.value = undefined;
     appliedSelection.value = undefined;
+    appliedDefinition.value = undefined;
     selecting.value = false;
     emit("clear");
     return;
@@ -63,6 +78,7 @@ async function choose(id?: number) {
       return;
     }
     appliedSelection.value = id;
+    appliedDefinition.value = definition;
     emit("select", definition);
   } catch (error) {
     if (request === selectionRequestId) {
@@ -109,8 +125,36 @@ onBeforeUnmount(() => {
         ></template
       >
     </el-select>
+    <div v-if="appliedDefinition" class="definition-summary">
+      <el-tag size="small" effect="plain">{{ roleCount }} 个角色</el-tag>
+      <el-tag size="small" effect="plain"
+        >{{ appliedDefinition.steps.length }} 条消息</el-tag
+      >
+      <el-tag size="small" effect="plain"
+        >预计等待 {{ wait[0] }}–{{ wait[1] }} 秒</el-tag
+      >
+      <el-button size="small" :disabled="selecting" @click="previewOpen = true"
+        >查看剧本</el-button
+      >
+    </div>
     <el-text type="info"
       >选用后替换当前编排并只读预览，管理员账号仍需选择；清除选择后可手动编辑当前内容。</el-text
     >
   </el-form-item>
+  <ScriptDefinitionPreview
+    v-if="appliedDefinition"
+    v-model="previewOpen"
+    :definition="appliedDefinition"
+  />
 </template>
+
+<style scoped>
+.definition-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  margin: 10px 0;
+}
+</style>

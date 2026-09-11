@@ -8,7 +8,7 @@ import {
   deleteScriptDefinition,
   type ScriptDefinitionSummary
 } from "@/api/script-library";
-import ScriptStepsEditor from "@/views/task/script-marketing/components/ScriptStepsEditor.vue";
+import ScriptComposer from "./components/ScriptComposer.vue";
 import {
   newStep,
   copyStep,
@@ -28,6 +28,7 @@ const errorMessage = ref("");
 const open = ref(false);
 const saving = ref(false);
 const editing = ref<number>();
+const composer = ref<InstanceType<typeof ScriptComposer>>();
 const form = reactive<{
   name: string;
   enabled: boolean;
@@ -59,6 +60,7 @@ async function edit(row?: ScriptDefinitionSummary, copy = false) {
     form.steps = value
       ? value.steps.map(copyStep)
       : [newStep("ADMIN"), newStep()];
+    if (!value) form.steps[1].roleKey = "推手1";
     open.value = true;
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, "剧本读取失败"));
@@ -69,6 +71,7 @@ async function save() {
     ElMessage.warning("请填写剧本名称");
     return;
   }
+  if (!composer.value?.validate()) return;
   saving.value = true;
   try {
     await saveScriptDefinition(
@@ -230,17 +233,29 @@ onMounted(load);
     <el-drawer
       v-model="open"
       :title="editing ? '编辑养群剧本' : '新建养群剧本'"
-      size="840px"
+      class="script-definition-drawer"
+      size="min(1720px, 96vw)"
+      destroy-on-close
       :close-on-click-modal="false"
     >
-      <el-form :model="form" label-width="100px" :disabled="saving">
-        <el-form-item label="剧本名称" required
-          ><el-input v-model="form.name" maxlength="100"
-        /></el-form-item>
-        <el-form-item label="启用"
-          ><el-switch v-model="form.enabled"
-        /></el-form-item>
-        <ScriptStepsEditor v-model="form.steps" :require-accounts="false" />
+      <el-form
+        :model="form"
+        label-position="top"
+        class="definition-form"
+        :disabled="saving"
+      >
+        <div class="definition-basics">
+          <el-form-item label="剧本名称" required
+            ><el-input v-model="form.name" maxlength="100"
+          /></el-form-item>
+          <el-form-item label="启用"
+            ><el-switch v-model="form.enabled"
+          /></el-form-item>
+          <span class="basics-hint"
+            >编排角色和消息，创建任务时再分配账号与目标群。</span
+          >
+        </div>
+        <ScriptComposer ref="composer" v-model="form.steps" />
       </el-form>
       <template #footer
         ><el-button :disabled="saving" @click="open = false">取消</el-button
@@ -269,5 +284,74 @@ onMounted(load);
 .el-pagination {
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+:deep(.script-definition-drawer .el-drawer__header) {
+  padding: 18px 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+:deep(.script-definition-drawer .el-drawer__body) {
+  display: flex;
+  min-height: 0;
+  padding: 16px;
+  overflow: hidden;
+  background: var(--el-fill-color-light);
+}
+
+:deep(.script-definition-drawer .el-drawer__footer) {
+  padding: 12px 20px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.definition-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.definition-basics {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 24px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.definition-basics .el-form-item {
+  margin-bottom: 0;
+}
+
+.definition-basics .el-form-item:first-child {
+  flex: 1;
+  max-width: 640px;
+}
+
+.basics-hint {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+@media (width <= 1000px) {
+  :deep(.script-definition-drawer) {
+    width: 100% !important;
+  }
+
+  .basics-hint {
+    display: none;
+  }
+}
+
+@media (width <= 700px) {
+  :deep(.script-definition-drawer .el-drawer__body) {
+    display: block;
+    overflow: auto;
+  }
 }
 </style>

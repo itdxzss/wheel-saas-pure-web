@@ -10,9 +10,13 @@ import ScriptMaterialPreview from "@/views/material/script-material/components/S
 import { nextEditorKey } from "../form";
 
 const model = defineModel<ScriptMessage>({ required: true });
-withDefaults(defineProps<{ showTemplatePicker?: boolean }>(), {
-  showTemplatePicker: true
-});
+withDefaults(
+  defineProps<{ showTemplatePicker?: boolean; showPreview?: boolean }>(),
+  {
+    showTemplatePicker: true,
+    showPreview: true
+  }
+);
 const templates = ref<ScriptMaterial[]>([]);
 const templateId = ref<number>();
 const assetOpen = ref(false);
@@ -175,7 +179,7 @@ function changeMode() {
       >提醒所有群成员</el-checkbox
     ></el-form-item
   >
-  <el-form-item label="内容预览">
+  <el-form-item v-if="showPreview" label="内容预览">
     <ScriptMaterialPreview :message="model" class="editor-preview" />
   </el-form-item>
   <ResourceAssetPicker
