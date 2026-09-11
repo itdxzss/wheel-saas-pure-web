@@ -7,8 +7,9 @@ const props = withDefaults(
     assetId: number;
     alt?: string;
     fit?: "cover" | "contain";
+    preview?: boolean;
   }>(),
-  { alt: "图片素材", fit: "cover" }
+  { alt: "图片素材", fit: "cover", preview: false }
 );
 
 const objectUrl = ref("");
@@ -52,6 +53,8 @@ onBeforeUnmount(() => {
       :src="objectUrl"
       :alt="alt"
       :fit="fit"
+      :preview-src-list="preview ? [objectUrl] : []"
+      preview-teleported
       lazy
       class="asset-thumbnail__image"
     />

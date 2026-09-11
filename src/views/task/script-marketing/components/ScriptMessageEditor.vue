@@ -6,6 +6,7 @@ import { listScriptMaterials, type ScriptMaterial } from "@/api/script-library";
 import type { ResourceAsset } from "@/api/resource-asset";
 import { apiErrorMessage } from "@/utils/api-error";
 import ResourceAssetPicker from "@/views/hyperlink/library/components/ResourceAssetPicker.vue";
+import ScriptMaterialPreview from "@/views/material/script-material/components/ScriptMaterialPreview.vue";
 import { nextEditorKey } from "../form";
 
 const model = defineModel<ScriptMessage>({ required: true });
@@ -175,19 +176,7 @@ function changeMode() {
     ></el-form-item
   >
   <el-form-item label="内容预览">
-    <div class="message-preview">
-      <strong>{{ model.content || "消息内容" }}</strong>
-      <div>{{ model.bodyText }}</div>
-      <div v-if="model.linkMode !== 2">{{ model.promotionLink }}</div>
-      <el-tag v-if="model.imageFileId" type="info"
-        >附带图片素材 #{{ model.imageFileId }}</el-tag
-      >
-      <el-space v-if="model.linkMode === 2"
-        ><el-tag v-for="button in model.buttons" :key="buttonKey(button)">{{
-          button.text || "按钮"
-        }}</el-tag></el-space
-      >
-    </div>
+    <ScriptMaterialPreview :message="model" class="editor-preview" />
   </el-form-item>
   <ResourceAssetPicker
     v-model="assetOpen"
@@ -197,12 +186,7 @@ function changeMode() {
 </template>
 
 <style scoped>
-.message-preview {
+.editor-preview {
   width: 100%;
-  padding: 12px;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  background: var(--el-fill-color-light);
-  border-radius: 6px;
 }
 </style>
