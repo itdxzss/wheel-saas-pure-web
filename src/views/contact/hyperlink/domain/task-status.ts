@@ -45,6 +45,11 @@ export const RUN_STATUS_OPTIONS: { value: number; label: string }[] = [
   0, 1, 2, 3, 4
 ].map(value => ({ value, label: RUN_STATUS_LABELS[value] }));
 
+/** 仅未开始、已完成、已停止可删除；任务开关不改变删除规则。 */
+export function canDeleteTask(runStatus: number): boolean {
+  return [0, 2, 4].includes(runStatus);
+}
+
 /**
  * 状态列文案。
  *
@@ -79,7 +84,7 @@ export function statusTagType(
 /**
  * 行操作按钮，按运行状态分支。
  *
- * 「账号数据」在任何状态都有；**没有删除**——接口没有，竞品也没有。
+ * 「账号数据」在任何状态都有；删除由工具栏的批量操作统一处理。
  * 停用只是「保存了不发」，因此仍可编辑与启动。
  *
  * @param isEnabled 任务开关

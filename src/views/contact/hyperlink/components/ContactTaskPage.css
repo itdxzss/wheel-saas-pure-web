@@ -1,0 +1,60 @@
+.contact-task-page {
+  padding: 16px;
+}
+
+.intro-card {
+  margin-bottom: 12px;
+}
+
+.intro-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.intro-card p {
+  margin: 8px 0 0;
+  line-height: 1.8;
+  color: var(--el-text-color-secondary);
+}
+
+.table-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.contact-table-bar {
+  overflow: auto;
+}
+
+.table-content {
+  padding: 0 16px 16px;
+}
+
+.cell-strong {
+  font-weight: 600;
+}
+
+.cell-sub {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--el-text-color-secondary);
+}
+
+.range-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.range-flag {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
+  object-fit: cover;
+  border-radius: 50%;
+}

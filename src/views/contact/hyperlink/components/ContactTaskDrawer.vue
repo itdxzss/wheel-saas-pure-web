@@ -439,7 +439,7 @@ watch(
                   controls-position="right"
                 />
                 <span class="field-tip"
-                  >单个任务内的上限，0 表示全部联系人</span
+                  >单个任务内的上限，0 表示发给全部联系人</span
                 >
               </el-form-item>
               <el-alert

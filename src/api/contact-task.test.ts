@@ -4,6 +4,7 @@ import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
 import {
   actContactTask,
+  batchDeleteContactTasks,
   contactTaskImageUrl,
   createContactTask,
   downloadContactTaskImage,
@@ -136,13 +137,16 @@ describe("contact task API", () => {
     );
   });
 
-  it("has no delete endpoint because neither the api nor the competitor has one", async () => {
-    const api = await import("./contact-task");
-
-    assert.equal(
-      Object.keys(api).some(name => name.toLowerCase().includes("delete")),
-      false
-    );
+  it("posts selected ids and returns the actual deleted count", async () => {
+    resetArmadaMock(2);
+    assert.equal(await batchDeleteContactTasks([7, 8]), 2);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "post",
+        url: "/api/contact-tasks/batch-delete",
+        opts: { data: { ids: [7, 8] } }
+      }
+    ]);
   });
 
   it("uploads the preview image through the shared template file endpoint", async () => {
