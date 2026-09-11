@@ -68,7 +68,8 @@ function resultType(status: ScriptRecord["status"]) {
             }}
           </div>
           <div class="record-step">
-            第 {{ row.stepIndex + 1 }} 项 · 账号 #{{ row.accountId }}
+            第 {{ row.stepIndex + 1 }} 项 ·
+            {{ row.accountPhone || "手机号不可用" }}
           </div>
         </template>
       </el-table-column>

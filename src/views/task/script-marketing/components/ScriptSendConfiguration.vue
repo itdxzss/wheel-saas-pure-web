@@ -37,7 +37,9 @@ function interval(step: ScriptStep, index: number): string {
                   step.roleKey || (step.role === "ADMIN" ? "管理员" : "推手")
                 }}</strong>
                 <span>{{
-                  step.accountId ? `账号 #${step.accountId}` : "按群分配账号"
+                  step.accountId
+                    ? detail.accountPhones?.[step.accountId] || "手机号不可用"
+                    : "按群分配账号"
                 }}</span>
               </div>
               <div class="step-preview">

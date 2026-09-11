@@ -41,7 +41,10 @@ function bindings(group: ScriptGroup): string {
   try {
     const value: Record<string, number> = JSON.parse(group.bindingsJson);
     return Object.entries(value)
-      .map(([role, account]) => `${role}：账号 #${account}`)
+      .map(
+        ([role, account]) =>
+          `${role}：${props.detail?.accountPhones?.[account] || "手机号不可用"}`
+      )
       .join("；");
   } catch {
     return "角色绑定读取失败，请刷新";

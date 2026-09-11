@@ -65,6 +65,7 @@ export interface ScriptGroup {
   remainingWaitMs: number;
 }
 export interface ScriptRecord {
+  accountPhone: string | null;
   id: number;
   groupId: number;
   stepIndex: number;
@@ -77,6 +78,7 @@ export interface ScriptRecord {
   finishedAt: number | null;
 }
 export interface ScriptDetail {
+  accountPhones: Record<string, string>;
   task: ScriptTask;
   steps: ScriptStep[];
   groups: ScriptGroup[];

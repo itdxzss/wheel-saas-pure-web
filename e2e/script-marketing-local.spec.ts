@@ -621,3 +621,113 @@ for (const delayed of ["detail", "records"] as const) {
     ).toHaveCount(0);
   });
 }
+
+test("task account identities use phones in records, configuration and role bindings", async ({
+  page
+}) => {
+  const task = {
+    id: 12,
+    taskName: "手机号展示任务",
+    accountGroupId: 30,
+    status: 3,
+    groupCount: 1,
+    startAt: 1,
+    endAt: null,
+    intervalSeconds: 10,
+    successCount: 2,
+    failedCount: 0,
+    unknownCount: 0,
+    inFlightCount: 0
+  };
+  const message = {
+    content: "测试消息",
+    bodyText: "测试消息",
+    buttons: [],
+    imageFileId: null
+  };
+  const unexpected: string[] = [];
+  await page.route("**/api/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (!path.startsWith("/api/")) return route.continue();
+    let data: unknown;
+    if (path === "/api/tenant/me/menus")
+      data = [
+        {
+          path: "/task",
+          name: "TaskCenter",
+          meta: { title: "任务中心" },
+          children: [
+            {
+              path: "/task/script-marketing",
+              name: "TaskScriptMarketing",
+              component: "task/script-marketing/index",
+              meta: { title: "养群任务", auths: [] }
+            }
+          ]
+        }
+      ];
+    else if (path === "/api/script-marketing-tasks")
+      data = { list: [task], total: 1 };
+    else if (path === "/api/script-marketing-tasks/12")
+      data = {
+        task,
+        accountPhones: { "685": "15550000685", "690": "15550000690" },
+        steps: [
+          { role: "ADMIN", accountId: 685, roleKey: "admin", message },
+          { role: "PROMOTER", accountId: null, roleKey: "p1", message }
+        ],
+        groups: [
+          {
+            id: 1,
+            groupName: "号码验证群",
+            nextStep: 2,
+            bindingsJson: JSON.stringify({ admin: 685, p1: 690, p2: 999 })
+          }
+        ]
+      };
+    else if (path === "/api/script-marketing-tasks/12/records")
+      data = {
+        total: 2,
+        list: [
+          {
+            id: 1,
+            groupId: 1,
+            stepIndex: 0,
+            accountId: 685,
+            accountPhone: "15550000685",
+            status: 2
+          },
+          {
+            id: 2,
+            groupId: 1,
+            stepIndex: 1,
+            accountId: 999,
+            accountPhone: null,
+            status: 2
+          }
+        ]
+      };
+    else {
+      unexpected.push(path);
+      return route.abort();
+    }
+    await route.fulfill({ json: { code: 0, message: "ok", data } });
+  });
+  await page.goto("http://127.0.0.1:5194/#/task/script-marketing");
+  await page.getByRole("button", { name: "详情", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "剧本任务详情" });
+  const records = drawer.locator(".records-table");
+  await expect(records.getByText("第 1 项 · 15550000685")).toBeVisible();
+  await expect(records.getByText("第 2 项 · 手机号不可用")).toBeVisible();
+  await drawer.locator(".el-table__expand-icon").first().click();
+  await expect(
+    drawer.getByText("admin：15550000685；p1：15550000690；p2：手机号不可用", {
+      exact: true
+    })
+  ).toBeVisible();
+  await drawer.getByRole("tab", { name: "发送配置（2）" }).click();
+  await expect(drawer.getByText("15550000685", { exact: true })).toBeVisible();
+  await expect(drawer.getByText("按群分配账号", { exact: true })).toBeVisible();
+  await expect(drawer.getByText(/账号 #(?:685|690|999)/)).toHaveCount(0);
+  expect(unexpected).toEqual([]);
+});
