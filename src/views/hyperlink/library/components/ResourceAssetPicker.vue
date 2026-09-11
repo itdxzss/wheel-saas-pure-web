@@ -126,7 +126,7 @@ onBeforeUnmount(() => clearTimeout(debounceTimer));
         >批量上传</el-button
       >
     </div>
-    <div class="format-tip">JPG/JPEG · 单张 ≤ 500KB</div>
+    <div class="format-tip">JPG/JPEG/PNG · 单张 ≤ 500KB</div>
     <div v-loading="loading" class="picker-grid">
       <button
         v-for="asset in rows"

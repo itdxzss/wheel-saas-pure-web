@@ -1,6 +1,11 @@
 export const RESOURCE_ASSET_MAX_FILES = 100;
 export const RESOURCE_ASSET_MAX_BYTES = 500 * 1024;
 export const RESOURCE_ASSET_MAX_TAGS = 20;
+export const RESOURCE_ASSET_IMAGE_ACCEPT =
+  ".jpg,.jpeg,.png,image/jpeg,image/png";
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const PNG_END = [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82];
 
 export interface ResourceAssetFileValidation {
   valid: boolean;
@@ -44,29 +49,33 @@ export function normalizeResourceAssetTags(values: string[]): string[] {
 export async function validateResourceAssetFile(
   file: File
 ): Promise<ResourceAssetFileValidation> {
-  if (
-    !/\.jpe?g$/i.test(file.name) ||
-    file.type.toLowerCase() !== "image/jpeg"
-  ) {
-    return { valid: false, message: `${file.name} 仅支持 JPG/JPEG 图片` };
+  const jpeg =
+    /\.jpe?g$/i.test(file.name) && file.type.toLowerCase() === "image/jpeg";
+  const png =
+    /\.png$/i.test(file.name) && file.type.toLowerCase() === "image/png";
+  if (!jpeg && !png) {
+    return { valid: false, message: `${file.name} 仅支持 JPG/JPEG/PNG 图片` };
   }
   if (file.size > RESOURCE_ASSET_MAX_BYTES) {
     return { valid: false, message: `${file.name} 不能超过 500KB` };
   }
-  if (file.size < 5) {
-    return { valid: false, message: `${file.name} 不是有效的 JPEG 文件` };
+  const invalidMessage = `${file.name} 不是有效的 ${png ? "PNG" : "JPEG"} 文件`;
+  if (file.size < (png ? PNG_SIGNATURE.length + PNG_END.length : 5)) {
+    return { valid: false, message: invalidMessage };
   }
-  const header = new Uint8Array(await file.slice(0, 3).arrayBuffer());
-  const tail = new Uint8Array(await file.slice(-2).arrayBuffer());
-  const valid =
-    header[0] === 0xff &&
-    header[1] === 0xd8 &&
-    header[2] === 0xff &&
-    tail[0] === 0xff &&
-    tail[1] === 0xd9;
+  const header = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const tail = new Uint8Array(await file.slice(-12).arrayBuffer());
+  const valid = png
+    ? PNG_SIGNATURE.every((byte, index) => header[index] === byte) &&
+      PNG_END.every((byte, index) => tail[index] === byte)
+    : header[0] === 0xff &&
+      header[1] === 0xd8 &&
+      header[2] === 0xff &&
+      tail[tail.length - 2] === 0xff &&
+      tail[tail.length - 1] === 0xd9;
   return valid
     ? { valid: true, message: "" }
-    : { valid: false, message: `${file.name} 不是有效的 JPEG 文件` };
+    : { valid: false, message: invalidMessage };
 }
 
 export function formatAssetBytes(value: number): string {

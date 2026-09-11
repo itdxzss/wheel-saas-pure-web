@@ -5,6 +5,7 @@ import { uploadResourceAsset } from "@/api/resource-asset";
 import { apiErrorMessage } from "@/utils/api-error";
 import {
   normalizeResourceAssetTags,
+  RESOURCE_ASSET_IMAGE_ACCEPT,
   RESOURCE_ASSET_MAX_FILES,
   type ResourceAssetUploadItem,
   uploadResourceAssetBatch,
@@ -126,7 +127,7 @@ watch(visible, opened => {
       v-model:file-list="fileList"
       drag
       multiple
-      accept=".jpg,.jpeg,image/jpeg"
+      :accept="RESOURCE_ASSET_IMAGE_ACCEPT"
       :auto-upload="false"
       :disabled="uploading"
       :on-change="onFileChange"
@@ -136,7 +137,7 @@ watch(visible, opened => {
       <div>点击或拖拽图片到此处</div>
       <template #tip>
         <div class="el-upload__tip">
-          JPG/JPEG，最多 100 张，单张不超过 500KB
+          JPG/JPEG/PNG，最多 100 张，单张不超过 500KB
         </div>
       </template>
     </el-upload>

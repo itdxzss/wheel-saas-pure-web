@@ -7,6 +7,10 @@ import {
   type HyperlinkResourceAsset
 } from "@/api/hyperlink-task";
 import { apiErrorMessage } from "@/utils/api-error";
+import {
+  RESOURCE_ASSET_IMAGE_ACCEPT,
+  validateResourceAssetFile
+} from "../../library/domain/resource-asset";
 import HyperlinkProtectedAssetImage from "./HyperlinkProtectedAssetImage.vue";
 
 const assetId = defineModel<number | null>({ required: true });
@@ -74,12 +78,9 @@ async function open(): Promise<void> {
 
 async function upload(file: UploadFile): Promise<void> {
   if (!file.raw) return;
-  if (file.raw.type !== "image/jpeg" || !/\.jpe?g$/i.test(file.raw.name)) {
-    ElMessage.warning("仅支持 JPG/JPEG 图片");
-    return;
-  }
-  if (file.raw.size > 500 * 1024) {
-    ElMessage.warning("图片不能超过 500KB");
+  const validation = await validateResourceAssetFile(file.raw);
+  if (!validation.valid) {
+    ElMessage.warning(validation.message);
     return;
   }
   uploadingCount.value += 1;
@@ -150,7 +151,7 @@ watch(assetId, () => {
         <el-button :loading="loading" @click="search">搜索</el-button>
         <el-upload
           multiple
-          accept=".jpg,.jpeg,image/jpeg"
+          :accept="RESOURCE_ASSET_IMAGE_ACCEPT"
           :auto-upload="false"
           :show-file-list="false"
           :on-change="upload"

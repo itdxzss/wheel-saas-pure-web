@@ -153,7 +153,8 @@ function onMessageTypeChange(): void {
               <div class="asset-selector">
                 <ResourceAssetField v-model="form.assetId" />
                 <div class="field-tip">
-                  支持从素材库选择或在选择器中批量上传 JPG，单张不超过 500KB。
+                  支持从素材库选择或在选择器中批量上传 JPG/JPEG/PNG，单张不超过
+                  500KB。
                 </div>
               </div>
             </el-form-item>

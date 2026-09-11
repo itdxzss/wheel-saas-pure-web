@@ -46,7 +46,7 @@ const {
             <el-tag class="intro-badge" effect="plain" round>Library</el-tag>
           </div>
           <p>
-            统一管理上传的图片素材；支持 JPG，单张不超过
+            统一管理上传的图片素材；支持 JPG/JPEG/PNG，单张不超过
             500KB。超链模板新建和编辑时可直接引用，避免重复上传。
           </p>
         </div>
