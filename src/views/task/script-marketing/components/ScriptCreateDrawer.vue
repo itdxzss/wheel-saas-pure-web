@@ -4,13 +4,11 @@ import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
   saveScriptTask,
-  scriptAccountOptions,
   scriptGroupOptions,
   scriptAccountGroupOptions,
   checkScriptDraft,
   type ScriptQualification,
   type ScriptAccountGroupOption,
-  type ScriptAccountOption,
   type ScriptDetail,
   type ScriptSave
 } from "@/api/script-marketing";
@@ -18,12 +16,11 @@ import type { GroupListRow } from "@/api/group";
 import { apiErrorMessage } from "@/utils/api-error";
 import {
   copyStep,
-  newStep,
   toScriptSave,
   validateScript,
   type EditableStep
 } from "../form";
-import ScriptStepsEditor from "./ScriptStepsEditor.vue";
+import ScriptDefinitionPreview from "./ScriptDefinitionPreview.vue";
 import ScriptQualificationPanel from "./ScriptQualificationPanel.vue";
 import ScriptDefinitionPicker from "./ScriptDefinitionPicker.vue";
 
@@ -40,12 +37,11 @@ const form = reactive<ScriptSave & { steps: EditableStep[] }>({
   groupLinkIds: [],
   steps: []
 });
-const accounts = ref<ScriptAccountOption[]>([]);
 const groupOptions = ref<Pick<GroupListRow, "id" | "groupName">[]>([]);
 const saving = ref(false);
-const scriptSelected = ref(false);
+const scriptName = ref("");
 const definitionLoading = ref(false);
-const accountsLoading = ref(false);
+const accountGroupsLoading = ref(false);
 const groupsLoading = ref(false);
 const scheduled = ref(false);
 const accountGroups = ref<ScriptAccountGroupOption[]>([]);
@@ -54,27 +50,9 @@ const checking = ref(false);
 const groupPage = ref(1);
 const groupTotal = ref(0);
 const groupKeyword = ref("");
-let accountRequest = 0;
+let accountGroupRequest = 0;
 let groupRequest = 0;
-async function loadAccounts(keyword = "") {
-  const request = ++accountRequest;
-  accountsLoading.value = true;
-  try {
-    const result = await scriptAccountOptions(keyword);
-    if (request !== accountRequest) return;
-    const map = new Map(
-      accounts.value
-        .filter(row => form.steps.some(step => step.accountId === row.id))
-        .map(row => [row.id, row])
-    );
-    result.list.forEach(row => map.set(row.id, row));
-    accounts.value = [...map.values()];
-  } catch (error) {
-    ElMessage.error(apiErrorMessage(error, "账号读取失败"));
-  } finally {
-    if (request === accountRequest) accountsLoading.value = false;
-  }
-}
+let resetting = false;
 async function loadGroups(keyword = "", append = false) {
   const request = ++groupRequest;
   if (!form.accountGroupId) {
@@ -107,10 +85,16 @@ async function loadGroups(keyword = "", append = false) {
   }
 }
 async function loadAccountGroups() {
+  const request = ++accountGroupRequest;
+  accountGroupsLoading.value = true;
   try {
-    accountGroups.value = await scriptAccountGroupOptions();
+    const result = await scriptAccountGroupOptions();
+    if (request === accountGroupRequest) accountGroups.value = result;
   } catch (error) {
-    ElMessage.error(apiErrorMessage(error, "账号分组读取失败"));
+    if (request === accountGroupRequest)
+      ElMessage.error(apiErrorMessage(error, "账号分组读取失败"));
+  } finally {
+    if (request === accountGroupRequest) accountGroupsLoading.value = false;
   }
 }
 async function check() {
@@ -158,8 +142,11 @@ async function save(goToJoin = false) {
   }
 }
 watch(visible, open => {
+  groupRequest++;
+  accountGroupRequest++;
   if (!open) return;
-  scriptSelected.value = false;
+  resetting = true;
+  scriptName.value = props.task ? "已保存的任务剧本" : "";
   definitionLoading.value = false;
   const detail = props.task;
   Object.assign(
@@ -181,27 +168,35 @@ watch(visible, open => {
           startAt: null,
           endAt: null,
           groupLinkIds: [],
-          steps: [newStep("ADMIN"), newStep()]
+          steps: []
         }
   );
+  resetting = false;
   scheduled.value = !!detail && detail.task.startAt > Date.now();
   report.value = undefined;
-  accounts.value = form.steps
-    .filter(s => s.accountId)
-    .map(s => ({ id: s.accountId!, wsPhone: `账号 #${s.accountId}` }));
+  accountGroups.value = [];
+  groupPage.value = 1;
+  groupTotal.value = 0;
+  groupKeyword.value = "";
   groupOptions.value =
     detail?.groups.map(g => ({ id: g.groupLinkId, groupName: g.groupName })) ||
     [];
-  void loadAccounts();
   void loadAccountGroups();
   void loadGroups();
 });
 watch(
   () => form.accountGroupId,
   () => {
+    if (resetting || !visible.value) return;
+    form.groupLinkIds = [];
+    groupOptions.value = [];
+    groupPage.value = 1;
+    groupTotal.value = 0;
+    groupKeyword.value = "";
     report.value = undefined;
     void loadGroups();
-  }
+  },
+  { flush: "sync" }
 );
 watch(
   () => [form.steps, form.groupLinkIds],
@@ -216,7 +211,7 @@ watch(
   <el-drawer
     v-model="visible"
     :title="task ? '编辑剧本任务' : '新建剧本任务'"
-    size="820px"
+    size="min(820px, 100vw)"
     :close-on-click-modal="false"
   >
     <el-form :model="form" label-width="100px" :disabled="saving">
@@ -226,19 +221,24 @@ watch(
       <ScriptDefinitionPicker
         v-if="visible"
         v-model:loading="definitionLoading"
+        :has-snapshot="!!task && !!form.steps.length"
         @select="
           definition => {
             form.steps = definition.steps.map(copyStep);
-            scriptSelected = true;
+            scriptName = definition.name;
             if (!form.taskName) form.taskName = definition.name;
           }
         "
-        @clear="scriptSelected = false"
+        @clear="
+          form.steps = [];
+          scriptName = '';
+        "
       />
       <el-form-item label="推手分组" required>
         <el-select
           v-model="form.accountGroupId"
           filterable
+          :loading="accountGroupsLoading"
           placeholder="选择推手账号分组"
           style="width: 100%"
         >
@@ -246,7 +246,7 @@ watch(
             v-for="group in accountGroups"
             :key="group.id"
             :value="group.id"
-            :label="group.name"
+            :label="`${group.name}（${group.accountCount} 个账号）`"
           />
         </el-select>
       </el-form-item>
@@ -280,16 +280,6 @@ watch(
           >
         </el-select>
       </el-form-item>
-      <el-form-item v-if="!scriptSelected" label="默认间隔" required
-        ><el-input-number
-          v-model="form.intervalSeconds"
-          :disabled="definitionLoading"
-          :min="1"
-          :max="86400"
-        /><span class="field-note"
-          >秒，新增发送项的默认值，每项可单独调整</span
-        ></el-form-item
-      >
       <el-form-item label="开始方式"
         ><el-switch
           v-model="scheduled"
@@ -309,17 +299,14 @@ watch(
           value-format="x"
           placeholder="选填，到期关闭"
       /></el-form-item>
-      <ScriptStepsEditor
-        v-model="form.steps"
-        :read-only="scriptSelected || definitionLoading"
-        :accounts="accounts"
-        :loading="accountsLoading"
-        :default-wait="form.intervalSeconds"
-        @search-accounts="loadAccounts"
+      <ScriptDefinitionPreview
+        :steps="form.steps"
+        :name="scriptName"
+        :loading="definitionLoading"
       />
       <el-button
         :loading="checking"
-        :disabled="definitionLoading"
+        :disabled="definitionLoading || !form.steps.length"
         @click="check"
         >检查所选群资格</el-button
       >
@@ -332,7 +319,7 @@ watch(
         @join="save(true)"
       />
       <el-alert
-        title="所选群全部通过资格检查后才能启动。进群由独立进群任务完成；暂停恢复保留角色和进度，下一条未提交消息不延续原等待。"
+        title="启动时每群随机选择一个可用在控管理员，并从所选分组分配推手。所选群全部通过资格检查后才能启动；暂停恢复保留账号与进度。"
         type="info"
         :closable="false"
       />
@@ -342,22 +329,10 @@ watch(
       ><el-button
         type="primary"
         :loading="saving"
-        :disabled="definitionLoading"
+        :disabled="definitionLoading || !form.steps.length"
         @click="save()"
         >保存草稿</el-button
       ></template
     >
   </el-drawer>
 </template>
-
-<style scoped>
-.field-note {
-  margin-left: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.add-step {
-  width: 100%;
-  margin: 16px 0;
-}
-</style>

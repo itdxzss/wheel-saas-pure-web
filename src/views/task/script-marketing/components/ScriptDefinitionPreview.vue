@@ -1,10 +1,26 @@
 <script setup lang="ts">
-import type { ScriptDefinition } from "@/api/script-library";
-import { nextEditorKey } from "../form";
+import { computed } from "vue";
+import type { ScriptStep } from "@/api/script-marketing";
+import { estimatedWait, nextEditorKey } from "../form";
 import ScriptMaterialPreview from "@/views/material/script-material/components/ScriptMaterialPreview.vue";
 
-const visible = defineModel<boolean>({ required: true });
-defineProps<{ definition: ScriptDefinition }>();
+const props = defineProps<{
+  steps: ScriptStep[];
+  name?: string;
+  loading?: boolean;
+}>();
+const roleCount = computed(
+  () => new Set(props.steps.map(step => step.roleKey || step.role)).size
+);
+const promoterCount = computed(
+  () =>
+    new Set(
+      props.steps
+        .filter(step => step.role === "PROMOTER")
+        .map(step => step.roleKey)
+    ).size
+);
+const wait = computed(() => estimatedWait(props.steps));
 const messageKeys = new WeakMap<object, string>();
 function messageKey(step: object): string {
   if (!messageKeys.has(step)) messageKeys.set(step, nextEditorKey());
@@ -13,51 +29,71 @@ function messageKey(step: object): string {
 </script>
 
 <template>
-  <el-dialog
-    v-model="visible"
-    :title="`剧本预览 · ${definition.name}`"
-    width="min(800px, 94vw)"
-    top="6vh"
-    append-to-body
-    destroy-on-close
+  <section
+    v-loading="loading"
+    aria-label="剧本预览"
     class="script-definition-preview"
   >
-    <p class="preview-note">
-      按发送顺序展示完整对话。第一条不等待，后续等待从上一条提交发送时开始计算。
-    </p>
-    <div class="conversation" aria-label="剧本完整对话">
-      <article
-        v-for="(step, index) in definition.steps"
-        :key="messageKey(step)"
-        class="conversation-message"
-        :class="{ 'is-promoter': step.role === 'PROMOTER' }"
-      >
-        <div class="message-heading">
-          <span class="message-number">第 {{ index + 1 }} 句</span>
-          <el-tag
-            size="small"
-            :type="step.role === 'ADMIN' ? 'warning' : 'primary'"
-            >{{
-              step.roleKey || (step.role === "ADMIN" ? "管理员" : "推手")
-            }}</el-tag
-          >
-          <span class="message-wait">{{
-            index === 0
-              ? "首条不等待"
-              : `等待 ${step.waitMinSeconds ?? 0}–${step.waitMaxSeconds ?? 0} 秒`
-          }}</span>
-        </div>
-        <ScriptMaterialPreview :message="step.message" />
-      </article>
-      <el-empty v-if="!definition.steps.length" description="该剧本暂无消息" />
-    </div>
-    <template #footer
-      ><el-button @click="visible = false">关闭</el-button></template
-    >
-  </el-dialog>
+    <el-divider content-position="left">剧本预览</el-divider>
+    <el-empty
+      v-if="!steps.length"
+      description="请先选择剧本"
+      :image-size="64"
+    />
+    <template v-else>
+      <strong>{{ name }}</strong>
+      <div class="definition-summary">
+        <el-tag size="small" effect="plain">{{ roleCount }} 个角色</el-tag>
+        <el-tag size="small" effect="plain">{{ steps.length }} 条消息</el-tag>
+        <el-tag size="small" effect="plain"
+          >预计等待 {{ wait[0] }}–{{ wait[1] }} 秒</el-tag
+        >
+      </div>
+      <p class="preview-note">
+        每群分配 1 个在控管理员和
+        {{ promoterCount }} 个推手。同群管理员发言共用一个账号，启动后固定身份。
+      </p>
+      <p class="preview-note">
+        按发送顺序展示完整对话。第一条不等待，后续等待从上一条提交发送时开始计算。
+        预计等待不含发送、排队和异常耗时。
+      </p>
+      <div class="conversation" aria-label="剧本完整对话">
+        <article
+          v-for="(step, index) in steps"
+          :key="messageKey(step)"
+          class="conversation-message"
+          :class="{ 'is-promoter': step.role === 'PROMOTER' }"
+        >
+          <div class="message-heading">
+            <span class="message-number">第 {{ index + 1 }} 句</span>
+            <el-tag
+              size="small"
+              :type="step.role === 'ADMIN' ? 'warning' : 'primary'"
+              >{{
+                step.roleKey || (step.role === "ADMIN" ? "管理员" : "推手")
+              }}</el-tag
+            >
+            <span class="message-wait">{{
+              index === 0
+                ? "首条不等待"
+                : `等待 ${step.waitMinSeconds ?? 0}–${step.waitMaxSeconds ?? 0} 秒`
+            }}</span>
+          </div>
+          <ScriptMaterialPreview :message="step.message" />
+        </article>
+      </div>
+    </template>
+  </section>
 </template>
 
 <style scoped>
+.definition-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
 .preview-note {
   margin-bottom: 14px;
   font-size: 13px;

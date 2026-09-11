@@ -34,7 +34,7 @@ export function copyStep(step: ScriptStep): EditableStep {
     roleKey:
       step.roleKey ||
       `${step.role === "ADMIN" ? "管理员" : "推手"}${step.accountId || ""}`,
-    accountId: step.role === "ADMIN" ? step.accountId : null,
+    accountId: null,
     waitMinSeconds: step.waitMinSeconds ?? 10,
     waitMaxSeconds: step.waitMaxSeconds ?? 10
   };
@@ -50,6 +50,7 @@ export function validateScript(form: ScriptSave): string | undefined {
   )
     return "发送间隔须为 1–86400 秒";
   if (!form.taskName.trim()) return "请填写任务名称";
+  if (!form.steps.length) return "请选择剧本";
   if (!form.accountGroupId) return "请选择推手账号分组";
   if (!form.groupLinkIds.length) return "请选择目标群";
   if (form.steps.length < 2 || form.steps.length > 100)
@@ -57,10 +58,8 @@ export function validateScript(form: ScriptSave): string | undefined {
   const roles = new Map<string, ScriptStep>();
   for (const [index, step] of form.steps.entries()) {
     if (!step.roleKey?.trim()) return `第 ${index + 1} 项请填写角色名称`;
-    if (step.role === "ADMIN" && !step.accountId)
-      return `第 ${index + 1} 项请选择管理员账号`;
-    if (step.role === "PROMOTER" && step.accountId)
-      return "推手由系统启动时分配，无需手动选择账号";
+    if (step.accountId)
+      return "管理员与推手由系统启动时按群分配，无需手动选择账号";
     if (
       !step.message.content.trim() &&
       !(step.message.linkMode === 3 && step.message.imageFileId)
@@ -81,7 +80,7 @@ export function validateScript(form: ScriptSave): string | undefined {
       previous &&
       (previous.role !== step.role || previous.accountId !== step.accountId)
     )
-      return "同一角色的类型和管理员账号必须一致";
+      return "同一角色的类型必须一致";
     roles.set(step.roleKey, step);
   }
   if (

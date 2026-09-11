@@ -135,7 +135,7 @@ onMounted(load);
       ><el-button :loading="loading" @click="load">刷新</el-button>
     </el-space>
     <el-alert
-      title="在这里编排角色、素材和发送间隔；创建任务时再选择推手分组、管理员及目标群。"
+      title="在这里编排角色、素材和发送间隔；创建任务时选择推手分组及目标群，管理员与推手在启动时按群分配。"
       type="info"
       :closable="false"
     />

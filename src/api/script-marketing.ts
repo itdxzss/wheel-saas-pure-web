@@ -83,11 +83,6 @@ export interface ScriptDetail {
   steps: ScriptStep[];
   groups: ScriptGroup[];
 }
-export interface ScriptAccountOption {
-  id: number;
-  wsPhone: string;
-  loginState?: number;
-}
 export type ScriptAction = "start" | "pause" | "resume" | "close";
 export interface ScriptQuery {
   page: number;
@@ -118,12 +113,6 @@ export const listScriptRecords = (
   armadaRequest("get", `${root}/${id}/records`, {
     params: { page, pageSize: 20 }
   });
-export const scriptAccountOptions = (
-  keyword = ""
-): Promise<PageResponse<ScriptAccountOption>> =>
-  armadaRequest("get", `${root}/options/accounts`, {
-    params: { keyword, page: 1, pageSize: 100 }
-  });
 export const scriptGroupOptions = (
   accountGroupId: number,
   keyword = "",
@@ -136,6 +125,7 @@ export const scriptGroupOptions = (
 export interface ScriptAccountGroupOption {
   id: number;
   name: string;
+  accountCount: number;
 }
 export interface ScriptQualificationGroup {
   groupLinkId: number;

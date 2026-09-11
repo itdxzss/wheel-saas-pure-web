@@ -5,7 +5,7 @@ const permissions = ["view", "create", "edit", "operate"].map(
   key => `tenant:script_marketing:${key}`
 );
 
-test("selected scripts are read-only, clearable and save with administrator bindings", async ({
+test("selected scripts preview inline and save without manual account bindings", async ({
   page
 }, testInfo) => {
   let material: Record<string, unknown> | undefined;
@@ -113,7 +113,10 @@ test("selected scripts are read-only, clearable and save with administrator bind
       }
       data = paged([]);
     } else if (path.endsWith("/options/account-groups"))
-      data = [{ id: 30, name: "推手分组 A" }];
+      data = [
+        { id: 30, name: "推手分组 A", accountCount: 6 },
+        { id: 31, name: "空分组", accountCount: 0 }
+      ];
     else if (path.endsWith("/options/accounts"))
       data = paged([{ id: 1, wsPhone: "15550000001" }]);
     else if (path.endsWith("/options/groups"))
@@ -176,20 +179,22 @@ test("selected scripts are read-only, clearable and save with administrator bind
     await picker.locator(".el-select").hover();
     await picker.locator(".el-select__clear").click();
   }
+  const preview = drawer.getByRole("region", { name: "剧本预览", exact: true });
+  const saveButton = drawer.getByRole("button", { name: "保存草稿" });
   await expect(
-    drawer.getByRole("button", { name: "查看剧本", exact: true })
-  ).toHaveCount(0);
+    preview.getByText("请先选择剧本", { exact: true })
+  ).toBeVisible();
+  await expect(saveButton).toBeDisabled();
   await chooseScript("素材复用剧本");
-  await expect(picker.locator(".definition-summary")).toContainText("2 个角色");
-  await expect(picker.locator(".definition-summary")).toContainText("2 条消息");
-  await expect(picker.locator(".definition-summary")).toContainText(
+  await expect(preview.locator(".definition-summary")).toContainText(
+    "2 个角色"
+  );
+  await expect(preview.locator(".definition-summary")).toContainText(
+    "2 条消息"
+  );
+  await expect(preview.locator(".definition-summary")).toContainText(
     "预计等待 10–10 秒"
   );
-  await drawer.getByRole("button", { name: "查看剧本", exact: true }).click();
-  const preview = page.getByRole("dialog", {
-    name: "剧本预览 · 素材复用剧本",
-    exact: true
-  });
   await expect(preview.locator(".conversation-message")).toHaveCount(2);
   await expect(preview.locator(".conversation-message").first()).toContainText(
     "首条不等待"
@@ -201,86 +206,40 @@ test("selected scripts are read-only, clearable and save with administrator bind
     "推手回应"
   );
   await expect(preview.locator("input, textarea")).toHaveCount(0);
-  expect(taskWrites).toBe(0);
-  await page.screenshot({
-    path: testInfo.outputPath("selected-script-preview.png"),
-    animations: "disabled"
-  });
-  await preview.getByRole("button", { name: "关闭", exact: true }).click();
-  await expect(preview).toBeHidden();
   await expect(drawer.getByRole("textbox", { name: "任务名称" })).toHaveValue(
     "素材复用剧本"
   );
-  const admin = drawer.locator(".el-collapse-item").nth(0);
-  const promoter = drawer.locator(".el-collapse-item").nth(1);
-  const saveButton = drawer.getByRole("button", { name: "保存草稿" });
-  await expect(admin.locator(".message-preview")).toContainText(
-    "来自公共素材库的开场"
-  );
-  await expect(drawer.locator(".el-collapse-item textarea")).toHaveCount(0);
-  await expect(
-    drawer.locator(".el-collapse-item input[type=radio]")
-  ).toHaveCount(0);
-  await expect(
-    drawer.locator(".el-collapse-item input[role=spinbutton]")
-  ).toHaveCount(0);
   for (const name of [
     "上移",
     "下移",
     "复制此项",
     "删除",
     "添加发送项",
-    "选择 / 上传图片"
+    "查看剧本"
   ])
     await expect(drawer.getByRole("button", { name, exact: true })).toHaveCount(
       0
     );
   await expect(drawer.getByText("默认间隔", { exact: true })).toHaveCount(0);
-  await promoter.locator(".el-collapse-item__header").click();
-  await expect(promoter.locator(".message-preview")).toContainText("推手回应");
-  await expect(promoter.getByText("10–10 秒", { exact: true })).toBeVisible();
-  await expect(promoter.getByRole("combobox")).toHaveCount(0);
+  await expect(drawer.getByText("管理员账号", { exact: true })).toHaveCount(0);
+  expect(taskWrites).toBe(0);
 
   failSelection = true;
   await chooseScript("切换剧本");
   await expect(page.getByText("剧本加载失败", { exact: true })).toBeVisible();
   await expect(picker.locator(".el-select")).toContainText("素材复用剧本");
-  await drawer.getByRole("button", { name: "查看剧本", exact: true }).click();
-  await expect(preview).toBeVisible();
   await expect(preview.locator(".message-preview").first()).toContainText(
     "来自公共素材库的开场"
   );
-  await preview.getByRole("button", { name: "关闭", exact: true }).click();
   await expect(saveButton).toBeEnabled();
-  await expect(drawer.locator(".el-collapse-item textarea")).toHaveCount(0);
   failSelection = false;
   await chooseScript("切换剧本");
-  await expect(admin.locator(".message-preview")).toContainText(
+  await expect(preview.locator(".message-preview").first()).toContainText(
     "切换后：来自公共素材库的开场"
   );
-  await drawer.getByRole("button", { name: "查看剧本", exact: true }).click();
-  const switchedPreview = page.getByRole("dialog", {
-    name: "剧本预览 · 切换剧本",
-    exact: true
-  });
-  await expect(
-    switchedPreview.locator(".message-preview").first()
-  ).toContainText("切换后：来自公共素材库的开场");
-  await switchedPreview
-    .getByRole("button", { name: "关闭", exact: true })
-    .click();
   await clearScript();
-  await expect(
-    drawer.getByRole("button", { name: "查看剧本", exact: true })
-  ).toHaveCount(0);
-  await expect(admin.locator("textarea").first()).toHaveValue(
-    "切换后：来自公共素材库的开场"
-  );
-  await admin.locator("textarea").first().fill("清除后手动修改");
-  await expect(
-    drawer.getByRole("button", { name: "添加发送项" })
-  ).toBeVisible();
-  await expect(drawer.getByText("默认间隔", { exact: true })).toBeVisible();
+  await expect(preview.locator(".conversation-message")).toHaveCount(0);
+  await expect(saveButton).toBeDisabled();
 
   holdSelection = true;
   const pendingSelection = page.waitForRequest("**/api/script-definitions/601");
@@ -291,38 +250,45 @@ test("selected scripts are read-only, clearable and save with administrator bind
     drawer.getByRole("button", { name: "检查所选群资格" })
   ).toBeDisabled();
   await clearScript();
-  await expect(saveButton).toBeEnabled();
   const lateResponse = page.waitForResponse("**/api/script-definitions/601");
   releaseSelection();
   await lateResponse;
   holdSelection = false;
-  await expect(
-    drawer.getByRole("button", { name: "查看剧本", exact: true })
-  ).toHaveCount(0);
-  await expect(admin.locator("textarea").first()).toHaveValue("清除后手动修改");
+  await expect(preview.locator(".conversation-message")).toHaveCount(0);
+  await expect(saveButton).toBeDisabled();
   await chooseScript("素材复用剧本");
-  await expect(admin.locator(".message-preview")).toContainText(
+  await expect(preview.locator(".message-preview").first()).toContainText(
     "来自公共素材库的开场"
   );
-  await admin
+  const pool = drawer
     .locator(".el-form-item")
-    .filter({ has: page.getByText("管理员账号", { exact: true }) })
-    .getByRole("combobox")
-    .click();
+    .filter({ has: page.getByText("推手分组", { exact: true }) })
+    .locator(".el-select");
+  const targets = drawer
+    .locator(".el-form-item")
+    .filter({ has: page.getByText("目标群", { exact: true }) })
+    .locator(".el-select");
+  await pool.click();
+  await expect(
+    page.getByRole("option", { name: "空分组（0 个账号）", exact: true })
+  ).toBeVisible();
   await page
-    .getByRole("option", { name: "15550000001 · #1", exact: true })
+    .getByRole("option", { name: "推手分组 A（6 个账号）", exact: true })
     .click();
-  for (const [label, name] of [
-    ["推手分组", "推手分组 A"],
-    ["目标群", "本地测试群"]
-  ]) {
-    await drawer
-      .locator(".el-form-item")
-      .filter({ has: page.getByText(label, { exact: true }) })
-      .locator(".el-select")
-      .click();
-    await page.getByRole("option", { name, exact: true }).click();
-  }
+  await targets.click();
+  await page.getByRole("option", { name: "本地测试群", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await pool.click();
+  await page
+    .getByRole("option", { name: "空分组（0 个账号）", exact: true })
+    .click();
+  await expect(targets).not.toContainText("本地测试群");
+  await pool.click();
+  await page
+    .getByRole("option", { name: "推手分组 A（6 个账号）", exact: true })
+    .click();
+  await targets.click();
+  await page.getByRole("option", { name: "本地测试群", exact: true }).click();
   await page.keyboard.press("Escape");
   await drawer.locator(".el-drawer__body").evaluate(element => {
     element.scrollTop = 0;
@@ -332,23 +298,18 @@ test("selected scripts are read-only, clearable and save with administrator bind
     fullPage: true,
     animations: "disabled"
   });
-  expect(taskWrites).toBe(0);
   await saveButton.click();
   await expect(drawer).toBeHidden();
   expect(taskWrites).toBe(1);
-  expect(saved?.steps).toEqual(
-    (definition?.steps as ScriptStep[]).map(step => ({
-      ...step,
-      accountId: step.role === "ADMIN" ? 1 : null
-    }))
-  );
+  expect(saved?.steps).toEqual(definition?.steps);
+  expect(saved?.steps.every(step => step.accountId === null)).toBe(true);
   expect(saved?.accountGroupId).toBe(30);
   expect(saved?.groupLinkIds).toEqual([42]);
   await page.getByRole("button", { name: "新建剧本任务", exact: true }).click();
   await expect(
-    drawer.getByRole("button", { name: "添加发送项" })
+    preview.getByText("请先选择剧本", { exact: true })
   ).toBeVisible();
-  await expect(admin.locator("textarea").first()).toHaveValue("");
+  await expect(saveButton).toBeDisabled();
 });
 
 test("conversation preview shows all 100 messages with bounded scrolling and no task writes", async ({
@@ -432,18 +393,14 @@ test("conversation preview shows all 100 messages with bounded scrolling and no 
     .filter({ has: page.getByText("选用剧本", { exact: true }) });
   await picker.locator(".el-select").click();
   await page.getByRole("option", { name: "百句对话剧本", exact: true }).click();
-  await expect(picker.locator(".definition-summary")).toContainText("3 个角色");
-  await expect(picker.locator(".definition-summary")).toContainText(
+  await expect(drawer.locator(".definition-summary")).toContainText("3 个角色");
+  await expect(drawer.locator(".definition-summary")).toContainText(
     "100 条消息"
   );
-  await expect(picker.locator(".definition-summary")).toContainText(
+  await expect(drawer.locator(".definition-summary")).toContainText(
     "预计等待 495–990 秒"
   );
-  await drawer.getByRole("button", { name: "查看剧本", exact: true }).click();
-  const preview = page.getByRole("dialog", {
-    name: "剧本预览 · 百句对话剧本",
-    exact: true
-  });
+  const preview = drawer.getByRole("region", { name: "剧本预览", exact: true });
   await expect(preview.locator(".conversation-message")).toHaveCount(100);
   await expect(preview.locator(".conversation-message").nth(1)).toContainText(
     "查看活动"
@@ -463,7 +420,7 @@ test("conversation preview shows all 100 messages with bounded scrolling and no 
       .evaluate(el => el.scrollHeight > el.clientHeight)
   ).toBe(true);
   await expect(
-    preview.getByRole("button", { name: "关闭", exact: true })
+    drawer.getByRole("button", { name: "保存草稿", exact: true })
   ).toBeInViewport();
   await page.screenshot({
     path: testInfo.outputPath("long-script-preview.png"),
@@ -474,7 +431,7 @@ test("conversation preview shows all 100 messages with bounded scrolling and no 
     await preview.evaluate(el => el.scrollWidth <= el.clientWidth + 1)
   ).toBe(true);
   await expect(
-    preview.getByRole("button", { name: "关闭", exact: true })
+    drawer.getByRole("button", { name: "保存草稿", exact: true })
   ).toBeInViewport();
   expect(writes).toEqual([]);
   expect(pageErrors).toEqual([]);
@@ -646,169 +603,107 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-/** 完整新页面的本地 API 契约夹具；所有 /api 请求被拦截，不接触真实环境。 */
-test("default roles, additional promoter and ordered save stay independent", async ({
+test("editing a saved draft keeps its snapshot and converts fixed accounts to automatic assignment", async ({
   page
-}, testInfo) => {
-  let saved: Record<string, unknown> | undefined;
-  const pageErrors: string[] = [];
-  page.on("pageerror", error => pageErrors.push(error.message));
-  const fixturePage = (list: unknown[]) => ({
-    list,
-    total: list.length,
-    page: 1,
-    pageSize: 100,
-    totalPages: 1
-  });
+}) => {
+  let saved: ScriptSave | undefined;
+  const task = {
+    id: 99,
+    taskName: "旧草稿",
+    status: 0,
+    accountGroupId: 30,
+    intervalSeconds: 10,
+    startAt: 1,
+    endAt: null,
+    groupCount: 1
+  };
+  const steps = ["ADMIN", "PROMOTER"].map((role, index) => ({
+    role,
+    roleKey: index ? "推手一" : "管理员",
+    accountId: index ? null : 1,
+    waitMinSeconds: 10,
+    waitMaxSeconds: 20,
+    message: {
+      templateName: "",
+      linkMode: 1,
+      content: `任务快照消息${index}`,
+      bodyText: "",
+      imageFileId: null,
+      promotionLink: "",
+      mentionAll: false,
+      buttons: []
+    }
+  }));
+  const paths: string[] = [];
   await page.route("**/api/**", async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
-    if (!path.startsWith("/api/")) {
-      await route.continue();
-      return;
-    }
+    if (!path.startsWith("/api/")) return route.continue();
+    paths.push(path);
     let data: unknown;
     if (path === "/api/tenant/me/menus")
       data = [
         {
           path: "/task",
           name: "TaskCenter",
-          meta: { title: "任务中心", rank: 3 },
+          meta: { title: "任务中心" },
           children: [
             {
               path: "/task/script-marketing",
               name: "TaskScriptMarketing",
               component: "task/script-marketing/index",
-              meta: {
-                title: "剧本营销任务",
-                auths: [],
-                module_key: "task",
-                perm_key: permissions[0]
-              }
+              meta: { title: "养群任务", auths: [] }
             }
           ]
         }
       ];
-    else if (path.endsWith("/options/account-groups"))
-      data = [{ id: 30, name: "推手分组 A" }];
-    else if (path.endsWith("/options/accounts"))
-      data = fixturePage(
-        [1, 2, 3].map(id => ({ id, wsPhone: `1555000000${id}`, loginState: 1 }))
-      );
+    else if (path === "/api/script-marketing-tasks")
+      data = { list: [task], total: 1 };
+    else if (path === "/api/script-marketing-tasks/99") {
+      if (request.method() === "PUT") saved = request.postDataJSON();
+      data = {
+        task,
+        steps,
+        groups: [{ id: 42, groupLinkId: 42, groupName: "本地测试群" }]
+      };
+    } else if (path.endsWith("/options/account-groups"))
+      data = [{ id: 30, name: "推手分组 A", accountCount: 6 }];
     else if (path.endsWith("/options/groups"))
-      data = fixturePage([
-        { id: 42, groupName: "本地测试群", groupJid: "120001@g.us" }
-      ]);
-    else if (
-      path === "/api/script-marketing-tasks" &&
-      request.method() === "POST"
-    ) {
-      saved = request.postDataJSON();
-      data = { task: { id: 99 }, steps: saved?.steps, groups: [] };
-    } else if (path === "/api/script-marketing-tasks") data = fixturePage([]);
-    else {
-      await route.abort();
-      return;
-    }
+      data = { list: [{ id: 42, groupName: "本地测试群" }], total: 1 };
+    else return route.abort();
     await route.fulfill({ json: { code: 0, message: "ok", data } });
   });
   await page.goto("http://127.0.0.1:5194/#/task/script-marketing");
-  await page.getByRole("button", { name: "新建剧本任务" }).click();
-  const drawer = page.locator(".el-drawer").filter({ hasText: "新建剧本任务" });
-  await expect(
-    drawer.locator(".el-collapse-item__header").nth(0)
-  ).toBeVisible();
-  await expect(
-    drawer.locator(".el-collapse-item__header").nth(1)
-  ).toBeVisible();
-  await drawer
-    .locator(".el-form-item")
-    .filter({ has: page.getByText("任务名称", { exact: true }) })
-    .locator("input")
-    .fill("三人顺序消息测试");
-  await drawer
-    .locator(".el-form-item")
-    .filter({ has: page.getByText("推手分组", { exact: true }) })
-    .locator(".el-select")
-    .click();
-  await page.getByRole("option", { name: "推手分组 A", exact: true }).click();
-  await drawer
-    .locator(".el-form-item")
-    .filter({ has: page.getByText("目标群", { exact: true }) })
-    .locator(".el-select")
-    .click();
-  await page.getByRole("option", { name: "本地测试群" }).click();
-  await page.keyboard.press("Escape");
-  async function fillStep(index: number, accountId: number, text: string) {
-    const section = drawer.locator(".el-collapse-item").nth(index);
-    if (index) await section.locator(".el-collapse-item__header").click();
-    if (index === 0) {
-      await section
-        .locator(".el-form-item")
-        .filter({ has: page.getByText("管理员账号", { exact: true }) })
-        .locator(".el-select")
-        .click();
-      await page
-        .getByRole("option", {
-          name: `1555000000${accountId} · #${accountId}`,
-          exact: true
-        })
-        .click();
-    }
-    await section.locator("textarea").first().fill(text);
-  }
-  await fillStep(0, 1, "管理员开场消息");
-  await fillStep(1, 2, "第一位推手消息");
-  await drawer.getByRole("button", { name: "添加发送项" }).click();
-  const third = drawer.locator(".el-collapse-item").nth(2);
-  await third.locator("textarea").first().fill("第二位推手消息");
-  await third.getByText("按钮消息", { exact: true }).click();
-  await third.getByPlaceholder("按钮文字").fill("查看详情");
-  await third.getByPlaceholder("链接或复制内容").fill("https://example.com");
-  await third.getByRole("button", { name: "添加按钮", exact: true }).click();
-  await expect(third.getByPlaceholder("按钮文字")).toHaveCount(2);
-  await third.getByPlaceholder("按钮文字").nth(1).fill("联系团队");
-  await third
-    .getByPlaceholder("链接或复制内容")
-    .nth(1)
-    .fill("https://example.com/contact");
-  await third.getByRole("button", { name: "复制此项", exact: true }).click();
-  const copied = drawer.locator(".el-collapse-item").nth(3);
-  await copied.locator(".el-collapse-item__header").click();
-  await expect(copied.getByPlaceholder("按钮文字").first()).toHaveValue(
-    "查看详情"
-  );
-  await copied.getByPlaceholder("按钮文字").first().fill("独立副本");
-  await copied.getByRole("button", { name: "删除", exact: true }).click();
-  await third.locator(".el-collapse-item__header").click();
-  await expect(third.getByPlaceholder("按钮文字").first()).toHaveValue(
-    "查看详情"
-  );
-  await third.getByRole("button", { name: "上移", exact: true }).click();
-  await drawer.locator(".el-drawer__body").evaluate(element => {
-    element.scrollTop = 0;
+  await page.getByRole("button", { name: "编辑", exact: true }).click();
+  const drawer = page.getByRole("dialog", {
+    name: "编辑剧本任务",
+    exact: true
   });
-  await page.screenshot({
-    path: testInfo.outputPath("create.png"),
-    fullPage: true,
-    animations: "disabled"
-  });
-  await drawer.getByRole("button", { name: "保存草稿" }).click();
-  await expect(page.getByText("草稿已保存，可在任务列表启动")).toBeVisible();
-  expect(saved?.taskName).toBe("三人顺序消息测试");
+  await expect(
+    drawer.getByText("已保存的任务剧本", { exact: true })
+  ).toBeVisible();
+  await expect(drawer.locator(".message-preview").first()).toContainText(
+    "任务快照消息0"
+  );
+  await expect(drawer.locator(".message-preview").last()).toContainText(
+    "任务快照消息1"
+  );
+  await expect(drawer.getByText("管理员账号", { exact: true })).toHaveCount(0);
+  await drawer.getByRole("button", { name: "保存草稿", exact: true }).click();
+  await expect(drawer).toBeHidden();
   expect(saved?.groupLinkIds).toEqual([42]);
-  const steps = saved?.steps as {
-    accountId: number;
-    message: { content: string };
-  }[];
-  expect(saved?.accountGroupId).toBe(30);
-  expect(steps.map(step => step.accountId)).toEqual([1, null, null]);
-  expect(steps.map(step => step.message.content)).toEqual([
-    "管理员开场消息",
-    "第二位推手消息",
-    "第一位推手消息"
+  expect(saved?.steps.map(step => step.accountId)).toEqual([null, null]);
+  expect(saved?.steps.map(step => step.message.content)).toEqual([
+    "任务快照消息0",
+    "任务快照消息1"
   ]);
-  expect(pageErrors).toEqual([]);
+  expect(
+    paths.some(
+      path =>
+        path.startsWith("/api/script-definitions") ||
+        path.endsWith("/options/accounts")
+    )
+  ).toBe(false);
 });
 
 for (const delayed of ["detail", "records"] as const) {

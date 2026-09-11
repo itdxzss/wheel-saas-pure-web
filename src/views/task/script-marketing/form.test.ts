@@ -12,7 +12,7 @@ import {
 const validForm = () => {
   const steps = [newStep("ADMIN"), newStep()];
   steps.forEach((step, index) => {
-    step.accountId = index === 0 ? 1 : null;
+    step.accountId = null;
     step.message.content = `message ${index}`;
   });
   return {
@@ -40,18 +40,26 @@ test("copy keeps account and role but edits do not change original content", () 
   assert.equal(copy.accountId, original.accountId);
   assert.equal(original.message.content, "message 1");
 });
-test("wire order uses stable roles and leaves promoters unbound until startup", () => {
+test("wire order leaves administrators and promoters unbound until startup", () => {
   const form = validForm();
   form.steps.push(copyStep(form.steps[1]));
   assert.equal(validateScript(form), undefined);
   const payload = toScriptSave(form);
   assert.deepEqual(
     payload.steps.map(s => s.accountId),
-    [1, null, null]
+    [null, null, null]
   );
   assert.equal("key" in payload.steps[0], false);
   form.steps[1].accountId = 1;
   assert.match(validateScript(form)!, /无需手动/);
+});
+test("copying an old draft clears fixed administrator accounts without changing its content", () => {
+  const source = validForm().steps[0];
+  source.accountId = 1;
+  const copy = copyStep(source);
+  assert.equal(copy.accountId, null);
+  assert.equal(source.accountId, 1);
+  assert.deepEqual(copy.message, source.message);
 });
 test("first interval is excluded and repeated promoter messages do not create extra roles", () => {
   const form = validForm();
@@ -63,7 +71,7 @@ test("first interval is excluded and repeated promoter messages do not create ex
   assert.deepEqual(estimatedWait(form.steps), [20, 40]);
   assert.equal(form.steps[1].roleKey, form.steps[2].roleKey);
   form.steps[2].role = "ADMIN";
-  form.steps[2].accountId = 2;
+  form.steps[2].accountId = null;
   assert.match(validateScript(form)!, /同一角色/);
 });
 test("image-only content and zero delay are allowed, missing group and inverted intervals are blocked", () => {
