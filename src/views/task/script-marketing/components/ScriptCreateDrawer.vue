@@ -43,6 +43,8 @@ const form = reactive<ScriptSave & { steps: EditableStep[] }>({
 const accounts = ref<ScriptAccountOption[]>([]);
 const groupOptions = ref<Pick<GroupListRow, "id" | "groupName">[]>([]);
 const saving = ref(false);
+const scriptSelected = ref(false);
+const definitionLoading = ref(false);
 const accountsLoading = ref(false);
 const groupsLoading = ref(false);
 const scheduled = ref(false);
@@ -112,6 +114,7 @@ async function loadAccountGroups() {
   }
 }
 async function check() {
+  if (definitionLoading.value) return;
   const error = validateScript(form);
   if (error) {
     ElMessage.warning(error);
@@ -130,6 +133,7 @@ async function check() {
   }
 }
 async function save(goToJoin = false) {
+  if (definitionLoading.value) return;
   form.startAt = scheduled.value ? form.startAt : null;
   if (scheduled.value && !form.startAt) {
     ElMessage.warning("请选择开始时间");
@@ -155,6 +159,8 @@ async function save(goToJoin = false) {
 }
 watch(visible, open => {
   if (!open) return;
+  scriptSelected.value = false;
+  definitionLoading.value = false;
   const detail = props.task;
   Object.assign(
     form,
@@ -219,12 +225,15 @@ watch(
       /></el-form-item>
       <ScriptDefinitionPicker
         v-if="visible"
+        v-model:loading="definitionLoading"
         @select="
           definition => {
             form.steps = definition.steps.map(copyStep);
+            scriptSelected = true;
             if (!form.taskName) form.taskName = definition.name;
           }
         "
+        @clear="scriptSelected = false"
       />
       <el-form-item label="推手分组" required>
         <el-select
@@ -271,9 +280,10 @@ watch(
           >
         </el-select>
       </el-form-item>
-      <el-form-item label="默认间隔" required
+      <el-form-item v-if="!scriptSelected" label="默认间隔" required
         ><el-input-number
           v-model="form.intervalSeconds"
+          :disabled="definitionLoading"
           :min="1"
           :max="86400"
         /><span class="field-note"
@@ -301,12 +311,18 @@ watch(
       /></el-form-item>
       <ScriptStepsEditor
         v-model="form.steps"
+        :read-only="scriptSelected || definitionLoading"
         :accounts="accounts"
         :loading="accountsLoading"
         :default-wait="form.intervalSeconds"
         @search-accounts="loadAccounts"
       />
-      <el-button :loading="checking" @click="check">检查所选群资格</el-button>
+      <el-button
+        :loading="checking"
+        :disabled="definitionLoading"
+        @click="check"
+        >检查所选群资格</el-button
+      >
       <ScriptQualificationPanel
         v-if="report"
         :report="report"
@@ -323,7 +339,11 @@ watch(
     </el-form>
     <template #footer
       ><el-button :disabled="saving" @click="visible = false">取消</el-button
-      ><el-button type="primary" :loading="saving" @click="save()"
+      ><el-button
+        type="primary"
+        :loading="saving"
+        :disabled="definitionLoading"
+        @click="save()"
         >保存草稿</el-button
       ></template
     >

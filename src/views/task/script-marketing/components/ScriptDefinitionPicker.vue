@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onBeforeUnmount, ref } from "vue";
 import { ElMessage } from "element-plus";
 import {
   listScriptDefinitions,
@@ -8,8 +8,13 @@ import {
   type ScriptDefinitionSummary
 } from "@/api/script-library";
 import { apiErrorMessage } from "@/utils/api-error";
-const emit = defineEmits<{ select: [definition: ScriptDefinition] }>();
+const emit = defineEmits<{
+  select: [definition: ScriptDefinition];
+  clear: [];
+}>();
+const selecting = defineModel<boolean>("loading", { default: false });
 const selected = ref<number>();
+const appliedSelection = ref<number>();
 const rows = ref<ScriptDefinitionSummary[]>([]);
 const loading = ref(false);
 const page = ref(1);
@@ -39,35 +44,52 @@ async function search(value = "", append = false) {
     if (request === requestId) loading.value = false;
   }
 }
-async function choose(id: number) {
+async function choose(id?: number) {
   const request = ++selectionRequestId;
-  loading.value = true;
+  if (typeof id !== "number") {
+    selected.value = undefined;
+    appliedSelection.value = undefined;
+    selecting.value = false;
+    emit("clear");
+    return;
+  }
+  selecting.value = true;
   try {
     const definition = await getScriptDefinition(id);
     if (request !== selectionRequestId || selected.value !== id) return;
     if (!definition.enabled) {
+      selected.value = appliedSelection.value;
       ElMessage.warning("该剧本已停用，请重新选择");
       return;
     }
+    appliedSelection.value = id;
     emit("select", definition);
   } catch (error) {
-    if (request === selectionRequestId)
+    if (request === selectionRequestId) {
+      selected.value = appliedSelection.value;
       ElMessage.error(apiErrorMessage(error, "剧本读取失败"));
+    }
   } finally {
-    if (request === selectionRequestId) loading.value = false;
+    if (request === selectionRequestId) selecting.value = false;
   }
 }
+onBeforeUnmount(() => {
+  requestId++;
+  selectionRequestId++;
+  selecting.value = false;
+});
 </script>
 
 <template>
   <el-form-item label="选用剧本">
     <el-select
       v-model="selected"
+      clearable
       filterable
       remote
       :remote-method="value => search(value)"
-      :loading="loading"
-      placeholder="搜索已启用剧本，复制到当前任务"
+      :loading="loading || selecting"
+      placeholder="搜索并选用已启用剧本"
       @visible-change="open => open && search()"
       @change="choose"
     >
@@ -88,7 +110,7 @@ async function choose(id: number) {
       >
     </el-select>
     <el-text type="info"
-      >选用会替换当前消息编排；也可以直接在下方配置。</el-text
+      >选用后替换当前编排并只读预览，管理员账号仍需选择；清除选择后可手动编辑当前内容。</el-text
     >
   </el-form-item>
 </template>

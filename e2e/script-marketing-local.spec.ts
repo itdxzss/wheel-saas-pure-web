@@ -1,14 +1,31 @@
 import { test, expect } from "@playwright/test";
+import type { ScriptSave, ScriptStep } from "../src/api/script-marketing";
 
 const permissions = ["view", "create", "edit", "operate"].map(
   key => `tenant:script_marketing:${key}`
 );
 
-test("shared message material flows through the script library into a task snapshot", async ({
+test("selected scripts are read-only, clearable and save with administrator bindings", async ({
   page
-}) => {
+}, testInfo) => {
   let material: Record<string, unknown> | undefined;
   let definition: Record<string, unknown> | undefined;
+  let saved: ScriptSave | undefined;
+  let failSelection = false;
+  let holdSelection = false;
+  let releaseSelection!: () => void;
+  const selectionGate = new Promise<void>(resolve => {
+    releaseSelection = resolve;
+  });
+  const alternateDefinition = () => ({
+    ...definition,
+    id: 602,
+    name: "切换剧本",
+    steps: (definition?.steps as ScriptStep[]).map(step => ({
+      ...step,
+      message: { ...step.message, content: `切换后：${step.message.content}` }
+    }))
+  });
   let taskWrites = 0;
   const menu = [
     [
@@ -79,13 +96,28 @@ test("shared message material flows through the script library into a task snaps
       data =
         request.method() === "POST"
           ? definition
-          : paged(definition ? [definition] : []);
-    } else if (path === "/api/script-definitions/601") data = definition;
-    else if (path === "/api/script-marketing-tasks") {
-      if (request.method() === "POST") taskWrites++;
+          : paged(definition ? [definition, alternateDefinition()] : []);
+    } else if (/^\/api\/script-definitions\/(601|602)$/.test(path)) {
+      if (holdSelection) await selectionGate;
+      if (failSelection) {
+        await route.fulfill({
+          json: { code: 500, message: "剧本加载失败", data: null }
+        });
+        return;
+      }
+      data = path.endsWith("/601") ? definition : alternateDefinition();
+    } else if (path === "/api/script-marketing-tasks") {
+      if (request.method() === "POST") {
+        taskWrites++;
+        saved = request.postDataJSON();
+      }
       data = paged([]);
-    } else if (path.endsWith("/options/account-groups")) data = [];
-    else if (path.endsWith("/options/accounts")) data = paged([]);
+    } else if (path.endsWith("/options/account-groups"))
+      data = [{ id: 30, name: "推手分组 A" }];
+    else if (path.endsWith("/options/accounts"))
+      data = paged([{ id: 1, wsPhone: "15550000001" }]);
+    else if (path.endsWith("/options/groups"))
+      data = paged([{ id: 42, groupName: "本地测试群" }]);
     else {
       await route.abort();
       return;
@@ -131,19 +163,136 @@ test("shared message material flows through the script library into a task snaps
   await page.goto("http://127.0.0.1:5194/#/task/script-marketing");
   await page.getByRole("button", { name: "新建剧本任务", exact: true }).click();
   drawer = page.getByRole("dialog", { name: "新建剧本任务" });
-  await drawer
+  const picker = drawer
     .locator(".el-form-item")
-    .filter({ has: page.getByText("选用剧本", { exact: true }) })
-    .locator(".el-select")
-    .click();
-  await page.getByRole("option", { name: "素材复用剧本", exact: true }).click();
+    .filter({ has: page.getByText("选用剧本", { exact: true }) });
+  async function chooseScript(name: string) {
+    await picker.locator(".el-select").click();
+    await page.getByRole("option", { name, exact: true }).click();
+  }
+  async function clearScript() {
+    await picker.locator(".el-select").hover();
+    await picker.locator(".el-select__clear").click();
+  }
+  await chooseScript("素材复用剧本");
   await expect(drawer.getByRole("textbox", { name: "任务名称" })).toHaveValue(
     "素材复用剧本"
   );
+  const admin = drawer.locator(".el-collapse-item").nth(0);
+  const promoter = drawer.locator(".el-collapse-item").nth(1);
+  const saveButton = drawer.getByRole("button", { name: "保存草稿" });
+  await expect(admin.locator(".message-preview")).toContainText(
+    "来自公共素材库的开场"
+  );
+  await expect(drawer.locator(".el-collapse-item textarea")).toHaveCount(0);
   await expect(
-    drawer.locator(".el-collapse-item").nth(0).locator("textarea").first()
-  ).toHaveValue("来自公共素材库的开场");
+    drawer.locator(".el-collapse-item input[type=radio]")
+  ).toHaveCount(0);
+  await expect(
+    drawer.locator(".el-collapse-item input[role=spinbutton]")
+  ).toHaveCount(0);
+  for (const name of [
+    "上移",
+    "下移",
+    "复制此项",
+    "删除",
+    "添加发送项",
+    "选择 / 上传图片"
+  ])
+    await expect(drawer.getByRole("button", { name, exact: true })).toHaveCount(
+      0
+    );
+  await expect(drawer.getByText("默认间隔", { exact: true })).toHaveCount(0);
+  await promoter.locator(".el-collapse-item__header").click();
+  await expect(promoter.locator(".message-preview")).toContainText("推手回应");
+  await expect(promoter.getByText("10–10 秒", { exact: true })).toBeVisible();
+  await expect(promoter.getByRole("combobox")).toHaveCount(0);
+
+  failSelection = true;
+  await chooseScript("切换剧本");
+  await expect(page.getByText("剧本加载失败", { exact: true })).toBeVisible();
+  await expect(picker.locator(".el-select")).toContainText("素材复用剧本");
+  await expect(saveButton).toBeEnabled();
+  await expect(drawer.locator(".el-collapse-item textarea")).toHaveCount(0);
+  failSelection = false;
+  await chooseScript("切换剧本");
+  await expect(admin.locator(".message-preview")).toContainText(
+    "切换后：来自公共素材库的开场"
+  );
+  await clearScript();
+  await expect(admin.locator("textarea").first()).toHaveValue(
+    "切换后：来自公共素材库的开场"
+  );
+  await admin.locator("textarea").first().fill("清除后手动修改");
+  await expect(
+    drawer.getByRole("button", { name: "添加发送项" })
+  ).toBeVisible();
+  await expect(drawer.getByText("默认间隔", { exact: true })).toBeVisible();
+
+  holdSelection = true;
+  const pendingSelection = page.waitForRequest("**/api/script-definitions/601");
+  await chooseScript("素材复用剧本");
+  await pendingSelection;
+  await expect(saveButton).toBeDisabled();
+  await expect(
+    drawer.getByRole("button", { name: "检查所选群资格" })
+  ).toBeDisabled();
+  await clearScript();
+  await expect(saveButton).toBeEnabled();
+  const lateResponse = page.waitForResponse("**/api/script-definitions/601");
+  releaseSelection();
+  await lateResponse;
+  holdSelection = false;
+  await expect(admin.locator("textarea").first()).toHaveValue("清除后手动修改");
+  await chooseScript("素材复用剧本");
+  await expect(admin.locator(".message-preview")).toContainText(
+    "来自公共素材库的开场"
+  );
+  await admin
+    .locator(".el-form-item")
+    .filter({ has: page.getByText("管理员账号", { exact: true }) })
+    .getByRole("combobox")
+    .click();
+  await page
+    .getByRole("option", { name: "15550000001 · #1", exact: true })
+    .click();
+  for (const [label, name] of [
+    ["推手分组", "推手分组 A"],
+    ["目标群", "本地测试群"]
+  ]) {
+    await drawer
+      .locator(".el-form-item")
+      .filter({ has: page.getByText(label, { exact: true }) })
+      .locator(".el-select")
+      .click();
+    await page.getByRole("option", { name, exact: true }).click();
+  }
+  await page.keyboard.press("Escape");
+  await drawer.locator(".el-drawer__body").evaluate(element => {
+    element.scrollTop = 0;
+  });
+  await page.screenshot({
+    path: testInfo.outputPath("selected-script.png"),
+    fullPage: true,
+    animations: "disabled"
+  });
   expect(taskWrites).toBe(0);
+  await saveButton.click();
+  await expect(drawer).toBeHidden();
+  expect(taskWrites).toBe(1);
+  expect(saved?.steps).toEqual(
+    (definition?.steps as ScriptStep[]).map(step => ({
+      ...step,
+      accountId: step.role === "ADMIN" ? 1 : null
+    }))
+  );
+  expect(saved?.accountGroupId).toBe(30);
+  expect(saved?.groupLinkIds).toEqual([42]);
+  await page.getByRole("button", { name: "新建剧本任务", exact: true }).click();
+  await expect(
+    drawer.getByRole("button", { name: "添加发送项" })
+  ).toBeVisible();
+  await expect(admin.locator("textarea").first()).toHaveValue("");
 });
 
 test("a short group shows the complete gap report and rechecking never starts a task", async ({

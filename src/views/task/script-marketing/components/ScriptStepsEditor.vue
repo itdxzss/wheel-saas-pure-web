@@ -9,6 +9,7 @@ import {
   type EditableStep
 } from "../form";
 import ScriptMessageEditor from "./ScriptMessageEditor.vue";
+import ScriptMaterialPreview from "@/views/material/script-material/components/ScriptMaterialPreview.vue";
 const steps = defineModel<EditableStep[]>({ required: true });
 const props = withDefaults(
   defineProps<{
@@ -16,6 +17,7 @@ const props = withDefaults(
     loading?: boolean;
     defaultWait?: number;
     requireAccounts?: boolean;
+    readOnly?: boolean;
   }>(),
   { accounts: () => [], defaultWait: 10, requireAccounts: true }
 );
@@ -100,7 +102,7 @@ function add() {
           {{ step.message.content || "图片 / 待填写内容" }}</strong
         ></template
       >
-      <el-form-item label="顺序操作">
+      <el-form-item v-if="!readOnly" label="顺序操作">
         <el-button :disabled="index === 0" @click="move(index, -1)"
           >上移</el-button
         >
@@ -123,13 +125,18 @@ function add() {
         >
       </el-form-item>
       <el-form-item label="发送身份" required>
-        <el-radio-group v-model="step.role" @change="changeType(step)">
+        <el-text v-if="readOnly">{{
+          step.role === "ADMIN" ? "管理员" : "推手"
+        }}</el-text>
+        <el-radio-group v-else v-model="step.role" @change="changeType(step)">
           <el-radio-button value="ADMIN">管理员</el-radio-button
           ><el-radio-button value="PROMOTER">推手</el-radio-button>
         </el-radio-group>
       </el-form-item>
       <el-form-item label="角色名称" required>
+        <el-text v-if="readOnly">{{ step.roleKey }}</el-text>
         <el-select
+          v-else
           v-model="step.roleKey"
           filterable
           allow-create
@@ -173,7 +180,10 @@ function add() {
         >
       </el-form-item>
       <el-form-item label="本条等待" required>
-        <el-space wrap>
+        <el-text v-if="readOnly && index > 0">
+          {{ step.waitMinSeconds }}–{{ step.waitMaxSeconds }} 秒
+        </el-text>
+        <el-space v-else-if="!readOnly" wrap>
           <el-input-number
             v-model="step.waitMinSeconds"
             :min="0"
@@ -195,15 +205,26 @@ function add() {
             : "从上一条提交发送时开始计时，不等待发送回执"
         }}</el-text>
       </el-form-item>
-      <ScriptMessageEditor v-model="step.message" />
+      <el-form-item v-if="readOnly" label="内容预览">
+        <ScriptMaterialPreview :message="step.message" class="step-preview" />
+      </el-form-item>
+      <ScriptMessageEditor v-else v-model="step.message" />
     </el-collapse-item>
   </el-collapse>
-  <el-button class="add-step" :disabled="steps.length >= 100" @click="add"
+  <el-button
+    v-if="!readOnly"
+    class="add-step"
+    :disabled="steps.length >= 100"
+    @click="add"
     >添加发送项</el-button
   >
 </template>
 
 <style scoped>
+.step-preview {
+  width: 100%;
+}
+
 .add-step {
   width: 100%;
   margin: 16px 0;
