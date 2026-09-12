@@ -1,6 +1,6 @@
 # 图片素材分组与业务隔离（2026-09-12）
 
-状态：本地实现与验证完成，未提交、推送或部署。分支 1.0.3-snapshot。
+状态：代码已提交推送并部署第一套 test1（2026-09-12）。分支 1.0.3-snapshot。
 
 用户已确认历史图片两边均可见，新上传按超链/养群分开。
 
@@ -16,7 +16,7 @@
 
 同级 armada 新增 V189、V190；assetScope=null 为历史，1 超链，2 养群。分组归属使用 tenant_id + file_id + scope 关系，groupId=0 查询未分组、省略查询全部。新绑定也校验图片业务。历史对象的名称、标签及删图状态仍共享；已有引用保持。
 
-本次隔离图片素材，未拆分普通营销与养群消息模板集合。未进行真实环境迁移或 API 联调。
+本次隔离图片素材，未拆分普通营销与养群消息模板集合。后端已完成 test1 迁移；真实登录态页面交互未验收，浏览器借用被用户取消。
 
 ## 验证
 
@@ -26,3 +26,5 @@
 - 输出：/tmp/resource-asset-scope-e2e.log、/tmp/resource-asset-scope-typecheck.log、/tmp/resource-asset-scope-lint.log、/tmp/resource-asset-scope-stylelint.log。
 
 pnpm 本地脚本触发依赖重装检查后因无 TTY 中断，未清理 node_modules 或改锁文件；使用现有 node_modules/.bin 工具验证。其他会话修改保留。
+
+部署代码 commit：fd619c53；运行 Nginx 中 554 个静态文件摘要与构建一致。后端 7130b386、Flyway V189/V190 和只读深度检查通过。详见同级 armada 的 .harness/changes/resource-asset-groups/deployment.md。本记录的后续提交仅更新文档，无需重新部署。
