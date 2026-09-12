@@ -28,3 +28,11 @@
 pnpm 本地脚本触发依赖重装检查后因无 TTY 中断，未清理 node_modules 或改锁文件；使用现有 node_modules/.bin 工具验证。其他会话修改保留。
 
 部署代码 commit：fd619c53；运行 Nginx 中 554 个静态文件摘要与构建一致。后端 7130b386、Flyway V189/V190 和只读深度检查通过。详见同级 armada 的 .harness/changes/resource-asset-groups/deployment.md。本记录的后续提交仅更新文档，无需重新部署。
+
+## 2026-09-12 按钮布局调整
+
+用户指出“管理分组”夹在筛选条件之间。现将分组/名称/标签/重置连续放左侧，“管理分组”和“批量上传”并排放右侧；窄屏自动换行。超链和养群复用此布局，业务和权限规则保持原有行为。
+
+代码 37dd646e 已推送并通过 --env test1 --fe 部署第一套环境。定向 ESLint/Stylelint、4 项本地浏览器交互与 production build 通过，已查看本地渲染截图。主工作区另一个在途群列表测试存在类型报错，保持原样；从 37dd646e 建立的独立干净发布工作树通过 tsc + vue-tsc 全项目检查，发布未包含其他群列表在途修改。
+
+部署退出 0；Nginx running、restart=0；页面入口及匹配本次工具栏的 JS/CSS 在容器和公网 HTTP 的 SHA256 与本地构建一致。证据：/tmp/resource-asset-toolbar-e2e.log、/tmp/test1-asset-toolbar-deploy.log、/tmp/test1-toolbar-verification.log。未借用用户浏览器或改动真实素材。
