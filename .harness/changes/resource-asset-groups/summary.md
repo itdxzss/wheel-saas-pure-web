@@ -36,3 +36,11 @@ pnpm 本地脚本触发依赖重装检查后因无 TTY 中断，未清理 node_m
 代码 37dd646e 已推送并通过 --env test1 --fe 部署第一套环境。定向 ESLint/Stylelint、4 项本地浏览器交互与 production build 通过，已查看本地渲染截图。主工作区另一个在途群列表测试存在类型报错，保持原样；从 37dd646e 建立的独立干净发布工作树通过 tsc + vue-tsc 全项目检查，发布未包含其他群列表在途修改。
 
 部署退出 0；Nginx running、restart=0；页面入口及匹配本次工具栏的 JS/CSS 在容器和公网 HTTP 的 SHA256 与本地构建一致。证据：/tmp/resource-asset-toolbar-e2e.log、/tmp/test1-asset-toolbar-deploy.log、/tmp/test1-toolbar-verification.log。未借用用户浏览器或改动真实素材。
+
+## 2026-09-12 分组素材数量
+
+分组下拉和管理弹窗显示“分组名（数量）”，移组、上传及素材选择器复用相同标签。数量由后端 GET /groups 返回 assetCount，按当前租户和业务统计未删除素材；历史共享图片按业务各自归属计数，不受搜索、标签或分页影响。新分组返回 0，上传、移组及删图后刷新数量。无需数据库迁移。
+
+后端 ResourceAsset*Test 37 项通过（含 H2 Mapper 20 项），新增计数测试覆盖空组、历史双边独立归属、移组、删除、异常跨业务/跨租户关系。前端定向 ESLint/Stylelint、隔离提交版本 tsc/vue-tsc 均通过；4 项本地 Playwright 回归通过，覆盖数量刷新及业务隔离。本地夹具验证不等同于测试环境登录态 API 联调。
+
+代码提交：后端 428b7873，前端 f708d008，均已推送 1.0.3-snapshot。第一套 test1 发布与产物核对结果另见 count-deployment.md。
