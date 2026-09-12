@@ -84,52 +84,54 @@ const {
     </el-card>
 
     <el-card shadow="never" class="filter-card">
-      <el-form inline>
-        <el-form-item label="素材分组">
-          <el-select
-            v-model="selectedGroup"
-            clearable
-            placeholder="全部分组"
-            class="group-filter"
+      <div class="filter-toolbar">
+        <el-form inline class="filter-form">
+          <el-form-item label="素材分组">
+            <el-select
+              v-model="selectedGroup"
+              clearable
+              placeholder="全部分组"
+              class="group-filter"
+            >
+              <el-option label="未分组" :value="0" />
+              <el-option
+                v-for="group in groups"
+                :key="group.id"
+                :label="group.groupName"
+                :value="group.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="素材名称">
+            <el-input v-model="keyword" clearable placeholder="按名称搜索" />
+          </el-form-item>
+          <el-form-item label="素材标签">
+            <el-select
+              v-model="selectedTags"
+              multiple
+              clearable
+              collapse-tags
+              placeholder="按标签筛选（任意匹配）"
+              class="tag-filter"
+            >
+              <el-option
+                v-for="tag in tagOptions"
+                :key="tag"
+                :label="tag"
+                :value="tag"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item
+            ><el-button @click="reset">重置</el-button></el-form-item
           >
-            <el-option label="未分组" :value="0" />
-            <el-option
-              v-for="group in groups"
-              :key="group.id"
-              :label="group.groupName"
-              :value="group.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
+        </el-form>
+        <div class="library-actions">
           <el-button
             v-if="hasAuth(editPermission) || hasAuth(deletePermission)"
             @click="groupManagerVisible = true"
             >管理分组</el-button
           >
-        </el-form-item>
-        <el-form-item label="素材名称">
-          <el-input v-model="keyword" clearable placeholder="按名称搜索" />
-        </el-form-item>
-        <el-form-item label="素材标签">
-          <el-select
-            v-model="selectedTags"
-            multiple
-            clearable
-            collapse-tags
-            placeholder="按标签筛选（任意匹配）"
-            class="tag-filter"
-          >
-            <el-option
-              v-for="tag in tagOptions"
-              :key="tag"
-              :label="tag"
-              :value="tag"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item><el-button @click="reset">重置</el-button></el-form-item>
-        <el-form-item>
           <el-button
             v-if="
               hasAuth(uploadPermission) ||
@@ -140,8 +142,8 @@ const {
           >
             批量上传
           </el-button>
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
     </el-card>
 
     <el-alert
@@ -372,6 +374,39 @@ const {
   font-size: 13px;
   line-height: 1.6;
   color: rgb(255 255 255 / 92%);
+}
+
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  align-items: flex-start;
+}
+
+.filter-form {
+  display: flex;
+  flex: 1 1 720px;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.filter-form :deep(.el-form-item) {
+  margin: 0;
+}
+
+.filter-form :deep(.el-input) {
+  width: 180px;
+}
+
+.library-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.library-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .group-filter {
