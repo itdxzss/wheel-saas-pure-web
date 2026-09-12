@@ -82,10 +82,10 @@ watch(onlyProblems, () => {
       >
       <el-table-column prop="required" label="所需推手" width="90" />
       <el-table-column prop="available" label="已确认可用" width="100" />
-      <el-table-column label="缺口" width="90"
+      <el-table-column label="推手人数缺口" width="120"
         ><template #default="{ row }">
           <el-text :type="row.shortage ? 'danger' : 'success'">{{
-            row.shortage ? `缺 ${row.shortage} 个` : "已满足"
+            row.shortage ? `缺 ${row.shortage} 个` : "人数已满足"
           }}</el-text>
         </template></el-table-column
       >

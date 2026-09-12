@@ -23,6 +23,7 @@ function buttonKey(button: object): number {
   <div class="message-preview" :class="{ 'is-compact': compact }">
     <div v-if="message.imageFileId" class="message-image">
       <ResourceAssetThumbnail
+        scope="SCRIPT"
         :asset-id="message.imageFileId"
         :alt="message.templateName || '消息图片'"
         fit="contain"

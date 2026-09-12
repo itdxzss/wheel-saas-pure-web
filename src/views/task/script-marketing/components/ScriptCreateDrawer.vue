@@ -15,7 +15,7 @@ import {
 import type { GroupListRow } from "@/api/group";
 import { apiErrorMessage } from "@/utils/api-error";
 import {
-  copyStep,
+  hydrateScriptSteps,
   toScriptSave,
   validateScript,
   type EditableStep
@@ -159,7 +159,7 @@ watch(visible, open => {
           startAt: detail.task.startAt,
           endAt: detail.task.endAt,
           groupLinkIds: detail.groups.map(g => g.groupLinkId),
-          steps: detail.steps.map(copyStep)
+          steps: hydrateScriptSteps(detail.steps)
         }
       : {
           taskName: "",
@@ -224,7 +224,7 @@ watch(
         :has-snapshot="!!task && !!form.steps.length"
         @select="
           definition => {
-            form.steps = definition.steps.map(copyStep);
+            form.steps = hydrateScriptSteps(definition.steps);
             scriptName = definition.name;
             if (!form.taskName) form.taskName = definition.name;
           }

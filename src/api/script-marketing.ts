@@ -19,6 +19,8 @@ export interface ScriptMessage {
   }[];
 }
 export interface ScriptStep {
+  stepId?: string;
+  replyToStepId?: string | null;
   role: "ADMIN" | "PROMOTER";
   accountId: number | null;
   message: ScriptMessage;
@@ -65,6 +67,7 @@ export interface ScriptGroup {
   remainingWaitMs: number;
 }
 export interface ScriptRecord {
+  replyFallbackReason: string | null;
   accountPhone: string | null;
   id: number;
   groupId: number;

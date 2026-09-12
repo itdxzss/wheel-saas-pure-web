@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import type { ResourceAsset } from "@/api/resource-asset";
+import type { ResourceAsset, ResourceAssetScope } from "@/api/resource-asset";
 import Edit from "~icons/ep/edit";
 import Delete from "~icons/ep/delete";
 import { formatAssetBytes } from "../domain/resource-asset";
 import ResourceAssetThumbnail from "./ResourceAssetThumbnail.vue";
 
-defineProps<{ asset: ResourceAsset }>();
+defineProps<{
+  asset: ResourceAsset;
+  groupName?: string;
+  scope: ResourceAssetScope;
+  editPermission: string;
+  deletePermission: string;
+}>();
 
 defineEmits<{
   (event: "edit", asset: ResourceAsset): void;
@@ -19,6 +25,7 @@ defineEmits<{
     <div class="asset-image">
       <ResourceAssetThumbnail
         :asset-id="asset.id"
+        :scope="scope"
         :alt="asset.assetName"
         fit="contain"
       />
@@ -40,6 +47,10 @@ defineEmits<{
       </template>
       <span v-else>无标签</span>
     </div>
+    <div v-if="asset.assetScope == null" class="asset-tags">
+      <el-tag size="small" type="info">历史共享</el-tag>
+    </div>
+    <div v-if="groupName" class="asset-tags">分组：{{ groupName }}</div>
     <div class="asset-meta">
       <div class="asset-meta-row">
         <span>尺寸</span>
@@ -62,7 +73,7 @@ defineEmits<{
     </div>
     <div class="asset-actions">
       <el-button
-        v-auth="'tenant:resource_asset:edit'"
+        v-auth="editPermission"
         link
         type="primary"
         :icon="useRenderIcon(Edit)"
@@ -84,7 +95,7 @@ defineEmits<{
           >
             <template #reference>
               <el-button
-                v-auth="'tenant:resource_asset:delete'"
+                v-auth="deletePermission"
                 link
                 type="danger"
                 :icon="useRenderIcon(Delete)"

@@ -3,7 +3,10 @@ import { defineConfig } from "@playwright/test";
 /** 本地新页面验收，测试拦截全部业务 API，不需要业务账号或后端。 */
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "script-marketing-local.spec.ts",
+  testMatch: [
+    "script-marketing-local.spec.ts",
+    "script-composer-local.spec.ts"
+  ],
   timeout: 45000,
   use: {
     channel: "chrome",

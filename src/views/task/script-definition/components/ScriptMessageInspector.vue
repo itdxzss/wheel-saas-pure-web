@@ -4,10 +4,13 @@ import type { EditableStep } from "@/views/task/script-marketing/form";
 import ScriptMessageEditor from "@/views/task/script-marketing/components/ScriptMessageEditor.vue";
 import ScriptMaterialPreview from "@/views/material/script-material/components/ScriptMaterialPreview.vue";
 import type { ComposerRole } from "../composables/useScriptComposer";
+import { replySummary } from "@/views/task/script-marketing/reply";
+import ScriptReplyQuote from "@/views/task/script-marketing/components/ScriptReplyQuote.vue";
 
 const step = defineModel<EditableStep>({ required: true });
 const props = defineProps<{
   index: number;
+  steps: EditableStep[];
   roles: ComposerRole[];
   roleKey?: string;
   inherited: boolean;
@@ -17,6 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   role: [key: string];
   inherit: [enabled: boolean];
+  locate: [stepId: string];
 }>();
 const mode = ref("edit");
 watch(
@@ -64,14 +68,47 @@ watch(
           :key="step.key"
           v-model="step.message"
           :show-preview="false"
-        />
+        >
+          <template #after-type>
+            <el-form-item label="回复哪一句">
+              <el-select
+                v-model="step.replyToStepId"
+                clearable
+                filterable
+                placeholder="不指定（普通消息）"
+                :disabled="index === 0"
+              >
+                <el-option :value="''" label="不指定（普通消息）" />
+                <el-option
+                  v-for="(target, targetIndex) in steps.slice(0, index)"
+                  :key="target.stepId"
+                  :value="target.stepId"
+                  :label="replySummary(target, targetIndex)"
+                />
+              </el-select>
+              <p class="muted">
+                {{
+                  index === 0
+                    ? "第一句没有可引用的前文"
+                    : "可引用前面任意一句；原句失败时，本句仍按普通消息发送。"
+                }}
+              </p>
+            </el-form-item>
+            <ScriptReplyQuote
+              :step="step"
+              :steps="steps"
+              clickable
+              @locate="emit('locate', $event)"
+            />
+          </template>
+        </ScriptMessageEditor>
         <div class="wait-settings">
           <strong>发送前随机等待</strong>
           <p class="muted">
             {{
               index === 0
                 ? "第一条不等待；调整顺序后按配置的时间等待。"
-                : "从上一条提交发送时开始计时，不等待发送回执。"
+                : "从上一条提交发送时开始计时；引用原句时还需等待原句发送结果。"
             }}
           </p>
           <el-checkbox
@@ -102,10 +139,15 @@ watch(
           </div>
         </div>
       </div>
-      <ScriptMaterialPreview
-        v-if="mode === 'preview'"
-        :message="step.message"
-      />
+      <template v-if="mode === 'preview'">
+        <ScriptReplyQuote
+          :step="step"
+          :steps="steps"
+          clickable
+          @locate="emit('locate', $event)"
+        />
+        <ScriptMaterialPreview :message="step.message" />
+      </template>
     </div>
   </section>
 </template>

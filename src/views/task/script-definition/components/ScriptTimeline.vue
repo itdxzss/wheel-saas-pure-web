@@ -6,6 +6,7 @@ import {
   type EditableStep
 } from "@/views/task/script-marketing/form";
 import type { ComposerRole } from "../composables/useScriptComposer";
+import ScriptReplyQuote from "@/views/task/script-marketing/components/ScriptReplyQuote.vue";
 
 const props = defineProps<{
   steps: EditableStep[];
@@ -124,6 +125,18 @@ const types = { 1: "文字 / 链接", 2: "按钮消息", 3: "图片 / 图文" };
             ><span v-if="step.message.mentionAll">@所有人</span></span
           >
         </button>
+        <ScriptReplyQuote
+          :step="step"
+          :steps="steps"
+          clickable
+          @locate="
+            id =>
+              emit(
+                'select',
+                steps.find(item => item.stepId === id)?.key || activeKey
+              )
+          "
+        />
         <div class="message-actions">
           <span
             class="drag-handle"
@@ -167,7 +180,7 @@ const types = { 1: "文字 / 链接", 2: "按钮消息", 3: "图片 / 图文" };
             type="danger"
             plain
             :disabled="!mayRemove(steps, index)"
-            title="至少保留一条管理员消息和一条推手消息"
+            title="被引用的消息不能删除，且须保留管理员和推手消息"
             @click="emit('remove', index)"
             >删除</el-button
           >

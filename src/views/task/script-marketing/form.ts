@@ -1,4 +1,5 @@
 import type { ScriptSave, ScriptStep } from "@/api/script-marketing";
+import { newStepId, validateReplies } from "./reply";
 
 let editorKey = 0;
 // 仅用于页面渲染，不发送到后端；普通 HTTP 也必须能创建配置项。
@@ -6,10 +7,16 @@ export function nextEditorKey(): string {
   return `script-editor-${++editorKey}`;
 }
 
-export type EditableStep = ScriptStep & { key: string };
+export type EditableStep = ScriptStep & {
+  key: string;
+  stepId: string;
+  replyToStepId: string | null;
+};
 export function newStep(role: ScriptStep["role"] = "PROMOTER"): EditableStep {
   return {
     key: nextEditorKey(),
+    stepId: newStepId(),
+    replyToStepId: null,
     role,
     accountId: null,
     roleKey: role === "ADMIN" ? "管理员" : `推手${editorKey}`,
@@ -31,6 +38,8 @@ export function copyStep(step: ScriptStep): EditableStep {
   return {
     ...JSON.parse(JSON.stringify(step)),
     key: nextEditorKey(),
+    stepId: newStepId(),
+    replyToStepId: step.replyToStepId || null,
     roleKey:
       step.roleKey ||
       `${step.role === "ADMIN" ? "管理员" : "推手"}${step.accountId || ""}`,
@@ -40,7 +49,32 @@ export function copyStep(step: ScriptStep): EditableStep {
   };
 }
 export function mayRemove(steps: ScriptStep[], index: number): boolean {
-  return steps.filter(step => step.role === steps[index]?.role).length > 1;
+  return (
+    steps.filter(step => step.role === steps[index]?.role).length > 1 &&
+    !steps.some(
+      step => step.replyToStepId && step.replyToStepId === steps[index]?.stepId
+    )
+  );
+}
+/** 读取与选入任务保留句子身份；旧数据按位置得到确定 ID。 */
+export function hydrateScriptSteps(steps: ScriptStep[]): EditableStep[] {
+  return steps.map((step, index) => ({
+    ...copyStep(step),
+    stepId: step.stepId || `legacy_${index}`
+  }));
+}
+/** 复制整份剧本时同时重建所有内部引用。 */
+export function cloneScriptSteps(steps: ScriptStep[]): EditableStep[] {
+  const source = hydrateScriptSteps(steps);
+  const copies = source.map(copyStep);
+  const ids = new Map(
+    source.map((step, index) => [step.stepId, copies[index].stepId])
+  );
+  copies.forEach(step => {
+    if (step.replyToStepId)
+      step.replyToStepId = ids.get(step.replyToStepId) ?? step.replyToStepId;
+  });
+  return copies;
 }
 export function validateScript(form: ScriptSave): string | undefined {
   if (
@@ -55,6 +89,8 @@ export function validateScript(form: ScriptSave): string | undefined {
   if (!form.groupLinkIds.length) return "请选择目标群";
   if (form.steps.length < 2 || form.steps.length > 100)
     return "请配置 2–100 个发送项";
+  const replyError = validateReplies(form.steps);
+  if (replyError) return replyError;
   const roles = new Map<string, ScriptStep>();
   for (const [index, step] of form.steps.entries()) {
     if (!step.roleKey?.trim()) return `第 ${index + 1} 项请填写角色名称`;
@@ -99,6 +135,8 @@ export function toScriptSave(form: ScriptSave): ScriptSave {
     endAt: form.endAt ? Number(form.endAt) : null,
     taskName: form.taskName.trim(),
     steps: form.steps.map(step => ({
+      stepId: step.stepId,
+      replyToStepId: step.replyToStepId || null,
       role: step.role,
       roleKey: step.roleKey?.trim() || "",
       waitMinSeconds: step.waitMinSeconds,

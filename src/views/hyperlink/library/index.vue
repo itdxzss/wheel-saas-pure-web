@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { ResourceAssetScope } from "@/api/resource-asset";
+import { hasAuth } from "@/router/utils";
+import ResourceAssetGroupManager from "./components/ResourceAssetGroupManager.vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import Gallery from "~icons/solar/gallery-wide-bold-duotone";
@@ -8,7 +11,32 @@ import { useResourceAssetLibrary } from "./composables/useResourceAssetLibrary";
 
 defineOptions({ name: "HyperlinkResourceAssetLibrary" });
 
+const props = withDefaults(defineProps<{ scope?: ResourceAssetScope }>(), {
+  scope: "HYPERLINK"
+});
+const permissionPrefix =
+  props.scope === "SCRIPT"
+    ? "tenant:script_marketing"
+    : "tenant:resource_asset";
+const editPermission = `${permissionPrefix}:edit`;
+const deletePermission = `${permissionPrefix}:delete`;
+const uploadPermission =
+  props.scope === "SCRIPT"
+    ? "tenant:script_marketing:create"
+    : "tenant:resource_asset:upload";
+
 const {
+  groups,
+  selectedGroup,
+  selectedIds,
+  groupManagerVisible,
+  groupBusy,
+  moveVisible,
+  moveGroupId,
+  createGroup,
+  deleteGroup,
+  openMove,
+  moveSelected,
   rows,
   tagOptions,
   keyword,
@@ -30,7 +58,7 @@ const {
   saveEdit,
   remove,
   afterUploaded
-} = useResourceAssetLibrary();
+} = useResourceAssetLibrary(props.scope);
 </script>
 
 <template>
@@ -43,11 +71,13 @@ const {
         <div class="intro-copy">
           <div class="intro-title">
             WhatsApp 素材库
-            <el-tag class="intro-badge" effect="plain" round>Library</el-tag>
+            <el-tag class="intro-badge" effect="plain" round>{{
+              scope === "SCRIPT" ? "养群图片" : "超链图片"
+            }}</el-tag>
           </div>
           <p>
             统一管理上传的图片素材；支持 JPG/JPEG/PNG，单张不超过
-            500KB。超链模板新建和编辑时可直接引用，避免重复上传。
+            500KB。历史图片两边均可使用，新上传的图片仅在当前业务中可见。
           </p>
         </div>
       </div>
@@ -55,6 +85,29 @@ const {
 
     <el-card shadow="never" class="filter-card">
       <el-form inline>
+        <el-form-item label="素材分组">
+          <el-select
+            v-model="selectedGroup"
+            clearable
+            placeholder="全部分组"
+            class="group-filter"
+          >
+            <el-option label="未分组" :value="0" />
+            <el-option
+              v-for="group in groups"
+              :key="group.id"
+              :label="group.groupName"
+              :value="group.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            v-if="hasAuth(editPermission) || hasAuth(deletePermission)"
+            @click="groupManagerVisible = true"
+            >管理分组</el-button
+          >
+        </el-form-item>
         <el-form-item label="素材名称">
           <el-input v-model="keyword" clearable placeholder="按名称搜索" />
         </el-form-item>
@@ -78,7 +131,10 @@ const {
         <el-form-item><el-button @click="reset">重置</el-button></el-form-item>
         <el-form-item>
           <el-button
-            v-auth="'tenant:resource_asset:upload'"
+            v-if="
+              hasAuth(uploadPermission) ||
+              (scope === 'SCRIPT' && hasAuth(editPermission))
+            "
             type="primary"
             @click="uploadVisible = true"
           >
@@ -102,14 +158,46 @@ const {
       class="asset-list-card"
       body-class="asset-list-card__body"
     >
+      <div v-auth="editPermission" class="batch-toolbar">
+        <el-checkbox
+          :model-value="rows.length > 0 && selectedIds.length === rows.length"
+          :indeterminate="
+            selectedIds.length > 0 && selectedIds.length < rows.length
+          "
+          :disabled="loading || !rows.length"
+          @change="selectedIds = $event ? rows.map(asset => asset.id) : []"
+          >选择本页</el-checkbox
+        >
+        <span>已选 {{ selectedIds.length }} 张</span>
+        <el-button :disabled="!selectedIds.length || loading" @click="openMove"
+          >移动到分组</el-button
+        >
+      </div>
       <div v-loading="loading" class="asset-grid">
-        <ResourceAssetCard
-          v-for="asset in rows"
-          :key="asset.id"
-          :asset="asset"
-          @edit="openEdit"
-          @remove="remove"
-        />
+        <div v-for="asset in rows" :key="asset.id" class="asset-item">
+          <el-checkbox-group
+            v-model="selectedIds"
+            v-auth="editPermission"
+            class="asset-selection"
+          >
+            <el-checkbox
+              :value="asset.id"
+              :aria-label="`选择素材 ${asset.assetName}`"
+            />
+          </el-checkbox-group>
+          <ResourceAssetCard
+            :asset="asset"
+            :scope="scope"
+            :edit-permission="editPermission"
+            :delete-permission="deletePermission"
+            :group-name="
+              groups.find(group => group.id === asset.groupId)?.groupName ||
+              '未分组'
+            "
+            @edit="openEdit"
+            @remove="remove"
+          />
+        </div>
         <el-empty v-if="!loading && !rows.length" description="暂无图片素材" />
       </div>
 
@@ -125,8 +213,48 @@ const {
     <ResourceAssetUploadDialog
       v-model="uploadVisible"
       :tag-options="tagOptions"
+      :groups="groups"
+      :default-group-id="selectedGroup"
+      :scope="scope"
       @uploaded="afterUploaded"
     />
+
+    <ResourceAssetGroupManager
+      v-model="groupManagerVisible"
+      :groups="groups"
+      :busy="groupBusy"
+      :edit-permission="editPermission"
+      :delete-permission="deletePermission"
+      @create="createGroup"
+      @remove="deleteGroup"
+    />
+    <el-dialog
+      v-model="moveVisible"
+      title="移动到分组"
+      width="min(460px, calc(100vw - 32px))"
+    >
+      <el-form label-position="top">
+        <el-form-item :label="`将选中的 ${selectedIds.length} 张图片移到`">
+          <el-select v-model="moveGroupId" class="full-width">
+            <el-option label="未分组" :value="0" />
+            <el-option
+              v-for="group in groups"
+              :key="group.id"
+              :label="group.groupName"
+              :value="group.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button :disabled="groupBusy" @click="moveVisible = false"
+          >取消</el-button
+        >
+        <el-button type="primary" :loading="groupBusy" @click="moveSelected"
+          >确认移动</el-button
+        >
+      </template>
+    </el-dialog>
 
     <el-dialog
       v-model="editVisible"
@@ -244,6 +372,32 @@ const {
   font-size: 13px;
   line-height: 1.6;
   color: rgb(255 255 255 / 92%);
+}
+
+.group-filter {
+  width: 180px;
+}
+
+.batch-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.asset-item {
+  position: relative;
+  min-width: 0;
+}
+
+.asset-selection {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  padding: 0 8px;
+  background: var(--el-bg-color);
+  border-radius: 4px;
 }
 
 .tag-filter {

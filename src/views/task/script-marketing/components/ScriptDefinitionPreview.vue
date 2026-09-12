@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { ScriptStep } from "@/api/script-marketing";
 import { estimatedWait, nextEditorKey } from "../form";
 import ScriptMaterialPreview from "@/views/material/script-material/components/ScriptMaterialPreview.vue";
+import ScriptReplyQuote from "./ScriptReplyQuote.vue";
 
 const props = defineProps<{
   steps: ScriptStep[];
@@ -79,6 +80,7 @@ function messageKey(step: object): string {
                 : `等待 ${step.waitMinSeconds ?? 0}–${step.waitMaxSeconds ?? 0} 秒`
             }}</span>
           </div>
+          <ScriptReplyQuote :step="step" :steps="steps" />
           <ScriptMaterialPreview :message="step.message" />
         </article>
       </div>

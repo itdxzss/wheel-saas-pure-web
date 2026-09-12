@@ -3,6 +3,9 @@ import { onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import {
   listResourceAssets,
+  listResourceAssetGroups,
+  type ResourceAssetGroup,
+  type ResourceAssetScope,
   listResourceAssetTags,
   type ResourceAsset
 } from "@/api/resource-asset";
@@ -13,11 +16,19 @@ import ResourceAssetThumbnail from "./ResourceAssetThumbnail.vue";
 import ResourceAssetUploadDialog from "./ResourceAssetUploadDialog.vue";
 
 const visible = defineModel<boolean>({ required: true });
-const props = defineProps<{ selectedAsset: ResourceAsset | null }>();
+const props = withDefaults(
+  defineProps<{
+    selectedAsset: ResourceAsset | null;
+    scope?: ResourceAssetScope;
+  }>(),
+  { scope: "HYPERLINK" }
+);
 const emit = defineEmits<{ (event: "select", asset: ResourceAsset): void }>();
 
 const rows = ref<ResourceAsset[]>([]);
 const tags = ref<string[]>([]);
+const groups = ref<ResourceAssetGroup[]>([]);
+const selectedGroup = ref<number | undefined>();
 const selectedTags = ref<string[]>([]);
 const keyword = ref("");
 const page = ref(1);
@@ -34,10 +45,12 @@ async function refresh(): Promise<void> {
   loading.value = true;
   try {
     const result = await listResourceAssets({
+      scope: props.scope,
       page: page.value,
       pageSize: pageSize.value,
       assetName: keyword.value.trim() || undefined,
       tags: selectedTags.value,
+      groupId: selectedGroup.value,
       selectableOnly: true
     });
     if (requestId !== refreshRequestId) return;
@@ -55,7 +68,12 @@ async function refresh(): Promise<void> {
 
 async function refreshTags(): Promise<void> {
   try {
-    tags.value = await listResourceAssetTags();
+    const [tagList, groupList] = await Promise.all([
+      listResourceAssetTags(props.scope),
+      listResourceAssetGroups(props.scope)
+    ]);
+    tags.value = tagList;
+    groups.value = groupList;
   } catch (error) {
     tags.value = [];
     ElMessage.warning(apiErrorMessage(error, "素材标签加载失败"));
@@ -89,6 +107,7 @@ watch(keyword, () => {
 });
 
 watch(selectedTags, search, { deep: true });
+watch(selectedGroup, search);
 
 watch(visible, opened => {
   if (!opened) {
@@ -112,6 +131,15 @@ onBeforeUnmount(() => clearTimeout(debounceTimer));
     :close-on-click-modal="false"
   >
     <div class="picker-toolbar">
+      <el-select v-model="selectedGroup" clearable placeholder="全部分组">
+        <el-option label="未分组" :value="0" />
+        <el-option
+          v-for="group in groups"
+          :key="group.id"
+          :label="group.groupName"
+          :value="group.id"
+        />
+      </el-select>
       <el-input v-model="keyword" clearable placeholder="搜索素材名称" />
       <el-select
         v-model="selectedTags"
@@ -137,7 +165,11 @@ onBeforeUnmount(() => clearTimeout(debounceTimer));
         @click="choose(asset)"
       >
         <div class="picker-image">
-          <ResourceAssetThumbnail :asset-id="asset.id" :alt="asset.assetName" />
+          <ResourceAssetThumbnail
+            :asset-id="asset.id"
+            :scope="scope"
+            :alt="asset.assetName"
+          />
           <span
             v-if="pendingSelection?.id === asset.id"
             class="selected-mark"
@@ -192,6 +224,9 @@ onBeforeUnmount(() => clearTimeout(debounceTimer));
     <ResourceAssetUploadDialog
       v-model="uploadVisible"
       :tag-options="tags"
+      :groups="groups"
+      :default-group-id="selectedGroup"
+      :scope="scope"
       @uploaded="afterUploaded"
     />
   </el-dialog>
@@ -200,7 +235,7 @@ onBeforeUnmount(() => clearTimeout(debounceTimer));
 <style scoped>
 .picker-toolbar {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  grid-template-columns: repeat(3, minmax(140px, 1fr)) auto;
   gap: 10px;
 }
 

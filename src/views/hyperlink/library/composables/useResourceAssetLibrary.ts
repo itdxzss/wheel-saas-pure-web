@@ -1,7 +1,13 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   deleteResourceAsset,
+  listResourceAssetGroups,
+  createResourceAssetGroup,
+  deleteResourceAssetGroup,
+  moveResourceAssets,
+  type ResourceAssetGroup,
+  type ResourceAssetScope,
   listResourceAssets,
   listResourceAssetTags,
   updateResourceAsset,
@@ -11,8 +17,17 @@ import { apiErrorMessage } from "@/utils/api-error";
 import { normalizeResourceAssetTags } from "../domain/resource-asset";
 
 /** 图片素材管理页的查询、编辑和删除状态。 */
-export function useResourceAssetLibrary() {
+export function useResourceAssetLibrary(
+  scope: ResourceAssetScope = "HYPERLINK"
+) {
   const rows = ref<ResourceAsset[]>([]);
+  const groups = ref<ResourceAssetGroup[]>([]);
+  const selectedGroup = ref<number | undefined>();
+  const selectedIds = ref<number[]>([]);
+  const groupManagerVisible = ref(false);
+  const groupBusy = ref(false);
+  const moveVisible = ref(false);
+  const moveGroupId = ref<number>(0);
   const tagOptions = ref<string[]>([]);
   const keyword = ref("");
   const selectedTags = ref<string[]>([]);
@@ -32,13 +47,16 @@ export function useResourceAssetLibrary() {
 
   async function refresh(): Promise<void> {
     const requestId = ++refreshRequestId;
+    selectedIds.value = [];
     loading.value = true;
     errorMessage.value = "";
     try {
       const result = await listResourceAssets({
+        scope,
         page: page.value,
         pageSize: pageSize.value,
         assetName: keyword.value.trim() || undefined,
+        groupId: selectedGroup.value,
         tags: selectedTags.value
       });
       if (requestId !== refreshRequestId) return;
@@ -56,10 +74,88 @@ export function useResourceAssetLibrary() {
 
   async function refreshTags(): Promise<void> {
     try {
-      tagOptions.value = await listResourceAssetTags();
+      tagOptions.value = await listResourceAssetTags(scope);
     } catch (error) {
       tagOptions.value = [];
       ElMessage.warning(apiErrorMessage(error, "素材标签加载失败"));
+    }
+  }
+
+  async function refreshGroups(): Promise<void> {
+    try {
+      groups.value = await listResourceAssetGroups(scope);
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "素材分组加载失败"));
+    }
+  }
+
+  async function createGroup(name: string): Promise<void> {
+    if (!name.trim()) {
+      ElMessage.warning("分组名称不能为空");
+      return;
+    }
+    groupBusy.value = true;
+    try {
+      await createResourceAssetGroup(name.trim(), scope);
+      ElMessage.success("分组已创建");
+      await refreshGroups();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "创建分组失败"));
+    } finally {
+      groupBusy.value = false;
+    }
+  }
+
+  async function deleteGroup(group: ResourceAssetGroup): Promise<void> {
+    try {
+      await ElMessageBox.confirm(
+        `删除分组“${group.groupName}”后，组内图片会移到“未分组”，图片和已有模板引用均保留。`,
+        "删除分组",
+        {
+          type: "warning",
+          confirmButtonText: "删除分组",
+          cancelButtonText: "取消"
+        }
+      );
+    } catch {
+      return;
+    }
+    groupBusy.value = true;
+    try {
+      await deleteResourceAssetGroup(group.id, scope);
+      if (selectedGroup.value === group.id) selectedGroup.value = undefined;
+      ElMessage.success("分组已删除，素材已保留");
+      page.value = 1;
+      await Promise.all([refreshGroups(), refresh()]);
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "删除分组失败"));
+    } finally {
+      groupBusy.value = false;
+    }
+  }
+
+  function openMove(): void {
+    moveGroupId.value = selectedGroup.value || 0;
+    moveVisible.value = true;
+  }
+
+  async function moveSelected(): Promise<void> {
+    if (!selectedIds.value.length) return;
+    groupBusy.value = true;
+    try {
+      await moveResourceAssets(
+        [...selectedIds.value],
+        moveGroupId.value || null,
+        scope
+      );
+      ElMessage.success("素材分组已更新");
+      moveVisible.value = false;
+      page.value = 1;
+      await refresh();
+    } catch (error) {
+      ElMessage.error(apiErrorMessage(error, "移组失败"));
+    } finally {
+      groupBusy.value = false;
     }
   }
 
@@ -71,6 +167,7 @@ export function useResourceAssetLibrary() {
   function reset(): void {
     keyword.value = "";
     selectedTags.value = [];
+    selectedGroup.value = undefined;
     search();
   }
 
@@ -99,10 +196,14 @@ export function useResourceAssetLibrary() {
     }
     saving.value = true;
     try {
-      await updateResourceAsset(editing.value.id, {
-        assetName: name,
-        tags: normalizeResourceAssetTags(editTags.value)
-      });
+      await updateResourceAsset(
+        editing.value.id,
+        {
+          assetName: name,
+          tags: normalizeResourceAssetTags(editTags.value)
+        },
+        scope
+      );
       ElMessage.success("素材信息已更新");
       editVisible.value = false;
       await Promise.all([refresh(), refreshTags()]);
@@ -116,7 +217,7 @@ export function useResourceAssetLibrary() {
   async function remove(asset: ResourceAsset): Promise<void> {
     if (asset.referenceCount > 0) return;
     try {
-      await deleteResourceAsset(asset.id);
+      await deleteResourceAsset(asset.id, scope);
       ElMessage.success("删除成功");
       if (rows.value.length === 1 && page.value > 1) page.value -= 1;
       await Promise.all([refresh(), refreshTags()]);
@@ -135,13 +236,27 @@ export function useResourceAssetLibrary() {
     debounceTimer = setTimeout(search, 300);
   });
   watch(selectedTags, search, { deep: true });
+  watch(selectedGroup, search);
   onBeforeUnmount(() => {
     refreshRequestId += 1;
     clearTimeout(debounceTimer);
   });
-  onMounted(() => void Promise.all([refresh(), refreshTags()]));
+  onMounted(
+    () => void Promise.all([refresh(), refreshTags(), refreshGroups()])
+  );
 
   return {
+    groups,
+    selectedGroup,
+    selectedIds,
+    groupManagerVisible,
+    groupBusy,
+    moveVisible,
+    moveGroupId,
+    createGroup,
+    deleteGroup,
+    openMove,
+    moveSelected,
     rows,
     tagOptions,
     keyword,

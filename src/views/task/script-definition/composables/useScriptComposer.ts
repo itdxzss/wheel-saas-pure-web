@@ -1,5 +1,6 @@
 import { computed, ref, type Ref } from "vue";
 import { ElMessage } from "element-plus";
+import { moveStep, validateReplies } from "@/views/task/script-marketing/reply";
 import type { ScriptStep } from "@/api/script-marketing";
 import {
   copyStep,
@@ -160,11 +161,17 @@ export function useScriptComposer(steps: Ref<EditableStep[]>) {
       from === to
     )
       return;
-    steps.value.splice(to, 0, steps.value.splice(from, 1)[0]);
+    if (!moveStep(steps.value, from, to))
+      ElMessage.warning("不能把回复放在被引用的对话之前");
   }
 
   function removeMessage(index: number) {
-    if (!mayRemove(steps.value, index)) return;
+    if (!mayRemove(steps.value, index)) {
+      ElMessage.warning(
+        "此句被引用或是该类型的最后一句，请先调整回复目标和角色配置"
+      );
+      return;
+    }
     const [removed] = steps.value.splice(index, 1);
     inherited.value.delete(removed.key);
     if (activeKey.value === removed.key)
@@ -180,6 +187,8 @@ export function useScriptComposer(steps: Ref<EditableStep[]>) {
     };
     if (steps.value.length < 2 || steps.value.length > 100)
       return report("请配置 2–100 条消息");
+    const replyError = validateReplies(steps.value);
+    if (replyError) return report(replyError);
     if (
       !steps.value.some(step => step.role === "ADMIN") ||
       !steps.value.some(step => step.role === "PROMOTER")

@@ -123,6 +123,7 @@ defineExpose({ validate });
       <ScriptMessageInspector
         v-if="activeStep"
         :model-value="activeStep"
+        :steps="steps"
         :index="activeIndex"
         :roles="roles"
         :role-key="roleFor(activeStep)?.key"
@@ -131,6 +132,12 @@ defineExpose({ validate });
         :default-max="defaultMax"
         @role="assignRole(activeStep, $event)"
         @inherit="useDefault(activeStep, $event)"
+        @locate="
+          id => {
+            activeKey =
+              steps.find(step => step.stepId === id)?.key || activeKey;
+          }
+        "
       />
       <section v-else class="composer-pane">
         <el-empty description="选择一句对话，在这里编辑或预览" />

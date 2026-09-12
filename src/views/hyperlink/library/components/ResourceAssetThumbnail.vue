@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
-import { downloadResourceAsset } from "@/api/resource-asset";
+import {
+  downloadResourceAsset,
+  type ResourceAssetScope
+} from "@/api/resource-asset";
 
 const props = withDefaults(
   defineProps<{
     assetId: number;
+    scope?: ResourceAssetScope;
     alt?: string;
     fit?: "cover" | "contain";
     preview?: boolean;
   }>(),
-  { alt: "图片素材", fit: "cover", preview: false }
+  { alt: "图片素材", fit: "cover", preview: false, scope: "HYPERLINK" }
 );
 
 const objectUrl = ref("");
@@ -28,7 +32,7 @@ async function load(): Promise<void> {
   failed.value = false;
   loading.value = true;
   try {
-    const blob = await downloadResourceAsset(props.assetId);
+    const blob = await downloadResourceAsset(props.assetId, props.scope);
     if (current !== requestId) return;
     objectUrl.value = URL.createObjectURL(blob);
   } catch {
@@ -38,7 +42,7 @@ async function load(): Promise<void> {
   }
 }
 
-watch(() => props.assetId, load, { immediate: true });
+watch(() => [props.assetId, props.scope], load, { immediate: true });
 
 onBeforeUnmount(() => {
   requestId += 1;

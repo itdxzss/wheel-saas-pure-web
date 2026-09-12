@@ -11,6 +11,12 @@ defineProps<{
 }>();
 const page = defineModel<number>("page", { required: true });
 const emit = defineEmits<{ reload: [] }>();
+const fallbackLabels: Record<string, string> = {
+  REPLY_TARGET_FAILED: "原句发送失败，本句按普通消息发送",
+  REPLY_TARGET_UNKNOWN: "原句结果未知，本句按普通消息发送",
+  REPLY_CONTEXT_MISSING: "原句引用信息缺失，本句按普通消息发送",
+  REPLY_TARGET_MISSING: "原句发送记录缺失，本句按普通消息发送"
+};
 function time(value: number | null) {
   return value ? dayjs(value).format("YYYY/MM/DD HH:mm:ss") : "—";
 }
@@ -51,6 +57,15 @@ function resultType(status: ScriptRecord["status"]) {
               <dt>消息 ID</dt>
               <dd>{{ row.messageId || "—" }}</dd>
             </div>
+            <div v-if="row.replyFallbackReason">
+              <dt>引用处理</dt>
+              <dd>
+                {{
+                  fallbackLabels[row.replyFallbackReason] ||
+                  row.replyFallbackReason
+                }}
+              </dd>
+            </div>
             <div>
               <dt>原命令 ID</dt>
               <dd>{{ row.commandId || "—" }}</dd>
@@ -89,7 +104,9 @@ function resultType(status: ScriptRecord["status"]) {
         min-width="170"
         show-overflow-tooltip
       >
-        <template #default="{ row }">{{ row.reason || "—" }}</template>
+        <template #default="{ row }">{{
+          row.reason || fallbackLabels[row.replyFallbackReason] || "—"
+        }}</template>
       </el-table-column>
     </el-table>
     <el-pagination

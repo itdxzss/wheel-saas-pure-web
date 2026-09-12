@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ResourceAssetIndex from "@/views/hyperlink/library/index.vue";
 import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import {
@@ -31,6 +32,7 @@ const rows = ref<ScriptMaterial[]>([]);
 const loading = ref(false);
 const errorMessage = ref("");
 const open = ref(false);
+const imagesOpen = ref(false);
 const saving = ref(false);
 const editing = ref<number>();
 const message = ref(newStep().message);
@@ -125,6 +127,7 @@ onBeforeUnmount(() => requestId++);
         </div>
         <div class="intro-copy">
           <h2>剧本素材库</h2>
+          <el-button @click="imagesOpen = true">管理养群图片</el-button>
           <p>
             管理文字、图片和按钮消息，编排剧本时可直接选用。素材修改不影响已保存的剧本。
           </p>
@@ -276,6 +279,15 @@ onBeforeUnmount(() => requestId++);
       </template>
     </el-drawer>
   </div>
+  <el-dialog
+    v-model="imagesOpen"
+    title="养群图片素材"
+    width="95%"
+    top="3vh"
+    destroy-on-close
+  >
+    <ResourceAssetIndex v-if="imagesOpen" scope="SCRIPT" />
+  </el-dialog>
 </template>
 
 <style scoped>

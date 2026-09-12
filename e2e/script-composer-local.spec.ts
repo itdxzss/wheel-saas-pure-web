@@ -293,3 +293,64 @@ test("role reuse, deletion and validation focus the right message", async ({
   ).toBeDisabled();
   expect(errors).toEqual([]);
 });
+
+test("quoted replies round-trip, locate originals, and protect message ordering", async ({
+  page
+}, testInfo) => {
+  const state = await setup(page);
+  const { drawer } = state;
+  const inspector = drawer.locator(".inspector-pane");
+  const cards = drawer.locator(".message-card");
+  const reply = inspector.getByRole("combobox", { name: "回复哪一句" });
+  await expect(reply).toBeDisabled();
+  await drawer
+    .getByRole("button", { name: "编辑第 3 条消息", exact: true })
+    .click();
+  await reply.click();
+  await page.getByRole("option", { name: /第 2 句/ }).click();
+  await expect(cards.nth(2).locator(".reply-quote")).toContainText("第 2 句");
+  await page.screenshot({
+    path: testInfo.outputPath("quoted-reply-editor.png"),
+    animations: "disabled"
+  });
+  await expect(
+    cards.nth(1).getByRole("button", { name: "删除", exact: true })
+  ).toBeDisabled();
+  await cards.nth(2).getByRole("button", { name: "上移第 3 条消息" }).click();
+  await expect(cards.nth(2)).toContainText("消息 3：");
+  await cards.nth(2).locator(".reply-quote button").click();
+  await expect(inspector).toContainText("第 2 句 · 推手1");
+  await drawer
+    .getByRole("button", { name: "编辑第 3 条消息", exact: true })
+    .click();
+  await inspector.getByText("预览", { exact: true }).click();
+  await expect(inspector.locator(".reply-quote:visible")).toContainText(
+    "消息 2："
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("quoted-reply-desktop.png"),
+    animations: "disabled"
+  });
+  await drawer.getByRole("button", { name: "保存剧本", exact: true }).click();
+  await expect(drawer).toBeHidden();
+  const saved = state.saved().steps;
+  expect(saved[2].replyToStepId).toBe(saved[1].stepId);
+  await page.getByRole("button", { name: "编辑", exact: true }).click();
+  await drawer
+    .getByRole("button", { name: "编辑第 3 条消息", exact: true })
+    .click();
+  await expect(
+    inspector
+      .locator(".el-select")
+      .filter({ has: page.getByRole("combobox", { name: "回复哪一句" }) })
+  ).toContainText("第 2 句");
+  await reply.click();
+  await page
+    .getByRole("option", { name: "不指定（普通消息）", exact: true })
+    .click();
+  await expect(cards.nth(2).locator(".reply-quote")).toHaveCount(0);
+  await expect(
+    cards.nth(1).getByRole("button", { name: "删除", exact: true })
+  ).toBeEnabled();
+  expect(state.errors).toEqual([]);
+});

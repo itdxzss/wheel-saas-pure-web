@@ -11,7 +11,8 @@ import {
 import ScriptComposer from "./components/ScriptComposer.vue";
 import {
   newStep,
-  copyStep,
+  hydrateScriptSteps,
+  cloneScriptSteps,
   type EditableStep
 } from "@/views/task/script-marketing/form";
 import { apiErrorMessage } from "@/utils/api-error";
@@ -58,7 +59,9 @@ async function edit(row?: ScriptDefinitionSummary, copy = false) {
     form.name = value ? value.name + (copy ? " 副本" : "") : "";
     form.enabled = value?.enabled ?? true;
     form.steps = value
-      ? value.steps.map(copyStep)
+      ? copy
+        ? cloneScriptSteps(value.steps)
+        : hydrateScriptSteps(value.steps)
       : [newStep("ADMIN"), newStep()];
     if (!value) form.steps[1].roleKey = "推手1";
     open.value = true;
@@ -79,6 +82,8 @@ async function save() {
         name: form.name.trim(),
         enabled: form.enabled,
         steps: form.steps.map(step => ({
+          stepId: step.stepId,
+          replyToStepId: step.replyToStepId || null,
           role: step.role,
           roleKey: step.roleKey?.trim() || "",
           accountId: null,

@@ -10,9 +10,18 @@ export interface PageResult<T> {
   totalPages: number;
 }
 
+export type ResourceAssetScope = "HYPERLINK" | "SCRIPT";
+
+export interface ResourceAssetGroup {
+  id: number;
+  groupName: string;
+}
+
 export interface ResourceAsset {
   id: number;
   assetName: string;
+  groupId: number | null;
+  assetScope: number | null;
   contentUrl: string;
   tags: string[];
   sizeBytes: number;
@@ -30,6 +39,8 @@ export interface ResourceAssetListQuery {
   assetName?: string;
   tags?: string[];
   selectableOnly?: boolean;
+  scope?: ResourceAssetScope;
+  groupId?: number;
 }
 
 export interface ResourceAssetUpdateRequest {
@@ -44,7 +55,7 @@ export function listResourceAssets(
     "get",
     "/api/resource-assets",
     {
-      params: query,
+      params: { ...query, scope: query.scope ?? "HYPERLINK" },
       paramsSerializer: {
         serialize: params => stringify(params, { arrayFormat: "repeat" })
       }
@@ -52,14 +63,22 @@ export function listResourceAssets(
   );
 }
 
-export function getResourceAsset(id: number): Promise<ResourceAsset> {
-  return armadaRequest<ResourceAsset>("get", `/api/resource-assets/${id}`);
+export function getResourceAsset(
+  id: number,
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<ResourceAsset> {
+  return armadaRequest<ResourceAsset>("get", `/api/resource-assets/${id}`, {
+    params: { scope }
+  });
 }
 
-export async function listResourceAssetTags(): Promise<string[]> {
+export async function listResourceAssetTags(
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<string[]> {
   const result = await armadaRequest<{ tags: string[] }>(
     "get",
-    "/api/resource-assets/tags"
+    "/api/resource-assets/tags",
+    { params: { scope } }
   );
   return result.tags;
 }
@@ -67,11 +86,15 @@ export async function listResourceAssetTags(): Promise<string[]> {
 export function uploadResourceAsset(
   file: File,
   tags: string[] = [],
-  onUploadProgress?: (progress: number) => void
+  onUploadProgress?: (progress: number) => void,
+  groupId?: number | null,
+  scope: ResourceAssetScope = "HYPERLINK"
 ): Promise<ResourceAsset> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("scope", scope);
   formData.append("tags", JSON.stringify(tags));
+  if (groupId) formData.append("groupId", String(groupId));
   return armadaRequest<ResourceAsset>(
     "post",
     "/api/resource-assets",
@@ -93,23 +116,82 @@ export function uploadResourceAsset(
 
 export function updateResourceAsset(
   id: number,
-  data: ResourceAssetUpdateRequest
+  data: ResourceAssetUpdateRequest,
+  scope: ResourceAssetScope = "HYPERLINK"
 ): Promise<ResourceAsset> {
   return armadaRequest<ResourceAsset>("put", `/api/resource-assets/${id}`, {
-    data
+    data,
+    params: { scope }
   });
 }
 
-export function deleteResourceAsset(id: number): Promise<void> {
-  return armadaRequest<void>("delete", `/api/resource-assets/${id}`);
+export function deleteResourceAsset(
+  id: number,
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<void> {
+  return armadaRequest<void>("delete", `/api/resource-assets/${id}`, {
+    params: { scope }
+  });
 }
 
-export function resourceAssetContentUrl(id: number): string {
-  return `/api/resource-assets/${id}/content`;
+export function resourceAssetContentUrl(
+  id: number,
+  scope: ResourceAssetScope = "HYPERLINK"
+): string {
+  return `/api/resource-assets/${id}/content?scope=${scope}`;
 }
 
-export function downloadResourceAsset(id: number): Promise<Blob> {
-  return http.request<Blob>("get", resourceAssetContentUrl(id), {
+export function downloadResourceAsset(
+  id: number,
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<Blob> {
+  return http.request<Blob>("get", resourceAssetContentUrl(id, scope), {
     responseType: "blob"
+  });
+}
+
+/** 查询当前租户分组，包含尚未上传素材的空分组。 */
+export function listResourceAssetGroups(
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<ResourceAssetGroup[]> {
+  return armadaRequest<ResourceAssetGroup[]>(
+    "get",
+    "/api/resource-assets/groups",
+    { params: { scope } }
+  );
+}
+
+export function createResourceAssetGroup(
+  groupName: string,
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<ResourceAssetGroup> {
+  return armadaRequest<ResourceAssetGroup>(
+    "post",
+    "/api/resource-assets/groups",
+    {
+      data: { groupName },
+      params: { scope }
+    }
+  );
+}
+
+/** 删除分组并将其中的图片移至未分组，保留图片与引用。 */
+export function deleteResourceAssetGroup(
+  id: number,
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<void> {
+  return armadaRequest<void>("delete", `/api/resource-assets/groups/${id}`, {
+    params: { scope }
+  });
+}
+
+export function moveResourceAssets(
+  assetIds: number[],
+  groupId: number | null,
+  scope: ResourceAssetScope = "HYPERLINK"
+): Promise<void> {
+  return armadaRequest<void>("put", "/api/resource-assets/group", {
+    data: { assetIds, groupId },
+    params: { scope }
   });
 }

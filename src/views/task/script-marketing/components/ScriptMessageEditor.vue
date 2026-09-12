@@ -93,6 +93,7 @@ function changeMode() {
       <el-radio-button :value="2">按钮消息</el-radio-button>
     </el-radio-group>
   </el-form-item>
+  <slot name="after-type" />
   <el-form-item
     label="消息内容"
     :required="!(model.linkMode === 3 && model.imageFileId)"
@@ -184,6 +185,7 @@ function changeMode() {
   </el-form-item>
   <ResourceAssetPicker
     v-model="assetOpen"
+    scope="SCRIPT"
     :selected-asset="asset"
     @select="selectAsset"
   />

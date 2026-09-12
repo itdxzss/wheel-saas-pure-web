@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { ElMessage, type UploadFile, type UploadUserFile } from "element-plus";
-import { uploadResourceAsset } from "@/api/resource-asset";
+import {
+  uploadResourceAsset,
+  type ResourceAssetScope,
+  type ResourceAssetGroup
+} from "@/api/resource-asset";
 import { apiErrorMessage } from "@/utils/api-error";
 import {
   normalizeResourceAssetTags,
@@ -13,13 +17,19 @@ import {
 } from "../domain/resource-asset";
 
 const visible = defineModel<boolean>({ required: true });
-const props = defineProps<{ tagOptions: string[] }>();
+const props = defineProps<{
+  tagOptions: string[];
+  groups?: ResourceAssetGroup[];
+  defaultGroupId?: number;
+  scope?: ResourceAssetScope;
+}>();
 const emit = defineEmits<{ (event: "uploaded"): void }>();
 
 const fileList = ref<UploadUserFile[]>([]);
 const items = ref<ResourceAssetUploadItem[]>([]);
 const tags = ref<string[]>([]);
 const uploading = ref(false);
+const groupId = ref(0);
 const progress = computed(() => {
   if (!items.value.length) return 0;
   return Math.round(
@@ -72,7 +82,14 @@ async function upload(): Promise<void> {
   const result = await uploadResourceAssetBatch(
     pending,
     tags.value,
-    uploadResourceAsset,
+    (file, tags, progress) =>
+      uploadResourceAsset(
+        file,
+        tags,
+        progress,
+        groupId.value || null,
+        props.scope ?? "HYPERLINK"
+      ),
     error => apiErrorMessage(error, "上传失败，可重试")
   );
   const succeeded = new Set(result.succeeded);
@@ -103,6 +120,7 @@ function beforeClose(done: () => void): void {
 }
 
 watch(visible, opened => {
+  if (opened) groupId.value = props.defaultGroupId || 0;
   if (!opened) reset();
 });
 </script>
@@ -141,6 +159,19 @@ watch(visible, opened => {
         </div>
       </template>
     </el-upload>
+    <el-form v-if="groups" label-position="top">
+      <el-form-item label="上传到分组">
+        <el-select v-model="groupId" :disabled="uploading" class="full-width">
+          <el-option label="未分组" :value="0" />
+          <el-option
+            v-for="group in groups"
+            :key="group.id"
+            :label="group.groupName"
+            :value="group.id"
+          />
+        </el-select>
+      </el-form-item>
+    </el-form>
     <el-form-item label="公共标签">
       <el-select
         v-model="tags"
