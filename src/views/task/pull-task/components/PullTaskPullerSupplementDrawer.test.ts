@@ -20,9 +20,9 @@ describe("normal-link puller supplement selection", () => {
     const drawer = source("./PullTaskPullerSupplementDrawer.vue");
 
     for (const label of [
-      "当前拉手",
+      "可用在群拉手",
       "计划拉手",
-      "缺少拉手",
+      "可补充拉手",
       "拉手账号分组",
       "补充数量",
       "选择方式",

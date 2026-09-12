@@ -727,6 +727,7 @@ export interface PullTaskPullerOptionRole {
   membershipStatus: number;
   availabilityStatus: number;
   occupied: boolean;
+  unavailableReasonCode?: string | null;
 }
 
 export interface PullTaskPullerCandidate {

@@ -57,15 +57,18 @@ function handleSelectionModeChange(value: string | number | boolean): void {
   >
     <div v-loading="loading" class="puller-supplement">
       <div v-if="options" class="count-grid">
-        <el-statistic title="当前拉手" :value="options.currentPullerCount" />
+        <el-statistic
+          title="可用在群拉手"
+          :value="options.currentPullerCount"
+        />
         <el-statistic title="计划拉手" :value="options.requiredPullerCount" />
-        <el-statistic title="缺少拉手" :value="options.missingPullerCount" />
+        <el-statistic title="可补充拉手" :value="options.missingPullerCount" />
       </div>
 
       <el-alert
         v-if="options && options.missingPullerCount === 0"
-        title="当前拉手已经补足，请刷新群详情"
-        type="success"
+        title="当前没有可补充名额，等待进群的账号仍保留名额"
+        type="info"
         :closable="false"
         show-icon
       />
@@ -74,6 +77,19 @@ function handleSelectionModeChange(value: string | number | boolean): void {
         <h4>当前拉手</h4>
         <el-table :data="options.currentPullers" size="small" border>
           <el-table-column prop="accountPhone" label="拉手账号" />
+          <el-table-column label="任务状态" width="110">
+            <template #default="{ row }">
+              {{
+                row.unavailableReasonCode === "PULLER_REPLACED"
+                  ? "已替换"
+                  : row.availabilityStatus === 4
+                    ? "已移出"
+                    : row.availabilityStatus === 1
+                      ? "可用"
+                      : "暂不可用"
+              }}
+            </template>
+          </el-table-column>
           <el-table-column label="在群状态" width="110">
             <template #default="{ row }">
               {{ membershipLabel(row.membershipStatus) }}
@@ -81,7 +97,7 @@ function handleSelectionModeChange(value: string | number | boolean): void {
           </el-table-column>
           <el-table-column label="占用" width="90">
             <template #default="{ row }">
-              {{ row.occupied ? "占用中" : "已释放" }}
+              {{ row.occupied ? "占用中" : "不占用" }}
             </template>
           </el-table-column>
           <template #empty>
@@ -117,6 +133,9 @@ function handleSelectionModeChange(value: string | number | boolean): void {
             :min="1"
             :max="Math.max(options.missingPullerCount, 1)"
           />
+          <small class="field-tip"
+            >可补充数量已扣除正常等待进群和正在进群的账号</small
+          >
         </el-form-item>
         <el-form-item label="选择方式" required>
           <el-radio-group

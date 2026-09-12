@@ -113,7 +113,7 @@ export function usePullTaskPullerSupplement(
     }
     const missing = options.value?.missingPullerCount ?? 0;
     if (missing <= 0) {
-      ElMessage.warning("当前拉手已经补足");
+      ElMessage.warning("当前没有可补充名额，等待进群的账号仍保留名额");
       return null;
     }
     if (form.supplementCount < 1 || form.supplementCount > missing) {
@@ -154,6 +154,9 @@ export function usePullTaskPullerSupplement(
       await callbacks.onSubmitted();
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "补充拉手提交失败"));
+      await loadOptions(
+        positiveId(form.accountGroupId) ? form.accountGroupId : undefined
+      );
     } finally {
       saving.value = false;
     }

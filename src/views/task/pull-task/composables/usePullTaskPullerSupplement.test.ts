@@ -29,6 +29,44 @@ function options(
 }
 
 describe("normal-link puller supplement state", () => {
+  it("does not supplement reserved slots even when nobody is in the group", async () => {
+    resetArmadaMockQueue([
+      options({ currentPullerCount: 0, missingPullerCount: 0 })
+    ]);
+    resetElementPlusMock();
+    const state = usePullTaskPullerSupplement({
+      onSubmitted: async () => undefined
+    });
+    await state.open(7, 19);
+    await state.submit();
+    assert.equal(armadaCalls().length, 1);
+    assert.match(
+      String(elementPlusCalls().at(-1)?.text ?? ""),
+      /没有可补充名额/
+    );
+  });
+
+  it("refreshes the gap after a concurrent supplement wins", async () => {
+    resetArmadaMockQueue([options()]);
+    resetElementPlusMock();
+    const state = usePullTaskPullerSupplement({
+      onSubmitted: async () => undefined
+    });
+    await state.open(7, 19);
+    resetArmadaMockQueue([
+      Promise.reject(new Error("补充数量超过当前拉手缺口")),
+      options({ missingPullerCount: 0 })
+    ]);
+    await state.submit();
+    assert.equal(state.options.value?.missingPullerCount, 0);
+    assert.equal(state.visible.value, true);
+    assert.equal(state.saving.value, false);
+    assert.deepEqual(
+      armadaCalls().map(call => call.method),
+      ["post", "get"]
+    );
+  });
+
   it("loads the frozen group and keeps remaining target data fixed", async () => {
     resetArmadaMockQueue([options()]);
     resetElementPlusMock();
