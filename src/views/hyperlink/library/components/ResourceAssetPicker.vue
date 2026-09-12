@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAssetGroupLabel } from "../domain/resource-asset";
 import { onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import {
@@ -136,7 +137,7 @@ onBeforeUnmount(() => clearTimeout(debounceTimer));
         <el-option
           v-for="group in groups"
           :key="group.id"
-          :label="group.groupName"
+          :label="formatAssetGroupLabel(group)"
           :value="group.id"
         />
       </el-select>

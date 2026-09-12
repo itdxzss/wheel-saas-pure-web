@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAssetGroupLabel } from "../domain/resource-asset";
 import { ref, watch } from "vue";
 import type { ResourceAssetGroup } from "@/api/resource-asset";
 
@@ -64,11 +65,9 @@ watch(visible, () => {
       max-height="360"
       empty-text="暂无分组，可先创建一个"
     >
-      <el-table-column
-        prop="groupName"
-        label="分组名称"
-        show-overflow-tooltip
-      />
+      <el-table-column prop="groupName" label="分组名称" show-overflow-tooltip>
+        <template #default="{ row }">{{ formatAssetGroupLabel(row) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="100">
         <template #default="{ row }">
           <el-button

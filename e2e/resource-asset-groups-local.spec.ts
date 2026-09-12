@@ -117,7 +117,18 @@ async function setup(
         state.mutations.push(scope);
         state.groups.push(group);
         data = group;
-      } else data = state.groups.filter(group => group.scope === scope);
+      } else
+        data = state.groups
+          .filter(group => group.scope === scope)
+          .map(group => ({
+            ...group,
+            assetCount: state.rows.filter(
+              row =>
+                row.groupId === group.id &&
+                (row.assetScope == null ||
+                  row.assetScope === (scope === "SCRIPT" ? 2 : 1))
+            ).length
+          }));
     } else if (url.pathname.startsWith("/api/resource-assets/groups/")) {
       const id = Number(url.pathname.split("/").pop());
       state.deletes.push(id);
@@ -137,7 +148,19 @@ async function setup(
       if (request.method() === "POST") {
         state.uploadedGroup =
           request.postDataBuffer()?.toString("latin1") ?? "";
-        data = { id: 3 };
+        const groupId = state.uploadedGroup.match(
+          /name="groupId"\r\n\r\n(\d+)/
+        )?.[1];
+        const row = {
+          id: Math.max(...state.rows.map(row => row.id)) + 1,
+          assetName: "test.png",
+          groupId: groupId ? Number(groupId) : null,
+          assetScope: state.uploadedGroup.includes('name="scope"\r\n\r\nSCRIPT')
+            ? 2
+            : 1
+        };
+        state.rows.push(row);
+        data = row;
       } else {
         state.queries.push(scope);
         const groupId = url.searchParams.get("groupId");
@@ -154,7 +177,7 @@ async function setup(
           list: rows.map(row => ({
             ...row,
             tags: [],
-            referenceCount: 1,
+            referenceCount: row.id > 3 ? 0 : 1,
             sizeBytes: 100,
             width: 1,
             height: 1,
@@ -167,6 +190,12 @@ async function setup(
           pageSize: 24
         };
       }
+    } else if (
+      /^\/api\/resource-assets\/\d+$/.test(url.pathname) &&
+      request.method() === "DELETE"
+    ) {
+      const id = Number(url.pathname.split("/").pop());
+      state.rows = state.rows.filter(row => row.id !== id);
     } else if (url.pathname === "/api/script-materials") {
       data = { list: [], total: 0, page: 1, pageSize: 24 };
     } else {
@@ -188,7 +217,12 @@ async function setup(
 
 async function chooseGroup(page: Page, name: string) {
   await page.locator(".group-filter").click();
-  await page.getByRole("option", { name, exact: true }).click();
+  await page
+    .getByRole("option", {
+      name: name === "未分组" ? name : new RegExp(`^${name}（\\d+）$`),
+      exact: true
+    })
+    .click();
 }
 
 test("creates, moves, filters, cancels deletion, then deletes group while retaining assets", async ({
@@ -199,13 +233,13 @@ test("creates, moves, filters, cancels deletion, then deletes group while retain
   const manager = page.getByRole("dialog", { name: "管理素材分组" });
   await manager.getByPlaceholder("输入新分组名称").fill("活动图");
   await manager.getByRole("button", { name: "新增分组" }).click();
-  await expect(manager.getByText("活动图", { exact: true })).toBeVisible();
+  await expect(manager.getByText("活动图（0）", { exact: true })).toBeVisible();
   await manager.locator(".el-dialog__headerbtn").click();
   await page.locator(".batch-toolbar .el-checkbox").click();
   await page.getByRole("button", { name: "移动到分组" }).click();
   const move = page.getByRole("dialog", { name: "移动到分组" });
   await move.locator(".el-select").click();
-  await page.getByRole("option", { name: "活动图", exact: true }).click();
+  await page.getByRole("option", { name: "活动图（0）", exact: true }).click();
   await move.getByRole("button", { name: "确认移动" }).click();
   await expect
     .poll(() => state.moves)
@@ -217,6 +251,8 @@ test("creates, moves, filters, cancels deletion, then deletes group while retain
     fullPage: true
   });
   await page.getByRole("button", { name: "管理分组", exact: true }).click();
+  await expect(manager.getByText("活动图（2）", { exact: true })).toBeVisible();
+  await expect(manager.getByText("产品图（0）", { exact: true })).toBeVisible();
   const row = manager.getByRole("row").filter({ hasText: "活动图" });
   await row.getByRole("button", { name: "删除分组" }).click();
   const confirmation = page.getByRole("dialog", {
@@ -256,6 +292,15 @@ test("upload defaults to selected group and includes groupId in multipart", asyn
   await expect
     .poll(() => state.uploadedGroup)
     .toContain('name="groupId"\r\n\r\n10');
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator(".group-filter")).toContainText("产品图（2）");
+  const uploaded = page.locator(".asset-item").filter({ hasText: "test.png" });
+  await uploaded.getByRole("button", { name: "删除", exact: true }).click();
+  await page
+    .locator(".el-popconfirm")
+    .getByRole("button", { name: "删除", exact: true })
+    .click();
+  await expect(page.locator(".group-filter")).toContainText("产品图（1）");
 });
 
 test("edit-only users can create groups but cannot delete them", async ({
@@ -284,7 +329,7 @@ test("script image management shows legacy and script uploads and always sends s
   await library.getByRole("button", { name: "管理分组", exact: true }).click();
   const manager = page.getByRole("dialog", { name: "管理素材分组" });
   await expect(manager.getByText("产品图", { exact: true })).toHaveCount(0);
-  await expect(manager.getByText("养群图", { exact: true })).toBeVisible();
+  await expect(manager.getByText("养群图（1）", { exact: true })).toBeVisible();
   await manager.getByPlaceholder("输入新分组名称").fill("独立养群分组");
   await manager.getByRole("button", { name: "新增分组" }).click();
   await expect.poll(() => state.mutations).toEqual(["SCRIPT"]);

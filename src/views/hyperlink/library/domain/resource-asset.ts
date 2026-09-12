@@ -1,3 +1,5 @@
+import type { ResourceAssetGroup } from "@/api/resource-asset";
+
 export const RESOURCE_ASSET_MAX_FILES = 100;
 export const RESOURCE_ASSET_MAX_BYTES = 500 * 1024;
 export const RESOURCE_ASSET_MAX_TAGS = 20;
@@ -108,4 +110,9 @@ export async function uploadResourceAssetBatch(
     }
   }
   return { succeeded, failed };
+}
+
+/** 分组总量由后端按租户及业务统计，不受当前分页或名称筛选影响。 */
+export function formatAssetGroupLabel(group: ResourceAssetGroup): string {
+  return `${group.groupName}（${group.assetCount}）`;
 }

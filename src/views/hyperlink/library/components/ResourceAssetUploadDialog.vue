@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAssetGroupLabel } from "../domain/resource-asset";
 import { computed, ref, watch } from "vue";
 import { ElMessage, type UploadFile, type UploadUserFile } from "element-plus";
 import {
@@ -166,7 +167,7 @@ watch(visible, opened => {
           <el-option
             v-for="group in groups"
             :key="group.id"
-            :label="group.groupName"
+            :label="formatAssetGroupLabel(group)"
             :value="group.id"
           />
         </el-select>

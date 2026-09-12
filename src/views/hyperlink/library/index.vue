@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAssetGroupLabel } from "./domain/resource-asset";
 import type { ResourceAssetScope } from "@/api/resource-asset";
 import { hasAuth } from "@/router/utils";
 import ResourceAssetGroupManager from "./components/ResourceAssetGroupManager.vue";
@@ -97,7 +98,7 @@ const {
               <el-option
                 v-for="group in groups"
                 :key="group.id"
-                :label="group.groupName"
+                :label="formatAssetGroupLabel(group)"
                 :value="group.id"
               />
             </el-select>
@@ -242,7 +243,7 @@ const {
             <el-option
               v-for="group in groups"
               :key="group.id"
-              :label="group.groupName"
+              :label="formatAssetGroupLabel(group)"
               :value="group.id"
             />
           </el-select>

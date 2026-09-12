@@ -15,6 +15,7 @@ export type ResourceAssetScope = "HYPERLINK" | "SCRIPT";
 export interface ResourceAssetGroup {
   id: number;
   groupName: string;
+  assetCount: number;
 }
 
 export interface ResourceAsset {

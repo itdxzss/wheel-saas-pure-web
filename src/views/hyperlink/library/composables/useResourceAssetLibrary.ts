@@ -151,7 +151,7 @@ export function useResourceAssetLibrary(
       ElMessage.success("素材分组已更新");
       moveVisible.value = false;
       page.value = 1;
-      await refresh();
+      await Promise.all([refresh(), refreshGroups()]);
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "移组失败"));
     } finally {
@@ -206,7 +206,7 @@ export function useResourceAssetLibrary(
       );
       ElMessage.success("素材信息已更新");
       editVisible.value = false;
-      await Promise.all([refresh(), refreshTags()]);
+      await Promise.all([refresh(), refreshTags(), refreshGroups()]);
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "素材信息更新失败"));
     } finally {
@@ -220,7 +220,7 @@ export function useResourceAssetLibrary(
       await deleteResourceAsset(asset.id, scope);
       ElMessage.success("删除成功");
       if (rows.value.length === 1 && page.value > 1) page.value -= 1;
-      await Promise.all([refresh(), refreshTags()]);
+      await Promise.all([refresh(), refreshTags(), refreshGroups()]);
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "素材删除失败"));
     }
@@ -228,7 +228,7 @@ export function useResourceAssetLibrary(
 
   async function afterUploaded(): Promise<void> {
     page.value = 1;
-    await Promise.all([refresh(), refreshTags()]);
+    await Promise.all([refresh(), refreshTags(), refreshGroups()]);
   }
 
   watch(keyword, () => {
