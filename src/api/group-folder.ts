@@ -15,6 +15,17 @@ export interface GroupFolderOption {
   name: string;
 }
 
+export interface GroupFolderFilterOption extends GroupFolderOption {
+  /** 群组列表未删除记录数，包含所有健康状态。 */
+  groupCount: number;
+}
+
+export interface GroupFolderFilterOptions {
+  totalGroupCount: number;
+  unassignedGroupCount: number;
+  folders: GroupFolderFilterOption[];
+}
+
 export interface GroupFolderWriteRequest {
   name: string;
 }
@@ -44,6 +55,13 @@ export function listGroupFolderOptions(): Promise<GroupFolderOption[]> {
   return armadaRequest<GroupFolderOption[]>(
     "get",
     "/api/group-folders/options"
+  );
+}
+
+export function listGroupFolderFilterOptions(): Promise<GroupFolderFilterOptions> {
+  return armadaRequest<GroupFolderFilterOptions>(
+    "get",
+    "/api/group-folders/filter-options"
   );
 }
 

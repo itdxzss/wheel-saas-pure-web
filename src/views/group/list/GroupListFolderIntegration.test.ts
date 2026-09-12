@@ -19,7 +19,12 @@ test("group list wires folder filter management and batch assignment", () => {
   assert.match(indexSource, /GroupFolderManageDialog/);
   assert.match(indexSource, /BatchAssignFolderDialog/);
   assert.match(indexSource, /全部分组/);
-  assert.match(indexSource, /未分组/);
+  assert.match(composableSource, /未分组/);
+  assert.match(indexSource, /v-for="item in folderFilterOptions"/);
+  assert.match(
+    indexSource,
+    /@visible-change="visible => visible && reloadFolderOptions\(\)"/
+  );
   assert.match(indexSource, /@manage-folders=/);
   assert.match(indexSource, /@assign-folder=/);
   assert.match(tableSource, /event: "manage-folders"/);

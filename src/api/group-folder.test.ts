@@ -4,12 +4,30 @@ import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import {
   batchDeleteGroupFolders,
   createGroupFolder,
+  listGroupFolderFilterOptions,
   listGroupFolderOptions,
   listGroupFolders,
   updateGroupFolder
 } from "./group-folder";
 
 describe("group folder API", () => {
+  it("loads global folder counts through the dedicated list filter endpoint", async () => {
+    const summary = {
+      totalGroupCount: 4,
+      unassignedGroupCount: 1,
+      folders: [{ id: 7, name: "9-8", groupCount: 3 }]
+    };
+    resetArmadaMock(summary);
+    assert.deepEqual(await listGroupFolderFilterOptions(), summary);
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "get",
+        url: "/api/group-folders/filter-options",
+        opts: undefined
+      }
+    ]);
+  });
+
   it("submits group folder management requests with camelCase payloads", async () => {
     resetArmadaMock({ deletedFolderCount: 1, ungroupedGroupCount: 3 });
 

@@ -19,8 +19,8 @@ import {
 } from "@/api/group";
 import { useGroupBatchTask } from "./useGroupBatchTask";
 import {
-  listGroupFolderOptions,
-  type GroupFolderOption
+  listGroupFolderFilterOptions,
+  type GroupFolderFilterOption
 } from "@/api/group-folder";
 import {
   listGroupCountryOptions,
@@ -51,7 +51,10 @@ export interface GroupListPageState {
   deleteSelectedGroups: () => Promise<void>;
   drawerGroup: Ref<GroupListRow | null>;
   drawerOpen: Ref<boolean>;
-  folderOptions: Ref<GroupFolderOption[]>;
+  folderOptions: Ref<GroupFolderFilterOption[]>;
+  folderFilterOptions: ComputedRef<
+    { value: GroupSearchForm["folderFilter"]; label: string }[]
+  >;
   folderOptionsLoading: Ref<boolean>;
   countryOptions: Ref<IpCountryOption[]>;
   countryOptionsLoading: Ref<boolean>;
@@ -112,7 +115,30 @@ export function useGroupListPage(): GroupListPageState {
     emptyHistoricalFilter()
   );
   const rows = ref<GroupListRow[]>([]);
-  const folderOptions = ref<GroupFolderOption[]>([]);
+  const folderOptions = ref<GroupFolderFilterOption[]>([]);
+  const totalGroupCount = ref<number | null>(null);
+  const unassignedGroupCount = ref<number | null>(null);
+  let folderOptionsRequestId = 0;
+  const folderFilterOptions = computed(() => [
+    {
+      value: "" as const,
+      label:
+        totalGroupCount.value == null
+          ? "全部分组"
+          : `全部分组（${totalGroupCount.value}）`
+    },
+    {
+      value: "UNASSIGNED" as const,
+      label:
+        unassignedGroupCount.value == null
+          ? "未分组"
+          : `未分组（${unassignedGroupCount.value}）`
+    },
+    ...folderOptions.value.map(folder => ({
+      value: folder.id,
+      label: `${folder.name}（${folder.groupCount}）`
+    }))
+  ]);
   const countryOptions = ref<IpCountryOption[]>([]);
   const selectedRows = ref<GroupListRow[]>([]);
   const drawerGroup = ref<GroupListRow | null>(null);
@@ -148,14 +174,17 @@ export function useGroupListPage(): GroupListPageState {
     selectedRows.value = [];
     loading.value = true;
     try {
-      const response = await listGroups(
-        toGroupListQuery(
-          searchForm,
-          historicalApplied,
-          page.value,
-          pageSize.value
-        )
-      );
+      const [response] = await Promise.all([
+        listGroups(
+          toGroupListQuery(
+            searchForm,
+            historicalApplied,
+            page.value,
+            pageSize.value
+          )
+        ),
+        loadFolderOptions()
+      ]);
       rows.value = response.list ?? [];
       total.value = response.total ?? 0;
     } catch (error) {
@@ -223,17 +252,25 @@ export function useGroupListPage(): GroupListPageState {
   }
 
   async function loadFolderOptions(showError = true): Promise<void> {
+    const requestId = ++folderOptionsRequestId;
     folderOptionsLoading.value = true;
     try {
-      folderOptions.value = await listGroupFolderOptions();
+      const response = await listGroupFolderFilterOptions();
+      if (requestId !== folderOptionsRequestId) return;
+      folderOptions.value = response.folders;
+      totalGroupCount.value = response.totalGroupCount;
+      unassignedGroupCount.value = response.unassignedGroupCount;
     } catch (error) {
+      if (requestId !== folderOptionsRequestId) return;
       if (showError) {
         ElMessage.error(
           apiErrorMessage(error, "群组分组选项加载失败，请稍后重试")
         );
       }
     } finally {
-      folderOptionsLoading.value = false;
+      if (requestId === folderOptionsRequestId) {
+        folderOptionsLoading.value = false;
+      }
     }
   }
 
@@ -319,7 +356,6 @@ export function useGroupListPage(): GroupListPageState {
   async function onGroupFoldersChanged(
     deletedFolderIds: number[]
   ): Promise<void> {
-    await loadFolderOptions();
     if (
       typeof searchForm.folderFilter === "number" &&
       deletedFolderIds.includes(searchForm.folderFilter)
@@ -362,7 +398,6 @@ export function useGroupListPage(): GroupListPageState {
 
   onMounted(() => {
     void refreshGroups();
-    void loadFolderOptions();
     void loadCountryOptions();
   });
 
@@ -431,6 +466,7 @@ export function useGroupListPage(): GroupListPageState {
     countryOptions,
     countryOptionsLoading,
     folderOptions,
+    folderFilterOptions,
     folderOptionsLoading,
     groupFolderManageOpen,
     historicalApplied,

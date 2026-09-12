@@ -47,6 +47,7 @@ const {
   countryOptions,
   countryOptionsLoading,
   folderOptions,
+  folderFilterOptions,
   folderOptionsLoading,
   groupFolderManageOpen,
   historicalApplied,
@@ -66,6 +67,7 @@ const {
   pageSize,
   queryHistoricalFilter,
   refreshGroups,
+  reloadFolderOptions,
   resetSearchForm,
   rows,
   searchForm,
@@ -104,14 +106,13 @@ function handleRowAction(row, action: string): void {
             class="group-list-control"
             placeholder="全部分组"
             :loading="folderOptionsLoading"
+            @visible-change="visible => visible && reloadFolderOptions()"
           >
-            <el-option label="全部分组" value="" />
-            <el-option label="未分组" value="UNASSIGNED" />
             <el-option
-              v-for="item in folderOptions"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
+              v-for="item in folderFilterOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
             />
           </el-select>
         </el-form-item>
