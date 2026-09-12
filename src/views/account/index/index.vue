@@ -252,7 +252,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="`${group.name}（${group.totalAccounts}）`"
               :value="group.id"
             />
           </el-select>

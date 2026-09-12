@@ -447,11 +447,17 @@ export function useAccountListPage(): AccountListPageState {
     const appliedFilters = queryState.applied();
     if (appliedFilters === null) {
       const initialRequest = queryState.begin(buildEditingFilters());
-      await loadAccountList(initialRequest, 1, true);
+      await Promise.all([
+        loadAccountList(initialRequest, 1, true),
+        loadAccountGroups()
+      ]);
       return;
     }
     const request = queryState.begin(appliedFilters);
-    await loadAccountList(request, page.value, false);
+    await Promise.all([
+      loadAccountList(request, page.value, false),
+      loadAccountGroups()
+    ]);
   }
 
   function searchAccounts() {
@@ -538,9 +544,6 @@ export function useAccountListPage(): AccountListPageState {
       ElMessage.success("迁移分组成功");
       showBatchMoveDrawer.value = false;
       selectedRows.value = [];
-      if (result.payload.newGroupName) {
-        await loadAccountGroups();
-      }
       await refreshAccountList();
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "迁移分组失败"));
@@ -898,7 +901,6 @@ export function useAccountListPage(): AccountListPageState {
     onlineCooldownTimer = window.setInterval(() => {
       now.value = Date.now();
     }, ONLINE_COOLDOWN_TICK_MS);
-    void loadAccountGroups();
     void refreshAccountList();
   });
 
