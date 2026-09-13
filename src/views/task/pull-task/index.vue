@@ -55,6 +55,8 @@ const {
   detailDrawerOpen,
   detailGroupRows,
   detailLoading,
+  detailRefreshError,
+  detailRefreshedAt,
   detailPage,
   detailPageSize,
   detailSearchForm,
@@ -97,6 +99,9 @@ const {
   loading: executionDetailLoading,
   members: executionMembers,
   open: openExecutionDetail,
+  refresh: refreshExecutionDetail,
+  refreshError: executionRefreshError,
+  refreshedAt: executionRefreshedAt,
   visible: executionDetailVisible
 } = usePullTaskExecutionDetail();
 
@@ -353,6 +358,8 @@ async function handleDetailTaskAction(
       :active-task="activeTask"
       :detail-group-rows="detailGroupRows"
       :detail-loading="detailLoading"
+      :refresh-error="detailRefreshError"
+      :refreshed-at="detailRefreshedAt"
       :detail-selected-count="detailSelectedCount"
       :detail-summary="detailSummary"
       :detail-task="detailTask"
@@ -367,6 +374,7 @@ async function handleDetailTaskAction(
       @open-puller-supplement="resourceSupplementFlows?.openPuller"
       @open-station-supplement="resourceSupplementFlows?.openStation"
       @refresh-detail-groups="refreshDetailGroups"
+      @auto-refresh="refreshDetailGroups(true)"
       @reset-detail-search="resetDetailSearch"
       @run-execution-operation="runExecutionAction"
       @run-group-operation="runGroupOperation"
@@ -381,6 +389,10 @@ async function handleDetailTaskAction(
       :detail="executionDetail"
       :loading="executionDetailLoading"
       :members="executionMembers"
+      :refresh-error="executionRefreshError"
+      :refreshed-at="executionRefreshedAt"
+      @refresh="refreshExecutionDetail()"
+      @auto-refresh="refreshExecutionDetail(true)"
     />
 
     <PullTaskResourceSupplementFlows

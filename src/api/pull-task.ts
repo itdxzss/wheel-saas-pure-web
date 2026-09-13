@@ -152,6 +152,7 @@ export interface PullTaskRow {
 }
 
 export interface PullTaskGroupRow {
+  observation?: PullTaskExecutionObservation | null;
   id: number;
   seq: number;
   groupName?: string | null;
@@ -513,6 +514,8 @@ export interface PullTaskStandardCreated {
 }
 
 export interface PullTaskStandardExecutionSummary {
+  /** 只读运行解释；不参与任务状态和阶段转换。 */
+  observation?: PullTaskExecutionObservation | null;
   executionId: number;
   seq: number;
   normalizedLink: string | null;
@@ -533,6 +536,21 @@ export interface PullTaskStandardExecutionSummary {
   managers: PullTaskStandardResourceCount | null;
   pullers: PullTaskStandardResourceCount | null;
   stations: PullTaskStandardResourceCount | null;
+}
+
+/** 后台基于当前执行事实生成的运行观察快照。 */
+export interface PullTaskExecutionObservation {
+  state: string;
+  label: string;
+  detail: string;
+  nextStep: string;
+  observedAt: number;
+  waitStartedAt: number | null;
+  nextCheckAt: number | null;
+  nextDispatchAt: number | null;
+  waveNo: number | null;
+  callSeq: number | null;
+  plannedCallCount: number | null;
 }
 
 export interface PullTaskStandardRole {

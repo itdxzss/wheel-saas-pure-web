@@ -72,8 +72,13 @@ describe("pull task list prototype", () => {
     assert.match(executionResourcesSource, /row\.pullers/);
     assert.match(executionResourcesSource, /row\.stations/);
     assert.match(detailDrawerSource, /row\.lastBusinessExecutedAt/);
-    assert.match(detailDrawerSource, /standardStageOptions/);
-    assert.match(detailDrawerSource, /standardWaitResourceOptions/);
+    const detailSearchSource = readFileSync(
+      new URL("./components/PullTaskDetailSearch.vue", import.meta.url),
+      "utf8"
+    );
+    assert.match(detailDrawerSource, /PullTaskDetailSearch/);
+    assert.match(detailSearchSource, /standardStageOptions/);
+    assert.match(detailSearchSource, /standardWaitResourceOptions/);
     assert.match(detailDrawerSource, /row\.stage/);
     assert.match(detailDrawerSource, /row\.materialSummary/);
     assert.match(standardSummarySource, /执行中/);

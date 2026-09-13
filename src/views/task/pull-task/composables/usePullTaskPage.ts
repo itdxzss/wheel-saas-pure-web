@@ -82,6 +82,8 @@ export interface PullTaskPageState {
   detailDrawerOpen: Ref<boolean>;
   detailGroupRows: Ref<PullTaskGroupRow[]>;
   detailLoading: Ref<boolean>;
+  detailRefreshError: Ref<string>;
+  detailRefreshedAt: Ref<number | null>;
   detailPage: Ref<number>;
   detailPageSize: Ref<number>;
   detailSearchForm: PullTaskDetailSearchForm;
@@ -100,7 +102,7 @@ export interface PullTaskPageState {
   openSupplementDrawer: () => void;
   page: Ref<number>;
   pageSize: Ref<number>;
-  refreshDetailGroups: () => Promise<void>;
+  refreshDetailGroups: (silent?: boolean) => Promise<void>;
   refreshTasks: () => Promise<void>;
   resetDetailSearch: () => void;
   resetSearchForm: () => void;
@@ -178,6 +180,7 @@ function standardGroupRow(
     reasonCode: execution.reasonCode,
     lastBusinessExecutedAt: execution.lastBusinessExecutedAt,
     materialSummary: execution.materialSummary,
+    observation: execution.observation,
     managers: execution.managers,
     pullers: execution.pullers,
     stations: execution.stations
@@ -275,6 +278,10 @@ export function usePullTaskPage(): PullTaskPageState {
   const selectedDetailRows = ref<PullTaskGroupRow[]>([]);
   const loading = ref(false);
   const detailLoading = ref(false);
+  const detailRefreshError = ref("");
+  const detailRefreshedAt = ref<number | null>(null);
+  let detailRequestVersion = 0;
+  let appliedDetailQuery = "";
   const advancedOpen = ref(false);
   const detailDrawerOpen = ref(false);
   const supplementDrawerOpen = ref(false);
@@ -352,13 +359,25 @@ export function usePullTaskPage(): PullTaskPageState {
     advancedOpen.value = !advancedOpen.value;
   }
 
-  async function refreshDetailGroups(): Promise<void> {
+  async function refreshDetailGroups(silent = false): Promise<void> {
     if (!activeTask.value) return;
+    if (silent && detailLoading.value) return;
+    const task = activeTask.value;
+    const queryKey = JSON.stringify([
+      task.id,
+      detailPage.value,
+      detailPageSize.value,
+      detailSearchForm
+    ]);
+    // 输入筛选条件但尚未查询时，自动刷新不能抢先应用条件。
+    if (silent && queryKey !== appliedDetailQuery) return;
+    appliedDetailQuery = queryKey;
+    const requestVersion = ++detailRequestVersion;
     detailLoading.value = true;
-    selectedDetailRows.value = [];
+    if (!silent) selectedDetailRows.value = [];
     try {
-      if (normalLink(activeTask.value)) {
-        const taskId = activeTask.value.id;
+      if (normalLink(task)) {
+        const taskId = task.id;
         const statusFilters = standardExecutionFilters(detailSearchForm.status);
         const [detail, executionPage] = await Promise.all([
           getPullTaskStandardDetail(taskId),
@@ -373,33 +392,58 @@ export function usePullTaskPage(): PullTaskPageState {
               statusFilters.waitResourceType
           })
         ]);
-        detailTask.value = standardTaskDetail(activeTask.value, detail);
+        if (
+          requestVersion !== detailRequestVersion ||
+          activeTask.value?.id !== taskId
+        )
+          return;
+        detailTask.value = standardTaskDetail(task, detail);
         standardTaskSummary.value = detail.summary;
         detailGroupRows.value = (executionPage.list ?? []).map(
           standardGroupRow
         );
         detailTotal.value = executionPage.total ?? 0;
+        detailRefreshedAt.value =
+          executionPage.list?.[0]?.observation?.observedAt ?? Date.now();
+        detailRefreshError.value = "";
         return;
       }
-      const result = await listPullTaskGroups(activeTask.value.id, {
+      const result = await listPullTaskGroups(task.id, {
         page: detailPage.value,
         pageSize: detailPageSize.value,
         status: detailSearchForm.status,
         keyword: detailSearchForm.keyword.trim()
       });
+      if (
+        requestVersion !== detailRequestVersion ||
+        activeTask.value?.id !== task.id
+      )
+        return;
       detailGroupRows.value = result.list ?? [];
       detailTotal.value = result.total ?? 0;
     } catch (error) {
-      detailGroupRows.value = [];
-      detailTotal.value = 0;
-      ElMessage.error(apiErrorMessage(error, "拉群任务明细加载失败"));
+      if (
+        requestVersion !== detailRequestVersion ||
+        activeTask.value?.id !== task.id
+      )
+        return;
+      detailRefreshError.value = apiErrorMessage(error, "拉群任务明细加载失败");
+      if (!normalLink(task)) {
+        detailGroupRows.value = [];
+        detailTotal.value = 0;
+      }
+      if (!silent) ElMessage.error(detailRefreshError.value);
     } finally {
-      detailLoading.value = false;
+      if (requestVersion === detailRequestVersion) detailLoading.value = false;
     }
   }
 
   async function openDetailDrawer(row: PullTaskRow): Promise<void> {
     activeTask.value = row;
+    detailRequestVersion++;
+    appliedDetailQuery = "";
+    detailRefreshError.value = "";
+    detailRefreshedAt.value = null;
     detailTask.value = null;
     standardTaskSummary.value = null;
     detailGroupRows.value = [];
@@ -692,6 +736,8 @@ export function usePullTaskPage(): PullTaskPageState {
     detailDrawerOpen,
     detailGroupRows,
     detailLoading,
+    detailRefreshError,
+    detailRefreshedAt,
     detailPage,
     detailPageSize,
     detailSearchForm,

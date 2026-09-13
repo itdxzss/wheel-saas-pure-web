@@ -5,6 +5,8 @@ import type {
 } from "@/api/pull-task";
 import { formatEpoch, standardStageLabel } from "../constants";
 import PullTaskStandardMaterialProgress from "./PullTaskStandardMaterialProgress.vue";
+import PullTaskExecutionObservation from "./PullTaskExecutionObservation.vue";
+import PullTaskObservationRefresh from "./PullTaskObservationRefresh.vue";
 import {
   actionTypeLabel,
   formatGroupLinkUrl,
@@ -20,7 +22,11 @@ defineProps<{
   loading: boolean;
   detail: PullTaskStandardExecutionDetail | null;
   members: PullTaskStandardMember[];
+  refreshError: string;
+  refreshedAt: number | null;
 }>();
+
+const emit = defineEmits<{ refresh: []; "auto-refresh": [] }>();
 
 const visible = defineModel<boolean>({ required: true });
 
@@ -122,7 +128,15 @@ function accountLabel(
     destroy-on-close
     title="群执行明细"
   >
-    <div v-loading="loading">
+    <PullTaskObservationRefresh
+      :visible="visible"
+      :loading="loading"
+      :error="refreshError"
+      :refreshed-at="refreshedAt"
+      @refresh="emit('refresh')"
+      @auto-refresh="emit('auto-refresh')"
+    />
+    <div v-loading="loading && !detail">
       <el-descriptions v-if="detail" :column="3" border class="overview">
         <el-descriptions-item label="执行行">
           #{{ detail.execution.seq }} / {{ detail.execution.executionId }}
@@ -132,9 +146,17 @@ function accountLabel(
           <template v-if="detail.execution.stage === 9">
             / {{ standardCreateStepLabel(detail.execution.createStep) }}
           </template>
+          <PullTaskExecutionObservation
+            :observation="detail.execution.observation"
+            part="batch"
+          />
         </el-descriptions-item>
         <el-descriptions-item label="最近执行">
           {{ formatEpoch(detail.execution.lastBusinessExecutedAt) }}
+          <PullTaskExecutionObservation
+            :observation="detail.execution.observation"
+            part="time"
+          />
         </el-descriptions-item>
         <el-descriptions-item label="群 JID">
           {{ detail.execution.groupJid || "-" }}
@@ -156,6 +178,20 @@ function accountLabel(
           {{
             detail.execution.reasonMessage || detail.execution.reasonCode || "-"
           }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="detail.execution.observation"
+          label="运行说明"
+          :span="3"
+        >
+          <PullTaskExecutionObservation
+            :observation="detail.execution.observation"
+            part="state"
+          />
+          <PullTaskExecutionObservation
+            :observation="detail.execution.observation"
+            part="reason"
+          />
         </el-descriptions-item>
         <el-descriptions-item label="料子进度" :span="3">
           <PullTaskStandardMaterialProgress

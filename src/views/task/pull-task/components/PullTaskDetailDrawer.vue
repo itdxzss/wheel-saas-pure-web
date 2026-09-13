@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
+import PullTaskDetailSearch from "./PullTaskDetailSearch.vue";
 import PullTaskDetailSummary from "./PullTaskDetailSummary.vue";
 import PullTaskExecutionResourceActions from "./PullTaskExecutionResourceActions.vue";
 import PullTaskLegacySupplementDrawer from "./PullTaskLegacySupplementDrawer.vue";
 import PullTaskStandardExecutionResourceCounts from "./PullTaskStandardExecutionResourceCounts.vue";
 import PullTaskStandardMaterialProgress from "./PullTaskStandardMaterialProgress.vue";
+import PullTaskExecutionObservation from "./PullTaskExecutionObservation.vue";
+import PullTaskObservationRefresh from "./PullTaskObservationRefresh.vue";
 import PullTaskStandardSavedSettings from "./PullTaskStandardSavedSettings.vue";
 import PullTaskStandardTaskSummary from "./PullTaskStandardTaskSummary.vue";
 import {
   formatEpoch,
   groupRowStatusLabel,
-  groupRowStatusOptions,
   groupRowStatusTagType,
-  standardStageLabel,
-  standardStageOptions,
-  standardWaitResourceOptions
+  standardStageLabel
 } from "../constants";
 import {
   formatGroupLinkUrl,
@@ -43,6 +43,8 @@ const props = defineProps<{
   activeTask: PullTaskRow | null;
   detailGroupRows: PullTaskGroupRow[];
   detailLoading: boolean;
+  refreshError: string;
+  refreshedAt: number | null;
   detailSelectedCount: number;
   detailSummary: PullTaskSummary;
   detailTask: PullTaskDetail | null;
@@ -60,6 +62,7 @@ const emit = defineEmits<{
   (event: "open-puller-supplement", row: PullTaskGroupRow): void;
   (event: "open-station-supplement", row: PullTaskGroupRow): void;
   (event: "refresh-detail-groups"): void;
+  (event: "auto-refresh"): void;
   (event: "reset-detail-search"): void;
   (event: "run-group-operation", operation: string): void;
   (
@@ -210,7 +213,6 @@ function groupNameLabel(row: PullTaskGroupRow): string {
         </el-dropdown>
       </div>
       <div v-else class="detail-actions">
-        <el-button @click="emit('refresh-detail-groups')">刷新</el-button>
         <el-button
           v-if="allowsTaskAction('START')"
           v-auth="'tenant:pull_task:operate'"
@@ -246,6 +248,15 @@ function groupNameLabel(row: PullTaskGroupRow): string {
       </div>
     </div>
 
+    <PullTaskObservationRefresh
+      v-if="normalLink"
+      :visible="visible"
+      :loading="detailLoading"
+      :refreshed-at="refreshedAt"
+      :error="refreshError"
+      @refresh="emit('refresh-detail-groups')"
+      @auto-refresh="emit('auto-refresh')"
+    />
     <PullTaskStandardTaskSummary
       v-if="normalLink && standardTaskSummary"
       :summary="standardTaskSummary"
@@ -262,98 +273,18 @@ function groupNameLabel(row: PullTaskGroupRow): string {
       :group-setting="detailTask.groupSetting"
     />
 
-    <el-form :model="searchForm" inline class="detail-search">
-      <el-form-item label="任务情况">
-        <el-select v-model="searchForm.status" clearable class="search-select">
-          <el-option
-            v-for="item in groupRowStatusOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item :label="newGroupMode ? '群名 / 料子' : '群链接'">
-        <el-input
-          v-model="searchForm.keyword"
-          clearable
-          class="search-keyword"
-          :placeholder="newGroupMode ? '群名 / 料子包名称' : '群名 / 群链接'"
-          @keyup.enter="emit('refresh-detail-groups')"
-        />
-      </el-form-item>
-      <el-form-item v-if="normalLink" label="当前阶段">
-        <el-select v-model="searchForm.stage" clearable class="search-select">
-          <el-option
-            v-for="item in standardStageOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-if="normalLink" label="资源异常">
-        <el-select
-          v-model="searchForm.waitResourceType"
-          clearable
-          class="search-select"
-        >
-          <el-option
-            v-for="item in standardWaitResourceOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="emit('refresh-detail-groups')">
-          查询
-        </el-button>
-        <el-button @click="emit('reset-detail-search')">重置</el-button>
-        <el-dropdown
-          v-if="!normalLink"
-          @command="op => emit('run-group-operation', op)"
-        >
-          <el-button>批量群组操作</el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="CHECK_STATUS">
-                批量检测群状态
-              </el-dropdown-item>
-              <el-dropdown-item command="SET_ADMIN">
-                批量设置管理员
-              </el-dropdown-item>
-              <el-dropdown-item command="REFRESH_LINK">
-                批量刷新群链接
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <el-dropdown
-          v-if="!normalLink"
-          @command="op => emit('run-rows-operation', op)"
-        >
-          <el-button>批量任务操作</el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="END">批量完成任务</el-dropdown-item>
-              <el-dropdown-item command="PAUSE">批量暂停任务</el-dropdown-item>
-              <el-dropdown-item command="RESTART"
-                >批量重启任务</el-dropdown-item
-              >
-              <el-dropdown-item command="UNSUBMIT"
-                >取消交单标记</el-dropdown-item
-              >
-              <el-dropdown-item command="START">批量启动任务</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </el-form-item>
-    </el-form>
+    <PullTaskDetailSearch
+      v-model="searchForm"
+      :normal-link="normalLink"
+      :new-group-mode="newGroupMode"
+      @refresh-detail-groups="emit('refresh-detail-groups')"
+      @reset-detail-search="emit('reset-detail-search')"
+      @run-group-operation="operation => emit('run-group-operation', operation)"
+      @run-rows-operation="operation => emit('run-rows-operation', operation)"
+    />
 
     <el-table
-      v-loading="detailLoading"
+      v-loading="detailLoading && (!normalLink || !detailGroupRows.length)"
       :data="detailGroupRows"
       row-key="id"
       border
@@ -405,6 +336,11 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           >
             {{ groupRowStatusLabel(row.status) }}
           </el-tag>
+          <PullTaskExecutionObservation
+            v-if="normalLink"
+            :observation="row.observation"
+            part="state"
+          />
         </template>
       </el-table-column>
       <el-table-column v-if="normalLink" label="当前阶段" width="150">
@@ -413,6 +349,10 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           <template v-if="row.stage === 9">
             / {{ standardCreateStepLabel(row.createStep) }}
           </template>
+          <PullTaskExecutionObservation
+            :observation="row.observation"
+            part="batch"
+          />
         </template>
       </el-table-column>
       <el-table-column v-if="normalLink" label="料子进度" min-width="360">
@@ -465,8 +405,15 @@ function groupNameLabel(row: PullTaskGroupRow): string {
         prop="blockReason"
         label="当前异常"
         min-width="180"
-        show-overflow-tooltip
-      />
+      >
+        <template #default="{ row }">
+          {{ row.blockReason || row.reasonCode || "-" }}
+          <PullTaskExecutionObservation
+            :observation="row.observation"
+            part="reason"
+          />
+        </template>
+      </el-table-column>
       <el-table-column
         v-else
         label="管理员 / 拉手"
@@ -486,6 +433,11 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           {{
             formatEpoch(normalLink ? row.lastBusinessExecutedAt : row.createdAt)
           }}
+          <PullTaskExecutionObservation
+            v-if="normalLink"
+            :observation="row.observation"
+            part="time"
+          />
         </template>
       </el-table-column>
       <el-table-column v-if="normalLink" label="操作" width="230" fixed="right">
@@ -550,20 +502,6 @@ function groupNameLabel(row: PullTaskGroupRow): string {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
-}
-
-.detail-search {
-  padding: 12px 12px 0;
-  margin-bottom: 16px;
-  background: var(--el-fill-color-lighter);
-}
-
-.search-keyword {
-  width: 220px;
-}
-
-.search-select {
-  width: 150px;
 }
 
 @media (width <= 900px) {
