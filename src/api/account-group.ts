@@ -9,6 +9,8 @@ export interface AccountGroupApiRow {
   onlineAccounts: number;
   /** 状态正常、在线且协议身份完整，可直接参与新建普群的账号数。 */
   executableOnlineAccounts?: number;
+  /** 拉群在线候选数量，含在线的被抢登和抢登中账号。 */
+  pullTaskOnlineAccounts?: number;
   abnormalAccounts: number;
   bannedAccounts: number;
   accountCountSummary?: string | null;
@@ -67,6 +69,7 @@ interface ArmadaAccountGroupRow {
   accountCount?: number | null;
   onlineCount?: number | null;
   executableOnlineCount?: number | null;
+  pullTaskOnlineCount?: number | null;
   restrictedCount?: number | null;
   riskCount?: number | null;
   bannedCount?: number | null;
@@ -99,6 +102,7 @@ function toAccountGroupRow(row: ArmadaAccountGroupRow): AccountGroupApiRow {
     totalAccounts,
     onlineAccounts,
     executableOnlineAccounts,
+    pullTaskOnlineAccounts: row.pullTaskOnlineCount ?? 0,
     abnormalAccounts,
     bannedAccounts,
     accountCountSummary: `${totalAccounts} - ${onlineAccounts} / ${abnormalAccounts} / ${bannedAccounts}`,

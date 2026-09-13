@@ -29,9 +29,8 @@ function nonNegativeCount(value: number): number {
 }
 
 function accountGroupOptionLabel(group: AccountGroupApiRow): string {
-  const executableOnline =
-    group.executableOnlineAccounts ?? group.onlineAccounts;
-  return `${group.name}（可执行在线 ${executableOnline}）`;
+  const executableOnline = group.pullTaskOnlineAccounts ?? group.onlineAccounts;
+  return `${group.name}（拉群在线候选 ${executableOnline}）`;
 }
 
 const stationDemand = computed(() => {
@@ -47,7 +46,7 @@ const selectedStationGroup = computed(() =>
 );
 const stationCapacity = computed(
   () =>
-    selectedStationGroup.value?.executableOnlineAccounts ??
+    selectedStationGroup.value?.pullTaskOnlineAccounts ??
     selectedStationGroup.value?.onlineAccounts ??
     0
 );
@@ -56,9 +55,9 @@ const stationCapacityTitle = computed(() => {
     return "站台容量：当前配置不需要站台账号";
   }
   if (!selectedStationGroup.value) {
-    return `当前配置至少需要 ${stationDemand.value} 个在线正常站台，请选择站台分组`;
+    return `当前配置至少需要 ${stationDemand.value} 个在线可用站台，请选择站台分组`;
   }
-  return `站台容量：至少需要 ${stationDemand.value} 个，当前可执行在线账号 ${stationCapacity.value} 个`;
+  return `站台容量：至少需要 ${stationDemand.value} 个，当前拉群在线候选账号 ${stationCapacity.value} 个`;
 });
 const stationCapacityType = computed<"success" | "warning" | "info">(() => {
   if (stationDemand.value === 0) return "info";

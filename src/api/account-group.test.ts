@@ -16,6 +16,7 @@ describe("account group API", () => {
           accountCount: 12,
           onlineCount: 3,
           executableOnlineCount: 2,
+          pullTaskOnlineCount: 3,
           restrictedCount: 4,
           riskCount: 2,
           bannedCount: 1,
@@ -30,6 +31,7 @@ describe("account group API", () => {
 
     assert.equal(result.list?.[0]?.abnormalAccounts, 4);
     assert.equal(result.list?.[0]?.executableOnlineAccounts, 2);
+    assert.equal(result.list?.[0]?.pullTaskOnlineAccounts, 3);
     assert.equal(result.list?.[0]?.accountCountSummary, "12 - 3 / 4 / 1");
     assert.deepEqual(armadaCalls(), [
       {

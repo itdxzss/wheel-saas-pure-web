@@ -62,8 +62,9 @@ describe("normal-link create prototype layout", () => {
     assert.match(planSource, /待建群/);
   });
 
-  it("shows executable online counts for every execution account group", () => {
-    assert.match(settingsSource, /可执行在线/);
+  it("shows pull-task online candidate counts for every execution account group", () => {
+    assert.match(settingsSource, /拉群在线候选/);
+    assert.match(settingsSource, /pullTaskOnlineAccounts/);
     assert.equal(
       settingsSource.match(/:label="accountGroupOptionLabel\(group\)"/g)
         ?.length,

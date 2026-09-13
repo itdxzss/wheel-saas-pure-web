@@ -134,7 +134,7 @@ function executorLabel(account: PullTaskManagerOptionRole): string {
             v-model="form.accountId"
             class="form-control"
             filterable
-            placeholder="请选择在线正常账号"
+            placeholder="请选择在线可用账号"
           >
             <el-option
               v-for="candidate in options.candidates"
@@ -194,7 +194,7 @@ function executorLabel(account: PullTaskManagerOptionRole): string {
           <el-table-column prop="accountId" label="账号 ID" width="140" />
           <template #empty>
             <el-empty
-              description="当前分组没有在线正常的候选账号"
+              description="当前分组没有在线可用的候选账号"
               :image-size="64"
             />
           </template>

@@ -181,7 +181,7 @@ function handleSelectionModeChange(value: string | number | boolean): void {
         </el-table>
         <el-empty
           v-if="options.candidates.length === 0"
-          description="当前分组没有未占用的在线正常账号"
+          description="当前分组没有未占用的在线可用账号"
           :image-size="56"
         />
       </section>
