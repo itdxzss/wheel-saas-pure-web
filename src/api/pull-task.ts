@@ -602,6 +602,14 @@ export interface PullTaskStandardMaterialSummary {
   remainingCount: number;
   submittedCount: number;
   canceledCount: number;
+  /** 待执行人数中已有提交历史的不同号码数。 */
+  retryPendingCount?: number;
+  /** 料子已提交尝试的累计次数，排除未提交计划与站台。 */
+  submittedAttemptCount?: number;
+  /** 已提交尝试中当前仍未确认的次数，不是未知人数。 */
+  unconfirmedAttemptCount?: number;
+  /** 最近一次确认料子入群成功的时间，不使用调度更新时间。 */
+  lastSuccessfulAt?: number | null;
 }
 
 export interface PullTaskStandardResourceCount {

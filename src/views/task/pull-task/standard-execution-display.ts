@@ -1,6 +1,43 @@
-import type { PullTaskStandardRole } from "@/api/pull-task";
+import type {
+  PullTaskStandardMaterialSummary,
+  PullTaskStandardRole
+} from "@/api/pull-task";
 
 const HTTP_URL_PATTERN = /^https?:\/\//i;
+
+/** 当前结果按人数展示；历史提交按次数展示，待重试是待执行人数的子集。 */
+export function standardMaterialProgressLines(
+  summary?: PullTaskStandardMaterialSummary | null,
+  executionStatus?: number | null
+): string[] {
+  if (!summary) return [];
+  const retry =
+    summary.retryPendingCount == null
+      ? ""
+      : `（其中待重试 ${summary.retryPendingCount} 人）`;
+  const lines = [
+    `成功 ${summary.successfulCount} 人 / 失败 ${summary.failedCount} 人 / 结果未知 ${summary.unknownCount} 人`,
+    `等待结果 ${summary.submittedCount} 人 / 待执行 ${summary.remainingCount} 人${retry}`
+  ];
+  if (summary.submittedAttemptCount != null) {
+    const unconfirmed =
+      summary.unconfirmedAttemptCount == null
+        ? ""
+        : ` / 其中结果未确认 ${summary.unconfirmedAttemptCount} 次`;
+    lines.push(`累计尝试 ${summary.submittedAttemptCount} 次${unconfirmed}`);
+  }
+  if (summary.canceledCount > 0) {
+    lines.push(`已取消 ${summary.canceledCount} 人`);
+  }
+  if (
+    executionStatus != null &&
+    [4, 5, 6].includes(executionStatus) &&
+    summary.unknownCount > 0
+  ) {
+    lines.push(`已结束，仍有 ${summary.unknownCount} 人的结果待核实`);
+  }
+  return lines;
+}
 
 export interface StandardExecutionStatusInput {
   executionStatus?: number | null;

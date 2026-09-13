@@ -40,6 +40,12 @@ describe("normal-link execution detail drawer", () => {
     );
     assert.match(source, /stationAccountLabel\(detail\.roles, row\.callId\)/);
     assert.match(source, /label="号码"/);
+    assert.match(source, /label="料子进度"/);
+    assert.match(source, /:summary="detail\.execution\.materialSummary"/);
+    assert.match(
+      source,
+      /:execution-status="detail\.execution\.executionStatus"/
+    );
     assert.doesNotMatch(source, /（脱敏）/);
     assert.doesNotMatch(source, /重新执行|重试|营销/);
   });

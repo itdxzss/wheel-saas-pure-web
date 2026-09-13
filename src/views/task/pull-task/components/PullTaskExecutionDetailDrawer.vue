@@ -4,6 +4,7 @@ import type {
   PullTaskStandardMember
 } from "@/api/pull-task";
 import { formatEpoch, standardStageLabel } from "../constants";
+import PullTaskStandardMaterialProgress from "./PullTaskStandardMaterialProgress.vue";
 import {
   actionTypeLabel,
   formatGroupLinkUrl,
@@ -155,6 +156,12 @@ function accountLabel(
           {{
             detail.execution.reasonMessage || detail.execution.reasonCode || "-"
           }}
+        </el-descriptions-item>
+        <el-descriptions-item label="料子进度" :span="3">
+          <PullTaskStandardMaterialProgress
+            :summary="detail.execution.materialSummary"
+            :execution-status="detail.execution.executionStatus"
+          />
         </el-descriptions-item>
       </el-descriptions>
 

@@ -9,6 +9,55 @@ const displayModuleUrl = new URL(
 );
 
 describe("standard pull task execution display", () => {
+  it("separates current people, pending retries and submitted attempt counts", async () => {
+    const { standardMaterialProgressLines } = await import(
+      displayModuleUrl.href
+    );
+    assert.deepEqual(
+      standardMaterialProgressLines({
+        totalCount: 201,
+        successfulCount: 88,
+        failedCount: 0,
+        unknownCount: 6,
+        remainingCount: 103,
+        submittedCount: 4,
+        canceledCount: 0,
+        retryPendingCount: 80,
+        submittedAttemptCount: 716,
+        unconfirmedAttemptCount: 622,
+        lastSuccessfulAt: 1000
+      }),
+      [
+        "成功 88 人 / 失败 0 人 / 结果未知 6 人",
+        "等待结果 4 人 / 待执行 103 人（其中待重试 80 人）",
+        "累计尝试 716 次 / 其中结果未确认 622 次"
+      ]
+    );
+    assert.deepEqual(standardMaterialProgressLines(null), []);
+  });
+
+  it("retains canceled people and flags unresolved results when execution ends", async () => {
+    const { standardMaterialProgressLines } = await import(
+      displayModuleUrl.href
+    );
+    const lines = standardMaterialProgressLines(
+      {
+        totalCount: 201,
+        successfulCount: 1,
+        failedCount: 0,
+        unknownCount: 1,
+        remainingCount: 0,
+        submittedCount: 0,
+        canceledCount: 199
+      },
+      4
+    );
+    assert.ok(lines.includes("已取消 199 人"));
+    assert.ok(lines.includes("已结束，仍有 1 人的结果待核实"));
+    assert.ok(!lines.some(line => line.includes("累计尝试")));
+    assert.ok(!lines.some(line => line.includes("待重试")));
+  });
+
   it("formats group links as copyable absolute URLs", async () => {
     const { formatGroupLinkUrl } = await import(displayModuleUrl.href);
 

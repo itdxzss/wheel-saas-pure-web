@@ -5,6 +5,7 @@ import PullTaskDetailSummary from "./PullTaskDetailSummary.vue";
 import PullTaskExecutionResourceActions from "./PullTaskExecutionResourceActions.vue";
 import PullTaskLegacySupplementDrawer from "./PullTaskLegacySupplementDrawer.vue";
 import PullTaskStandardExecutionResourceCounts from "./PullTaskStandardExecutionResourceCounts.vue";
+import PullTaskStandardMaterialProgress from "./PullTaskStandardMaterialProgress.vue";
 import PullTaskStandardSavedSettings from "./PullTaskStandardSavedSettings.vue";
 import PullTaskStandardTaskSummary from "./PullTaskStandardTaskSummary.vue";
 import {
@@ -414,15 +415,12 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           </template>
         </template>
       </el-table-column>
-      <el-table-column v-if="normalLink" label="料子进度" min-width="230">
+      <el-table-column v-if="normalLink" label="料子进度" min-width="360">
         <template #default="{ row }">
-          <template v-if="row.materialSummary">
-            成功 {{ row.materialSummary.successfulCount }} / 失败
-            {{ row.materialSummary.failedCount }} / 未知
-            {{ row.materialSummary.unknownCount }} / 剩余
-            {{ row.materialSummary.remainingCount }}
-          </template>
-          <span v-else>-</span>
+          <PullTaskStandardMaterialProgress
+            :summary="row.materialSummary"
+            :execution-status="row.executionStatus"
+          />
         </template>
       </el-table-column>
       <el-table-column
