@@ -49,7 +49,10 @@ import {
 } from "@/api/account-group";
 import { apiErrorMessage } from "@/utils/api-error";
 import { downloadBlobFile } from "@/utils/download";
-import { standardExecutionStatus } from "../standard-execution-display";
+import {
+  executionSlotWaitReason,
+  standardExecutionStatus
+} from "../standard-execution-display";
 
 export interface PullTaskSearchForm {
   id: string;
@@ -224,6 +227,9 @@ function standardExecutionFilters(
   status: PullTaskGroupStatus | ""
 ): Partial<PullTaskStandardExecutionQuery> {
   if (status === "PAUSED") return { manualPaused: 1 };
+  if (status === "WAIT_CONCURRENCY") {
+    return { executionStatus: 3, reasonCode: executionSlotWaitReason };
+  }
   if (status === "MANAGER_SHORTAGE") {
     return { executionStatus: 3, waitResourceType: 1 };
   }

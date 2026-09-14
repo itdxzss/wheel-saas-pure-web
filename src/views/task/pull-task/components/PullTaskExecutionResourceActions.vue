@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { PullTaskGroupRow, PullTaskRow } from "@/api/pull-task";
+import { isExecutionSlotWait } from "../standard-execution-display";
 
 defineOptions({ name: "PullTaskExecutionResourceActions" });
 
@@ -25,7 +26,10 @@ const activeExecution = computed(
     [1, 2, 3].includes(props.row.executionStatus ?? 0)
 );
 const normalLinkWait = computed(
-  () => activeExecution.value && props.row.executionStatus === 3
+  () =>
+    activeExecution.value &&
+    props.row.executionStatus === 3 &&
+    !isExecutionSlotWait(props.row)
 );
 const pauseVisible = computed(
   () => activeExecution.value && !props.row.manualPaused

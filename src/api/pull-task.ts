@@ -712,6 +712,7 @@ export interface PullTaskStandardExecutionQuery {
   stage?: number;
   waitResourceType?: number;
   manualPaused?: number;
+  reasonCode?: string;
 }
 
 export interface PullTaskManagerOptionRole {

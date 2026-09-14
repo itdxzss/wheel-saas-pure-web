@@ -57,6 +57,7 @@ export const groupRowStatusOptions: Array<{
   { label: "添加执行中", value: "RUNNING" },
   { label: "群组封禁", value: "GROUP_BANNED" },
   { label: "管理员不足", value: "MANAGER_SHORTAGE" },
+  { label: "等待并发名额", value: "WAIT_CONCURRENCY" },
   { label: "拉手不足", value: "PULLER_SHORTAGE" },
   { label: "站台不足", value: "STATION_SHORTAGE" },
   { label: "任务暂停", value: "PAUSED" },

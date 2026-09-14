@@ -85,6 +85,18 @@ const managerAdminReasons = new Set([
 
 const managerJoinPendingApprovalReason = "MANAGER_JOIN_PENDING_APPROVAL";
 
+/** 资源已通过复核，当前等待父任务的并发执行名额。 */
+export const executionSlotWaitReason = "EXECUTION_SLOT_UNAVAILABLE";
+
+export function isExecutionSlotWait(
+  execution: StandardExecutionStatusInput
+): boolean {
+  return (
+    execution.executionStatus === 3 &&
+    execution.reasonCode === executionSlotWaitReason
+  );
+}
+
 export function standardStageLabel(stage?: number | null): string {
   return (
     standardStageOptions.find(option => option.value === stage)?.label ?? "-"
@@ -104,6 +116,7 @@ export function standardExecutionStatus(
   if (execution.manualPaused) return "PAUSED";
   if (execution.executionStatus === 1) return "WAIT_START";
   if (execution.executionStatus === 2) return "RUNNING";
+  if (isExecutionSlotWait(execution)) return "WAIT_CONCURRENCY";
   if (
     execution.executionStatus === 3 &&
     execution.reasonCode &&

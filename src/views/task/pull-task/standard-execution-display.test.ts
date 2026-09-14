@@ -9,6 +9,30 @@ const displayModuleUrl = new URL(
 );
 
 describe("standard pull task execution display", () => {
+  it("shows concurrency waiting before resource shortage and preserves pause", async () => {
+    const { standardExecutionStatus, isExecutionSlotWait } = await import(
+      displayModuleUrl.href
+    );
+    for (const waitResourceType of [1, 2, 3]) {
+      const row = {
+        executionStatus: 3,
+        waitResourceType,
+        reasonCode: "EXECUTION_SLOT_UNAVAILABLE"
+      };
+      assert.equal(standardExecutionStatus(row), "WAIT_CONCURRENCY");
+      assert.equal(isExecutionSlotWait(row), true);
+      assert.equal(
+        standardExecutionStatus({ ...row, manualPaused: true }),
+        "PAUSED"
+      );
+      assert.equal(isExecutionSlotWait({ ...row, executionStatus: 4 }), false);
+    }
+    assert.equal(
+      standardExecutionStatus({ executionStatus: 3, waitResourceType: 1 }),
+      "MANAGER_SHORTAGE"
+    );
+  });
+
   it("separates current people, pending retries and submitted attempt counts", async () => {
     const { standardMaterialProgressLines } = await import(
       displayModuleUrl.href

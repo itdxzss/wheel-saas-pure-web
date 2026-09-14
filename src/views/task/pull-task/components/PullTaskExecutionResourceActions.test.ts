@@ -20,6 +20,7 @@ describe("normal-link single execution actions", () => {
     assert.match(source, /waitResourceType === 2/);
     assert.match(source, /waitResourceType === 3/);
     assert.doesNotMatch(source, /reasonCode ===/);
+    assert.match(source, /!isExecutionSlotWait\(props\.row\)/);
     assert.match(source, /emit\('lifecycle', 'pause'\)/);
     assert.match(source, /emit\('lifecycle', 'resume'\)/);
     assert.match(source, /emit\('lifecycle', 'end'\)/);
