@@ -10,6 +10,10 @@ const profileSavingSource = readFileSync(
   new URL("../composables/useGroupProfileSaving.ts", import.meta.url),
   "utf8"
 );
+const metadataRefreshSource = readFileSync(
+  new URL("../composables/waitForGroupMetadataRefresh.ts", import.meta.url),
+  "utf8"
+);
 
 describe("group member drawer", () => {
   it("loads the aggregated group detail without optimistic permission defaults", () => {
@@ -17,11 +21,21 @@ describe("group member drawer", () => {
     assert.doesNotMatch(source, /inviteViaLink:\s*true/);
     assert.match(source, /getGroupDetail\(group\.id\)/);
     assert.match(source, /permissions\.inviteViaLink/);
-    assert.doesNotMatch(source, /permissions\.editGroupSettings\s*==\s*null/);
-    assert.doesNotMatch(
-      source,
-      /permissions\.adminApproveNewMembers\s*==\s*null/
-    );
+    for (const field of [
+      "editGroupSettings",
+      "sendMessages",
+      "addMembers",
+      "inviteViaLink",
+      "adminApproveNewMembers"
+    ]) {
+      assert.match(
+        source,
+        new RegExp(`permissions\\.${field} == null \\? '未知' : ''`)
+      );
+    }
+    assert.match(source, /未知，尚未获取限时消息设置/);
+    assert.match(source, /已读取群信息，成员/);
+    assert.doesNotMatch(source, /metadata：/);
     assert.doesNotMatch(
       source,
       /!detail\?\.capabilities\.inviteViaLink\.supported/
@@ -33,7 +47,10 @@ describe("group member drawer", () => {
     assert.match(source, /mirrorSynced/);
     assert.match(source, /ref="avatarUploadRef"/);
     assert.match(source, /avatarUploadRef\.value\?\.clearFiles\(\)/);
-    assert.match(source, /loaded\.metadataSyncedAt\s*!==\s*previousSyncedAt/);
+    assert.match(
+      metadataRefreshSource,
+      /loaded\.metadataSyncedAt\s*!==\s*options\.previousSyncedAt/
+    );
     assert.match(source, /群信息仍在同步，请稍后再试/);
     assert.doesNotMatch(
       source,

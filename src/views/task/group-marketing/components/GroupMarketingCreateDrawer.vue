@@ -60,6 +60,7 @@ const emit = defineEmits<{
 const visible = defineModel<boolean>({ required: true });
 const form = defineModel<GroupMarketingCreateForm>("form", { required: true });
 const treeRef = ref<TreeRef>();
+const checkedTreeKeys = ref<Set<string>>(new Set());
 const dynamicAccountIds = ref<Set<number>>(new Set());
 const loadedAccountsById = ref<Map<number, MarketingTreeAccount>>(new Map());
 
@@ -162,11 +163,27 @@ function defaultCheckedKeys(): string[] {
   );
 }
 
+const allAccountsChecked = computed(() => {
+  const keys = defaultCheckedKeys();
+  return keys.length > 0 && keys.every(key => checkedTreeKeys.value.has(key));
+});
+
 function resetCheckedKeys(): void {
   dynamicAccountIds.value = defaultDynamicAccountIds(props.treeAccounts);
+  checkedTreeKeys.value = new Set(defaultCheckedKeys());
   void nextTick(() => {
-    treeRef.value?.setCheckedKeys(defaultCheckedKeys());
+    treeRef.value?.setCheckedKeys([...checkedTreeKeys.value]);
   });
+}
+
+function toggleAllAccounts(): void {
+  if (!allAccountsChecked.value) {
+    resetCheckedKeys();
+    return;
+  }
+  dynamicAccountIds.value = new Set();
+  checkedTreeKeys.value = new Set();
+  treeRef.value?.setCheckedKeys([]);
 }
 
 watch(
@@ -182,10 +199,15 @@ watch(
 function onAccountGroupChange(value: number | ""): void {
   loadedAccountsById.value = new Map();
   dynamicAccountIds.value = new Set();
+  checkedTreeKeys.value = new Set();
   emit("account-group-change", value);
 }
 
 function onTreeCheck(node: TreeNode): void {
+  const checkedKeys = new Set(
+    (treeRef.value?.getCheckedKeys(false) ?? []).map(key => String(key))
+  );
+  checkedTreeKeys.value = checkedKeys;
   const parsed = parseMarketingTreeKey(node.id);
   if (!parsed) return;
   const nextDynamicAccountIds = new Set(dynamicAccountIds.value);
@@ -195,9 +217,6 @@ function onTreeCheck(node: TreeNode): void {
     dynamicAccountIds.value = nextDynamicAccountIds;
     return;
   }
-  const checkedKeys = new Set(
-    (treeRef.value?.getCheckedKeys(false) ?? []).map(key => String(key))
-  );
   if (checkedKeys.has(accountTreeKey(parsed.accountId))) {
     nextDynamicAccountIds.add(parsed.accountId);
   } else {
@@ -322,9 +341,13 @@ function submit(): void {
               在线账号 {{ onlineAccountCount }} 个 · 当前群组
               {{ totalGroupCount }} 个
             </span>
-            <el-button size="small" @click="resetCheckedKeys"
-              >全选账号</el-button
+            <el-button
+              size="small"
+              :disabled="treeLoading || defaultCheckedKeys().length === 0"
+              @click="toggleAllAccounts"
             >
+              {{ allAccountsChecked ? "取消全选" : "全选账号" }}
+            </el-button>
           </div>
           <el-tree
             ref="treeRef"

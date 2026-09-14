@@ -521,8 +521,10 @@ onBeforeUnmount(resetState);
         show-icon
       >
         <template #title>
-          metadata：{{ detail.metadataSyncStatus || "未排队" }}；最后同步：{{
-            detail.metadataSyncedAt || "-"
+          {{
+            detail.membersAvailable
+              ? `已读取群信息，成员 ${detail.members.length} 人`
+              : "已有群信息已展示，成员列表待同步"
           }}
         </template>
         <template v-if="detail.metadataSyncError" #default>
@@ -562,6 +564,9 @@ onBeforeUnmount(resetState);
 
       <section class="drawer-section">
         <div class="drawer-section-title">限时消息</div>
+        <el-text v-if="!loading && timedMessageMode == null" type="info">
+          未知，尚未获取限时消息设置
+        </el-text>
         <el-radio-group
           v-model="timedMessageMode"
           class="timed-message-group"
@@ -585,6 +590,9 @@ onBeforeUnmount(resetState);
             <span>编辑群组设置</span>
             <el-switch
               :model-value="permissions.editGroupSettings ?? false"
+              :inactive-text="
+                permissions.editGroupSettings == null ? '未知' : ''
+              "
               :disabled="loading || savingPermission"
               @change="
                 value => togglePermission('editGroupSettings', Boolean(value))
@@ -595,6 +603,7 @@ onBeforeUnmount(resetState);
             <span>发送新消息</span>
             <el-switch
               :model-value="permissions.sendMessages ?? false"
+              :inactive-text="permissions.sendMessages == null ? '未知' : ''"
               :disabled="loading || savingPermission"
               @change="
                 value => togglePermission('sendMessages', Boolean(value))
@@ -605,6 +614,7 @@ onBeforeUnmount(resetState);
             <span>添加其他成员</span>
             <el-switch
               :model-value="permissions.addMembers ?? false"
+              :inactive-text="permissions.addMembers == null ? '未知' : ''"
               :disabled="loading || savingPermission"
               @change="value => togglePermission('addMembers', Boolean(value))"
             />
@@ -618,6 +628,7 @@ onBeforeUnmount(resetState);
             </span>
             <el-switch
               :model-value="permissions.inviteViaLink ?? false"
+              :inactive-text="permissions.inviteViaLink == null ? '未知' : ''"
               :disabled="loading || savingPermission"
               @change="
                 value => togglePermission('inviteViaLink', Boolean(value))
@@ -628,6 +639,9 @@ onBeforeUnmount(resetState);
             <span>管理员可以批准新成员</span>
             <el-switch
               :model-value="permissions.adminApproveNewMembers ?? false"
+              :inactive-text="
+                permissions.adminApproveNewMembers == null ? '未知' : ''
+              "
               :disabled="loading || savingPermission"
               @change="
                 value =>

@@ -124,6 +124,7 @@ export interface GroupDetail {
   groupName: string | null;
   remark: string | null;
   avatarUrl: string | null;
+  /** 当前群资料可读取；各项权限和完整成员快照独立判断是否已获取。 */
   liveStateAvailable: boolean;
   liveStateUnavailableReason: string | null;
   timedMessageMode: TimedMessageMode | null;
