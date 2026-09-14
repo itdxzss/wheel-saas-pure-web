@@ -2,7 +2,7 @@ import { armadaRequest } from "@/api/armada";
 import { http } from "@/utils/http";
 import type { PageResponse } from "@/api/account";
 
-export type MarketingTemplateLinkMode = 1 | 2 | 3;
+export type MarketingTemplateLinkMode = 1 | 2 | 3 | 4;
 export type MarketingTemplateButtonType = "link" | "copy" | "quick";
 
 type BackendButtonType = "LINK_JUMP" | "COPY_CONTENT" | "QUICK_REPLY";

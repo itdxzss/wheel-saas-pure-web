@@ -91,6 +91,7 @@ function changeMode() {
       <el-radio-button :value="1">文字 / 链接</el-radio-button>
       <el-radio-button :value="3">图片 / 图文</el-radio-button>
       <el-radio-button :value="2">按钮消息</el-radio-button>
+      <el-radio-button :value="4">图片链接卡片</el-radio-button>
     </el-radio-group>
   </el-form-item>
   <slot name="after-type" />
@@ -115,10 +116,19 @@ function changeMode() {
       maxlength="10000"
     />
   </el-form-item>
-  <el-form-item v-if="model.linkMode !== 2" label="推广链接">
-    <el-input v-model="model.promotionLink" placeholder="选填，https://…" />
+  <el-form-item
+    v-if="model.linkMode !== 2"
+    label="推广链接"
+    :required="model.linkMode === 4"
+  >
+    <el-input
+      v-model="model.promotionLink"
+      :placeholder="
+        model.linkMode === 4 ? '必填，https://…' : '选填，https://…'
+      "
+    />
   </el-form-item>
-  <el-form-item label="图片素材">
+  <el-form-item label="图片素材" :required="model.linkMode === 4">
     <el-space wrap>
       <el-button @click="assetOpen = true">选择 / 上传图片</el-button>
       <span v-if="model.imageFileId">{{

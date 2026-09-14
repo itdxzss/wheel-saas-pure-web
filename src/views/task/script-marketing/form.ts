@@ -1,4 +1,5 @@
 import type { ScriptSave, ScriptStep } from "@/api/script-marketing";
+import { validateMarketingImageLink } from "@/views/material/marketing-template/domain/link-validation";
 import { newStepId, validateReplies } from "./reply";
 
 let editorKey = 0;
@@ -101,6 +102,13 @@ export function validateScript(form: ScriptSave): string | undefined {
       !(step.message.linkMode === 3 && step.message.imageFileId)
     )
       return `第 ${index + 1} 项请填写消息内容或选择图片`;
+    if (step.message.linkMode === 4) {
+      const error = validateMarketingImageLink(
+        Boolean(step.message.imageFileId),
+        step.message.promotionLink
+      );
+      if (error) return `第 ${index + 1} 项${error}`;
+    }
     if (
       step.waitMinSeconds === null ||
       step.waitMaxSeconds === null ||

@@ -72,6 +72,7 @@ function buttonValuePlaceholder(button: MarketingTemplateButton): string {
           <el-option label="普通超链" :value="1" />
           <el-option label="按钮超链" :value="2" />
           <el-option label="图文内容" :value="3" />
+          <el-option label="图片链接卡片" :value="4" />
         </el-select>
       </el-form-item>
       <el-form-item label="@所有人">
@@ -96,7 +97,17 @@ function buttonValuePlaceholder(button: MarketingTemplateButton): string {
           placeholder="选填，作为补充说明展示"
         />
       </el-form-item>
-      <el-form-item label="推广链接">
+      <el-alert
+        v-if="form.linkMode === 4"
+        type="info"
+        :closable="false"
+        :title="
+          form.imageFileId
+            ? '使用模板已绑定的图片生成链接卡片。'
+            : '请先到素材管理为此模板上传图片。'
+        "
+      />
+      <el-form-item label="推广链接" :required="form.linkMode === 4">
         <el-input v-model="form.promotionLink" clearable />
       </el-form-item>
       <el-form-item v-if="form.linkMode === 2" label="按钮设置">

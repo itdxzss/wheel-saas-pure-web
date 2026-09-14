@@ -11,6 +11,7 @@ import {
 import { newStep } from "@/views/task/script-marketing/form";
 import ScriptMessageEditor from "@/views/task/script-marketing/components/ScriptMessageEditor.vue";
 import { apiErrorMessage } from "@/utils/api-error";
+import { validateMarketingImageLink } from "@/views/material/marketing-template/domain/link-validation";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import Gallery from "~icons/solar/gallery-wide-bold-duotone";
@@ -89,6 +90,17 @@ async function save() {
     return;
   }
   saving.value = true;
+  if (message.value.linkMode === 4) {
+    const error = validateMarketingImageLink(
+      Boolean(message.value.imageFileId),
+      message.value.promotionLink
+    );
+    if (error) {
+      ElMessage.warning(error);
+      saving.value = false;
+      return;
+    }
+  }
   try {
     await saveScriptMaterial(message.value, editing.value);
     open.value = false;
@@ -160,6 +172,7 @@ onBeforeUnmount(() => requestId++);
           >
             <el-option :value="1" label="文字 / 链接" />
             <el-option :value="3" label="图片 / 图文" />
+            <el-option :value="4" label="图片链接卡片" />
             <el-option :value="2" label="按钮消息" />
           </el-select>
         </el-form-item>

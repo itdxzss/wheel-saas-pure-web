@@ -25,6 +25,25 @@ const validForm = () => {
     steps
   };
 };
+test("image link steps require image and HTTP destination and keep type 4 in payload", () => {
+  const form = validForm();
+  const message = form.steps[1].message;
+  message.linkMode = 4;
+  message.promotionLink = "https://example.com/card";
+  assert.match(validateScript(form)!, /图片/);
+  message.imageFileId = 91;
+  message.promotionLink = "";
+  assert.match(validateScript(form)!, /推广链接/);
+  message.promotionLink = "javascript:alert(1)";
+  assert.match(validateScript(form)!, /推广链接/);
+  message.promotionLink = "https://example.com/card";
+  assert.equal(validateScript(form), undefined);
+  const payload = toScriptSave(form).steps[1].message;
+  assert.equal(payload.linkMode, 4);
+  assert.equal(payload.imageFileId, 91);
+  assert.equal(payload.promotionLink, "https://example.com/card");
+  assert.deepEqual(payload.buttons, []);
+});
 test("minimum admin/promoter stays present when deleting", () => {
   const form = validForm();
   assert.equal(mayRemove(form.steps, 0), false);

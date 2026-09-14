@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { MarketingTemplateForm } from "../composables/useMarketingTemplatePage";
+import { validateMarketingImageLink } from "../domain/link-validation";
 
 const props = defineProps<{
   form: MarketingTemplateForm;
@@ -9,10 +10,16 @@ const props = defineProps<{
 const previewType = computed(() => {
   if (props.form.linkMode === "BUTTON") return "按钮超链";
   if (props.form.linkMode === "IMAGE_TEXT") return "图文内容";
+  if (props.form.linkMode === "IMAGE_LINK") return "图片链接卡片";
   return "普通超链";
 });
 
 const bottomText = computed(() => `营销模板消息 · ${previewType.value}`);
+const imageLinkHref = computed(() =>
+  validateMarketingImageLink(true, props.form.promotionLink)
+    ? undefined
+    : props.form.promotionLink.trim()
+);
 
 const buttonBodyText = computed(() =>
   [props.form.content, props.form.text].filter(value => value.trim()).join("\n")
@@ -32,7 +39,7 @@ const linkDomain = computed(() => {
   <el-card shadow="never" class="marketing-template-preview">
     <template #header>
       <div class="preview-header">
-        <span>WhatsApp 接收效果</span>
+        <span>WhatsApp 消息样式预览</span>
         <el-tag effect="plain">{{ previewType }}</el-tag>
       </div>
     </template>
@@ -58,7 +65,38 @@ const linkDomain = computed(() => {
 
         <div class="wa-chat">
           <div class="wa-date">今天</div>
-          <div class="wa-message-card">
+          <div v-if="form.linkMode === 'IMAGE_LINK'" class="wa-message-card">
+            <div v-if="form.mentionAll" class="wa-mention-all">@all</div>
+            <a
+              class="wa-image-link-card"
+              :href="imageLinkHref"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="打开图片推广链接"
+            >
+              <div class="wa-image-box">
+                <el-image
+                  v-if="form.imageUrl"
+                  :src="form.imageUrl"
+                  fit="cover"
+                  class="wa-image"
+                />
+                <div v-else class="wa-image-placeholder">请上传链接预览图</div>
+              </div>
+              <div class="wa-image-link-copy">
+                <strong>{{ form.content || "卡片标题" }}</strong>
+                <span v-if="form.text">{{ form.text }}</span>
+                <small>{{ linkDomain || "链接域名" }}</small>
+              </div>
+            </a>
+            <div class="wa-link-url">
+              {{ form.promotionLink || "请填写推广链接" }}
+            </div>
+            <div class="wa-message-footer">
+              <span>图片链接卡片</span><span>18:25 ✓✓</span>
+            </div>
+          </div>
+          <div v-else class="wa-message-card">
             <div class="wa-image-box">
               <el-image
                 v-if="form.imageUrl"
@@ -136,16 +174,16 @@ const linkDomain = computed(() => {
   max-width: 315px;
   padding: 10px;
   margin: 0 auto;
-  border-radius: 34px;
   background: #0f172a;
+  border-radius: 34px;
   box-shadow: 0 14px 34px rgb(15 23 42 / 16%);
 }
 
 .phone-screen {
-  overflow: hidden;
   min-height: 505px;
-  border-radius: 26px;
+  overflow: hidden;
   background: #efe7d8;
+  border-radius: 26px;
 }
 
 .phone-status {
@@ -155,10 +193,10 @@ const linkDomain = computed(() => {
   align-items: center;
   height: 40px;
   padding: 0 18px;
-  color: #fff;
-  background: #07111f;
   font-size: 11px;
   font-weight: 700;
+  color: #fff;
+  background: #07111f;
 }
 
 .phone-status span:last-child {
@@ -168,8 +206,8 @@ const linkDomain = computed(() => {
 .phone-notch {
   width: 74px;
   height: 20px;
-  border-radius: 12px;
   background: #020617;
+  border-radius: 12px;
 }
 
 .wa-topbar {
@@ -189,9 +227,9 @@ const linkDomain = computed(() => {
 }
 
 .wa-avatar {
-  background: #45c78f;
-  color: #fff;
   font-weight: 700;
+  color: #fff;
+  background: #45c78f;
 }
 
 .wa-name {
@@ -200,8 +238,8 @@ const linkDomain = computed(() => {
 }
 
 .wa-online {
-  color: rgb(255 255 255 / 76%);
   font-size: 11px;
+  color: rgb(255 255 255 / 76%);
 }
 
 .wa-action {
@@ -231,27 +269,49 @@ const linkDomain = computed(() => {
   width: fit-content;
   padding: 4px 12px;
   margin: 0 auto 10px;
-  border-radius: 999px;
-  color: #64748b;
-  background: #e8f2ef;
   font-size: 11px;
   font-weight: 600;
+  color: #64748b;
+  background: #e8f2ef;
+  border-radius: 999px;
 }
 
 .wa-message-card {
   display: grid;
   gap: 7px;
   padding: 7px 7px 8px;
-  border-radius: 8px;
   background: #fff;
+  border-radius: 8px;
   box-shadow: 0 2px 6px rgb(15 23 42 / 12%);
 }
 
 .wa-image-box {
-  overflow: hidden;
   min-height: 150px;
-  border-radius: 7px;
+  overflow: hidden;
   background: #e8fff5;
+  border-radius: 7px;
+}
+
+.wa-image-link-card {
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  background: #f4f6f8;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+}
+
+.wa-image-link-copy {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.wa-image-link-copy small {
+  color: #64748b;
 }
 
 .wa-image {
@@ -263,11 +323,11 @@ const linkDomain = computed(() => {
   display: grid;
   place-content: center;
   height: 160px;
+  font-size: 12px;
+  line-height: 1.55;
   color: #78909c;
   text-align: center;
-  line-height: 1.55;
   background: linear-gradient(135deg, #eefdf7, #e5f7f4);
-  font-size: 12px;
 }
 
 .wa-image-placeholder-title {
@@ -275,8 +335,8 @@ const linkDomain = computed(() => {
 }
 
 .wa-template-name {
-  color: #64748b;
   font-size: 11px;
+  color: #64748b;
 }
 
 .wa-mention-all {
@@ -286,10 +346,10 @@ const linkDomain = computed(() => {
 }
 
 .wa-content {
-  color: #111827;
   font-size: 13px;
   font-weight: 800;
   line-height: 1.45;
+  color: #111827;
   white-space: pre-wrap;
 }
 
@@ -304,36 +364,36 @@ const linkDomain = computed(() => {
   display: grid;
   gap: 3px;
   padding: 7px 9px;
+  font-size: 12px;
+  background: #f4f6f8;
   border-left: 3px solid #22c55e;
   border-radius: 7px;
-  background: #f4f6f8;
-  font-size: 12px;
 }
 
 .wa-link-title {
-  color: #111827;
   font-weight: 800;
+  color: #111827;
 }
 
 .wa-link-url {
   overflow: hidden;
-  color: #64748b;
   text-overflow: ellipsis;
+  color: #64748b;
   white-space: nowrap;
 }
 
 .wa-footer-note {
-  color: #64748b;
   font-size: 11px;
   line-height: 1.4;
+  color: #64748b;
   white-space: pre-wrap;
 }
 
 .wa-message-footer {
   display: flex;
   justify-content: space-between;
-  color: #94a3b8;
   font-size: 10px;
+  color: #94a3b8;
 }
 
 .wa-buttons {

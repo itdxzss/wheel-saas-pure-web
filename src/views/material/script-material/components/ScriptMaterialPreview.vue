@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import type { ScriptMessage } from "@/api/script-marketing";
+import { computed } from "vue";
+import { validateMarketingImageLink } from "@/views/material/marketing-template/domain/link-validation";
 import ResourceAssetThumbnail from "@/views/hyperlink/library/components/ResourceAssetThumbnail.vue";
 
-withDefaults(defineProps<{ message: ScriptMessage; compact?: boolean }>(), {
-  compact: false
-});
+const props = withDefaults(
+  defineProps<{ message: ScriptMessage; compact?: boolean }>(),
+  {
+    compact: false
+  }
+);
+const imageLinkHref = computed(() =>
+  props.message.linkMode === 4 &&
+  !validateMarketingImageLink(true, props.message.promotionLink)
+    ? props.message.promotionLink.trim()
+    : undefined
+);
 
 const buttonTypes = {
   LINK_JUMP: "跳转链接",
@@ -21,15 +32,22 @@ function buttonKey(button: object): number {
 
 <template>
   <div class="message-preview" :class="{ 'is-compact': compact }">
-    <div v-if="message.imageFileId" class="message-image">
+    <component
+      :is="message.linkMode === 4 ? 'a' : 'div'"
+      v-if="message.imageFileId"
+      class="message-image"
+      :href="imageLinkHref"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <ResourceAssetThumbnail
         scope="SCRIPT"
         :asset-id="message.imageFileId"
         :alt="message.templateName || '消息图片'"
         fit="contain"
-        :preview="!compact"
+        :preview="!compact && message.linkMode !== 4"
       />
-    </div>
+    </component>
     <div class="message-copy">
       <el-tag
         v-if="message.mentionAll"
@@ -99,6 +117,7 @@ function buttonKey(button: object): number {
 }
 
 .message-image {
+  display: block;
   height: 300px;
 }
 

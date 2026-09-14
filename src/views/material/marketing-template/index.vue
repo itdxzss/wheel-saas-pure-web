@@ -54,6 +54,7 @@ const {
 function linkModeLabel(mode: MarketingTemplateRow["linkMode"]) {
   if (mode === "BUTTON") return "按钮超链";
   if (mode === "IMAGE_TEXT") return "图文内容";
+  if (mode === "IMAGE_LINK") return "图片链接卡片";
   return "普通超链";
 }
 
@@ -112,6 +113,7 @@ onMounted(() => {
             <el-option label="普通超链" value="NORMAL" />
             <el-option label="按钮超链" value="BUTTON" />
             <el-option label="图文内容" value="IMAGE_TEXT" />
+            <el-option label="图片链接卡片" value="IMAGE_LINK" />
           </el-select>
         </el-form-item>
         <el-form-item v-show="advancedOpen" label="推广链接">

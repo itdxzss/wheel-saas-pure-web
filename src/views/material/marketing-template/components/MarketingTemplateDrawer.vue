@@ -8,10 +8,10 @@ import {
   type UploadUserFile
 } from "element-plus";
 import {
-  validateMarketingPromotionLink,
   type MarketingDrawerMode,
   type MarketingTemplateForm
 } from "../composables/useMarketingTemplatePage";
+import { validateMarketingPromotionLink } from "../domain/link-validation";
 import MarketingButtonEditor from "./MarketingButtonEditor.vue";
 import MarketingTemplatePreview from "./MarketingTemplatePreview.vue";
 
@@ -37,7 +37,8 @@ const promotionLinkRules: FormItemRule[] = [
     validator: (_rule, value: unknown, callback) => {
       const promotionLink = typeof value === "string" ? value : "";
       const message =
-        form.value.linkMode === "NORMAL" && !promotionLink.trim()
+        ["NORMAL", "IMAGE_LINK"].includes(form.value.linkMode) &&
+        !promotionLink.trim()
           ? "请输入推广链接"
           : validateMarketingPromotionLink(promotionLink);
       callback(message ? new Error(message) : undefined);
@@ -105,8 +106,8 @@ watch(visible, opened => {
 <template>
   <el-drawer v-model="visible" :title="title" size="1180px" destroy-on-close>
     <div class="drawer-subtitle">
-      左侧按照 WhatsApp 聊天页收到的营销模版消息实时预览；按钮超链支持最多 3
-      个按钮。
+      左侧为消息样式预览；图片链接卡片用于点击图片打开推广链接。实际显示以
+      WhatsApp 收件端为准。
     </div>
 
     <div class="marketing-template-drawer">
@@ -123,7 +124,7 @@ watch(visible, opened => {
           type="info"
           show-icon
           :closable="false"
-          title="营销模版支持普通超链、按钮超链和图文内容；按钮超链最多 3 个。"
+          title="营销模版支持普通超链、按钮超链、图文内容和图片链接卡片；按钮超链最多 3 个。"
         />
 
         <el-card shadow="never" class="form-card">
@@ -156,6 +157,7 @@ watch(visible, opened => {
               <el-option label="普通超链" value="NORMAL" />
               <el-option label="按钮超链" value="BUTTON" />
               <el-option label="图文内容" value="IMAGE_TEXT" />
+              <el-option label="图片链接卡片" value="IMAGE_LINK" />
             </el-select>
           </el-form-item>
 
@@ -177,7 +179,10 @@ watch(visible, opened => {
             </div>
           </template>
 
-          <el-form-item label="上传图片">
+          <el-form-item
+            label="上传图片"
+            :required="form.linkMode === 'IMAGE_LINK'"
+          >
             <el-upload
               v-model:file-list="imageFileList"
               drag
@@ -192,7 +197,7 @@ watch(visible, opened => {
               </div>
               <template #tip>
                 <div class="el-upload__tip">
-                  图片要求不超过 500KB；选择后按 WhatsApp 图片消息比例预览。
+                  图片要求不超过 500KB；图片链接卡片使用此图片作为链接预览图。
                 </div>
               </template>
             </el-upload>
@@ -247,7 +252,9 @@ watch(visible, opened => {
             label="推广链接"
             prop="promotionLink"
             :rules="promotionLinkRules"
-            :required="form.linkMode === 'NORMAL'"
+            :required="
+              form.linkMode === 'NORMAL' || form.linkMode === 'IMAGE_LINK'
+            "
           >
             <el-input
               v-model="form.promotionLink"

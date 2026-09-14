@@ -4,10 +4,10 @@ import Delete from "~icons/ep/delete";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { type FormItemRule } from "element-plus";
 import {
-  validateMarketingButtonLink,
   type MarketingButtonType,
   type MarketingTemplateButton
 } from "../composables/useMarketingTemplatePage";
+import { validateMarketingButtonLink } from "../domain/link-validation";
 
 const buttons = defineModel<MarketingTemplateButton[]>({ required: true });
 

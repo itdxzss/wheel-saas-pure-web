@@ -34,7 +34,10 @@ describe("marketing template drawer", () => {
       source,
       /<el-form-item\s+v-if="form\.linkMode !== 'BUTTON'"\s+label="推广链接"/
     );
-    assert.match(source, /:required="form\.linkMode === 'NORMAL'"/);
+    assert.match(
+      source,
+      /:required="\s*form\.linkMode === 'NORMAL' \|\| form\.linkMode === 'IMAGE_LINK'\s*"/
+    );
   });
 
   it("offers a mention-all switch with a group notification warning", () => {

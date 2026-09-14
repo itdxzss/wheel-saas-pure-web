@@ -11,6 +11,8 @@ defineEmits<{
 }>();
 
 const kind = computed(() => {
+  if (props.material.linkMode === 4)
+    return { label: "图片链接卡片", type: "primary" as const };
   if (props.material.linkMode === 2)
     return { label: "按钮消息", type: "success" as const };
   if (props.material.linkMode === 3)

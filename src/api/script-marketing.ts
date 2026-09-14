@@ -6,7 +6,7 @@ import type { GroupListRow } from "@/api/group";
 /** 独立后端 ScriptMarketingSaveDTO 的消息快照契约。 */
 export interface ScriptMessage {
   templateName: string;
-  linkMode: 1 | 2 | 3;
+  linkMode: 1 | 2 | 3 | 4;
   content: string;
   bodyText: string;
   imageFileId: number | null;

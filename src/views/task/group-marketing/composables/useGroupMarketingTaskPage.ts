@@ -9,6 +9,7 @@ import {
   type Ref
 } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { validateMarketingImageLink } from "@/views/material/marketing-template/domain/link-validation";
 import {
   batchDeleteMarketingTasks,
   closeMarketingTask,
@@ -193,6 +194,12 @@ function copyMaterialForm(
 function validateMaterialForm(form: MarketingTemplateWrite): string {
   if (!form.templateName.trim()) return "模板名称不能为空";
   if (!form.content.trim()) return "内容不能为空";
+  if (form.linkMode === 4) {
+    return validateMarketingImageLink(
+      Boolean(form.imageFileId),
+      form.promotionLink
+    );
+  }
   if (form.linkMode === 2 && form.buttons.length === 0) {
     return "按钮超链消息类型至少配置 1 个按钮";
   }

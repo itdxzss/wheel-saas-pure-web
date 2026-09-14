@@ -12,8 +12,17 @@ import {
   type MarketingTemplateWrite
 } from "@/api/marketing-template";
 import { apiErrorMessage } from "@/utils/api-error";
+import {
+  validateMarketingButtonLink,
+  validateMarketingPromotionLink,
+  validateMarketingImageLink
+} from "../domain/link-validation";
 
-export type MarketingLinkMode = "NORMAL" | "BUTTON" | "IMAGE_TEXT";
+export type MarketingLinkMode =
+  | "NORMAL"
+  | "BUTTON"
+  | "IMAGE_TEXT"
+  | "IMAGE_LINK";
 export type MarketingDrawerMode = "create" | "edit" | "preview";
 export type MarketingButtonType = "link" | "copy" | "quick";
 
@@ -114,12 +123,14 @@ const emptyForm = (): MarketingTemplateForm => ({
 function fromApiLinkMode(linkMode: ApiMarketingTemplateRow["linkMode"]) {
   if (linkMode === 2) return "BUTTON";
   if (linkMode === 3) return "IMAGE_TEXT";
+  if (linkMode === 4) return "IMAGE_LINK";
   return "NORMAL";
 }
 
 function toApiLinkMode(linkMode: MarketingLinkMode) {
   if (linkMode === "BUTTON") return 2;
   if (linkMode === "IMAGE_TEXT") return 3;
+  if (linkMode === "IMAGE_LINK") return 4;
   return 1;
 }
 
@@ -199,71 +210,15 @@ function toWritePayload(form: MarketingTemplateForm): MarketingTemplateWrite {
   };
 }
 
-export type MarketingButtonLinkValidationMessage =
-  | ""
-  | "请输入跳转链接"
-  | "请输入标准的跳转链接";
-
-const HTTP_URL_PATTERN = /^https?:\/\//i;
-const EXPLICIT_SCHEME_PATTERN = /^[a-z][a-z\d+.-]*:\/\//i;
-const ILLEGAL_URL_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\uffff<>"{}|\\^`]/;
-const HOST_LABEL_PATTERN = /^[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?$/i;
-
-function hasStandardHostname(hostname: string): boolean {
-  const normalized = hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
-  if (normalized === "localhost" || normalized.includes(":")) return true;
-  const labels = normalized.split(".");
-  return (
-    labels.length >= 2 && labels.every(label => HOST_LABEL_PATTERN.test(label))
-  );
-}
-
-export function validateMarketingButtonLink(
-  value: string
-): MarketingButtonLinkValidationMessage {
-  const trimmed = value.trim();
-  if (!trimmed) return "请输入跳转链接";
-  if (
-    trimmed !== value ||
-    ILLEGAL_URL_CHARACTER_PATTERN.test(trimmed) ||
-    (EXPLICIT_SCHEME_PATTERN.test(trimmed) && !HTTP_URL_PATTERN.test(trimmed))
-  ) {
-    return "请输入标准的跳转链接";
-  }
-  try {
-    const url = new URL(
-      HTTP_URL_PATTERN.test(trimmed) ? trimmed : `https://${trimmed}`
-    );
-    if (
-      (url.protocol !== "http:" && url.protocol !== "https:") ||
-      url.username ||
-      url.password ||
-      !hasStandardHostname(url.hostname)
-    ) {
-      return "请输入标准的跳转链接";
-    }
-    return "";
-  } catch {
-    return "请输入标准的跳转链接";
-  }
-}
-
-export type MarketingPromotionLinkValidationMessage =
-  | ""
-  | "请输入标准的推广链接";
-
-export function validateMarketingPromotionLink(
-  value: string
-): MarketingPromotionLinkValidationMessage {
-  if (!value.trim()) return "";
-  const message = validateMarketingButtonLink(value);
-  if (!message) return "";
-  return "请输入标准的推广链接";
-}
-
 function validateForm(form: MarketingTemplateForm): string {
   if (!form.templateName.trim()) return "请填写模版名称";
   if (!form.content.trim()) return "请填写内容";
+  if (form.linkMode === "IMAGE_LINK") {
+    return validateMarketingImageLink(
+      Boolean(form.imageFileId || form.imageFile),
+      form.promotionLink
+    );
+  }
   if (form.linkMode === "NORMAL" && !form.promotionLink.trim()) {
     return "请输入推广链接";
   }

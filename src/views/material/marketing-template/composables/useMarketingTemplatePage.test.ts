@@ -7,6 +7,7 @@ import {
 } from "@/api/__tests__/armada-test-double";
 import { httpCalls, resetHttpMock } from "@/api/__tests__/http-test-double";
 import * as marketingTemplatePage from "./useMarketingTemplatePage";
+import { validateMarketingButtonLink as validateLink } from "../domain/link-validation";
 
 const { useMarketingTemplatePage } = marketingTemplatePage;
 
@@ -30,24 +31,79 @@ function displayPromotionLink(row: PromotionLinkRow): string {
   );
 }
 
-type LinkValidationMessage =
-  | ""
-  | "请输入跳转链接"
-  | "请输入标准的跳转链接"
-  | "validator-missing";
-
-function validateLink(value: string): LinkValidationMessage {
-  const moduleWithValidator =
-    marketingTemplatePage as typeof marketingTemplatePage & {
-      validateMarketingButtonLink?: (value: string) => LinkValidationMessage;
-    };
-  return (
-    moduleWithValidator.validateMarketingButtonLink?.(value) ??
-    "validator-missing"
-  );
-}
-
 describe("marketing template page state", () => {
+  it("saves image link cards with type 4 and no hidden buttons", async () => {
+    resetArmadaMock({ list: [], total: 0, page: 1, pageSize: 10 });
+    const state = useMarketingTemplatePage();
+    state.openCreateDrawer();
+    Object.assign(state.templateForm.value, {
+      templateName: "图片链接卡片",
+      linkMode: "IMAGE_LINK",
+      content: "标题",
+      imageFileId: 91,
+      promotionLink: "https://example.com/card"
+    });
+    await state.saveTemplate();
+    const payload = (armadaCalls()[0].opts as { data: Record<string, unknown> })
+      .data;
+    assert.equal(payload.linkMode, 4);
+    assert.equal(payload.imageFileId, 91);
+    assert.equal(payload.promotionLink, "https://example.com/card");
+    assert.deepEqual(payload.buttons, []);
+  });
+
+  it("blocks image link cards without a real image selection or valid HTTP URL", async () => {
+    for (const values of [
+      { imageFileId: null, promotionLink: "https://example.com/card" },
+      { imageFileId: 91, promotionLink: "" },
+      { imageFileId: 91, promotionLink: "example.com/card" },
+      { imageFileId: 91, promotionLink: "javascript:alert(1)" }
+    ]) {
+      resetArmadaMock({ list: [], total: 0, page: 1, pageSize: 10 });
+      const state = useMarketingTemplatePage();
+      state.openCreateDrawer();
+      Object.assign(state.templateForm.value, {
+        templateName: "图片链接卡片",
+        linkMode: "IMAGE_LINK",
+        content: "标题",
+        imageUrl: "blob:preview-only",
+        ...values
+      });
+      await state.saveTemplate();
+      assert.equal(armadaCalls().length, 0);
+      assert.equal(state.drawerVisible.value, true);
+    }
+  });
+
+  it("retains image link card type when reading and filtering templates", async () => {
+    resetArmadaMock({
+      list: [
+        {
+          id: 91,
+          templateName: "图片链接卡片",
+          linkMode: 4,
+          content: "标题",
+          bodyText: "说明",
+          imageFileId: 91,
+          promotionLink: "https://example.com/card",
+          buttons: []
+        }
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10
+    });
+    const state = useMarketingTemplatePage();
+    Object.assign(state.searchForm.value, { linkMode: "IMAGE_LINK" });
+    await state.searchTemplates();
+    assert.equal(state.rows.value[0].linkMode, "IMAGE_LINK");
+    assert.equal(
+      (armadaCalls()[0].opts as { params: { linkMode: number } }).params
+        .linkMode,
+      4
+    );
+  });
+
   it("shows the first link button URL for a button template", () => {
     assert.equal(
       displayPromotionLink({
