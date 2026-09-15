@@ -45,6 +45,18 @@ const accountRouter = {
         module_key: "account",
         perm_key: "tenant:account:edit"
       }
+    },
+    {
+      path: "/account/registration",
+      component: "account/registration/index",
+      name: "AccountRegistration",
+      meta: {
+        title: "新号注册",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "account",
+        perm_key: "tenant:account:edit"
+      }
     }
   ]
 };

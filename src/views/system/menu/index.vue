@@ -57,6 +57,7 @@ const componentOptions = [
   "account/index/index",
   "account/group/index",
   "account/import/index",
+  "account/registration/index",
   "group/imports/index",
   "group/list/index",
   "group/history/index",
