@@ -32,6 +32,7 @@ const emit = defineEmits<{
   (event: "create"): void;
   (event: "move-pending-file", fileName: string, offset: -1 | 1): void;
   (event: "plan"): void;
+  (event: "plan-data-packages", ids: number[]): void;
   (event: "remove-pending-file", fileName: string): void;
   (event: "remove-row", rowId: number): void;
 }>();
@@ -120,6 +121,7 @@ function changeCreationMode(mode: string): void {
             @clear="emit('clear')"
             @move-pending-file="forwardPendingFileMove"
             @plan="emit('plan')"
+            @plan-data-packages="emit('plan-data-packages', $event)"
             @remove-pending-file="emit('remove-pending-file', $event)"
           />
           <PullTaskStandardPlanTable

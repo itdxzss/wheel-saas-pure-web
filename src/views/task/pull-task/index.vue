@@ -123,6 +123,7 @@ const {
   open: openStandardCreate,
   pendingFiles: standardPendingFiles,
   plan: planStandardDraft,
+  planDataPackages: planStandardDataPackages,
   planning: standardPlanning,
   resourceError: standardResourceError,
   removePendingFile: removeStandardPendingFile,
@@ -331,6 +332,7 @@ async function handleDetailTaskAction(
       @avatar-clear="clearStandardGroupAvatar"
       @clear="clearStandardDraft"
       @create="createStandardTask"
+      @plan-data-packages="planStandardDataPackages"
       @move-pending-file="moveStandardPendingFile"
       @plan="planStandardDraft"
       @remove-pending-file="removeStandardPendingFile"

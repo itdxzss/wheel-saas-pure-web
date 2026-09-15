@@ -408,6 +408,8 @@ export interface PullTaskStandardExecutionRow {
   normalizedLink: string | null;
   sourceLinkLineNo: number | null;
   sourceFileName: string;
+  sourceDataPackageId?: number | null;
+  sourceDataPackageGeneration?: number | null;
   totalLineCount: number;
   validMemberCount: number;
   invalidLineCount: number;
@@ -957,6 +959,20 @@ export function planPullTaskStandardDraft(
         delete config.headers["Content-Type"];
       }
     }
+  );
+}
+
+/** 将所选数据包快照加入当前标准拉群草稿；服务端在创建时再次校验并领取。 */
+export function planPullTaskStandardDataPackages(data: {
+  creationMode: PullTaskCreationMode;
+  packageIds: number[];
+  groupFolderId?: number | null;
+  linksText?: string;
+}): Promise<PullTaskStandardDraft> {
+  return armadaRequest<PullTaskStandardDraft>(
+    "post",
+    "/api/pull-tasks/standard/draft/data-packages",
+    { data, timeout: 45_000 }
   );
 }
 

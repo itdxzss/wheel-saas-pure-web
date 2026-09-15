@@ -68,6 +68,7 @@ const componentOptions = [
   "material/marketing-template/index",
   "resource/ip/index",
   "resource/ip-stats/index",
+  "resource/group-data-package/index",
   "buyer/template/index",
   "buyer/channel/index",
   "buyer/channel-stats/index",

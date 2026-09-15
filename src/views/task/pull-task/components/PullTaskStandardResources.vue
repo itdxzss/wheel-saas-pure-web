@@ -9,6 +9,7 @@ import type {
 } from "@/api/pull-task";
 import Delete from "~icons/ep/delete";
 import Upload from "~icons/ep/upload";
+import PullTaskDataPackagePicker from "./PullTaskDataPackagePicker.vue";
 
 const MAX_MATERIAL_FILE_COUNT = 50;
 const MAX_MATERIAL_FILE_BYTES = 2 * 1024 * 1024;
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   (event: "clear"): void;
   (event: "move-pending-file", fileName: string, offset: -1 | 1): void;
   (event: "plan"): void;
+  (event: "plan-data-packages", ids: number[]): void;
   (event: "remove-pending-file", fileName: string): void;
 }>();
 
@@ -43,6 +45,11 @@ const pastedLineCount = computed(
 );
 const visibleResourceError = computed(
   () => uploadValidationMessage.value || props.resourceError
+);
+const dataPackageIds = computed(() =>
+  props.draft.rows.flatMap(row =>
+    row.sourceDataPackageId ? [row.sourceDataPackageId] : []
+  )
 );
 
 function scheduleAutomaticPlan(): void {
@@ -257,6 +264,16 @@ function statusType(
         <div class="el-upload__text">拖拽或点击上传 .txt 文件</div>
       </el-upload>
 
+      <div class="package-entry">
+        <PullTaskDataPackagePicker
+          :existing-ids="dataPackageIds"
+          :planning="planning"
+          :resource-error="resourceError"
+          @plan="emit('plan-data-packages', $event)"
+        />
+        <span>也可选择已导入的数据包；一个包对应一个料子执行单元。</span>
+      </div>
+
       <el-alert
         v-if="visibleResourceError"
         :title="visibleResourceError"
@@ -355,6 +372,16 @@ function statusType(
 </template>
 
 <style scoped>
+.package-entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
 .resource-sections {
   display: grid;
   gap: 16px;

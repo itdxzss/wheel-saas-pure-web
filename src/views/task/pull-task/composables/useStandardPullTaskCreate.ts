@@ -6,6 +6,7 @@ import {
   deletePullTaskStandardGroupAvatar,
   getPullTaskStandardDraft,
   planPullTaskStandardDraft,
+  planPullTaskStandardDataPackages,
   removePullTaskStandardDraftRow,
   type PullTaskStandardCreateRequest,
   type PullTaskCreationMode,
@@ -95,6 +96,7 @@ export interface StandardPullTaskCreateState {
   setGroupAvatarFile: (file: File) => Promise<void>;
   clearGroupAvatar: () => Promise<void>;
   plan: () => Promise<boolean>;
+  planDataPackages: (packageIds: number[]) => Promise<boolean>;
   removeRow: (rowId: number) => Promise<void>;
   clear: () => Promise<void>;
   create: () => Promise<void>;
@@ -401,6 +403,7 @@ export function useStandardPullTaskCreate(
   }
 
   async function plan(): Promise<boolean> {
+    if (planning.value || creating.value) return false;
     if (form.creationMode === "PASTED_LINK" && !hasGroupSource()) {
       ElMessage.warning("请选择群组分组或粘贴群链接");
       return false;
@@ -425,6 +428,51 @@ export function useStandardPullTaskCreate(
       return true;
     } catch (error) {
       resourceError.value = apiErrorMessage(error, "执行计划生成失败");
+      return false;
+    } finally {
+      planning.value = false;
+    }
+  }
+
+  async function planDataPackages(packageIds: number[]): Promise<boolean> {
+    if (planning.value || creating.value) return false;
+    const ids = [...new Set(packageIds)];
+    if (ids.length === 0 || ids.length > 50) {
+      resourceError.value = "请选择 1–50 个数据包";
+      return false;
+    }
+    if (
+      ids.some(id =>
+        draft.value.rows.some(row => row.sourceDataPackageId === id)
+      )
+    ) {
+      resourceError.value = "所选数据包已在当前执行计划中，请勿重复添加";
+      return false;
+    }
+    if (form.creationMode === "PASTED_LINK" && !hasGroupSource()) {
+      resourceError.value = "请先选择群组分组或粘贴群链接，再添加数据包";
+      return false;
+    }
+    resourceError.value = "";
+    planning.value = true;
+    try {
+      draft.value = await planPullTaskStandardDataPackages({
+        creationMode: form.creationMode,
+        packageIds: ids,
+        groupFolderId: planningGroupFolderId(),
+        linksText: currentLinksText()
+      });
+      plannedLinksText = currentLinksText();
+      plannedGroupFolderId = planningGroupFolderId();
+      plannedCreationMode = form.creationMode;
+      storePlannedLinks(plannedLinksText);
+      ElMessage.success("数据包已加入执行计划，创建任务时将再次校验可用号码");
+      return true;
+    } catch (error) {
+      resourceError.value = apiErrorMessage(
+        error,
+        "数据包加入计划失败，请刷新数据包后重试"
+      );
       return false;
     } finally {
       planning.value = false;
@@ -670,6 +718,7 @@ export function useStandardPullTaskCreate(
     setGroupAvatarFile,
     clearGroupAvatar,
     plan,
+    planDataPackages,
     removeRow,
     clear,
     create

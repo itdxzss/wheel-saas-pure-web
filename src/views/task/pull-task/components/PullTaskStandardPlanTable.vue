@@ -82,7 +82,14 @@ const emit = defineEmits<{
         label="进群料子"
         min-width="150"
         show-overflow-tooltip
-      />
+      >
+        <template #default="{ row }">
+          <div>{{ row.sourceFileName }}</div>
+          <el-tag v-if="row.sourceDataPackageId" size="small" type="info">
+            数据包 #{{ row.sourceDataPackageId }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="validMemberCount" label="有效料子" width="88" />
       <el-table-column label="状态" width="88">
         <template #default>
