@@ -8,6 +8,8 @@ import type {
 import { formatEpochMillis } from "@/utils/time";
 import {
   canCancelRegistration,
+  registrationActualCost,
+  registrationFailureLabel,
   registrationStateLabel,
   registrationTagType
 } from "../registration-display";
@@ -174,11 +176,10 @@ async function cancel(task: AccountRegistrationTask): Promise<void> {
           }}</el-tag></template
         ></el-table-column
       >
-      <el-table-column label="实际费用 / 币种" min-width="160"
-        ><template #default="{ row }"
-          >{{ row.actualCost ?? "-" }} /
-          {{ row.currency ? `ISO ${row.currency}` : "未返回" }}</template
-        ></el-table-column
+      <el-table-column label="成交费用（美元）" min-width="160"
+        ><template #default="{ row }">{{
+          registrationActualCost(row.actualCost)
+        }}</template></el-table-column
       >
       <el-table-column
         prop="activationId"
@@ -188,12 +189,11 @@ async function cancel(task: AccountRegistrationTask): Promise<void> {
       />
       <el-table-column prop="accountId" label="账号 ID" width="100" />
       <el-table-column prop="importBatchId" label="导入批次" width="100" />
-      <el-table-column
-        prop="failureCode"
-        label="失败原因码"
-        min-width="170"
-        show-overflow-tooltip
-      />
+      <el-table-column label="失败原因" min-width="230" show-overflow-tooltip
+        ><template #default="{ row }">{{
+          registrationFailureLabel(row.failureCode)
+        }}</template></el-table-column
+      >
       <el-table-column label="更新时间" min-width="175"
         ><template #default="{ row }">{{
           formatEpochMillis(row.updatedAt)

@@ -60,6 +60,7 @@ export type AccountRegistrationItemState =
   | "SUCCEEDED"
   | "FAILED"
   | "UNKNOWN"
+  | "CANCELLING"
   | "CANCELLED";
 
 export interface AccountRegistrationItem {
