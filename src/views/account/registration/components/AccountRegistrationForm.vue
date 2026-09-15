@@ -103,7 +103,7 @@ watch(
 
 <template>
   <el-alert
-    title="按采购号码数量执行，失败不自动补购。价格是短信号码单价，不代表成品账号或账号质量。"
+    title="注册号码单价是 Grizzly 提供号码及接码服务的费用。号码注册成功后才会成为账号；采购数量按号码计算，失败不自动补购。"
     type="info"
     :closable="false"
     show-icon
@@ -135,11 +135,11 @@ watch(
         />
       </el-select>
     </el-form-item>
-    <el-form-item label="短信单价" prop="unitPrice">
+    <el-form-item label="注册号码单价" prop="unitPrice">
       <el-select
         v-model="form.unitPrice"
         :loading="pricesLoading"
-        placeholder="选择当前价格档位"
+        placeholder="选择当前渠道的价格档位"
         class="registration-control"
       >
         <el-option

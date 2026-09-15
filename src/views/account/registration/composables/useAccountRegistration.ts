@@ -94,6 +94,17 @@ function emptyDraft(): RegistrationDraft {
   };
 }
 
+function defaultCountryId(
+  countries: AccountRegistrationCatalog["countries"]
+): string {
+  // Grizzly 的美国渠道是 187；目录首项可能是 12（美国虚拟）。
+  return (
+    countries.find(country => country.id === "187")?.id ??
+    countries[0]?.id ??
+    ""
+  );
+}
+
 function requestId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function")
     return globalThis.crypto.randomUUID();
@@ -159,7 +170,7 @@ export function useAccountRegistration(
         !frozen.value &&
         !response.countries.some(country => country.id === form.countryId)
       ) {
-        form.countryId = response.countries[0]?.id ?? "";
+        form.countryId = defaultCountryId(response.countries);
         form.unitPrice = "";
       }
       if (form.countryId) await loadPrices();
@@ -334,7 +345,7 @@ export function useAccountRegistration(
     submitState.value = "editing";
     submitError.value = "";
     Object.assign(form, emptyDraft());
-    form.countryId = catalog.value?.countries[0]?.id ?? "";
+    form.countryId = defaultCountryId(catalog.value?.countries ?? []);
     activeTab.value = "create";
     tiers.value = [];
     if (form.countryId) void loadPrices();

@@ -51,16 +51,19 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 8; i++) await Promise.resolve();
 }
 
-async function setup() {
+async function setup(countries = catalog.countries) {
   const visible = ref(false);
   const scope = effectScope();
   scopes.push(scope);
   const state = scope.run(() => useAccountRegistration(visible))!;
-  resetArmadaMockQueue([catalog, { list: [], total: 0 }, [tier]]);
+  resetArmadaMockQueue([
+    { ...catalog, countries },
+    { list: [], total: 0 },
+    [tier]
+  ]);
   visible.value = true;
   await settle();
   Object.assign(state.form, {
-    countryId: "channel-us",
     unitPrice: "0.3500",
     quantity: 2,
     accountGroupId: 9,
@@ -75,6 +78,64 @@ afterEach(() => {
 });
 
 describe("新号注册请求与观察生命周期", () => {
+  it("loads United States prices by default when the virtual channel is listed first", async () => {
+    const { state } = await setup([
+      { id: "12", name: "美国（虚拟）" },
+      { id: "187", name: "美国" }
+    ]);
+    assert.equal(state.form.countryId, "187");
+    assert.deepEqual(
+      armadaCalls().find(call => call.url.endsWith("/price-tiers"))?.opts,
+      { params: { countryId: "187" } }
+    );
+  });
+
+  it("preserves an explicitly selected virtual channel on refresh and defaults a new draft to United States", async () => {
+    const countries = [
+      { id: "12", name: "美国（虚拟）" },
+      { id: "187", name: "美国" }
+    ];
+    const { state } = await setup(countries);
+    state.form.countryId = "12";
+    resetArmadaMockQueue([
+      { ...catalog, countries },
+      [{ ...tier, country: "12" }]
+    ]);
+    await state.loadCatalog();
+    assert.equal(state.form.countryId, "12");
+    assert.deepEqual(armadaCalls()[1].opts, { params: { countryId: "12" } });
+
+    resetArmadaMockQueue([[{ ...tier, country: "187" }]]);
+    assert.equal(state.resetDraft(), true);
+    await settle();
+    assert.equal(state.form.countryId, "187");
+    assert.equal(state.form.unitPrice, "");
+    assert.deepEqual(armadaCalls()[0].opts, { params: { countryId: "187" } });
+  });
+
+  it("uses an available channel when United States is missing from the catalog", async () => {
+    const { state } = await setup([{ id: "12", name: "美国（虚拟）" }]);
+    assert.equal(state.form.countryId, "12");
+    resetArmadaMockQueue([[{ ...tier, country: "12" }]]);
+    assert.equal(state.resetDraft(), true);
+    await settle();
+    assert.equal(state.form.countryId, "12");
+  });
+
+  it("keeps the country empty and skips price requests for an empty catalog", async () => {
+    const { state } = await setup([]);
+    assert.equal(state.form.countryId, "");
+    assert.equal(
+      armadaCalls().some(call => call.url.endsWith("/price-tiers")),
+      false
+    );
+    resetArmadaMockQueue([]);
+    assert.equal(state.resetDraft(), true);
+    await settle();
+    assert.equal(state.form.countryId, "");
+    assert.equal(armadaCalls().length, 0);
+  });
+
   it("freezes the original request and reuses its UUID after an uncertain response", async () => {
     const { state } = await setup();
     resetArmadaMockFailure(new Error("network disconnected"));
