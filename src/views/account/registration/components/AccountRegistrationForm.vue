@@ -36,6 +36,7 @@ const emit = defineEmits<{
 }>();
 const formRef = ref<FormInstance>();
 const creatingGroup = ref(false);
+const groupDialogVisible = ref(false);
 const groupName = ref("");
 const rules: FormRules = {
   countryId: [{ required: true, message: "请选择美国渠道", trigger: "change" }],
@@ -69,7 +70,11 @@ async function submit(): Promise<void> {
 }
 
 async function handleCreateGroup(): Promise<void> {
-  if (creatingGroup.value || props.frozen || !groupName.value.trim()) return;
+  if (creatingGroup.value || props.frozen || !props.active) return;
+  if (!groupName.value.trim()) {
+    ElMessage.warning("请输入分组名称");
+    return;
+  }
   const token = groupGeneration;
   creatingGroup.value = true;
   try {
@@ -80,7 +85,10 @@ async function handleCreateGroup(): Promise<void> {
     if (token !== groupGeneration || !props.active || props.frozen) return;
     if (created) {
       form.value.accountGroupId = created.id;
+      formRef.value?.clearValidate("accountGroupId");
       groupName.value = "";
+      groupDialogVisible.value = false;
+      ElMessage.success("新增分组成功，已选为目标分组");
     }
   } catch (error) {
     if (token === groupGeneration && props.active)
@@ -96,6 +104,7 @@ watch(
     if (!active) {
       groupGeneration++;
       creatingGroup.value = false;
+      groupDialogVisible.value = false;
     }
   }
 );
@@ -182,24 +191,18 @@ watch(
         <el-option
           v-for="group in groups"
           :key="group.id"
-          :label="group.name"
+          :label="`${group.name}（${group.totalAccounts} 个账号）`"
           :value="group.id"
         />
       </el-select>
-      <div class="group-create">
-        <el-input
-          v-model="groupName"
-          maxlength="100"
-          placeholder="新增分组名称"
-          @keyup.enter="handleCreateGroup"
-        />
-        <el-button
-          :loading="creatingGroup"
-          :disabled="!groupName.trim()"
-          @click="handleCreateGroup"
-          >新增分组</el-button
-        >
-      </div>
+      <el-button
+        class="ml-2"
+        @click="
+          groupName = '';
+          groupDialogVisible = true;
+        "
+        >新增分组</el-button
+      >
     </el-form-item>
     <el-form-item label="账号类型" prop="accountType">
       <el-radio-group v-model="form.accountType">
@@ -218,6 +221,38 @@ watch(
       </el-select>
     </el-form-item>
   </el-form>
+  <el-dialog
+    v-model="groupDialogVisible"
+    title="新增分组"
+    width="480px"
+    append-to-body
+    :close-on-click-modal="false"
+    :close-on-press-escape="!creatingGroup"
+    :show-close="!creatingGroup"
+  >
+    <el-form label-position="top" @submit.prevent="handleCreateGroup">
+      <el-form-item label="分组名称" required>
+        <el-input
+          v-model="groupName"
+          :disabled="creatingGroup"
+          maxlength="100"
+          show-word-limit
+          placeholder="请输入分组名称"
+        />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button :disabled="creatingGroup" @click="groupDialogVisible = false"
+        >取消</el-button
+      >
+      <el-button
+        type="primary"
+        :loading="creatingGroup"
+        @click="handleCreateGroup"
+        >确认新增分组</el-button
+      >
+    </template>
+  </el-dialog>
   <el-alert
     v-if="submitState === 'unknown'"
     class="mb-4"
@@ -270,14 +305,6 @@ watch(
   margin-top: 6px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-}
-
-.group-create {
-  display: flex;
-  gap: 8px;
-  width: 420px;
-  max-width: 100%;
-  margin-top: 8px;
 }
 
 .registration-actions {
