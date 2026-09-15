@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { HyperlinkTaskListItem } from "@/api/hyperlink-task-list";
+import InfoFilled from "~icons/ep/info-filled";
 import { currentPageMetrics } from "../domain/list-display";
 
 const props = defineProps<{ rows: HyperlinkTaskListItem[] }>();
@@ -27,14 +29,30 @@ const metrics = computed(() => currentPageMetrics(props.rows));
         >✓✓ 双钩数 <strong>{{ metrics.deliveredNum.toLocaleString() }}</strong>
         <small>({{ metrics.deliveryRate }})</small></span
       >
-      <span class="click-metric"
-        >◎ 点击 UV
-        <strong>{{ metrics.clickUvNum.toLocaleString() }}</strong></span
-      >
-      <span
-        >点击率
-        <strong class="click-rate">{{ metrics.clickRate }}</strong></span
-      >
+      <span class="click-metric">
+        ◎ 点击 UV
+        <el-tooltip
+          content="点击率 = 点击 UV ÷ 开启短链的单钩数"
+          placement="top"
+        >
+          <span class="metric-help" tabindex="0" aria-label="点击统计说明">
+            <component :is="useRenderIcon(InfoFilled)" />
+          </span>
+        </el-tooltip>
+        <strong>{{ metrics.clickUvNum.toLocaleString() }}</strong>
+      </span>
+      <span>
+        点击率
+        <el-tooltip
+          content="点击率 = 点击 UV ÷ 开启短链的单钩数"
+          placement="top"
+        >
+          <span class="metric-help" tabindex="0" aria-label="点击率计算说明">
+            <component :is="useRenderIcon(InfoFilled)" />
+          </span>
+        </el-tooltip>
+        <strong class="click-rate">{{ metrics.clickRate }}</strong>
+      </span>
     </div>
     <div class="metrics-legend">
       <span class="legend-label">ⓘ 指标说明：</span>
@@ -107,6 +125,13 @@ const metrics = computed(() => currentPageMetrics(props.rows));
 
 .click-rate {
   color: #08a84f !important;
+}
+
+.metric-help {
+  display: inline-flex;
+  margin-left: 3px;
+  vertical-align: middle;
+  cursor: help;
 }
 
 .metrics-legend {
