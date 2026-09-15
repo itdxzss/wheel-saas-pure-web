@@ -147,7 +147,7 @@ watch(
           :key="String(tier.cost)"
           :value="String(tier.cost)"
           :disabled="tier.count <= 0"
-          :label="`${tier.cost} · 库存 ${tier.count}`"
+          :label="`${tier.cost} 美元/个 · 库存 ${tier.count}`"
         />
       </el-select>
       <el-button
@@ -158,7 +158,7 @@ watch(
         >刷新价格</el-button
       >
       <div class="field-help">
-        供应商未返回报价币种。库存为查询快照，采购时可能变化。
+        单价单位为美元（USD）/个号码。库存为查询快照，采购时可能变化。
       </div>
     </el-form-item>
     <el-form-item label="采购数量" prop="quantity">

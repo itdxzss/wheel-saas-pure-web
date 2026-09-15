@@ -24,3 +24,12 @@
 ## 回滚
 
 按本轮文件差异回退页面和菜单调整，保留原有注册业务代码及其他会话修改。生产菜单迁移仅在获准部署的目标环境通过 Flyway 执行；本轮未修改任何共享库。
+
+## 报价币种展示
+
+2026-09-15 用户要求给价格档位补币种。依据 Grizzly 官方公告，2025-09-01 起全部价格和余额切换为 USD，`getPrices` 返回价格及 `getNumber.maxPrice` 均以美元计价：
+https://grizzlysms.com/cn/blog/important-update-all-grizzly-sms-prices-and-balances-are-switching-to-usd
+
+下拉报价显示「0.15 美元/个 · 库存 …」，说明文字明确美元（USD）/个号码，注册任务的采购单价同步补美元单位。保留接口原始价格精度与采购参数，不进行币种换算；实际费用仍以订单返回币种展示。本次仅更新前端，沿用用户已确认的 test1 发布环境。
+
+验证：`pnpm typecheck`、两个变更 Vue 文件的定向 ESLint、Vite 构建和 `git diff --check` 通过。

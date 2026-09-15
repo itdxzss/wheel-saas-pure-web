@@ -67,7 +67,7 @@ async function cancel(task: AccountRegistrationTask): Promise<void> {
     <el-table-column prop="id" label="任务 ID" width="95" />
     <el-table-column label="美国渠道 / 单价" min-width="160">
       <template #default="{ row }"
-        >{{ countryName(row.countryId) }}<br />{{ row.unitPrice }} /
+        >{{ countryName(row.countryId) }}<br />{{ row.unitPrice }} 美元（USD）/
         号码</template
       >
     </el-table-column>
