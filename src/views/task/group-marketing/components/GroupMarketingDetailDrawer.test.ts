@@ -23,7 +23,7 @@ describe("group marketing detail drawer", () => {
     );
     assert.match(
       groupTableSource(),
-      /label="当前关系"[\s\S]*label="最后协议状态"[\s\S]*label="群名称"[\s\S]*label="群 GID"[\s\S]*label="成功"[\s\S]*label="失败"[\s\S]*label="跳过"[\s\S]*label="最后发送时间"[\s\S]*label="最后执行"/
+      /label="当前关系"[\s\S]*label="群状态"[\s\S]*label="群名称"[\s\S]*label="群 GID"[\s\S]*label="成功"[\s\S]*label="失败"[\s\S]*label="跳过"[\s\S]*label="最后发送时间"[\s\S]*label="最后执行"/
     );
     assert.doesNotMatch(source, />群组链接</);
     assert.doesNotMatch(source, />最近原因</);

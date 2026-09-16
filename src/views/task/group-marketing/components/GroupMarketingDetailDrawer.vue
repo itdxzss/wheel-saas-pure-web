@@ -138,7 +138,7 @@ function groupRowKey(group: MarketingTaskGroupStatRow): string {
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="最后协议状态" width="130" resizable>
+                <el-table-column label="群状态" width="130" resizable>
                   <template #default="{ row: group }">
                     <el-tag
                       size="small"
