@@ -237,7 +237,14 @@ watch(visible, opened => {
             />
           </el-form-item>
 
-          <el-form-item label="文本">
+          <el-alert
+            v-if="form.linkMode === 'IMAGE_LINK'"
+            title="内容会完整放在消息正文中；图片仍可点击，卡片标题显示推广链接的域名。"
+            type="info"
+            :closable="false"
+          />
+
+          <el-form-item v-if="form.linkMode !== 'IMAGE_LINK'" label="文本">
             <el-input
               v-model="form.text"
               type="textarea"

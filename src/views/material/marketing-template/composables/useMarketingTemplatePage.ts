@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   batchDeleteMarketingTemplates,
@@ -173,8 +173,14 @@ function toForm(row: MarketingTemplateRow): MarketingTemplateForm {
     imageName: row.imageFileId ? "已上传图片" : "",
     imageUrl: "",
     imageFile: null,
-    content: row.content,
-    text: row.text,
+    content:
+      row.linkMode === "IMAGE_LINK"
+        ? [row.content, row.text]
+            .map(value => value.trim())
+            .filter(Boolean)
+            .join("\n")
+        : row.content,
+    text: row.linkMode === "IMAGE_LINK" ? "" : row.text,
     mentionAll: row.mentionAll,
     promotionLink: row.promotionLink,
     buttons:
@@ -194,7 +200,7 @@ function toWritePayload(form: MarketingTemplateForm): MarketingTemplateWrite {
     textType: form.textType || null,
     imageFileId: form.imageFileId,
     content: form.content.trim(),
-    bodyText: form.text.trim(),
+    bodyText: form.linkMode === "IMAGE_LINK" ? "" : form.text.trim(),
     mentionAll: form.mentionAll,
     buttons:
       form.linkMode === "BUTTON"
@@ -320,6 +326,20 @@ export function useMarketingTemplatePage() {
     promotionLink: ""
   });
   const templateForm = ref<MarketingTemplateForm>(emptyForm());
+  // Switching an existing draft to an image link must not hide or discard its text.
+  watch(
+    () => templateForm.value.linkMode,
+    mode => {
+      if (mode !== "IMAGE_LINK") return;
+      const form = templateForm.value;
+      form.content = [form.content, form.text]
+        .map(value => value.trim())
+        .filter(Boolean)
+        .join("\n");
+      form.text = "";
+    },
+    { flush: "sync" }
+  );
   const rows = ref<MarketingTemplateRow[]>([]);
   const selectedRows = ref<MarketingTemplateRow[]>([]);
   const loading = ref(false);

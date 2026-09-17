@@ -25,6 +25,13 @@ const buttonBodyText = computed(() =>
   [props.form.content, props.form.text].filter(value => value.trim()).join("\n")
 );
 
+const imageLinkBodyText = computed(() =>
+  [props.form.content, props.form.promotionLink]
+    .map(value => value.trim())
+    .filter(Boolean)
+    .join("\n")
+);
+
 const linkDomain = computed(() => {
   if (!props.form.promotionLink) return "";
   try {
@@ -84,13 +91,11 @@ const linkDomain = computed(() => {
                 <div v-else class="wa-image-placeholder">请上传链接预览图</div>
               </div>
               <div class="wa-image-link-copy">
-                <strong>{{ form.content || "卡片标题" }}</strong>
-                <span v-if="form.text">{{ form.text }}</span>
-                <small>{{ linkDomain || "链接域名" }}</small>
+                <strong>{{ linkDomain || "链接域名" }}</strong>
               </div>
             </a>
-            <div class="wa-link-url">
-              {{ form.promotionLink || "请填写推广链接" }}
+            <div class="wa-image-link-body">
+              {{ imageLinkBodyText || "请输入完整文案" }}
             </div>
             <div class="wa-message-footer">
               <span>图片链接卡片</span><span>18:25 ✓✓</span>
@@ -310,8 +315,11 @@ const linkDomain = computed(() => {
   white-space: pre-wrap;
 }
 
-.wa-image-link-copy small {
-  color: #64748b;
+.wa-image-link-body {
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .wa-image {

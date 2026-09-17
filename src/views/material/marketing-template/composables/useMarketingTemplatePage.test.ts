@@ -52,6 +52,41 @@ describe("marketing template page state", () => {
     assert.deepEqual(payload.buttons, []);
   });
 
+  it("preserves legacy image link text in content across editing and saving", async () => {
+    const state = useMarketingTemplatePage();
+    await state.openEditDrawer({
+      id: 7,
+      templateName: "旧图片链接卡片",
+      linkMode: "IMAGE_LINK",
+      content: "主文案",
+      text: "补充说明",
+      promotionLink: "https://example.com/card",
+      mentionAll: false,
+      buttons: []
+    });
+    assert.equal(state.templateForm.value.content, "主文案\n补充说明");
+    assert.equal(state.templateForm.value.text, "");
+    state.templateForm.value.imageFileId = 91;
+    resetArmadaMock({ list: [], total: 0, page: 1, pageSize: 10 });
+    await state.saveTemplate();
+    const payload = (armadaCalls()[0].opts as { data: Record<string, unknown> })
+      .data;
+    assert.equal(payload.content, "主文案\n补充说明");
+    assert.equal(payload.bodyText, "");
+  });
+
+  it("merges draft text only once when switching to image links", () => {
+    const state = useMarketingTemplatePage();
+    state.templateForm.value.content = "主文案";
+    state.templateForm.value.text = "补充说明";
+    state.templateForm.value.linkMode = "IMAGE_LINK";
+    assert.equal(state.templateForm.value.content, "主文案\n补充说明");
+    assert.equal(state.templateForm.value.text, "");
+    state.templateForm.value.linkMode = "NORMAL";
+    state.templateForm.value.linkMode = "IMAGE_LINK";
+    assert.equal(state.templateForm.value.content, "主文案\n补充说明");
+  });
+
   it("blocks image link cards without a real image selection or valid HTTP URL", async () => {
     for (const values of [
       { imageFileId: null, promotionLink: "https://example.com/card" },
