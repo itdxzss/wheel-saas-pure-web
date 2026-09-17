@@ -42,6 +42,7 @@ const {
   closeMemberDrawer,
   deleteGroup,
   deleteSelectedGroups,
+  exportSelectedGroups,
   drawerGroup,
   drawerOpen,
   countryOptions,
@@ -217,6 +218,7 @@ function handleRowAction(row, action: string): void {
       @batch-refresh-info="submitRefreshInfo"
       @create-normal-group="commonGroupCreateFlow?.open()"
       @delete-selected="deleteSelectedGroups"
+      @export-selected="exportSelectedGroups"
       @manage-folders="openGroupFolderManage"
       @refresh="refreshGroups"
       @row-action="handleRowAction"

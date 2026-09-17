@@ -6,6 +6,7 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { GroupClassification, GroupListRow } from "@/api/group";
 import { formatEpochMillis as formatEpoch } from "@/utils/time";
 import { groupContinentOptions } from "../constants";
+import type { GroupLinkExportFormat } from "../group-link-export";
 import Delete from "~icons/ep/delete";
 
 defineOptions({
@@ -27,6 +28,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: "assign-folder"): void;
   (event: "delete-selected"): void;
+  (event: "export-selected", format: GroupLinkExportFormat): void;
   (event: "batch-refresh-links"): void;
   (event: "batch-refresh-info"): void;
   (event: "manage-folders"): void;
@@ -102,6 +104,21 @@ function classificationMeta(row: GroupListRow) {
         新建普群
       </el-button>
       <el-button @click="emit('manage-folders')">管理群组分组</el-button>
+      <el-dropdown
+        trigger="click"
+        :disabled="loading || selectedCount === 0"
+        @command="format => emit('export-selected', format)"
+      >
+        <el-button :disabled="loading || selectedCount === 0">
+          导出群组链接<span v-if="selectedCount">({{ selectedCount }})</span>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="csv">导出 CSV</el-dropdown-item>
+            <el-dropdown-item command="txt">导出 TXT</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <el-button
         type="primary"
         plain

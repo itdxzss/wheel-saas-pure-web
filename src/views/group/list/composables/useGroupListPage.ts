@@ -27,6 +27,11 @@ import {
   type IpCountryOption
 } from "@/api/resource-ip";
 import { apiErrorMessage } from "@/utils/api-error";
+import { downloadBlobFile } from "@/utils/download";
+import {
+  buildGroupLinkExport,
+  type GroupLinkExportFormat
+} from "../group-link-export";
 import {
   emptyHistoricalFilter,
   toGroupListQuery,
@@ -49,6 +54,7 @@ export interface GroupListPageState {
   closeMemberDrawer: () => void;
   deleteGroup: (row: GroupListRow) => Promise<void>;
   deleteSelectedGroups: () => Promise<void>;
+  exportSelectedGroups: (format: GroupLinkExportFormat) => void;
   drawerGroup: Ref<GroupListRow | null>;
   drawerOpen: Ref<boolean>;
   folderOptions: Ref<GroupFolderFilterOption[]>;
@@ -154,6 +160,28 @@ export function useGroupListPage(): GroupListPageState {
   const pageSize = ref(10);
   const total = ref(0);
   const selectedCount = computed(() => selectedRows.value.length);
+  function exportSelectedGroups(format: GroupLinkExportFormat): void {
+    if (loading.value || selectedRows.value.length === 0) return;
+    const selected = selectedRows.value;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    downloadBlobFile(
+      `群组链接_${timestamp}.${format}`,
+      new Blob([buildGroupLinkExport(selected, format)], {
+        type:
+          format === "csv"
+            ? "text/csv;charset=utf-8"
+            : "text/plain;charset=utf-8"
+      })
+    );
+    const missing = selected.filter(row => !row.inviteUrl).length;
+    if (missing) {
+      ElMessage.warning(
+        `已导出 ${selected.length} 个群组，其中 ${missing} 个群暂无链接`
+      );
+    } else {
+      ElMessage.success(`已导出 ${selected.length} 个群组`);
+    }
+  }
   // 与后端 selectLinkRefreshBlockedIds 同口径：封禁或不可用都不允许刷新链接；
   // 链接失效恰恰最需要刷新，不在拦截范围内。
   const refreshLinkBlocked = computed(() =>
@@ -461,6 +489,7 @@ export function useGroupListPage(): GroupListPageState {
     closeMemberDrawer,
     deleteGroup,
     deleteSelectedGroups,
+    exportSelectedGroups,
     drawerGroup,
     drawerOpen,
     countryOptions,
