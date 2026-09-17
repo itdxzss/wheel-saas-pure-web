@@ -122,7 +122,7 @@ function handleSelectionModeChange(value: string | number | boolean): void {
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="`${group.name}（在线 ${group.onlineAccounts}）`"
               :value="group.id"
             />
           </el-select>

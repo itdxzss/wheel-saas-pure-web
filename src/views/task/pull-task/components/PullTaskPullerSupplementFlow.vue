@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import type { AccountGroupApiRow } from "@/api/account-group";
+import { ref } from "vue";
+import { ElMessage } from "element-plus";
+import {
+  listAccountGroups,
+  type AccountGroupApiRow
+} from "@/api/account-group";
+import { apiErrorMessage } from "@/utils/api-error";
 import type { PullTaskGroupRow } from "@/api/pull-task";
 import PullTaskPullerSupplementDrawer from "./PullTaskPullerSupplementDrawer.vue";
 import { usePullTaskPullerSupplement } from "../composables/usePullTaskPullerSupplement";
@@ -7,13 +13,28 @@ import { usePullTaskPullerSupplement } from "../composables/usePullTaskPullerSup
 defineOptions({ name: "PullTaskPullerSupplementFlow" });
 
 const props = defineProps<{
-  accountGroups: AccountGroupApiRow[];
   taskId?: number;
 }>();
 
 const emit = defineEmits<{
   (event: "submitted"): void;
 }>();
+
+const accountGroups = ref<AccountGroupApiRow[]>([]);
+const groupsLoading = ref(false);
+
+async function refreshAccountGroups(): Promise<void> {
+  accountGroups.value = [];
+  groupsLoading.value = true;
+  try {
+    const result = await listAccountGroups({ page: 1, pageSize: 500 });
+    accountGroups.value = result.list ?? [];
+  } catch (error) {
+    ElMessage.error(apiErrorMessage(error, "账号分组加载失败"));
+  } finally {
+    groupsLoading.value = false;
+  }
+}
 
 const {
   changeAccountGroup,
@@ -31,7 +52,10 @@ const {
 
 async function open(row: PullTaskGroupRow): Promise<void> {
   if (!props.taskId) return;
-  await openSelection(props.taskId, row.id);
+  await Promise.all([
+    openSelection(props.taskId, row.id),
+    refreshAccountGroups()
+  ]);
 }
 
 defineExpose({ open });
@@ -42,7 +66,7 @@ defineExpose({ open });
     v-model="visible"
     v-model:form="form"
     :account-groups="accountGroups"
-    :loading="loading"
+    :loading="loading || groupsLoading"
     :options="options"
     :saving="saving"
     @account-group-change="changeAccountGroup"

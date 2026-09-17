@@ -48,7 +48,6 @@ defineExpose({ openManager, openPuller, openStation });
   />
   <PullTaskPullerSupplementFlow
     ref="pullerFlow"
-    :account-groups="accountGroups"
     :task-id="taskId"
     @submitted="emit('submitted')"
   />
