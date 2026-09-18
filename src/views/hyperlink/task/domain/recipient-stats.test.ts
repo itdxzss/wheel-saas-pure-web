@@ -86,7 +86,13 @@ describe("hyperlink recipient stats domain", () => {
     assert.equal(current.page, 4);
   });
 
-  it("keeps UNREGISTERED as the competitor failure label", () => {
-    assert.equal(recipientStatusLabel("UNREGISTERED"), "失败");
+  it("shows business outcomes without exposing internal errors", () => {
+    assert.equal(recipientStatusLabel("UNREGISTERED"), "目标无法发送");
+    assert.equal(
+      recipientStatusLabel("SENDING", "RESULT_PENDING"),
+      "结果确认中"
+    );
+    assert.equal(recipientStatusLabel("PENDING", "RECOVERY_PENDING"), "处理中");
+    assert.equal(recipientStatusLabel("FAILED", "ACCOUNT_BANNED"), "未完成");
   });
 });

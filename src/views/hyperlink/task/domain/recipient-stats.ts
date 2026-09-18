@@ -109,15 +109,20 @@ export function summaryCards(summary: HyperlinkTaskSummary): SummaryCard[] {
   ];
 }
 
-export function recipientStatusLabel(status: HyperlinkRecipientStatus): string {
+export function recipientStatusLabel(
+  status: HyperlinkRecipientStatus,
+  businessCode?: string | null
+): string {
+  if (businessCode === "RESULT_PENDING") return "结果确认中";
+  if (businessCode === "TARGET_UNAVAILABLE") return "目标无法发送";
   const labels: Record<HyperlinkRecipientStatus, string> = {
-    PENDING: "待发送",
-    SENDING: "发送中",
-    SUCCESS: "单钩",
-    DELIVERED: "双钩",
-    READ: "已读",
-    FAILED: "失败",
-    UNREGISTERED: "失败"
+    PENDING: "处理中",
+    SENDING: "处理中",
+    SUCCESS: "发送成功",
+    DELIVERED: "发送成功（已送达）",
+    READ: "发送成功（已读）",
+    FAILED: "未完成",
+    UNREGISTERED: "目标无法发送"
   };
   return labels[status];
 }

@@ -21,7 +21,7 @@ const canExport = computed(() => hasPerms("tenant:hyperlink_task:export"));
 const columns: TableColumnList = [
   { label: "收信号码", prop: "recipientPhone", minWidth: 180 },
   { label: "发送账号", prop: "senderPhone", minWidth: 180 },
-  { label: "状态 / 失败原因", prop: "status", minWidth: 280 }
+  { label: "发送结果", prop: "status", minWidth: 280 }
 ];
 
 function formatTime(value?: number | null): string {
@@ -30,10 +30,13 @@ function formatTime(value?: number | null): string {
 
 function failureReason(row: {
   status: string;
-  failReason: string | null;
+  failCode: string | null;
 }): string {
-  if (row.status === "UNREGISTERED") return row.failReason || "号码未注册";
-  return row.failReason || "";
+  if (row.status === "UNREGISTERED" || row.failCode === "TARGET_UNAVAILABLE")
+    return "目标数据导致无法发送";
+  if (row.failCode === "RECOVERY_PENDING")
+    return "等待恢复发送；任务暂停后可在修复完成时继续";
+  return "";
 }
 
 defineExpose({
@@ -88,15 +91,6 @@ defineExpose({
               :value="country.iso2"
             />
           </el-select>
-        </el-form-item>
-        <el-form-item label="完整失败原因">
-          <el-input
-            v-model="state.filters.failReason"
-            maxlength="255"
-            clearable
-            placeholder="严格匹配完整原因"
-            @keyup.enter="state.search"
-          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="state.search">搜索</el-button>
@@ -180,7 +174,7 @@ defineExpose({
             </el-table-column>
             <el-table-column
               v-if="!dynamicColumns[2].hide"
-              label="状态 / 失败原因"
+              label="发送结果"
               min-width="280"
             >
               <template #default="{ row }">
@@ -189,7 +183,7 @@ defineExpose({
                     :type="recipientStatusTagType(row.status)"
                     effect="plain"
                   >
-                    {{ recipientStatusLabel(row.status) }}
+                    {{ recipientStatusLabel(row.status, row.failCode) }}
                   </el-tag>
                   <span class="status-time">{{
                     formatTime(row.statusAt)
@@ -200,7 +194,7 @@ defineExpose({
                     placement="top"
                   >
                     <el-tag type="danger" effect="light" class="failure-reason">
-                      原因：{{ failureReason(row) }}
+                      {{ failureReason(row) }}
                     </el-tag>
                   </el-tooltip>
                 </div>
