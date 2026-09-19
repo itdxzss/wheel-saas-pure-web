@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type {
   PullTaskManagerCandidate,
@@ -124,7 +125,7 @@ function executorLabel(account: PullTaskManagerOptionRole): string {
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>

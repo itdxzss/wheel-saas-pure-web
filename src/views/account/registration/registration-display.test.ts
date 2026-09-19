@@ -1,11 +1,26 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canPrepareDeviceReplacement,
   registrationActualCost,
   registrationFailureLabel,
   registrationStateLabel,
   registrationTagType
 } from "./registration-display";
+
+test("设备注册超时属于已结束任务，可保存下一笔许可", () => {
+  assert.equal(
+    canPrepareDeviceReplacement("UNKNOWN", "REGISTRATION_TIMEOUT"),
+    true
+  );
+  assert.equal(canPrepareDeviceReplacement("FAILED", "ANY_FAILURE"), true);
+  assert.equal(canPrepareDeviceReplacement("CANCELLED", null), true);
+  assert.equal(
+    canPrepareDeviceReplacement("UNKNOWN", "PURCHASE_RESULT_UNKNOWN"),
+    false
+  );
+  assert.equal(canPrepareDeviceReplacement("WAITING_CODE", null), false);
+});
 
 test("取消中与已确认取消有明确区分，未知原因仍保留", () => {
   assert.equal(registrationStateLabel("CANCELLING"), "等待取消订单");

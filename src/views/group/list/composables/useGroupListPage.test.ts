@@ -19,6 +19,22 @@ const summary = {
 };
 
 describe("group list folder counts", () => {
+  it("resets control relation selections and starts a fresh first-page query", () => {
+    const state = useGroupListPage();
+    state.searchForm.controlRelations = [
+      "CONTROLLED_OWNER",
+      "CONTROLLED_ADMIN_CREATOR_ABSENT"
+    ];
+    state.page.value = 3;
+    resetArmadaMockQueue([{ list: [], total: 0 }, summary]);
+    state.resetSearchForm();
+    assert.deepEqual(state.searchForm.controlRelations, []);
+    assert.equal(state.page.value, 1);
+    const request = armadaCalls()[0]?.opts as {
+      params: { controlRelations?: string };
+    };
+    assert.equal(request.params.controlRelations, undefined);
+  });
   it("shows global counts and zero folders independently of table filters", async () => {
     const state = useGroupListPage();
     state.searchForm.status = "AVAILABLE";

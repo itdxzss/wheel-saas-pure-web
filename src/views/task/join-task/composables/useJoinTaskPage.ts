@@ -60,6 +60,8 @@ export interface JoinTaskEditorForm {
   fixedIntervalMaxSec: number;
   multiIntervalMinSec: number;
   multiIntervalMaxSec: number;
+  setAdminEnabled: boolean;
+  clearAdminsAndLeaveEnabled: boolean;
   retryEnabled: boolean;
   retryLimit: number;
   failurePolicy: JoinFailurePolicy;
@@ -77,7 +79,6 @@ export interface JoinTaskAccountOption {
   disabled: boolean;
   stateLabel: string;
   riskLabel: string;
-  isAdmin: boolean;
 }
 
 export interface JoinTaskPageState {
@@ -132,6 +133,8 @@ function emptyEditorForm(): JoinTaskEditorForm {
     fixedIntervalMaxSec: 20,
     multiIntervalMinSec: 10,
     multiIntervalMaxSec: 20,
+    setAdminEnabled: false,
+    clearAdminsAndLeaveEnabled: false,
     retryEnabled: true,
     retryLimit: 2,
     failurePolicy: "RETRY_THEN_EXPORT"
@@ -187,8 +190,7 @@ function toAccountOption(account: TenantAccount): JoinTaskAccountOption | null {
     isOnline,
     disabled: !isOnline || isRisk || isBanned,
     stateLabel: accountStateLabel(account),
-    riskLabel: riskStateLabel(account),
-    isAdmin: false
+    riskLabel: riskStateLabel(account)
   };
 }
 
@@ -345,6 +347,8 @@ export function useJoinTaskPage(): JoinTaskPageState {
       fixedIntervalMaxSec: detail.fixedIntervalMaxSec,
       multiIntervalMinSec: detail.multiIntervalMinSec,
       multiIntervalMaxSec: detail.multiIntervalMaxSec,
+      setAdminEnabled: detail.setAdminEnabled === true,
+      clearAdminsAndLeaveEnabled: detail.clearAdminsAndLeaveEnabled === true,
       retryEnabled: detail.retryEnabled,
       retryLimit: detail.retryLimit,
       failurePolicy: detail.failurePolicy || "RETRY_THEN_EXPORT"
@@ -482,6 +486,9 @@ export function useJoinTaskPage(): JoinTaskPageState {
       fixedIntervalMaxSec: editorForm.fixedIntervalMaxSec,
       multiIntervalMinSec: editorForm.multiIntervalMinSec,
       multiIntervalMaxSec: editorForm.multiIntervalMaxSec,
+      setAdminEnabled: editorForm.setAdminEnabled,
+      clearAdminsAndLeaveEnabled:
+        editorForm.setAdminEnabled && editorForm.clearAdminsAndLeaveEnabled,
       retryEnabled: editorForm.retryEnabled,
       retryLimit: editorForm.retryEnabled ? editorForm.retryLimit : 0,
       failurePolicy: editorForm.failurePolicy

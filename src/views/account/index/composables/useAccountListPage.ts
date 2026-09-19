@@ -158,6 +158,7 @@ export interface AccountListPageState {
   searchAccounts: () => void;
   searchForm: AccountSearchForm;
   selectedCount: ComputedRef<number>;
+  selectedRows: Ref<TenantAccount[]>;
   showAdvancedSearch: Ref<boolean>;
   showBatchMoveDrawer: Ref<boolean>;
   statCards: ComputedRef<AccountStatCard[]>;
@@ -940,6 +941,7 @@ export function useAccountListPage(): AccountListPageState {
     searchAccounts,
     searchForm,
     selectedCount,
+    selectedRows,
     showAdvancedSearch,
     showBatchMoveDrawer,
     statCards,

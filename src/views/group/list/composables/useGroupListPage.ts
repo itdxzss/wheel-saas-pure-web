@@ -14,6 +14,7 @@ import {
   batchRefreshGroupInfo,
   batchRefreshGroupLinks,
   listGroups,
+  type GroupControlRelation,
   type GroupBatchTaskDetail,
   type GroupListRow
 } from "@/api/group";
@@ -45,6 +46,7 @@ export interface GroupSearchForm {
   folderFilter: "" | "UNASSIGNED" | number;
   groupType: GroupType;
   availableAdmin: "" | "YES" | "NO";
+  controlRelations: GroupControlRelation[];
 }
 
 export interface GroupListPageState {
@@ -112,7 +114,8 @@ export function useGroupListPage(): GroupListPageState {
     status: "",
     folderFilter: "",
     groupType: "",
-    availableAdmin: ""
+    availableAdmin: "",
+    controlRelations: []
   });
   const historicalApplied = reactive<HistoricalFilterValue>(
     emptyHistoricalFilter()
@@ -230,6 +233,7 @@ export function useGroupListPage(): GroupListPageState {
   }
 
   function resetSearchForm(): void {
+    searchForm.controlRelations = [];
     searchForm.keyword = "";
     searchForm.status = "";
     searchForm.folderFilter = "";

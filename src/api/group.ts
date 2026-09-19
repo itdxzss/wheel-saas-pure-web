@@ -7,6 +7,13 @@ import {
 
 export type { GroupClassification } from "./group-classification";
 
+/** 群内角色与建群人在群状态的独立多选条件。 */
+export type GroupControlRelation =
+  | "CONTROLLED_OWNER"
+  | "CONTROLLED_ADMIN_CREATOR_ABSENT"
+  | "EXTERNAL_CREATOR_PRESENT"
+  | "UNKNOWN";
+
 export interface GroupListRow {
   id: number;
   url: string;
@@ -69,6 +76,7 @@ export interface GroupListQuery {
   withoutFolder?: boolean;
   groupType?: "HISTORICAL" | "POST_CONTROL";
   availableAdmin?: boolean;
+  controlRelations?: GroupControlRelation[];
   memberCountMin?: number;
   memberCountMax?: number;
   continentCode?: string;
@@ -201,6 +209,10 @@ function toListParams(query: GroupListQuery) {
     withoutFolder: query.withoutFolder,
     groupType: query.groupType,
     availableAdmin: query.availableAdmin,
+    // Spring @ModelAttribute 将逗号分隔的枚举值绑定为集合，避免 qs 的索引键差异。
+    ...(query.controlRelations?.length
+      ? { controlRelations: [...new Set(query.controlRelations)].join(",") }
+      : {}),
     memberCountMin: query.memberCountMin,
     memberCountMax: query.memberCountMax,
     continentCode: query.continentCode,

@@ -402,6 +402,8 @@ describe("hyperlink task editor rules", () => {
     };
 
     assert.equal(validateHyperlinkTaskForm(form, context), "");
+    form.messageContent.title = "";
+    assert.equal(validateHyperlinkTaskForm(form, context), "");
     form.messageContent.content += "字";
     assert.equal(
       validateHyperlinkTaskForm(form, context),

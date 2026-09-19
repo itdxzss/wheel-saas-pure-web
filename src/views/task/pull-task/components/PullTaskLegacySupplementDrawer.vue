@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { PullTaskSupplementForm } from "../composables/usePullTaskPage";
 
@@ -22,7 +23,7 @@ const form = defineModel<PullTaskSupplementForm>("form", { required: true });
           <el-option
             v-for="group in accountGroups"
             :key="group.id"
-            :label="group.name"
+            :label="formatAccountGroupLabel(group)"
             :value="group.id"
           />
         </el-select>

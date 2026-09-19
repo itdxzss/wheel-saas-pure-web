@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAccountGroupNamesLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -17,6 +18,8 @@ import Plus from "~icons/ep/plus";
 defineOptions({
   name: "JoinTaskTable"
 });
+
+const accountGroupNamesLabel = useAccountGroupNamesLabel();
 
 const props = defineProps<{
   columns: TableColumnList;
@@ -113,7 +116,7 @@ function asJoinTaskRow(row: unknown): JoinTaskRow {
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            {{ row.accountGroupNames || "-" }}
+            {{ accountGroupNamesLabel(row.accountGroupNames) }}
           </template>
         </el-table-column>
         <el-table-column
@@ -128,7 +131,7 @@ function asJoinTaskRow(row: unknown): JoinTaskRow {
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[4].hide"
-          label="进群统计"
+          label="任务步骤统计"
           width="150"
         >
           <template #default="{ row }">

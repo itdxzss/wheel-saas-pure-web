@@ -34,6 +34,8 @@ export interface JoinTaskRow {
   intervalLabel?: string | null;
   distributionMode: JoinTaskDistributionMode;
   failurePolicy?: string | null;
+  setAdminEnabled?: boolean;
+  clearAdminsAndLeaveEnabled?: boolean;
   retryEnabled: boolean;
   retryLimit: number;
   status: JoinTaskStatus;
@@ -56,12 +58,26 @@ export interface JoinTaskDetail extends JoinTaskRow {
 }
 
 export interface JoinResultRow {
+  approvalStatus?: string;
+  approvalReason?: string;
+  approvalActorAccountId?: number | null;
   account?: string | null;
   link?: string | null;
   status: JoinResultStatus;
   reason?: string | null;
   reasonLabel?: string | null;
   isAdmin: boolean;
+  cleanupStatus?: string;
+  cleanupReason?: string;
+  cleanupCompleted?: number;
+  cleanupTotal?: number;
+  id?: number;
+  adminStatus?: string;
+  adminReason?: string;
+  adminActorAccountId?: number | null;
+  stepStatus?: JoinResultStatus;
+  joinedAt?: number | null;
+  promotedAt?: number | null;
 }
 
 export interface JoinTaskQuery {
@@ -91,6 +107,8 @@ export interface CreateJoinTaskRequest {
   fixedIntervalMaxSec: number;
   multiIntervalMinSec: number;
   multiIntervalMaxSec: number;
+  setAdminEnabled?: boolean;
+  clearAdminsAndLeaveEnabled?: boolean;
   retryEnabled: boolean;
   retryLimit: number;
   failurePolicy: string;

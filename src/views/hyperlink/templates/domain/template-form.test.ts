@@ -9,6 +9,25 @@ import {
 } from "./template-form";
 
 describe("hyperlink template form contract", () => {
+  it("allows empty titles for all supported templates without moving text", () => {
+    for (const messageType of [1, 3, 4] as const) {
+      const form = createEmptyHyperlinkTemplateForm();
+      Object.assign(form, {
+        name: "选填标题",
+        messageType,
+        title: "  ",
+        content: "完整正文",
+        cardText: "完整卡片正文",
+        linkDescription: "描述",
+        promotionLink: "https://example.com/promo",
+        assetId: 12
+      });
+      assert.equal(validateHyperlinkTemplateForm(form), "");
+      const request = toHyperlinkTemplateWriteRequest(form);
+      assert.equal(request.title, "");
+      assert.equal(request.content, "完整正文");
+    }
+  });
   it("starts with the competitor default normal button and type order", () => {
     const form = createEmptyHyperlinkTemplateForm();
 
@@ -153,7 +172,7 @@ describe("hyperlink template form contract", () => {
     form.content += "字";
     assert.equal(
       validateHyperlinkTemplateForm(form),
-      "底部小字不能超过 1024 个字符"
+      "正文不能超过 1024 个字符"
     );
     form.messageType = 4;
     form.content = "副".repeat(61);

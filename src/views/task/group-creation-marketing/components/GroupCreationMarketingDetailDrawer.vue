@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import type { GroupCreationMarketingTaskDetail } from "@/api/group-creation-marketing";
 import {
   formatEpoch,
@@ -7,6 +8,8 @@ import {
   taskStatusLabel,
   taskStatusTagType
 } from "../constants";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "GroupCreationMarketingDetailDrawer"
@@ -37,7 +40,9 @@ const visible = defineModel<boolean>({ required: true });
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="账号分组">
-          {{ detail.accountGroupName }}
+          {{
+            accountGroupLabel(detail.accountGroupId, detail.accountGroupName)
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="营销模板">
           {{ detail.marketingTemplateName }}

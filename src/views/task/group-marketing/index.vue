@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
 import { ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -61,6 +62,8 @@ const {
   treeAccounts,
   treeLoading
 } = useGroupMarketingTaskPage();
+
+provideAccountGroupLabels(accountGroups);
 
 const exportSelectedRows = ref<MarketingTaskRow[]>([]);
 const {

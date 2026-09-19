@@ -3,6 +3,11 @@ import { reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
+  listAccountGroups,
+  type AccountGroupApiRow
+} from "@/api/account-group";
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
+import {
   saveScriptTask,
   scriptGroupOptions,
   scriptAccountGroupOptions,
@@ -45,6 +50,14 @@ const accountGroupsLoading = ref(false);
 const groupsLoading = ref(false);
 const scheduled = ref(false);
 const accountGroups = ref<ScriptAccountGroupOption[]>([]);
+const accountGroupCounts = ref<AccountGroupApiRow[]>([]);
+
+function accountGroupLabel(group: ScriptAccountGroupOption): string {
+  const counts = accountGroupCounts.value.find(item => item.id === group.id);
+  return formatAccountGroupLabel(
+    counts ?? { name: group.name, totalAccounts: group.accountCount }
+  );
+}
 const report = ref<ScriptQualification>();
 const checking = ref(false);
 const groupPage = ref(1);
@@ -88,8 +101,21 @@ async function loadAccountGroups() {
   const request = ++accountGroupRequest;
   accountGroupsLoading.value = true;
   try {
-    const result = await scriptAccountGroupOptions();
-    if (request === accountGroupRequest) accountGroups.value = result;
+    const [result, counts] = await Promise.allSettled([
+      scriptAccountGroupOptions(),
+      listAccountGroups({ page: 1, pageSize: 500 })
+    ]);
+    if (request === accountGroupRequest) {
+      if (result.status === "rejected") throw result.reason;
+      accountGroups.value = result.value;
+      accountGroupCounts.value =
+        counts.status === "fulfilled" ? (counts.value.list ?? []) : [];
+      if (counts.status === "rejected") {
+        ElMessage.warning(
+          apiErrorMessage(counts.reason, "分组在线数量加载失败")
+        );
+      }
+    }
   } catch (error) {
     if (request === accountGroupRequest)
       ElMessage.error(apiErrorMessage(error, "账号分组读取失败"));
@@ -246,7 +272,7 @@ watch(
             v-for="group in accountGroups"
             :key="group.id"
             :value="group.id"
-            :label="`${group.name}（${group.accountCount} 个账号）`"
+            :label="accountGroupLabel(group)"
           />
         </el-select>
       </el-form-item>

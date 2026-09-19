@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { computed } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { GroupFolderRow } from "@/api/group-folder";
@@ -173,7 +174,7 @@ const previewFolderName = computed(
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>
@@ -190,7 +191,7 @@ const previewFolderName = computed(
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>

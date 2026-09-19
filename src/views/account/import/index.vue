@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { ref } from "vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import AccountImportDetailDrawer from "./components/AccountImportDetailDrawer.vue";
@@ -57,6 +59,8 @@ const {
   total
 } = useAccountImportPage();
 
+provideAccountGroupLabels(accountGroups);
+
 async function handleSubmitImport(
   payload: AccountImportSubmitPayload
 ): Promise<void> {
@@ -105,7 +109,7 @@ async function handleSubmitImport(
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="formatAccountGroupLabel(group)"
               :value="group.name"
             />
           </el-select>

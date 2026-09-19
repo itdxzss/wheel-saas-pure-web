@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
@@ -12,6 +13,8 @@ import {
 import { exportOptions } from "../constants";
 import RefreshRight from "~icons/ep/refresh-right";
 import Upload from "~icons/ep/upload";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "AccountImportTable"
@@ -125,7 +128,11 @@ function exportRow(row: AccountImportTask, command: string): void {
           label="分组"
           min-width="140"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">{{
+            accountGroupLabel(null, row.group)
+          }}</template>
+        </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[4].hide"
           prop="device"

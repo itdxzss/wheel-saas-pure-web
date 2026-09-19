@@ -1,4 +1,4 @@
-import type { GroupListQuery } from "@/api/group";
+import type { GroupControlRelation, GroupListQuery } from "@/api/group";
 import type { IpCountryOption } from "@/api/resource-ip";
 
 export type GroupType = "" | "HISTORICAL" | "POST_CONTROL";
@@ -18,6 +18,7 @@ export interface MainGroupFilterValue {
   folderFilter: "" | "UNASSIGNED" | number;
   groupType: GroupType;
   availableAdmin: "" | "YES" | "NO";
+  controlRelations: GroupControlRelation[];
 }
 
 export function emptyHistoricalFilter(): HistoricalFilterValue {
@@ -73,6 +74,9 @@ export function toGroupListQuery(
     memberCountMin: numberValue(applied.memberCountMin),
     memberCountMax: numberValue(applied.memberCountMax)
   };
+  if (main.controlRelations.length) {
+    query.controlRelations = [...new Set(main.controlRelations)];
+  }
   if (sendsHistoricalScope) {
     query.continentCode = applied.continentCode || undefined;
     query.countryIso2 = applied.countryIso2 || undefined;

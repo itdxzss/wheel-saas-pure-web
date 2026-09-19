@@ -18,6 +18,28 @@ import {
 } from "./group";
 
 describe("group API", () => {
+  it("serializes multiple control relations for Spring enum collection binding", async () => {
+    resetArmadaMock({ list: [], total: 0 });
+    await listGroups({
+      controlRelations: [
+        "CONTROLLED_OWNER",
+        "CONTROLLED_ADMIN_CREATOR_ABSENT",
+        "CONTROLLED_OWNER"
+      ]
+    });
+    const selected = armadaCalls()[0]?.opts as {
+      params: { controlRelations?: string };
+    };
+    assert.equal(
+      selected.params.controlRelations,
+      "CONTROLLED_OWNER,CONTROLLED_ADMIN_CREATOR_ABSENT"
+    );
+    await listGroups({ controlRelations: [] });
+    const all = armadaCalls()[1]?.opts as {
+      params: { controlRelations?: string };
+    };
+    assert.equal(all.params.controlRelations, undefined);
+  });
   it("filters and assigns group folders with camelCase params", async () => {
     resetArmadaMock({ list: [], total: 0 });
 
@@ -214,13 +236,12 @@ describe("group API", () => {
     });
     const uploadOptions = calls[2].opts as {
       data: FormData;
-      timeout: number;
     };
     assert.equal(calls[2].method, "post");
     assert.equal(calls[2].url, "/api/group-links/42/avatar");
     assert.ok(uploadOptions.data instanceof FormData);
     assert.equal(uploadOptions.data.get("file"), file);
-    assert.equal(uploadOptions.timeout, 45000);
+    assert.equal((calls[2].config as { timeout: number }).timeout, 45000);
     assert.equal(avatarResult.mirrorSynced, true);
     assert.equal(avatarResult.avatarUrl, "https://pps.whatsapp.net/new.jpg");
   });

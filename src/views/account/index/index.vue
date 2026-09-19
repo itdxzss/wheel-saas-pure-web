@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { ref } from "vue";
+import AccountMutualContactDrawer from "./components/AccountMutualContactDrawer.vue";
+import AccountExportDrawer from "./components/AccountExportDrawer.vue";
+import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { useRouter } from "vue-router";
 import type { AccountGroupMarketingOccupancy } from "@/api/account-group";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -18,6 +23,8 @@ defineOptions({
 });
 
 const router = useRouter();
+const mutualContactsOpen = ref(false);
+const exportDrawer = ref<InstanceType<typeof AccountExportDrawer>>();
 
 const {
   accountGroups,
@@ -49,6 +56,7 @@ const {
   searchAccounts,
   searchForm,
   selectedCount,
+  selectedRows,
   showAdvancedSearch,
   showBatchMoveDrawer,
   statCards,
@@ -58,6 +66,18 @@ const {
   total,
   wsExporting
 } = useAccountListPage();
+
+provideAccountGroupLabels(accountGroups);
+
+function handleAccountBatchCommand(command: string) {
+  if (command === "export-accounts" || command === "export-history") {
+    exportDrawer.value?.open(
+      command === "export-accounts" ? selectedRows.value : []
+    );
+    return;
+  }
+  handleBatchAction(command);
+}
 
 /** 仅已接入详情页的任务类型支持从占用弹窗跳转。 */
 function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
@@ -79,6 +99,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
 
 <template>
   <div class="account-list-page">
+    <AccountExportDrawer ref="exportDrawer" @changed="refreshAccountList" />
     <div class="account-list-stats">
       <el-card
         v-for="card in statCards"
@@ -252,7 +273,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="`${group.name}（${group.totalAccounts}）`"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>
@@ -342,12 +363,15 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
       :takeover-batch-tip="takeoverBatchTip"
       :total="total"
       :ws-exporting="wsExporting"
-      @batch-command="handleBatchAction"
+      @batch-command="handleAccountBatchCommand"
+      @mutual-contacts="mutualContactsOpen = true"
       @group-click="openMarketingOccupancy"
       @refresh="refreshAccountList"
       @row-action="handleRowAction"
       @selection-change="onSelectionChange"
     />
+
+    <AccountMutualContactDrawer v-model="mutualContactsOpen" />
 
     <MarketingOccupancyDialog
       v-model="marketingOccupancyDialogOpen"
@@ -390,7 +414,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>

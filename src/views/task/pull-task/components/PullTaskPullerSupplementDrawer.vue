@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type {
   PullTaskPullerCandidate,
@@ -122,7 +123,7 @@ function handleSelectionModeChange(value: string | number | boolean): void {
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="`${group.name}（在线 ${group.onlineAccounts}）`"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>

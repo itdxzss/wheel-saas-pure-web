@@ -1,16 +1,15 @@
 <script setup lang="ts">
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import type { GroupCreationMarketingTaskRow } from "@/api/group-creation-marketing";
-import {
-  formatEpoch,
-  taskStatusLabel,
-  taskStatusTagType
-} from "../constants";
+import { formatEpoch, taskStatusLabel, taskStatusTagType } from "../constants";
 import Download from "~icons/ep/download";
 import Plus from "~icons/ep/plus";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "GroupCreationMarketingTaskTable"
@@ -57,11 +56,7 @@ function canStop(row: GroupCreationMarketingTaskRow): boolean {
 </script>
 
 <template>
-  <PureTableBar
-    title="建群营销"
-    :columns="columns"
-    @refresh="emit('refresh')"
-  >
+  <PureTableBar title="建群营销" :columns="columns" @refresh="emit('refresh')">
     <template #buttons>
       <el-button
         type="primary"
@@ -116,7 +111,11 @@ function canStop(row: GroupCreationMarketingTaskRow): boolean {
           label="账号分组"
           min-width="160"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">{{
+            accountGroupLabel(row.accountGroupId, row.accountGroupName)
+          }}</template>
+        </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[3].hide"
           prop="marketingTemplateName"

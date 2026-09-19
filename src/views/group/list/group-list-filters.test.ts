@@ -6,6 +6,38 @@ import {
   toGroupListQuery
 } from "./group-list-filters";
 
+test("control relations preserve multiple selections and compose with existing filters", () => {
+  const main = {
+    keyword: "",
+    status: "AVAILABLE",
+    folderFilter: "" as const,
+    groupType: "" as const,
+    availableAdmin: "YES" as const,
+    controlRelations: [
+      "CONTROLLED_OWNER",
+      "CONTROLLED_ADMIN_CREATOR_ABSENT"
+    ] as const
+  };
+  const query = toGroupListQuery(
+    { ...main, controlRelations: [...main.controlRelations] },
+    emptyHistoricalFilter(),
+    1,
+    10
+  );
+  assert.deepEqual(query.controlRelations, main.controlRelations);
+  assert.equal(query.availableAdmin, true);
+  assert.equal(query.status, "AVAILABLE");
+  assert.equal(
+    toGroupListQuery(
+      { ...main, controlRelations: [] },
+      emptyHistoricalFilter(),
+      1,
+      10
+    ).controlRelations,
+    undefined
+  );
+});
+
 test("historical conditions infer historical type and omit invalid numbers", () => {
   const applied = {
     ...emptyHistoricalFilter(),
@@ -24,7 +56,8 @@ test("historical conditions infer historical type and omit invalid numbers", () 
         status: "AVAILABLE",
         folderFilter: "UNASSIGNED",
         groupType: "",
-        availableAdmin: "YES"
+        availableAdmin: "YES",
+        controlRelations: []
       },
       applied,
       2,
@@ -62,7 +95,8 @@ test("post-control selection keeps shared member range but suppresses historical
       status: "",
       folderFilter: "",
       groupType: "POST_CONTROL",
-      availableAdmin: "NO"
+      availableAdmin: "NO",
+      controlRelations: []
     },
     applied,
     1,

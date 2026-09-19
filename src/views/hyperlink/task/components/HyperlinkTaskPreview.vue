@@ -50,7 +50,7 @@ const linkHost = computed(() => {
                   class="message-image"
                 />
                 <div v-else class="image-placeholder">链接预览图</div>
-                <b>{{ form.messageContent.title || "消息标题" }}</b>
+                <b>{{ form.messageContent.title?.trim() || linkHost }}</b>
                 <span>{{
                   form.messageContent.linkDescription || "链接描述"
                 }}</span>
@@ -73,7 +73,9 @@ const linkHost = computed(() => {
                 :asset-id="imageId"
                 class="message-image"
               />
-              <b>{{ form.messageContent.title || "消息标题" }}</b>
+              <b v-if="form.messageContent.title?.trim()">{{
+                form.messageContent.title
+              }}</b>
               <div v-if="form.messageType === 4" class="message-text">
                 {{ form.messageContent.cardText || "卡片正文" }}
               </div>

@@ -29,12 +29,12 @@ const isLinkCard = computed(
 );
 const hasBodyImage = computed(() => form.value.messageType !== 1);
 const contentLabel = computed(() => {
-  if (form.value.messageType === 3) return "底部小字";
+  if (form.value.messageType === 3) return "正文";
   if (form.value.messageType === 4) return "副标题小字";
   return "正文";
 });
 const contentMaxLength = computed(() =>
-  isLinkCard.value ? 2000 : form.value.messageType === 4 ? 60 : 200
+  isLinkCard.value ? 2000 : form.value.messageType === 4 ? 60 : 1024
 );
 
 function handleTemplateChange(value: unknown): void {
@@ -100,7 +100,7 @@ function handleTemplateChange(value: unknown): void {
         :disabled="disabled"
       />
     </el-form-item>
-    <el-form-item label="消息标题" required>
+    <el-form-item label="消息标题">
       <el-input
         v-model="form.messageContent.title"
         :type="form.messageType === 3 ? 'textarea' : 'text'"
@@ -108,7 +108,7 @@ function handleTemplateChange(value: unknown): void {
         maxlength="1024"
         show-word-limit
         :disabled="disabled"
-        placeholder="请输入消息标题"
+        placeholder="选填；标题不显示时，可留空并将完整内容填写到正文"
       />
     </el-form-item>
     <template v-if="isLinkCard">

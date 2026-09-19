@@ -5,6 +5,7 @@ import {
   applyRecipientFilters,
   defaultRecipientQuery,
   recipientStatusLabel,
+  recipientFailureReason,
   summaryCards
 } from "./recipient-stats";
 
@@ -93,6 +94,34 @@ describe("hyperlink recipient stats domain", () => {
       "结果确认中"
     );
     assert.equal(recipientStatusLabel("PENDING", "RECOVERY_PENDING"), "处理中");
-    assert.equal(recipientStatusLabel("FAILED", "ACCOUNT_BANNED"), "未完成");
+    assert.equal(recipientStatusLabel("FAILED", "ACCOUNT_BANNED"), "发送失败");
   });
+});
+
+it("shows 463 retry and terminal reasons without stale errors on success", () => {
+  const failReason = "WhatsApp 拒绝发送（463），已用尽首次发送加3次重试";
+  assert.equal(
+    recipientStatusLabel("PENDING", "WA_ACK_REJECTED_463"),
+    "等待换号重试"
+  );
+  assert.equal(
+    recipientStatusLabel("FAILED", "WA_ACK_REJECTED_463"),
+    "发送失败"
+  );
+  assert.equal(
+    recipientFailureReason({
+      status: "FAILED",
+      failCode: "WA_ACK_REJECTED_463",
+      failReason
+    }),
+    failReason
+  );
+  assert.equal(
+    recipientFailureReason({
+      status: "DELIVERED",
+      failCode: "WA_ACK_REJECTED_463",
+      failReason
+    }),
+    ""
+  );
 });

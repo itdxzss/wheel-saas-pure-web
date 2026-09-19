@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { computed } from "vue";
 import type { UploadFile } from "element-plus";
 import type { AccountGroupApiRow } from "@/api/account-group";
@@ -38,7 +39,7 @@ const administratorRequired = computed(() =>
 );
 
 function groupOptionLabel(group: AccountGroupApiRow): string {
-  return `${group.name}（正常在线 ${group.onlineAccounts}）`;
+  return formatAccountGroupLabel(group);
 }
 
 function handleFileChange(uploadFile: UploadFile): void {

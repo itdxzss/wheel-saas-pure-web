@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import JoinTaskDetailDrawer from "./components/JoinTaskDetailDrawer.vue";
 import JoinTaskEditorDrawer from "./components/JoinTaskEditorDrawer.vue";
@@ -55,6 +57,8 @@ const {
   toggleAdvanced
 } = useJoinTaskPage();
 
+provideAccountGroupLabels(accountGroups);
+
 function runRowAction(
   row: JoinTaskRow,
   action: "detail" | "edit" | "copy" | "start"
@@ -89,7 +93,7 @@ function runRowAction(
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="group.name"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>

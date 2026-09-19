@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
+import { computed, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import type {
   AccountGroupApiRow,
@@ -28,6 +29,17 @@ const props = defineProps<{
   ) => Promise<AccountGroupApiRow | null>;
 }>();
 const form = defineModel<RegistrationDraft>("form", { required: true });
+const merchants = computed(
+  () =>
+    props.tiers.find(tier => String(tier.cost) === form.value.unitPrice)
+      ?.providerIds ?? []
+);
+watch(
+  () => form.value.unitPrice,
+  () => {
+    if (!props.frozen) form.value.providerId = null;
+  }
+);
 const emit = defineEmits<{
   (event: "submit"): void;
   (event: "country-change"): void;
@@ -170,6 +182,26 @@ watch(
         单价单位为美元（USD）/个号码。库存为查询快照，采购时可能变化。
       </div>
     </el-form-item>
+    <el-form-item label="商家码">
+      <el-select
+        v-model="form.providerId"
+        clearable
+        filterable
+        placeholder="自动（平台分配，不限定商家）"
+        class="registration-control"
+        @clear="form.providerId = null"
+      >
+        <el-option
+          v-for="merchant in merchants"
+          :key="merchant"
+          :label="merchant"
+          :value="merchant"
+        />
+      </el-select>
+      <div class="field-help">
+        默认由平台按所选单价分配，不传商家码；最低价和最高价均为所选单价。也可手动指定商家，清空后恢复自动。
+      </div>
+    </el-form-item>
     <el-form-item label="采购数量" prop="quantity">
       <el-input-number
         v-model="form.quantity"
@@ -191,7 +223,7 @@ watch(
         <el-option
           v-for="group in groups"
           :key="group.id"
-          :label="`${group.name}（${group.totalAccounts} 个账号）`"
+          :label="formatAccountGroupLabel(group)"
           :value="group.id"
         />
       </el-select>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed, ref } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -19,6 +20,8 @@ import {
   marketingPromotionLink,
   marketingTemplateSummary
 } from "./marketing-template-info";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "GroupMarketingTaskTable"
@@ -148,7 +151,10 @@ function taskLifecycleType(
             <div class="task-name-cell">
               <strong>{{ row.taskName }}</strong>
               <small>
-                {{ row.accountGroupName }} · 营销模板 ·
+                {{
+                  accountGroupLabel(row.accountGroupId, row.accountGroupName)
+                }}
+                · 营销模板 ·
                 {{ row.marketingTemplateName || "-" }}
               </small>
             </div>

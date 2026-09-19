@@ -19,6 +19,16 @@ export const availableAdminOptions = [
   { label: "无可用管理员", value: "NO" }
 ];
 
+export const groupControlRelationOptions = [
+  { label: "我方是群主", value: "CONTROLLED_OWNER" },
+  {
+    label: "我方是管理员且建群人不在群",
+    value: "CONTROLLED_ADMIN_CREATOR_ABSENT"
+  },
+  { label: "建群人在群但未上控", value: "EXTERNAL_CREATOR_PRESENT" },
+  { label: "待确认", value: "UNKNOWN" }
+];
+
 /** 群创建者国家所属七大洲的稳定代码与中文展示名。 */
 export const groupContinentOptions = [
   ["ASIA", "亚洲"],

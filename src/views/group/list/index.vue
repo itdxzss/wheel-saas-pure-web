@@ -10,6 +10,7 @@ import GroupMemberDrawer from "./components/GroupMemberDrawer.vue";
 import HistoricalGroupFilterDrawer from "./components/HistoricalGroupFilterDrawer.vue";
 import {
   availableAdminOptions,
+  groupControlRelationOptions,
   groupListColumns,
   groupStatusOptions,
   groupTypeOptions
@@ -153,6 +154,25 @@ function handleRowAction(row, action: string): void {
           >
             <el-option
               v-for="item in availableAdminOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="群主控制关系">
+          <el-select
+            v-model="searchForm.controlRelations"
+            multiple
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            class="group-list-control"
+            placeholder="全部关系"
+            title="多选条件满足任意一项；建群人身份或成员资料不足时为待确认"
+          >
+            <el-option
+              v-for="item in groupControlRelationOptions"
               :key="item.value"
               :label="item.label"
               :value="item.value"

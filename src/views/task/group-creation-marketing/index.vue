@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
 import { onMounted } from "vue";
+import { ElMessage } from "element-plus";
+import { listAccountGroups } from "@/api/account-group";
+import { apiErrorMessage } from "@/utils/api-error";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import GroupCreationMarketingCreateDrawer from "./components/GroupCreationMarketingCreateDrawer.vue";
 import GroupCreationMarketingDetailDrawer from "./components/GroupCreationMarketingDetailDrawer.vue";
@@ -49,8 +53,17 @@ const {
   loadTasks
 } = useGroupCreationMarketingPage();
 
+provideAccountGroupLabels(accountGroups);
+
 onMounted(() => {
   void loadTasks();
+  void listAccountGroups({ page: 1, pageSize: 500 })
+    .then(result => {
+      accountGroups.value = result.list ?? [];
+    })
+    .catch(error =>
+      ElMessage.error(apiErrorMessage(error, "账号分组加载失败"))
+    );
 });
 </script>
 

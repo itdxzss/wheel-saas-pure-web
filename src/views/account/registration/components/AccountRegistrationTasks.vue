@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { resolveAccountGroupLabel } from "@/utils/account-group-label";
 import { ElMessageBox } from "element-plus";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type {
@@ -35,7 +36,7 @@ const emit = defineEmits<{
 }>();
 
 function groupName(id: number): string {
-  return props.groups.find(group => group.id === id)?.name ?? `分组 #${id}`;
+  return resolveAccountGroupLabel(props.groups, id);
 }
 
 function countryName(id: string): string {
@@ -69,7 +70,8 @@ async function cancel(task: AccountRegistrationTask): Promise<void> {
     <el-table-column prop="id" label="任务 ID" width="95" />
     <el-table-column label="美国渠道 / 单价" min-width="160">
       <template #default="{ row }"
-        >{{ countryName(row.countryId) }}<br />{{ row.unitPrice }} 美元（USD）/
+        >{{ countryName(row.countryId) }} · 商家
+        {{ row.providerId || "自动分配" }}<br />{{ row.unitPrice }} 美元（USD）/
         号码</template
       >
     </el-table-column>
@@ -176,6 +178,11 @@ async function cancel(task: AccountRegistrationTask): Promise<void> {
           }}</el-tag></template
         ></el-table-column
       >
+      <el-table-column label="取号尝试" min-width="120">
+        <template #default="{ row }"
+          >{{ row.purchaseAttempts ?? 0 }} / 50</template
+        >
+      </el-table-column>
       <el-table-column label="成交费用（美元）" min-width="160"
         ><template #default="{ row }">{{
           registrationActualCost(row.actualCost)
@@ -189,7 +196,7 @@ async function cancel(task: AccountRegistrationTask): Promise<void> {
       />
       <el-table-column prop="accountId" label="账号 ID" width="100" />
       <el-table-column prop="importBatchId" label="导入批次" width="100" />
-      <el-table-column label="失败原因" min-width="230" show-overflow-tooltip
+      <el-table-column label="执行说明" min-width="230" show-overflow-tooltip
         ><template #default="{ row }">{{
           registrationFailureLabel(row.failureCode)
         }}</template></el-table-column

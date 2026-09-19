@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import type { AccountGroupApiRow } from "@/api/account-group";
 
 defineOptions({
@@ -33,7 +34,7 @@ const emit = defineEmits<{
           <el-option
             v-for="group in accountGroups"
             :key="group.id"
-            :label="`${group.name}（${group.totalAccounts} 个账号）`"
+            :label="formatAccountGroupLabel(group)"
             :value="group.id"
           />
         </el-select>

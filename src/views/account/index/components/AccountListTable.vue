@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed } from "vue";
+import { hasAuth } from "@/router/utils";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -17,6 +19,8 @@ import {
   sourceLabel
 } from "../account-display";
 import { marketingOccupancyMeta } from "../marketing-occupancy";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "AccountListTable"
@@ -40,6 +44,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (event: "mutual-contacts"): void;
   (event: "batch-command", command: string): void;
   (event: "group-click", row: TenantAccount): void;
   (event: "refresh"): void;
@@ -81,6 +86,12 @@ function occupancyTagStyle(row: TenantAccount) {
 <template>
   <PureTableBar title="账号列表" :columns="columns" @refresh="emit('refresh')">
     <template #buttons>
+      <el-button
+        v-if="hasAuth('tenant:account:view')"
+        @click="emit('mutual-contacts')"
+      >
+        互相添加好友
+      </el-button>
       <el-dropdown trigger="click" @command="emit('batch-command', $event)">
         <el-button
           :loading="batchSubmitting || wsExporting"
@@ -117,6 +128,19 @@ function occupancyTagStyle(row: TenantAccount) {
               :disabled="selectedCount === 0 || batchSubmitting || wsExporting"
             >
               导出WS号
+            </el-dropdown-item>
+            <el-dropdown-item
+              v-if="hasAuth('tenant:account:edit')"
+              command="export-accounts"
+              :disabled="selectedCount === 0 || batchSubmitting || wsExporting"
+            >
+              导出账号并移除
+            </el-dropdown-item>
+            <el-dropdown-item
+              v-if="hasAuth('tenant:account:edit')"
+              command="export-history"
+            >
+              账号导出记录
             </el-dropdown-item>
             <el-dropdown-item
               command="clear-operation-restrictions"
@@ -176,7 +200,9 @@ function occupancyTagStyle(row: TenantAccount) {
               :style="occupancyTagStyle(row as TenantAccount)"
               @click="emit('group-click', row as TenantAccount)"
             >
-              {{ row.group_name || "未命名分组" }}
+              {{
+                accountGroupLabel(row.group_id, row.group_name || "未命名分组")
+              }}
             </el-tag>
             <span v-else>-</span>
           </template>

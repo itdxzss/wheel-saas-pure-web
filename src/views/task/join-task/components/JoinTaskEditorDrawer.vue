@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import {
+  formatAccountGroupLabel,
+  resolveAccountGroupLabel
+} from "@/utils/account-group-label";
 import { computed } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import {
@@ -49,7 +53,7 @@ const selectedGroupSummary = computed(() => {
     form.value.accountGroupIds.includes(group.id)
   );
   return {
-    names: selected.map(group => group.name).join("、") || "-",
+    names: selected.map(formatAccountGroupLabel).join("、") || "-",
     total: selected.reduce((sum, group) => sum + group.totalAccounts, 0),
     online: selected.reduce((sum, group) => sum + group.onlineAccounts, 0)
   };
@@ -165,7 +169,7 @@ function submit(): void {
           <el-option
             v-for="group in accountGroups"
             :key="group.id"
-            :label="`${group.name}（在线 ${group.onlineAccounts} / 总 ${group.totalAccounts}）`"
+            :label="formatAccountGroupLabel(group)"
             :value="group.id"
           />
         </el-select>
@@ -222,9 +226,17 @@ function submit(): void {
             <el-table-column
               prop="groupName"
               label="所属分组"
-              min-width="140"
+              min-width="240"
               show-overflow-tooltip
-            />
+            >
+              <template #default="{ row }">{{
+                resolveAccountGroupLabel(
+                  accountGroups,
+                  row.groupId,
+                  row.groupName
+                )
+              }}</template>
+            </el-table-column>
             <el-table-column label="在线状态" width="100">
               <template #default="{ row }">
                 <el-tag
@@ -245,11 +257,6 @@ function submit(): void {
                 >
                   {{ row.riskLabel }}
                 </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="管理员设置状态" width="150">
-              <template #default="{ row }">
-                {{ row.isAdmin ? "已被设置为管理" : "未被设置为管理" }}
               </template>
             </el-table-column>
             <template #empty>
@@ -333,6 +340,35 @@ function submit(): void {
           </div>
         </el-form-item>
       </template>
+
+      <el-divider content-position="left">群管理设置</el-divider>
+      <el-form-item label="设置管理员">
+        <div>
+          <el-switch
+            v-model="form.setAdminEnabled"
+            @change="
+              value => {
+                if (!value) form.clearAdminsAndLeaveEnabled = false;
+              }
+            "
+          />
+          <div class="el-form-item__extra">
+            进群成功后，由本群原有的受控管理员设置该账号为管理员。
+          </div>
+        </div>
+      </el-form-item>
+
+      <el-form-item label="清空其他管理员并退出群组" label-width="210px">
+        <div>
+          <el-switch
+            v-model="form.clearAdminsAndLeaveEnabled"
+            :disabled="!form.setAdminEnabled"
+          />
+          <div class="el-form-item__extra">
+            提权成功后，新管理员踢出其他管理员（包含平台受控账号），全部成功后原执行账号退群。任一步失败停止后续。
+          </div>
+        </div>
+      </el-form-item>
 
       <el-divider content-position="left">失败处理</el-divider>
       <el-form-item label="失败自动重试">

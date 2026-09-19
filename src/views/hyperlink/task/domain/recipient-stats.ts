@@ -109,10 +109,24 @@ export function summaryCards(summary: HyperlinkTaskSummary): SummaryCard[] {
   ];
 }
 
+export function recipientFailureReason(row: {
+  status: string;
+  failCode: string | null;
+  failReason?: string | null;
+}): string {
+  if (["SUCCESS", "DELIVERED", "READ"].includes(row.status)) return "";
+  if (row.failReason?.trim()) return row.failReason.trim();
+  if (row.status === "UNREGISTERED" || row.failCode === "TARGET_UNAVAILABLE")
+    return "目标数据导致无法发送";
+  return "";
+}
+
 export function recipientStatusLabel(
   status: HyperlinkRecipientStatus,
   businessCode?: string | null
 ): string {
+  if (businessCode === "WA_ACK_REJECTED_463" && status === "PENDING")
+    return "等待换号重试";
   if (businessCode === "RESULT_PENDING") return "结果确认中";
   if (businessCode === "TARGET_UNAVAILABLE") return "目标无法发送";
   const labels: Record<HyperlinkRecipientStatus, string> = {
@@ -121,7 +135,7 @@ export function recipientStatusLabel(
     SUCCESS: "发送成功",
     DELIVERED: "发送成功（已送达）",
     READ: "发送成功（已读）",
-    FAILED: "未完成",
+    FAILED: "发送失败",
     UNREGISTERED: "目标无法发送"
   };
   return labels[status];

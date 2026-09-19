@@ -40,12 +40,26 @@ const FAILURE_LABELS: Record<string, string> = {
   PURCHASE_CANCELLATION_TIMEOUT: "订单取消超时，请核对供应商订单",
   PURCHASE_CANCELLATION_CODE_RECEIVED: "异常价格订单已收到短信，需要人工核对",
   PURCHASE_CANCELLATION_UNCONFIRMED: "订单取消结果待核对",
+  SMS_NO_NUMBERS_RETRY: "暂未取到号码，等待 5 秒后重试",
+  SMS_NO_NUMBERS_EXHAUSTED: "已尝试 50 次，仍未取到号码",
   SMS_NO_NUMBERS: "供应商未分配到号码"
 };
 
 /** 保留未知原因码，避免把未支持的错误误报为已处理。 */
 export function registrationFailureLabel(code?: string | null): string {
   return code ? (FAILURE_LABELS[code] ?? code) : "—";
+}
+
+/** 已确认结束的设备任务可由用户保存下一笔许可；结果不明时只放行注册超时。 */
+export function canPrepareDeviceReplacement(
+  state: string,
+  failureCode?: string | null
+): boolean {
+  return (
+    state === "FAILED" ||
+    state === "CANCELLED" ||
+    (state === "UNKNOWN" && failureCode === "REGISTRATION_TIMEOUT")
+  );
 }
 
 /** Grizzly 现行价格、余额和成交金额按 USD 计价；不依据旧币种标记换算金额。 */

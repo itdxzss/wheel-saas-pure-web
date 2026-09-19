@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { onBeforeUnmount, ref, watch } from "vue";
 import {
   getPullTaskStandardGroupAvatarContent,
@@ -6,6 +7,8 @@ import {
   type PullTaskStandardGroupSetting,
   type PullTaskStandardSetting
 } from "@/api/pull-task";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "PullTaskStandardSavedSettings"
@@ -115,7 +118,12 @@ onBeforeUnmount(() => {
           v-if="creationMode === 'NEW_GROUP'"
           label="建群人分组"
         >
-          {{ namedGroup(standardSetting.creatorGroupName) }}
+          {{
+            accountGroupLabel(
+              standardSetting.creatorGroupId,
+              standardSetting.creatorGroupName
+            )
+          }}
         </el-descriptions-item>
         <el-descriptions-item
           v-if="creationMode === 'NEW_GROUP'"
@@ -162,19 +170,44 @@ onBeforeUnmount(() => {
           {{ standardSetting.concurrentGroupCount }}
         </el-descriptions-item>
         <el-descriptions-item label="管理分组">
-          {{ namedGroup(standardSetting.managerGroupName) }}
+          {{
+            accountGroupLabel(
+              standardSetting.managerGroupId,
+              standardSetting.managerGroupName
+            )
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="拉手分组">
-          {{ namedGroup(standardSetting.pullerGroupName) }}
+          {{
+            accountGroupLabel(
+              standardSetting.pullerGroupId,
+              standardSetting.pullerGroupName
+            )
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="站台分组">
-          {{ namedGroup(standardSetting.stationGroupName) }}
+          {{
+            accountGroupLabel(
+              standardSetting.stationGroupId,
+              standardSetting.stationGroupName
+            )
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="管理完成归档分组">
-          {{ namedGroup(standardSetting.managerFinishGroupName) }}
+          {{
+            accountGroupLabel(
+              standardSetting.managerFinishGroupId,
+              standardSetting.managerFinishGroupName
+            )
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="拉手完成归档分组">
-          {{ namedGroup(standardSetting.pullerFinishGroupName) }}
+          {{
+            accountGroupLabel(
+              standardSetting.pullerFinishGroupId,
+              standardSetting.pullerFinishGroupName
+            )
+          }}
         </el-descriptions-item>
       </el-descriptions>
 

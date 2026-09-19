@@ -392,8 +392,8 @@ export function validateHyperlinkTaskForm(
   }
   const taskName = required(form.taskName, "任务名称", 128);
   if (taskName) return taskName;
-  const title = required(form.messageContent.title, "消息标题", 1024);
-  if (title) return title;
+  if ((form.messageContent.title?.trim().length ?? 0) > 1024)
+    return "消息标题不能超过 1024 个字符";
 
   if (form.messageType === 1 || form.messageType === 2) {
     const description = required(
@@ -414,8 +414,8 @@ export function validateHyperlinkTaskForm(
     const content = required(form.messageContent.content, "正文", 2000);
     if (content) return content;
   } else {
-    const contentLabel = form.messageType === 4 ? "副标题小字" : "底部小字";
-    const contentMaxLength = form.messageType === 4 ? 60 : 200;
+    const contentLabel = form.messageType === 4 ? "副标题小字" : "正文";
+    const contentMaxLength = form.messageType === 4 ? 60 : 1024;
     if ((form.messageContent.content?.trim().length ?? 0) > contentMaxLength) {
       return `${contentLabel}不能超过 ${contentMaxLength} 个字符`;
     }

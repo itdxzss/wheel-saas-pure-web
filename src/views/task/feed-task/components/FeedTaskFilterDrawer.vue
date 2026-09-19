@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { reactive, watch } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { FeedTaskAccountFilter } from "@/api/feed-task";
@@ -96,7 +97,7 @@ watch(
               <el-option
                 v-for="group in accountGroups"
                 :key="group.id"
-                :label="`${group.name}（${group.totalAccounts}）`"
+                :label="formatAccountGroupLabel(group)"
                 :value="group.id"
               />
             </el-select>

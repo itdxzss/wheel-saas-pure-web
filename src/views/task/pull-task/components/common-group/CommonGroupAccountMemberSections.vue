@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { watch } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type {
@@ -65,7 +66,7 @@ watch(
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="`${group.name}（在线 ${group.onlineAccounts}）`"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>
@@ -93,9 +94,7 @@ watch(
         <el-form-item :error="errors.secondaryManagerGroupId">
           <template #label>
             次管理员分组
-            <CommonGroupHelp
-              content="从当前账号分组中选择次管理员账号。"
-            />
+            <CommonGroupHelp content="从当前账号分组中选择次管理员账号。" />
           </template>
           <el-select
             v-model="form.secondaryManagerGroupId"
@@ -107,13 +106,11 @@ watch(
             <el-option
               v-for="group in accountGroups"
               :key="group.id"
-              :label="`${group.name}（在线 ${group.onlineAccounts}）`"
+              :label="formatAccountGroupLabel(group)"
               :value="group.id"
             />
           </el-select>
-          <div class="field-help">
-            可选；展示当前账号分组及在线账号数量。
-          </div>
+          <div class="field-help">可选；展示当前账号分组及在线账号数量。</div>
         </el-form-item>
 
         <el-form-item :error="errors.secondaryManagerCount">
@@ -181,7 +178,7 @@ watch(
               <el-option
                 v-for="group in accountGroups"
                 :key="group.id"
-                :label="`${group.name}（在线 ${group.onlineAccounts}）`"
+                :label="formatAccountGroupLabel(group)"
                 :value="group.id"
               />
             </el-select>

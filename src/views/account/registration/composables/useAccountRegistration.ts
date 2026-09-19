@@ -87,6 +87,7 @@ function emptyDraft(): RegistrationDraft {
   return {
     countryId: "",
     unitPrice: "",
+    providerId: null,
     quantity: 1,
     accountGroupId: "",
     accountType: "",
@@ -105,7 +106,7 @@ function defaultCountryId(
   );
 }
 
-function requestId(): string {
+export function registrationRequestId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function")
     return globalThis.crypto.randomUUID();
   const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
@@ -200,6 +201,16 @@ export function useAccountRegistration(
       tiers.value = response;
       if (
         !frozen.value &&
+        form.providerId &&
+        !response.some(
+          tier =>
+            String(tier.cost) === form.unitPrice &&
+            tier.providerIds.includes(form.providerId!)
+        )
+      )
+        form.providerId = null;
+      if (
+        !frozen.value &&
         !response.some(
           tier => String(tier.cost) === form.unitPrice && tier.count > 0
         )
@@ -219,6 +230,7 @@ export function useAccountRegistration(
   function changeCountry(): void {
     if (frozen.value) return;
     form.unitPrice = "";
+    form.providerId = null;
     tiers.value = [];
     void loadPrices();
   }
@@ -286,7 +298,10 @@ export function useAccountRegistration(
       pricesLoading.value ||
       priceError.value ||
       !tiers.value.some(
-        tier => String(tier.cost) === form.unitPrice && tier.count > 0
+        tier =>
+          String(tier.cost) === form.unitPrice &&
+          tier.count > 0 &&
+          (!form.providerId || tier.providerIds.includes(form.providerId))
       )
     )
       return "请选择当前有库存的价格档位";
@@ -312,7 +327,7 @@ export function useAccountRegistration(
         ...form,
         accountGroupId: Number(form.accountGroupId),
         accountType: form.accountType as 1 | 2,
-        requestId: requestId()
+        requestId: registrationRequestId()
       });
     }
     const token = generation;

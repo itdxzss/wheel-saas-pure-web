@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { Loading } from "@element-plus/icons-vue";
@@ -212,7 +213,7 @@ onBeforeUnmount(stopPolling);
           <el-option
             v-for="group in groups"
             :key="group.id"
-            :label="group.name"
+            :label="formatAccountGroupLabel(group)"
             :value="group.id"
           />
         </el-select>

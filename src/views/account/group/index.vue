@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -421,7 +422,7 @@ onMounted(() => {
             min-width="220"
           >
             <template #default="{ row }">
-              <span>{{ row.name }}</span>
+              <span>{{ formatAccountGroupLabel(row) }}</span>
               <el-tag
                 v-if="row.systemBuiltin"
                 class="ml-2"

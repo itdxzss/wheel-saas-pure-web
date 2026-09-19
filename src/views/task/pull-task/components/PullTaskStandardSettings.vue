@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { computed } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { GroupFolderRow } from "@/api/group-folder";
@@ -30,7 +31,7 @@ function nonNegativeCount(value: number): number {
 
 function accountGroupOptionLabel(group: AccountGroupApiRow): string {
   const executableOnline = group.pullTaskOnlineAccounts ?? group.onlineAccounts;
-  return `${group.name}（拉群在线候选 ${executableOnline}）`;
+  return `${formatAccountGroupLabel(group)}（拉群在线候选 ${executableOnline}）`;
 }
 
 const stationDemand = computed(() => {
@@ -348,7 +349,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-option
                   v-for="group in accountGroups"
                   :key="group.id"
-                  :label="group.name"
+                  :label="formatAccountGroupLabel(group)"
                   :value="group.id"
                 />
               </el-select>
@@ -363,7 +364,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-option
                   v-for="group in accountGroups"
                   :key="group.id"
-                  :label="group.name"
+                  :label="formatAccountGroupLabel(group)"
                   :value="group.id"
                 />
               </el-select>

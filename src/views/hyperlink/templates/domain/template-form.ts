@@ -130,8 +130,7 @@ export function validateHyperlinkTemplateForm(
 
   const nameMessage = requiredLengthMessage(form.name, "模板名称", 128);
   if (nameMessage) return nameMessage;
-  const titleMessage = requiredLengthMessage(form.title, "标题", 512);
-  if (titleMessage) return titleMessage;
+  if (form.title.trim().length > 512) return "标题不能超过 512 个字符";
   if (form.remark.trim().length > 255) return "备注不能超过 255 个字符";
 
   if (form.messageType === 1) {
@@ -152,7 +151,7 @@ export function validateHyperlinkTemplateForm(
     return "";
   }
 
-  const contentLabel = form.messageType === 3 ? "底部小字" : "副标题";
+  const contentLabel = form.messageType === 3 ? "正文" : "副标题";
   const contentMaxLength = form.messageType === 4 ? 60 : 1024;
   if (form.content.trim().length > contentMaxLength) {
     return `${contentLabel}不能超过 ${contentMaxLength} 个字符`;

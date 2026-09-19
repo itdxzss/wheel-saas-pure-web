@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { resolveAccountGroupLabel } from "@/utils/account-group-label";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { GroupPullMarketingTaskDetail } from "@/api/group-pull-marketing";
 import type { MarketingTemplateRow } from "@/api/marketing-template";
@@ -23,7 +24,7 @@ const props = defineProps<{
 
 function groupName(id?: number | null, optional = false): string {
   if (id == null) return optional ? "未配置，账号保留原分组" : "-";
-  return props.accountGroups.find(group => group.id === id)?.name ?? `ID ${id}`;
+  return resolveAccountGroupLabel(props.accountGroups, id);
 }
 
 function templateName(id: number): string {

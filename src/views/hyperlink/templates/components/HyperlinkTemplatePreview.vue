@@ -71,7 +71,7 @@ const buttonLabel = computed(
                   </div>
                 </div>
                 <div class="link-copy">
-                  <strong>{{ form.title || "消息标题" }}</strong>
+                  <strong>{{ form.title.trim() || linkHost }}</strong>
                   <span>{{ form.linkDescription || "链接描述" }}</span>
                   <small>{{ linkHost }}</small>
                 </div>
@@ -97,7 +97,9 @@ const buttonLabel = computed(
                   class="wa-image"
                 />
               </div>
-              <strong class="message-title">{{ form.title || "标题" }}</strong>
+              <strong v-if="form.title.trim()" class="message-title">{{
+                form.title
+              }}</strong>
               <div v-if="form.content" class="message-copy">
                 {{ form.content }}
               </div>
@@ -112,8 +114,13 @@ const buttonLabel = computed(
           </template>
 
           <template v-else>
-            <div class="wa-message-bubble card-lead">
-              <strong class="message-title">{{ form.title || "标题" }}</strong>
+            <div
+              v-if="form.title.trim() || form.content"
+              class="wa-message-bubble card-lead"
+            >
+              <strong v-if="form.title.trim()" class="message-title">{{
+                form.title
+              }}</strong>
               <div v-if="form.content" class="message-copy">
                 {{ form.content }}
               </div>

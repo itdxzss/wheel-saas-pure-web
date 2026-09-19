@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import {
+  adminStageLabel,
+  approvalProgressLabel,
+  cleanupStageLabel,
+  joinStepStatus
+} from "../admin-stage";
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import type { JoinResultRow, JoinTaskDetail } from "@/api/join-task";
 import {
   failurePolicyLabel,
@@ -9,6 +16,8 @@ import {
   joinTaskStatusLabel,
   joinTaskStatusTagType
 } from "../constants";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "JoinTaskDetailDrawer"
@@ -43,7 +52,13 @@ const visible = defineModel<boolean>({ required: true });
           {{ formatEpoch(detail.createdAt) }}
         </el-descriptions-item>
         <el-descriptions-item label="账号分组">
-          {{ detail.accountGroupNames || "-" }}
+          {{
+            detail.accountGroupIds
+              .map(id => accountGroupLabel(id))
+              .join("、") ||
+            detail.accountGroupNames ||
+            "-"
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="分配方式">
           {{ joinTaskDistributionLabel(detail.distributionMode) }}
@@ -71,6 +86,14 @@ const visible = defineModel<boolean>({ required: true });
         </el-descriptions-item>
       </el-descriptions>
 
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="设置管理员">
+          {{ detail.setAdminEnabled ? "开启" : "关闭" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="清空其他管理员并退出群组">
+          {{ detail.clearAdminsAndLeaveEnabled ? "开启" : "关闭" }}
+        </el-descriptions-item>
+      </el-descriptions>
       <div class="section-title">进群明细</div>
       <el-table class="detail-table" :data="results" border>
         <el-table-column
@@ -82,9 +105,6 @@ const visible = defineModel<boolean>({ required: true });
           <template #default="{ row }">
             <div class="account-cell">
               <span>{{ row.account || "-" }}</span>
-              <small>{{
-                row.isAdmin ? "已被设置为管理" : "未被设置为管理"
-              }}</small>
             </div>
           </template>
         </el-table-column>
@@ -94,25 +114,88 @@ const visible = defineModel<boolean>({ required: true });
           min-width="300"
           show-overflow-tooltip
         />
-        <el-table-column label="进群状态" width="120">
+        <el-table-column label="进群状态" width="170">
           <template #default="{ row }">
             <el-tag
               size="small"
               :type="joinResultStatusTagType(row.status)"
               effect="plain"
             >
-              {{ joinResultStatusLabel(row.status) }}
+              {{
+                approvalProgressLabel(row) || joinResultStatusLabel(row.status)
+              }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column
           prop="reason"
-          label="原因"
+          label="进群处理说明"
           min-width="180"
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            {{ row.reasonLabel || row.reason || "-" }}
+            {{ row.approvalReason || row.reasonLabel || row.reason || "-" }}
+          </template>
+        </el-table-column>
+        <el-table-column label="设置管理员" width="150">
+          <template #default="{ row }">
+            <el-tag
+              :type="joinResultStatusTagType(row.adminStatus)"
+              effect="plain"
+            >
+              {{ adminStageLabel(row, !!detail.setAdminEnabled) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="adminActorAccountId"
+          label="操作管理员ID"
+          width="140"
+        />
+        <el-table-column
+          prop="adminReason"
+          label="管理员设置原因"
+          min-width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          v-if="detail.clearAdminsAndLeaveEnabled"
+          label="清理 / 退群"
+          min-width="170"
+        >
+          <template #default="{ row }">
+            {{ cleanupStageLabel(row) }}
+            <span v-if="row.cleanupTotal"
+              >（已踢出 {{ row.cleanupCompleted ?? 0 }}/{{
+                row.cleanupTotal
+              }}）</span
+            >
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="detail.clearAdminsAndLeaveEnabled"
+          prop="cleanupReason"
+          label="清理 / 退群失败原因"
+          min-width="240"
+          show-overflow-tooltip
+        />
+        <el-table-column label="步骤结果" width="120">
+          <template #default="{ row }">
+            <el-tag
+              :type="
+                joinResultStatusTagType(
+                  joinStepStatus(row, !!detail.setAdminEnabled)
+                )
+              "
+            >
+              {{
+                joinStepStatus(row, !!detail.setAdminEnabled) === "PENDING"
+                  ? "执行中"
+                  : joinResultStatusLabel(
+                      joinStepStatus(row, !!detail.setAdminEnabled)
+                    )
+              }}
+            </el-tag>
           </template>
         </el-table-column>
       </el-table>

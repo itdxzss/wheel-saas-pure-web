@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { computed, nextTick, ref, watch } from "vue";
 import type { LoadFunction } from "element-plus";
 import type {
@@ -329,7 +330,7 @@ function submit(): void {
           <el-option
             v-for="group in accountGroups"
             :key="group.id"
-            :label="`${group.name}（${group.onlineAccounts}）`"
+            :label="formatAccountGroupLabel(group)"
             :value="group.id"
           />
         </el-select>

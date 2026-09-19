@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { onBeforeUnmount, watch } from "vue";
 import type { UploadFile } from "element-plus";
 import type { HistoricalGroupDetail } from "@/api/historical-group";
@@ -74,7 +75,7 @@ onBeforeUnmount(() => state.close());
           <el-option
             v-for="group in state.accountGroups.value"
             :key="group.id"
-            :label="`${group.name}（${group.totalAccounts} 个账号）`"
+            :label="formatAccountGroupLabel(group)"
             :value="group.id"
           />
         </el-select>

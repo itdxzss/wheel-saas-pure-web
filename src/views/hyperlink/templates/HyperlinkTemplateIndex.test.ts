@@ -74,7 +74,7 @@ describe("hyperlink template page contract", () => {
     assert.match(drawer, /深度追踪/);
     assert.doesNotMatch(drawer, /添加按钮/);
     assert.doesNotMatch(drawer, /label="备注"/);
-    assert.match(drawer, /底部小字/);
+    assert.match(drawer, /正文/);
     assert.match(drawer, /副标题/);
     assert.match(drawer, /卡片正文/);
   });
@@ -87,7 +87,7 @@ describe("hyperlink template page contract", () => {
     assert.match(drawer, /content: \{ 1: 5, 3: 3, 4: 2 \}/);
     assert.match(drawer, /cardText: \{ 4: 4 \}/);
     assert.match(drawer, /button: \{ 3: 4, 4: 5 \}/);
-    assert.match(drawer, /messageType === 3\) return "底部小字"/);
+    assert.match(drawer, /messageType === 3\) return "正文"/);
     assert.match(drawer, /messageType === 4\) return "副标题"/);
     assert.match(
       drawer,

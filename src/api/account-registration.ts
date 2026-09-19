@@ -25,6 +25,7 @@ export interface AccountRegistrationRequest {
   requestId: string;
   countryId: string;
   unitPrice: string;
+  providerId?: string | null;
   quantity: number;
   accountGroupId: number;
   accountType: 1 | 2;
@@ -74,6 +75,8 @@ export interface AccountRegistrationItem {
   registrationId?: string | null;
   importBatchId?: number | null;
   accountId?: number | null;
+  purchaseAttempts?: number;
+  nextPurchaseAt?: number | null;
   failureCode?: string | null;
   createdAt: number;
   updatedAt: number;

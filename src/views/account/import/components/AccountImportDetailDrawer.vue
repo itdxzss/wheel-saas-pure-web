@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import type {
@@ -15,6 +16,8 @@ import type {
   AccountImportDetailStatus,
   AccountImportExportKind
 } from "../types";
+
+const accountGroupLabel = useAccountGroupLabel();
 
 defineOptions({
   name: "AccountImportDetailDrawer"
@@ -168,7 +171,7 @@ function statusReason(row: AccountImportDetailRow): string {
             {{ task.total ?? 0 }}
           </el-descriptions-item>
           <el-descriptions-item label="账号分组">
-            {{ task.group || "-" }}
+            {{ accountGroupLabel(null, task.group) }}
           </el-descriptions-item>
           <el-descriptions-item label="机型">
             {{ task.device || "-" }}
@@ -289,7 +292,11 @@ function statusReason(row: AccountImportDetailRow): string {
             label="分组"
             min-width="130"
             show-overflow-tooltip
-          />
+          >
+            <template #default="{ row }">{{
+              accountGroupLabel(null, row.group)
+            }}</template>
+          </el-table-column>
           <el-table-column label="创建时间" width="180">
             <template #default="{ row }">{{
               formatDate(row.created_at)

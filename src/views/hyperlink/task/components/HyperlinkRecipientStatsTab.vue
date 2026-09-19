@@ -9,6 +9,7 @@ import {
   countryFlag,
   recipientPageSizes,
   recipientStatusLabel,
+  recipientFailureReason,
   recipientStatusTagType
 } from "../domain/recipient-stats";
 
@@ -21,22 +22,11 @@ const canExport = computed(() => hasPerms("tenant:hyperlink_task:export"));
 const columns: TableColumnList = [
   { label: "收信号码", prop: "recipientPhone", minWidth: 180 },
   { label: "发送账号", prop: "senderPhone", minWidth: 180 },
-  { label: "发送结果", prop: "status", minWidth: 280 }
+  { label: "状态 / 失败原因", prop: "status", minWidth: 280 }
 ];
 
 function formatTime(value?: number | null): string {
   return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
-}
-
-function failureReason(row: {
-  status: string;
-  failCode: string | null;
-}): string {
-  if (row.status === "UNREGISTERED" || row.failCode === "TARGET_UNAVAILABLE")
-    return "目标数据导致无法发送";
-  if (row.failCode === "RECOVERY_PENDING")
-    return "等待恢复发送；任务暂停后可在修复完成时继续";
-  return "";
 }
 
 defineExpose({
@@ -174,7 +164,7 @@ defineExpose({
             </el-table-column>
             <el-table-column
               v-if="!dynamicColumns[2].hide"
-              label="发送结果"
+              label="状态 / 失败原因"
               min-width="280"
             >
               <template #default="{ row }">
@@ -189,12 +179,12 @@ defineExpose({
                     formatTime(row.statusAt)
                   }}</span>
                   <el-tooltip
-                    v-if="failureReason(row)"
-                    :content="failureReason(row)"
+                    v-if="recipientFailureReason(row)"
+                    :content="recipientFailureReason(row)"
                     placement="top"
                   >
                     <el-tag type="danger" effect="light" class="failure-reason">
-                      {{ failureReason(row) }}
+                      {{ recipientFailureReason(row) }}
                     </el-tag>
                   </el-tooltip>
                 </div>

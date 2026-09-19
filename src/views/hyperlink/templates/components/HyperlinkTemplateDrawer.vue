@@ -48,7 +48,7 @@ const imageLabel = computed(() =>
       : "正文主图"
 );
 const contentLabel = computed(() => {
-  if (form.value.messageType === 3) return "底部小字";
+  if (form.value.messageType === 3) return "正文";
   if (form.value.messageType === 4) return "副标题";
   return "正文";
 });
@@ -159,18 +159,14 @@ function onMessageTypeChange(): void {
               </div>
             </el-form-item>
 
-            <el-form-item
-              label="标题"
-              required
-              :style="{ order: fieldOrder('title') }"
-            >
+            <el-form-item label="标题" :style="{ order: fieldOrder('title') }">
               <el-input
                 v-model="form.title"
                 :type="form.messageType === 3 ? 'textarea' : 'text'"
                 :rows="2"
                 maxlength="512"
                 show-word-limit
-                placeholder="请输入标题"
+                placeholder="选填；标题不显示时，可留空并将完整内容填写到正文"
               />
             </el-form-item>
 

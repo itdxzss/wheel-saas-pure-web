@@ -18,6 +18,8 @@ import {
 import { apiErrorMessage } from "@/utils/api-error";
 import AccountRegistrationForm from "./components/AccountRegistrationForm.vue";
 import AccountRegistrationTasks from "./components/AccountRegistrationTasks.vue";
+import DeviceRegistrationPanel from "./components/DeviceRegistrationPanel.vue";
+import CloudRegistrationPanel from "./components/CloudRegistrationPanel.vue";
 import { useAccountRegistration } from "./composables/useAccountRegistration";
 
 defineOptions({ name: "AccountRegistration" });
@@ -126,13 +128,23 @@ onBeforeRouteLeave(() => {
       class="mb-4"
     />
     <el-alert
-      v-if="catalog && !catalog.orderingEnabled"
+      v-if="
+        !['device', 'cloud'].includes(activeTab) &&
+        catalog &&
+        !catalog.orderingEnabled
+      "
       :title="catalog.disabledReason || '当前未启用采购，可查看已有任务'"
       type="warning"
       :closable="false"
       class="mb-4"
     />
     <el-tabs v-model="activeTab">
+      <el-tab-pane label="云手机自动注册" name="cloud">
+        <CloudRegistrationPanel :active="active && activeTab === 'cloud'" />
+      </el-tab-pane>
+      <el-tab-pane label="手机注册 / 取号验证" name="device">
+        <DeviceRegistrationPanel :active="active && activeTab === 'device'" />
+      </el-tab-pane>
       <el-tab-pane label="新建注册" name="create">
         <div class="catalog-toolbar">
           <el-button :loading="groupLoading" @click="loadGroups"

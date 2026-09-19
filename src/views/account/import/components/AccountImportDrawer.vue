@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type UploadFile, type UploadInstance } from "element-plus";
 import type {
@@ -239,7 +240,7 @@ function submitDrawer(): void {
                 <el-option
                   v-for="group in groups"
                   :key="group.id"
-                  :label="group.name"
+                  :label="formatAccountGroupLabel(group)"
                   :value="group.id"
                 />
               </el-select>

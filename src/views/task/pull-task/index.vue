@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
 import { ref } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
@@ -164,6 +165,7 @@ async function handleDetailTaskAction(
   if (!activeTask.value) return;
   await runTaskAction(activeTask.value, action);
 }
+provideAccountGroupLabels(accountGroups);
 </script>
 
 <template>

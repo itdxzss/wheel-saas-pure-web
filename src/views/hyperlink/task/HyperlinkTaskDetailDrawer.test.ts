@@ -60,12 +60,11 @@ describe("hyperlink task H4 detail drawer", () => {
     }
   });
 
-  it("covers four filters, search reset refresh export and server pagination", () => {
+  it("covers the current three filters, search reset refresh export and server pagination", () => {
     for (const label of [
       "收信号码",
       "收信国家",
       "发信国家",
-      "完整失败原因",
       "搜索",
       "重置",
       "导出"

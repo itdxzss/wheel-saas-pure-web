@@ -56,7 +56,7 @@ export const joinTaskColumns: TableColumnList = [
   { label: "任务名称", prop: "name", minWidth: 220 },
   { label: "账号分组", prop: "accountGroupNames", minWidth: 180 },
   { label: "分配方式", prop: "distributionMode", width: 170 },
-  { label: "进群统计", prop: "total", width: 150 },
+  { label: "任务步骤统计", prop: "total", width: 150 },
   { label: "进群间隔", prop: "intervalLabel", width: 120 },
   { label: "重试", prop: "retryEnabled", width: 110 },
   { label: "任务状态", prop: "status", width: 120 },

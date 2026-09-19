@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { computed } from "vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { AccountGroupApiRow } from "@/api/account-group";
@@ -64,7 +65,7 @@ function asMaterialRow(row: unknown): GroupCreationMarketingUploadedMaterial {
 }
 
 function accountGroupLabel(group: AccountGroupApiRow): string {
-  return `${group.name}（正常在线 ${props.accountGroupUsableCounts[group.id] ?? 0}）`;
+  return `${formatAccountGroupLabel(group)}（正常可用 ${props.accountGroupUsableCounts[group.id] ?? 0}）`;
 }
 </script>
 
