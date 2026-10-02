@@ -20,6 +20,13 @@ import {
 } from "@/api/account-group";
 import { listGroupFolders, type GroupFolderRow } from "@/api/group-folder";
 import { apiErrorMessage } from "@/utils/api-error";
+import {
+  captureModeSettings,
+  defaultNewGroupSettings,
+  requireNewGroupProfile,
+  validateStandardProfileAndPullSettings,
+  type StandardPullTaskModeSettings
+} from "../standard-create-policy";
 
 const LINKS_STORAGE_KEY = "pull-task-standard-normal-link-links";
 const PLANNED_LINKS_STORAGE_KEY =
@@ -41,6 +48,7 @@ export interface StandardPullTaskCreateForm {
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
+  pullIntervalMaxSeconds: number;
   pullerCountPerGroup: number;
   stationCountPerCall: number;
   concurrentGroupCount: number;
@@ -119,6 +127,7 @@ function emptyForm(): StandardPullTaskCreateForm {
     pullCountMin: 50,
     pullCountMax: 50,
     pullIntervalSeconds: 15,
+    pullIntervalMaxSeconds: 15,
     pullerCountPerGroup: 2,
     stationCountPerCall: 0,
     concurrentGroupCount: 1,
@@ -225,6 +234,26 @@ export function useStandardPullTaskCreate(
   let plannedPendingNames = new Set<string>();
   let plannedGroupFolderId: number | null = null;
   let plannedCreationMode: PullTaskCreationMode = form.creationMode;
+  const modeSettings = new Map<
+    PullTaskCreationMode,
+    StandardPullTaskModeSettings
+  >();
+
+  watch(
+    () => form.creationMode,
+    (mode, previousMode) => {
+      modeSettings.set(previousMode, captureModeSettings(form));
+      Object.assign(
+        form,
+        modeSettings.get(mode) ??
+          (mode === "NEW_GROUP"
+            ? defaultNewGroupSettings()
+            : captureModeSettings(emptyForm()))
+      );
+      if (mode === "NEW_GROUP") requireNewGroupProfile(form);
+    },
+    { flush: "sync" }
+  );
 
   watch(linksText, value => storeLinks(value));
 
@@ -265,7 +294,7 @@ export function useStandardPullTaskCreate(
           plannedLinksText = "";
         }
         if (restoredMode === "NEW_GROUP") {
-          form.groupSettingEnabled = true;
+          requireNewGroupProfile(form);
         }
       } else {
         ElMessage.error(apiErrorMessage(draftResult.reason, "草稿加载失败"));
@@ -568,12 +597,9 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("请选择站台分组");
       return null;
     }
-    if (form.pullCountMin < 1 || form.pullCountMax < form.pullCountMin) {
-      ElMessage.warning("单次拉人数范围配置不正确");
-      return null;
-    }
-    if (form.earlyPullCount < 1 || form.earlyPullCallCount < 1) {
-      ElMessage.warning("前期拉人人数或执行次数配置不正确");
+    const configurationError = validateStandardProfileAndPullSettings(form);
+    if (configurationError) {
+      ElMessage.warning(configurationError);
       return null;
     }
     return {
@@ -592,6 +618,10 @@ export function useStandardPullTaskCreate(
       pullCountMin: form.pullCountMin,
       pullCountMax: form.pullCountMax,
       pullIntervalSeconds: form.pullIntervalSeconds,
+      pullIntervalMaxSeconds:
+        form.creationMode === "NEW_GROUP"
+          ? form.pullIntervalMaxSeconds
+          : form.pullIntervalSeconds,
       pullerCountPerGroup: form.pullerCountPerGroup,
       stationCountPerCall: form.stationCountPerCall,
       concurrentGroupCount: form.concurrentGroupCount,
@@ -687,6 +717,7 @@ export function useStandardPullTaskCreate(
       uploadedAvatar.value = null;
       storePlannedLinks("");
       Object.assign(form, emptyForm());
+      modeSettings.clear();
       ElMessage.success("拉群任务已创建");
       await options.onCreated();
     } catch (error) {

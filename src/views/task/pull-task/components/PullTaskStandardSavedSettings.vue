@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { onBeforeUnmount, ref, watch } from "vue";
+import { formatPullInterval } from "../standard-create-policy";
 import {
   getPullTaskStandardGroupAvatarContent,
   type PullTaskCreationMode,
@@ -147,18 +148,30 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="拉手踩链接进群">
           {{ yesNo(standardSetting.pullerJoinByLink) }}
         </el-descriptions-item>
-        <el-descriptions-item label="前期单次拉人数">
+        <el-descriptions-item
+          v-if="standardSetting.earlyPullCallCount > 0"
+          label="前期单次拉人数"
+        >
           {{ standardSetting.earlyPullCount }}
         </el-descriptions-item>
         <el-descriptions-item label="前期拉人执行次数">
-          {{ standardSetting.earlyPullCallCount }} 次
+          {{
+            standardSetting.earlyPullCallCount === 0
+              ? "不启用，从首次调用起使用人数范围"
+              : `${standardSetting.earlyPullCallCount} 次`
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="单次拉人数范围">
           {{ standardSetting.pullCountMin }} ~
           {{ standardSetting.pullCountMax }}
         </el-descriptions-item>
         <el-descriptions-item label="拉人间隔">
-          {{ standardSetting.pullIntervalSeconds }} 秒
+          {{
+            formatPullInterval(
+              standardSetting.pullIntervalSeconds,
+              standardSetting.pullIntervalMaxSeconds
+            )
+          }}
         </el-descriptions-item>
         <el-descriptions-item label="拉手数量">
           {{ standardSetting.pullerCountPerGroup }}

@@ -24,6 +24,7 @@ const emit = defineEmits<{
 const form = defineModel<StandardPullTaskCreateForm>("form", {
   required: true
 });
+const isNewGroup = computed(() => form.value.creationMode === "NEW_GROUP");
 
 function nonNegativeCount(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
@@ -209,12 +210,16 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-input-number
                   v-model="form.pullCountMin"
                   :min="1"
+                  :max="isNewGroup ? 3 : undefined"
+                  :precision="0"
                   controls-position="right"
                 />
                 <span>~</span>
                 <el-input-number
                   v-model="form.pullCountMax"
                   :min="form.pullCountMin"
+                  :max="isNewGroup ? 3 : undefined"
+                  :precision="0"
                   controls-position="right"
                 />
               </div>
@@ -228,10 +233,31 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 class="full-width"
               />
             </el-form-item>
-            <el-form-item label="拉人间隔" required>
+            <el-form-item v-if="isNewGroup" label="拉人随机间隔" required>
+              <div class="range-inputs">
+                <el-input-number
+                  v-model="form.pullIntervalSeconds"
+                  :min="10"
+                  :max="15"
+                  :precision="0"
+                  controls-position="right"
+                />
+                <span>~</span>
+                <el-input-number
+                  v-model="form.pullIntervalMaxSeconds"
+                  :min="Math.max(10, form.pullIntervalSeconds)"
+                  :max="15"
+                  :precision="0"
+                  controls-position="right"
+                />
+                <span class="field-unit">秒</span>
+              </div>
+            </el-form-item>
+            <el-form-item v-else label="拉人间隔" required>
               <el-input-number
                 v-model="form.pullIntervalSeconds"
                 :min="0"
+                :precision="0"
                 controls-position="right"
                 class="full-width"
               />
@@ -255,7 +281,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 class="full-width"
               />
             </el-form-item>
-            <el-form-item label="前期单次拉人数" required>
+            <el-form-item v-if="!isNewGroup" label="前期单次拉人数" required>
               <el-input-number
                 v-model="form.earlyPullCount"
                 :min="1"
@@ -263,7 +289,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 class="full-width"
               />
             </el-form-item>
-            <el-form-item label="前期拉人执行次数" required>
+            <el-form-item v-if="!isNewGroup" label="前期拉人执行次数" required>
               <el-input-number
                 v-model="form.earlyPullCallCount"
                 :min="1"
@@ -273,6 +299,13 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
               <span class="field-unit">次</span>
             </el-form-item>
           </div>
+          <el-alert
+            v-if="isNewGroup"
+            title="从第一次调用起按人数范围拉料子；同一个群相邻调用使用设定范围内的随机间隔。"
+            type="info"
+            :closable="false"
+            show-icon
+          />
         </section>
 
         <section class="setting-block account-block">

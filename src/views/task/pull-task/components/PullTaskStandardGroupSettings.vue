@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { UploadFile, UploadInstance } from "element-plus";
 import type { StandardPullTaskCreateForm } from "../composables/useStandardPullTaskCreate";
 
@@ -18,6 +18,7 @@ const emit = defineEmits<{
   (event: "avatar-clear"): void;
 }>();
 const avatarUpload = ref<UploadInstance>();
+const isNewGroup = computed(() => form.value.creationMode === "NEW_GROUP");
 
 function handleAvatarChange(uploadFile: UploadFile): void {
   if (uploadFile.raw) emit("avatar-change", uploadFile.raw);
@@ -34,7 +35,7 @@ function clearAvatar(): void {
     <template #header>
       <div class="group-setting-header">
         <span class="group-setting-title">群信息设置</span>
-        <el-switch v-model="form.groupSettingEnabled" />
+        <el-switch v-model="form.groupSettingEnabled" :disabled="isNewGroup" />
       </div>
     </template>
     <el-form :model="form" label-position="top" class="group-settings-form">
@@ -44,11 +45,21 @@ function clearAvatar(): void {
       >
         <h3>设置顺序</h3>
         <el-form-item label="设置顺序">
-          <el-radio-group v-model="form.groupSettingTiming">
+          <el-radio-group
+            v-model="form.groupSettingTiming"
+            :disabled="isNewGroup"
+          >
             <el-radio-button value="BEFORE_PULL">拉人之前设置</el-radio-button>
             <el-radio-button value="AFTER_PULL">拉完人后设置</el-radio-button>
           </el-radio-group>
         </el-form-item>
+        <el-alert
+          v-if="isNewGroup"
+          title="群名称和群描述设置成功后，才开始拉料子成员。"
+          type="info"
+          :closable="false"
+          show-icon
+        />
       </section>
 
       <section
@@ -57,14 +68,18 @@ function clearAvatar(): void {
       >
         <h3>基础资料</h3>
         <div class="group-setting-grid profile-grid">
-          <el-form-item label="群名称（可选）">
+          <el-form-item
+            :label="isNewGroup ? '群名称' : '群名称（可选）'"
+            :required="isNewGroup"
+          >
             <el-input
               v-model="form.groupName"
-              maxlength="128"
+              :maxlength="isNewGroup ? 100 : 128"
+              show-word-limit
               placeholder="请输入群名称"
             />
           </el-form-item>
-          <el-form-item label="料子文件名为群名">
+          <el-form-item v-if="!isNewGroup" label="料子文件名为群名">
             <el-switch v-model="form.useMaterialFileNameAsGroupName" />
           </el-form-item>
           <el-form-item label="群头像（可选）">
@@ -86,7 +101,11 @@ function clearAvatar(): void {
               </el-button>
             </div>
           </el-form-item>
-          <el-form-item label="群描述（可选）" class="description-field">
+          <el-form-item
+            :label="isNewGroup ? '群描述' : '群描述（可选）'"
+            :required="isNewGroup"
+            class="description-field"
+          >
             <el-input
               v-model="form.groupDescription"
               type="textarea"

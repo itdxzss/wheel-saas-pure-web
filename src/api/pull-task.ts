@@ -487,6 +487,8 @@ export interface PullTaskStandardCreateRequest {
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
+  /** 间隔上限；旧客户端省略时按 pullIntervalSeconds 固定间隔处理。 */
+  pullIntervalMaxSeconds?: number;
   pullerCountPerGroup: number;
   stationCountPerCall: number;
   concurrentGroupCount: number;
@@ -666,6 +668,7 @@ export interface PullTaskStandardSetting {
   pullCountMin: number;
   pullCountMax: number;
   pullIntervalSeconds: number;
+  pullIntervalMaxSeconds?: number | null;
   pullerCountPerGroup: number;
   stationCountPerCall: number;
   concurrentGroupCount: number;

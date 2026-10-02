@@ -51,9 +51,6 @@ function changeCreationMode(mode: string): void {
   if (mode !== "PASTED_LINK" && mode !== "NEW_GROUP") {
     return;
   }
-  if (mode === "NEW_GROUP" && form.value.creationMode !== "NEW_GROUP") {
-    form.value.groupSettingEnabled = true;
-  }
   form.value.creationMode = mode;
 }
 </script>

@@ -117,6 +117,113 @@ describe("standard normal-link pull task create state", () => {
 
     assert.equal(state.form.creationMode, "NEW_GROUP");
     assert.equal(state.form.groupSettingEnabled, true);
+    assert.equal(state.form.groupSettingTiming, "BEFORE_PULL");
+    assert.equal(state.form.useMaterialFileNameAsGroupName, false);
+    assert.equal(state.form.earlyPullCallCount, 0);
+    assert.equal(state.form.pullCountMin, 1);
+    assert.equal(state.form.pullCountMax, 3);
+    assert.equal(state.form.pullIntervalSeconds, 10);
+    assert.equal(state.form.pullIntervalMaxSeconds, 15);
+  });
+
+  it("keeps each mode's pull settings when switching tabs", () => {
+    const state = validState();
+    state.form.pullCountMin = 20;
+    state.form.pullCountMax = 30;
+    state.form.pullIntervalSeconds = 22;
+    state.form.groupSettingTiming = "AFTER_PULL";
+    state.form.useMaterialFileNameAsGroupName = true;
+
+    state.form.creationMode = "NEW_GROUP";
+
+    assert.equal(state.form.groupSettingEnabled, true);
+    assert.equal(state.form.groupSettingTiming, "BEFORE_PULL");
+    assert.equal(state.form.useMaterialFileNameAsGroupName, false);
+    assert.equal(state.form.earlyPullCallCount, 0);
+    assert.equal(state.form.pullCountMin, 1);
+    assert.equal(state.form.pullCountMax, 3);
+    assert.equal(state.form.pullIntervalSeconds, 10);
+    assert.equal(state.form.pullIntervalMaxSeconds, 15);
+    state.form.pullCountMin = 2;
+    state.form.pullIntervalSeconds = 11;
+    state.form.pullIntervalMaxSeconds = 14;
+
+    state.form.creationMode = "PASTED_LINK";
+
+    assert.equal(state.form.groupSettingEnabled, false);
+    assert.equal(state.form.groupSettingTiming, "AFTER_PULL");
+    assert.equal(state.form.useMaterialFileNameAsGroupName, true);
+    assert.equal(state.form.earlyPullCallCount, 2);
+    assert.equal(state.form.pullCountMin, 20);
+    assert.equal(state.form.pullCountMax, 30);
+    assert.equal(state.form.pullIntervalSeconds, 22);
+
+    state.form.creationMode = "NEW_GROUP";
+    assert.equal(state.form.pullCountMin, 2);
+    assert.equal(state.form.pullIntervalSeconds, 11);
+    assert.equal(state.form.pullIntervalMaxSeconds, 14);
+  });
+
+  it("rejects invalid new-group profile, batch and interval settings before submission", async () => {
+    const invalidCases: Array<
+      [Partial<ReturnType<typeof validState>["form"]>, string]
+    > = [
+      [{ groupName: "  " }, "请填写群名称"],
+      [{ groupName: "名".repeat(101) }, "群名称不能超过 100 个字符"],
+      [{ groupDescription: " \n " }, "请填写群描述"],
+      [{ groupDescription: "描".repeat(1025) }, "群描述不能超过 1024 个字符"],
+      [
+        { groupSettingEnabled: false },
+        "新群模式必须在群名称和群描述设置成功后开始拉人"
+      ],
+      [
+        { groupSettingTiming: "AFTER_PULL" },
+        "新群模式必须在群名称和群描述设置成功后开始拉人"
+      ],
+      [
+        { useMaterialFileNameAsGroupName: true },
+        "新群模式请填写群名称，不能使用料子文件名"
+      ],
+      [{ earlyPullCallCount: 2 }, "新群模式从首次调用起使用单次拉人数范围"],
+      [{ pullCountMax: 4 }, "新群模式单次拉人数必须在 1–3 人范围内"],
+      [{ pullCountMin: 2.5 }, "新群模式单次拉人数必须在 1–3 人范围内"],
+      [
+        { pullCountMin: 3, pullCountMax: 2 },
+        "新群模式单次拉人数必须在 1–3 人范围内"
+      ],
+      [{ pullIntervalSeconds: 9 }, "新群模式拉人间隔必须在 10–15 秒范围内"],
+      [{ pullIntervalMaxSeconds: 16 }, "新群模式拉人间隔必须在 10–15 秒范围内"],
+      [
+        { pullIntervalSeconds: 14, pullIntervalMaxSeconds: 13 },
+        "新群模式拉人间隔必须在 10–15 秒范围内"
+      ],
+      [
+        { pullIntervalMaxSeconds: Number.NaN },
+        "新群模式拉人间隔必须在 10–15 秒范围内"
+      ]
+    ];
+    for (const [invalidValues, expectedWarning] of invalidCases) {
+      resetArmadaMockQueue([
+        { list: [] },
+        { list: [] },
+        draft({ creationMode: "NEW_GROUP" })
+      ]);
+      const state = validState();
+      await state.open();
+      Object.assign(state.form, {
+        creatorGroupId: 10,
+        groupName: "测试群",
+        groupDescription: "第一行\n第二行",
+        ...invalidValues
+      });
+      resetArmadaMock({ id: 7 });
+      resetElementPlusMock();
+
+      await state.create();
+
+      assert.equal(armadaCalls().length, 0, expectedWarning);
+      assert.equal(elementPlusCalls().at(-1)?.text, expectedWarning);
+    }
   });
 
   it("keeps successful create data when one initial request fails", async () => {
@@ -332,6 +439,8 @@ describe("standard normal-link pull task create state", () => {
     state.form.initialStationCount = 2;
     state.form.creatorLeaveAfterPull = true;
     state.form.groupSettingEnabled = true;
+    state.form.groupName = "完整填写的群名";
+    state.form.groupDescription = "第一行简介\n第二行简介";
     state.linksText.value = "https://chat.whatsapp.com/hidden-old-link";
     state.addFiles([
       new File(["8613900000000"], "first-group.txt", { type: "text/plain" }),
@@ -361,6 +470,21 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(createPayload.creatorLeaveAfterPull, true);
     assert.equal(createPayload.groupFolderId, null);
     assert.equal(createPayload.groupSetting.enabled, true);
+    assert.equal(createPayload.groupSetting.settingTiming, "BEFORE_PULL");
+    assert.equal(createPayload.groupSetting.groupName, "完整填写的群名");
+    assert.equal(
+      createPayload.groupSetting.groupDescription,
+      "第一行简介\n第二行简介"
+    );
+    assert.equal(
+      createPayload.groupSetting.useMaterialFileNameAsGroupName,
+      false
+    );
+    assert.equal(createPayload.earlyPullCallCount, 0);
+    assert.equal(createPayload.pullCountMin, 1);
+    assert.equal(createPayload.pullCountMax, 3);
+    assert.equal(createPayload.pullIntervalSeconds, 10);
+    assert.equal(createPayload.pullIntervalMaxSeconds, 15);
   });
 
   it("plans with full links and keeps unmatched accepted TXT for retry", async () => {
@@ -521,6 +645,7 @@ describe("standard normal-link pull task create state", () => {
       "materialAdminTiming",
       "pullCountMax",
       "pullCountMin",
+      "pullIntervalMaxSeconds",
       "pullIntervalSeconds",
       "pullerCountPerGroup",
       "pullerFinishGroupId",
@@ -542,6 +667,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal("initialStationCount" in payload, false);
     assert.equal(payload.earlyPullCount, 1);
     assert.equal(payload.earlyPullCallCount, 2);
+    assert.equal(payload.pullIntervalMaxSeconds, payload.pullIntervalSeconds);
     assert.equal(payload.pullerJoinByLink, true);
     assert.deepEqual(payload.groupSetting, {
       enabled: true,
