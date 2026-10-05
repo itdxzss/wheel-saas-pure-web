@@ -492,7 +492,8 @@ export interface PullTaskStandardCreateRequest {
   pullerCountPerGroup: number;
   stationCountPerCall: number;
   concurrentGroupCount: number;
-  managerGroupId: number;
+  /** 新群模式可不选择管理分组。 */
+  managerGroupId: number | null;
   pullerGroupId: number;
   stationGroupId: number | null;
   managerFinishGroupId: number | null;

@@ -311,13 +311,13 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
         <section class="setting-block account-block">
           <h3>账号分组</h3>
           <div class="setting-grid account-grid">
-            <el-form-item label="管理分组" required>
+            <el-form-item label="管理分组" :required="!isNewGroup">
               <el-select
                 v-model="form.managerGroupId"
                 clearable
                 filterable
                 class="full-width"
-                placeholder="每群默认 1 个管理员"
+                :placeholder="isNewGroup ? '可不选择' : '每群默认 1 个管理员'"
               >
                 <el-option
                   v-for="group in accountGroups"

@@ -570,8 +570,12 @@ export function useStandardPullTaskCreate(
       ElMessage.warning("未生成可执行计划，请检查 TXT 料子");
       return null;
     }
-    if (!positiveId(form.managerGroupId) || !positiveId(form.pullerGroupId)) {
+    if (form.creationMode !== "NEW_GROUP" && !positiveId(form.managerGroupId)) {
       ElMessage.warning("请选择管理和拉手分组");
+      return null;
+    }
+    if (!positiveId(form.pullerGroupId)) {
+      ElMessage.warning("请选择拉手分组");
       return null;
     }
     const creatorGroupId = positiveId(form.creatorGroupId)
@@ -625,7 +629,9 @@ export function useStandardPullTaskCreate(
       pullerCountPerGroup: form.pullerCountPerGroup,
       stationCountPerCall: form.stationCountPerCall,
       concurrentGroupCount: form.concurrentGroupCount,
-      managerGroupId: form.managerGroupId,
+      managerGroupId: positiveId(form.managerGroupId)
+        ? form.managerGroupId
+        : null,
       pullerGroupId: form.pullerGroupId,
       stationGroupId: positiveId(form.stationGroupId)
         ? form.stationGroupId

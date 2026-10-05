@@ -487,6 +487,39 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(createPayload.pullIntervalMaxSeconds, 15);
   });
 
+  it("allows an omitted manager group only in new-group mode", async () => {
+    for (const pullerGroupId of [12, ""] as const) {
+      resetArmadaMockQueue([draft({ creationMode: "NEW_GROUP" }), { id: 7 }]);
+      resetElementPlusMock();
+      const state = validState();
+      state.form.creationMode = "NEW_GROUP";
+      state.form.creatorGroupId = 10;
+      state.form.managerGroupId = "";
+      state.form.pullerGroupId = pullerGroupId;
+      state.form.groupName = "客户群";
+      state.form.groupDescription = "群简介";
+      state.addFiles([new File(["8613900000000"], "new-group.txt")]);
+
+      await state.create();
+
+      if (pullerGroupId === "") {
+        assert.equal(armadaCalls().length, 1);
+        assert.equal(elementPlusCalls().at(-1)?.text, "请选择拉手分组");
+      } else {
+        assert.equal(armadaCalls().length, 2);
+        assert.equal(armadaCalls()[1].url, "/api/pull-tasks/standard");
+        const payload = (
+          armadaCalls()[1].opts as {
+            data: PullTaskStandardCreateRequest;
+          }
+        ).data;
+        assert.equal(payload.managerGroupId, null);
+        assert.equal(payload.creatorGroupId, 10);
+        assert.equal(payload.pullerGroupId, 12);
+      }
+    }
+  });
+
   it("plans with full links and keeps unmatched accepted TXT for retry", async () => {
     resetArmadaMock(
       draft({
