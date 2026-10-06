@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { pullTaskCreationModeLabel } from "../creation-mode-display";
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import PullTaskDetailSearch from "./PullTaskDetailSearch.vue";
@@ -169,11 +170,9 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           data-testid="pull-task-detail-creation-mode"
         >
           {{
-            newGroupMode
-              ? "新群模式"
-              : activeTask?.creationMode === "RESOURCE_POOL"
-                ? "资源池模式"
-                : "群链接模式"
+            pullTaskCreationModeLabel(
+              detailTask?.creationMode ?? activeTask?.creationMode
+            )
           }}
         </el-tag>
         <small v-if="!normalLink">{{ selectedGroupTip }}</small>
@@ -277,6 +276,7 @@ function groupNameLabel(row: PullTaskGroupRow): string {
       v-model="searchForm"
       :normal-link="normalLink"
       :new-group-mode="newGroupMode"
+      :creation-mode="detailTask?.creationMode ?? activeTask?.creationMode"
       @refresh-detail-groups="emit('refresh-detail-groups')"
       @reset-detail-search="emit('reset-detail-search')"
       @run-group-operation="operation => emit('run-group-operation', operation)"
@@ -397,7 +397,10 @@ function groupNameLabel(row: PullTaskGroupRow): string {
         min-width="230"
       >
         <template #default="{ row }">
-          <PullTaskStandardExecutionResourceCounts :row="row" />
+          <PullTaskStandardExecutionResourceCounts
+            :row="row"
+            :direct-link="activeTask?.creationMode === 'DIRECT_LINK'"
+          />
         </template>
       </el-table-column>
       <el-table-column

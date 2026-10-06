@@ -20,7 +20,12 @@ import { usePullTaskPage } from "./composables/usePullTaskPage";
 import { usePullTaskExecutionDetail } from "./composables/usePullTaskExecutionDetail";
 import { usePullTaskGlobalSetting } from "./composables/usePullTaskGlobalSetting";
 import { useStandardPullTaskCreate } from "./composables/useStandardPullTaskCreate";
-import type { PullTaskListAction, PullTaskRow } from "@/api/pull-task";
+import { useDirectLinkPullTaskCreate } from "./composables/useDirectLinkPullTaskCreate";
+import type {
+  PullTaskCreationMode,
+  PullTaskListAction,
+  PullTaskRow
+} from "@/api/pull-task";
 import Delete from "~icons/ep/delete";
 import Plus from "~icons/ep/plus";
 import RefreshRight from "~icons/ep/refresh-right";
@@ -132,6 +137,28 @@ const {
   setGroupAvatarFile: setStandardGroupAvatarFile,
   visible: standardCreateVisible
 } = useStandardPullTaskCreate({ onCreated: refreshTasks });
+
+const createMode = ref<PullTaskCreationMode>("PASTED_LINK");
+const directCreate = useDirectLinkPullTaskCreate({
+  onCreated: async () => {
+    standardCreateVisible.value = false;
+    await refreshTasks();
+  }
+});
+
+async function openCreate(): Promise<void> {
+  if (createMode.value === "DIRECT_LINK") {
+    standardCreateVisible.value = true;
+    await directCreate.load();
+    return;
+  }
+  await openStandardCreate();
+  createMode.value = standardCreateForm.creationMode;
+}
+
+function changeCreateMode(mode: PullTaskCreationMode): void {
+  if (mode === "DIRECT_LINK") void directCreate.load();
+}
 
 function updateGlobalSettingForm(value: typeof globalSettingForm): void {
   Object.assign(globalSettingForm, value);
@@ -279,7 +306,7 @@ provideAccountGroupLabels(accountGroups);
           v-auth="'tenant:pull_task:create'"
           type="primary"
           :icon="useRenderIcon(Plus)"
-          @click="openStandardCreate"
+          @click="openCreate"
         >
           新建拉群任务
         </el-button>
@@ -319,6 +346,9 @@ provideAccountGroupLabels(accountGroups);
       v-model="standardCreateVisible"
       v-model:form="standardCreateForm"
       v-model:links-text="standardLinksText"
+      v-model:creation-mode="createMode"
+      v-model:direct-form="directCreate.form"
+      :direct-state="directCreate"
       :account-groups="createAccountGroups"
       :clearing="standardClearing"
       :creating="standardCreating"
@@ -334,6 +364,7 @@ provideAccountGroupLabels(accountGroups);
       @avatar-clear="clearStandardGroupAvatar"
       @clear="clearStandardDraft"
       @create="createStandardTask"
+      @mode-change="changeCreateMode"
       @plan-data-packages="planStandardDataPackages"
       @move-pending-file="moveStandardPendingFile"
       @plan="planStandardDraft"
@@ -393,6 +424,7 @@ provideAccountGroupLabels(accountGroups);
       :detail="executionDetail"
       :loading="executionDetailLoading"
       :members="executionMembers"
+      :direct-link="activeTask?.creationMode === 'DIRECT_LINK'"
       :refresh-error="executionRefreshError"
       :refreshed-at="executionRefreshedAt"
       @refresh="refreshExecutionDetail()"

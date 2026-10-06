@@ -7,7 +7,7 @@ export interface AccountGroupApiRow {
   name: string;
   totalAccounts: number;
   onlineAccounts: number;
-  /** 状态正常、在线且协议身份完整，可直接参与新建普群的账号数。 */
+  /** 在线且协议身份完整的新建普群候选数，不按账号生命周期标签筛选。 */
   executableOnlineAccounts?: number;
   /** 拉群在线候选数量，含在线的被抢登和抢登中账号。 */
   pullTaskOnlineAccounts?: number;

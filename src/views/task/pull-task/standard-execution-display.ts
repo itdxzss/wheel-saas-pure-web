@@ -56,7 +56,8 @@ export const standardStageOptions = [
   { label: "拉人执行", value: 6 },
   { label: "料子提权", value: 7 },
   { label: "执行收口", value: 8 },
-  { label: "创建新群", value: 9 }
+  { label: "创建新群", value: 9 },
+  { label: "拉手进群", value: 10 }
 ];
 
 export const standardCreateStepOptions = [
@@ -127,7 +128,8 @@ export function standardExecutionStatus(
   if (
     execution.executionStatus === 3 &&
     execution.waitResourceType === 4 &&
-    execution.reasonCode === managerJoinPendingApprovalReason
+    (execution.reasonCode === managerJoinPendingApprovalReason ||
+      execution.reasonCode === "PULLER_JOIN_PENDING_APPROVAL")
   ) {
     return "WAITING_APPROVAL";
   }

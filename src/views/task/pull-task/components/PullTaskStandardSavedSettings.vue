@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
-import { onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { formatPullInterval } from "../standard-create-policy";
+import { pullTaskCreationModeLabel } from "../creation-mode-display";
 import {
   getPullTaskStandardGroupAvatarContent,
   type PullTaskCreationMode,
@@ -19,8 +20,10 @@ const props = defineProps<{
   visible: boolean;
   creationMode: PullTaskCreationMode;
   standardSetting: PullTaskStandardSetting;
-  groupSetting: PullTaskStandardGroupSetting;
+  groupSetting?: PullTaskStandardGroupSetting | null;
 }>();
+
+const directLink = computed(() => props.creationMode === "DIRECT_LINK");
 
 const avatarObjectUrl = ref<string | null>(null);
 const avatarLoading = ref(false);
@@ -81,7 +84,10 @@ async function loadAvatar(open: boolean, previewUrl?: string | null) {
 }
 
 watch(
-  [() => props.visible, () => props.groupSetting.avatarPreviewUrl],
+  [
+    () => props.visible,
+    () => (directLink.value ? null : props.groupSetting?.avatarPreviewUrl)
+  ],
   ([open, previewUrl]) => void loadAvatar(open, previewUrl),
   { immediate: true }
 );
@@ -98,18 +104,12 @@ onBeforeUnmount(() => {
       <el-divider content-position="left">执行设置</el-divider>
       <el-descriptions :column="3" border size="small">
         <el-descriptions-item label="创建模式">
-          {{
-            creationMode === "NEW_GROUP"
-              ? "新群模式"
-              : creationMode === "RESOURCE_POOL"
-                ? "资源池模式"
-                : "群链接模式"
-          }}
+          {{ pullTaskCreationModeLabel(creationMode) }}
         </el-descriptions-item>
         <el-descriptions-item label="自动启动">
           {{ standardSetting.autoStart === 1 ? "是" : "否" }}
         </el-descriptions-item>
-        <el-descriptions-item label="拉人完成后群主退群">
+        <el-descriptions-item v-if="!directLink" label="拉人完成后群主退群">
           {{ yesNo(standardSetting.creatorLeaveAfterPull) }}
         </el-descriptions-item>
         <el-descriptions-item label="群组分组">
@@ -132,17 +132,17 @@ onBeforeUnmount(() => {
         >
           {{ standardSetting.initialStationCount }}
         </el-descriptions-item>
-        <el-descriptions-item label="拉手同步料子方式">
+        <el-descriptions-item v-if="!directLink" label="拉手同步料子方式">
           {{ settingLabel(standardSetting.pullerSyncMode) }}
         </el-descriptions-item>
-        <el-descriptions-item label="设置料子内容管理">
+        <el-descriptions-item v-if="!directLink" label="设置料子内容管理">
           {{
             standardSetting.materialAdminTiming === 1
               ? "任务开始后设置"
               : "任务完成后设置"
           }}
         </el-descriptions-item>
-        <el-descriptions-item label="清空群原成员">
+        <el-descriptions-item v-if="!directLink" label="清空群原成员">
           {{ yesNo(standardSetting.clearExistingMembers) }}
         </el-descriptions-item>
         <el-descriptions-item label="拉手踩链接进群">
@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="同时启动任务数">
           {{ standardSetting.concurrentGroupCount }}
         </el-descriptions-item>
-        <el-descriptions-item label="管理分组">
+        <el-descriptions-item v-if="!directLink" label="管理分组">
           {{
             accountGroupLabel(
               standardSetting.managerGroupId,
@@ -206,7 +206,7 @@ onBeforeUnmount(() => {
             )
           }}
         </el-descriptions-item>
-        <el-descriptions-item label="管理完成归档分组">
+        <el-descriptions-item v-if="!directLink" label="管理完成归档分组">
           {{
             accountGroupLabel(
               standardSetting.managerFinishGroupId,
@@ -224,60 +224,62 @@ onBeforeUnmount(() => {
         </el-descriptions-item>
       </el-descriptions>
 
-      <el-divider content-position="left">群信息设置</el-divider>
-      <div class="saved-group-profile">
-        <el-image
-          v-if="avatarObjectUrl"
-          :src="avatarObjectUrl"
-          fit="cover"
-          class="saved-avatar"
-        />
-        <span v-else-if="avatarLoading" class="avatar-placeholder">
-          头像加载中...
-        </span>
-        <span v-else-if="avatarLoadFailed" class="avatar-placeholder">
-          头像加载失败
-        </span>
-        <el-descriptions :column="3" border size="small">
-          <el-descriptions-item label="总开关">
-            {{ groupSetting.enabled ? "开启" : "关闭" }}
-          </el-descriptions-item>
-          <el-descriptions-item label="设置顺序">
-            {{ settingLabel(groupSetting.settingTiming) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="群名来源">
-            {{
-              groupSetting.useMaterialFileNameAsGroupName
-                ? "料子文件名"
-                : "手动设置"
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item label="群名称">
-            {{ groupSetting.groupName || "未设置" }}
-          </el-descriptions-item>
-          <el-descriptions-item label="群描述" :span="3">
-            {{ groupSetting.groupDescription || "未设置" }}
-          </el-descriptions-item>
-          <el-descriptions-item label="任务后自动关闭禁言">
-            {{ yesNo(groupSetting.autoCloseMuteAfterTask) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="任务后自动关闭拉人权限">
-            {{ yesNo(groupSetting.autoCloseInviteAfterTask) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="编辑群设置">
-            {{ settingLabel(groupSetting.editPermission) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="群禁言">
-            {{ settingLabel(groupSetting.muteMode) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="获取群链接权限">
-            {{ settingLabel(groupSetting.linkPermission) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="限时消息">
-            {{ settingLabel(groupSetting.disappearingMessage) }}
-          </el-descriptions-item>
-        </el-descriptions>
-      </div>
+      <template v-if="!directLink && groupSetting">
+        <el-divider content-position="left">群信息设置</el-divider>
+        <div class="saved-group-profile">
+          <el-image
+            v-if="avatarObjectUrl"
+            :src="avatarObjectUrl"
+            fit="cover"
+            class="saved-avatar"
+          />
+          <span v-else-if="avatarLoading" class="avatar-placeholder">
+            头像加载中...
+          </span>
+          <span v-else-if="avatarLoadFailed" class="avatar-placeholder">
+            头像加载失败
+          </span>
+          <el-descriptions :column="3" border size="small">
+            <el-descriptions-item label="总开关">
+              {{ groupSetting.enabled ? "开启" : "关闭" }}
+            </el-descriptions-item>
+            <el-descriptions-item label="设置顺序">
+              {{ settingLabel(groupSetting.settingTiming) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="群名来源">
+              {{
+                groupSetting.useMaterialFileNameAsGroupName
+                  ? "料子文件名"
+                  : "手动设置"
+              }}
+            </el-descriptions-item>
+            <el-descriptions-item label="群名称">
+              {{ groupSetting.groupName || "未设置" }}
+            </el-descriptions-item>
+            <el-descriptions-item label="群描述" :span="3">
+              {{ groupSetting.groupDescription || "未设置" }}
+            </el-descriptions-item>
+            <el-descriptions-item label="任务后自动关闭禁言">
+              {{ yesNo(groupSetting.autoCloseMuteAfterTask) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="任务后自动关闭拉人权限">
+              {{ yesNo(groupSetting.autoCloseInviteAfterTask) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="编辑群设置">
+              {{ settingLabel(groupSetting.editPermission) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="群禁言">
+              {{ settingLabel(groupSetting.muteMode) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="获取群链接权限">
+              {{ settingLabel(groupSetting.linkPermission) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="限时消息">
+              {{ settingLabel(groupSetting.disappearingMessage) }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </template>
     </el-collapse-item>
   </el-collapse>
 </template>

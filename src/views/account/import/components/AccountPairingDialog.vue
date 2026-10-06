@@ -7,6 +7,7 @@ import type { AccountGroupApiRow } from "@/api/account-group";
 import {
   createControlPairingSession,
   getControlPairingSession,
+  recoverControlPairingSession,
   type ControlPairingStatus
 } from "@/api/account-pairing";
 import { apiErrorMessage } from "@/utils/api-error";
@@ -29,7 +30,7 @@ const form = reactive({
   accountGroupId: undefined as number | undefined,
   remark: ""
 });
-const status = ref<ControlPairingStatus | "IDLE">("IDLE");
+const status = ref<ControlPairingStatus | "IDLE" | "UNKNOWN">("IDLE");
 const pairingCode = ref("");
 const expiresAt = ref<number>();
 const accountId = ref<number>();
@@ -42,9 +43,6 @@ let consecutivePollErrors = 0;
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ERRORS = 3;
-const active = computed(() =>
-  ["REQUESTING", "WAITING_CONFIRMATION", "FINALIZING"].includes(status.value)
-);
 const formattedPairingCode = computed(() => {
   const code = pairingCode.value.replace(/\s/g, "");
   return code.length === 8 ? `${code.slice(0, 4)} ${code.slice(4)}` : code;
@@ -103,14 +101,22 @@ async function poll(version: number): Promise<void> {
       schedulePoll(version);
       return;
     }
-    status.value = "FAILED";
-    errorMessage.value = apiErrorMessage(error, "配对状态查询失败，请重试");
+    status.value = "UNKNOWN";
+    errorMessage.value =
+      "暂时无法查询配对状态，原请求可能仍在进行，请继续查询。";
   }
 }
 
 async function submit(): Promise<void> {
+  const validationVersion = pollVersion;
   if (!(await formRef.value?.validate().catch(() => false))) return;
-  if (!form.accountGroupId || submitting.value) return;
+  if (
+    validationVersion !== pollVersion ||
+    !visible.value ||
+    !form.accountGroupId ||
+    submitting.value
+  )
+    return;
   stopPolling();
   const version = ++pollVersion;
   submitting.value = true;
@@ -131,10 +137,49 @@ async function submit(): Promise<void> {
     if (visible.value) await poll(version);
   } catch (error) {
     if (version !== pollVersion) return;
-    status.value = "FAILED";
-    errorMessage.value = apiErrorMessage(error, "认证码登录请求失败，请重试");
+    if (isUncertainRequest(error)) {
+      status.value = "UNKNOWN";
+      errorMessage.value = "连接中断，正在确认原配对请求的状态。";
+      await recoverRequest(version);
+    } else {
+      status.value = "FAILED";
+      errorMessage.value = apiErrorMessage(error, "认证码登录请求失败，请重试");
+    }
   } finally {
-    submitting.value = false;
+    if (version === pollVersion) submitting.value = false;
+  }
+}
+
+function isUncertainRequest(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const failure = error as { code?: string; response?: { status?: number } };
+  return (
+    ["ECONNABORTED", "ETIMEDOUT", "ERR_NETWORK"].includes(failure.code ?? "") ||
+    (failure.response?.status ?? 0) >= 500
+  );
+}
+
+async function recoverRequest(version = pollVersion): Promise<void> {
+  submitting.value = true;
+  try {
+    if (!sessionId) {
+      const [existing] = await recoverControlPairingSession(form.phone.trim());
+      if (version !== pollVersion) return;
+      if (!existing) {
+        status.value = "UNKNOWN";
+        errorMessage.value = "暂未查询到配对会话，请稍后继续查询。";
+        return;
+      }
+      sessionId = existing.sessionId;
+    }
+    consecutivePollErrors = 0;
+    await poll(version);
+  } catch {
+    if (version !== pollVersion) return;
+    status.value = "UNKNOWN";
+    errorMessage.value = "暂时无法确认请求状态，请检查网络后继续查询。";
+  } finally {
+    if (version === pollVersion) submitting.value = false;
   }
 }
 
@@ -146,6 +191,16 @@ function retry(): void {
   pairingCode.value = "";
   errorMessage.value = "";
   accountId.value = undefined;
+  expiresAt.value = undefined;
+  submitting.value = false;
+  consecutivePollErrors = 0;
+  formRef.value?.clearValidate();
+}
+
+function switchAccount(): void {
+  retry();
+  form.phone = "";
+  form.remark = "";
 }
 
 async function copyCode(): Promise<void> {
@@ -158,18 +213,15 @@ async function copyCode(): Promise<void> {
   }
 }
 
-watch(visible, opened => {
-  if (!opened) {
-    stopPolling();
-    return;
-  }
-  if (sessionId && active.value) {
-    const version = ++pollVersion;
-    void poll(version);
-  }
-});
+watch(
+  visible,
+  opened => {
+    if (!opened) switchAccount();
+  },
+  { flush: "sync" }
+);
 
-onBeforeUnmount(stopPolling);
+onBeforeUnmount(retry);
 </script>
 
 <template>
@@ -229,17 +281,34 @@ onBeforeUnmount(stopPolling);
     </el-form>
 
     <div v-else class="pairing-state">
+      <p>当前手机号：{{ form.phone }}</p>
       <template v-if="status === 'REQUESTING'">
         <el-icon class="is-loading pairing-spinner" :size="38">
           <Loading />
         </el-icon>
         <h3>正在向 WhatsApp 申请认证码</h3>
-        <p>通常几秒内完成，请保持弹窗打开。</p>
+        <p>正在连接并生成认证码，可能需要数十秒，请保持弹窗打开。</p>
+      </template>
+
+      <el-result
+        v-else-if="status === 'UNKNOWN'"
+        icon="warning"
+        title="配对状态待确认"
+        :sub-title="errorMessage"
+      />
+
+      <template v-else-if="status === 'WAITING_CONFIRMATION' && !pairingCode">
+        <el-icon class="is-loading pairing-spinner" :size="38">
+          <Loading />
+        </el-icon>
+        <h3>正在等待后台返回关联结果</h3>
+        <p>认证码有效期已结束，正在确认本次结果，请勿重复发起。</p>
       </template>
 
       <template v-else-if="status === 'WAITING_CONFIRMATION'">
         <el-tag type="success" effect="plain">等待主设备确认</el-tag>
         <p class="pairing-hint">本功能固定认证码为 8888 8888</p>
+        <p>正在自动查询关联结果，请在手机上完成确认。</p>
         <button class="pairing-code" type="button" @click="copyCode">
           {{ formattedPairingCode }}
         </button>
@@ -285,14 +354,28 @@ onBeforeUnmount(stopPolling);
         <el-button @click="visible = false">关闭</el-button>
         <el-button type="primary" @click="retry">重新发起</el-button>
       </template>
-      <el-button
-        v-else-if="status === 'SUCCEEDED'"
-        type="primary"
-        @click="visible = false"
-      >
-        完成
-      </el-button>
-      <el-button v-else @click="visible = false">暂时关闭</el-button>
+      <template v-else-if="status === 'UNKNOWN'">
+        <el-button @click="visible = false">关闭</el-button>
+        <el-button
+          :loading="submitting"
+          type="primary"
+          @click="recoverRequest()"
+        >
+          继续查询
+        </el-button>
+      </template>
+      <template v-else>
+        <el-button @click="visible = false">
+          {{ status === "SUCCEEDED" ? "完成" : "关闭" }}
+        </el-button>
+        <el-button
+          v-if="status !== 'FINALIZING'"
+          type="primary"
+          @click="switchAccount"
+        >
+          切换账号
+        </el-button>
+      </template>
     </template>
   </el-dialog>
 </template>

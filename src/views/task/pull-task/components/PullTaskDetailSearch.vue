@@ -1,12 +1,36 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import type { PullTaskCreationMode } from "@/api/pull-task";
+import { stagesForCreationMode } from "../creation-mode-display";
 import {
   groupRowStatusOptions,
-  standardStageOptions,
   standardWaitResourceOptions
 } from "../constants";
 import type { PullTaskDetailSearchForm } from "../composables/usePullTaskPage";
 
-defineProps<{ normalLink: boolean; newGroupMode: boolean }>();
+const props = defineProps<{
+  normalLink: boolean;
+  newGroupMode: boolean;
+  creationMode?: PullTaskCreationMode;
+}>();
+const stages = computed(() => stagesForCreationMode(props.creationMode));
+const statuses = computed(() =>
+  props.creationMode === "DIRECT_LINK"
+    ? groupRowStatusOptions.filter(
+        item =>
+          ![
+            "MANAGER_SHORTAGE",
+            "ADMIN_SETUP_FAILED",
+            "GROUP_CREATE_FAILED"
+          ].includes(item.value)
+      )
+    : groupRowStatusOptions
+);
+const resources = computed(() =>
+  props.creationMode === "DIRECT_LINK"
+    ? standardWaitResourceOptions.filter(item => item.value !== 1)
+    : standardWaitResourceOptions
+);
 const searchForm = defineModel<PullTaskDetailSearchForm>({ required: true });
 const emit = defineEmits<{
   (event: "refresh-detail-groups"): void;
@@ -21,7 +45,7 @@ const emit = defineEmits<{
     <el-form-item label="任务情况">
       <el-select v-model="searchForm.status" clearable class="search-select">
         <el-option
-          v-for="item in groupRowStatusOptions"
+          v-for="item in statuses"
           :key="item.value"
           :label="item.label"
           :value="item.value"
@@ -40,7 +64,7 @@ const emit = defineEmits<{
     <el-form-item v-if="normalLink" label="当前阶段">
       <el-select v-model="searchForm.stage" clearable class="search-select">
         <el-option
-          v-for="item in standardStageOptions"
+          v-for="item in stages"
           :key="item.value"
           :label="item.label"
           :value="item.value"
@@ -54,7 +78,7 @@ const emit = defineEmits<{
         class="search-select"
       >
         <el-option
-          v-for="item in standardWaitResourceOptions"
+          v-for="item in resources"
           :key="item.value"
           :label="item.label"
           :value="item.value"

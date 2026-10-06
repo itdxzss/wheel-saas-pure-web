@@ -1,7 +1,16 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { AccountGroupApiRow } from "@/api/account-group";
 import type { GroupFolderRow } from "@/api/group-folder";
-import type { PullTaskStandardDraft } from "@/api/pull-task";
+import type {
+  PullTaskStandardDraft,
+  PullTaskCreationMode
+} from "@/api/pull-task";
+import type {
+  DirectLinkPullTaskCreateState,
+  DirectLinkPullTaskForm
+} from "../composables/useDirectLinkPullTaskCreate";
+import PullTaskDirectLinkCreateContent from "./PullTaskDirectLinkCreateContent.vue";
 import type { StandardPullTaskCreateForm } from "../composables/useStandardPullTaskCreate";
 import PullTaskStandardSettings from "./PullTaskStandardSettings.vue";
 import PullTaskStandardResources from "./PullTaskStandardResources.vue";
@@ -11,7 +20,7 @@ defineOptions({
   name: "PullTaskCreateDrawer"
 });
 
-defineProps<{
+const props = defineProps<{
   accountGroups: AccountGroupApiRow[];
   clearing: boolean;
   creating: boolean;
@@ -22,6 +31,7 @@ defineProps<{
   pendingFiles: File[];
   planning: boolean;
   resourceError: string;
+  directState: DirectLinkPullTaskCreateState;
 }>();
 
 const emit = defineEmits<{
@@ -35,6 +45,7 @@ const emit = defineEmits<{
   (event: "plan-data-packages", ids: number[]): void;
   (event: "remove-pending-file", fileName: string): void;
   (event: "remove-row", rowId: number): void;
+  (event: "mode-change", mode: PullTaskCreationMode): void;
 }>();
 
 const visible = defineModel<boolean>({ required: true });
@@ -42,15 +53,42 @@ const form = defineModel<StandardPullTaskCreateForm>("form", {
   required: true
 });
 const linksText = defineModel<string>("linksText", { required: true });
+const creationMode = defineModel<PullTaskCreationMode>("creationMode", {
+  required: true
+});
+const directForm = defineModel<DirectLinkPullTaskForm>("directForm", {
+  required: true
+});
+const directMode = computed(() => creationMode.value === "DIRECT_LINK");
+const busy = computed(() => props.creating || props.directState.creating);
+const currentLoading = computed(() =>
+  directMode.value ? props.directState.loading : props.loading
+);
+
+function submit(): void {
+  if (directMode.value) void props.directState.create();
+  else emit("create");
+}
+
+function beforeClose(done: () => void): void {
+  if (!busy.value) done();
+}
 
 function forwardPendingFileMove(fileName: string, offset: -1 | 1): void {
   emit("move-pending-file", fileName, offset);
 }
 
 function changeCreationMode(mode: string): void {
-  if (mode !== "PASTED_LINK" && mode !== "NEW_GROUP") {
+  if (
+    busy.value ||
+    props.planning ||
+    (mode !== "PASTED_LINK" && mode !== "NEW_GROUP" && mode !== "DIRECT_LINK")
+  ) {
     return;
   }
+  creationMode.value = mode;
+  emit("mode-change", mode);
+  if (mode === "DIRECT_LINK") return;
   form.value.creationMode = mode;
 }
 </script>
@@ -62,84 +100,116 @@ function changeCreationMode(mode: string): void {
     destroy-on-close
     :with-header="false"
     class="pull-task-create-drawer"
+    :before-close="beforeClose"
   >
     <div class="create-surface">
       <header class="create-header">
         <div class="create-title">
-          <el-button text class="close-button" @click="visible = false">
+          <el-button
+            text
+            class="close-button"
+            :disabled="busy"
+            @click="visible = false"
+          >
             ×
           </el-button>
           <strong>新建拉群任务</strong>
         </div>
         <el-button
+          v-if="!directMode"
           type="primary"
-          :loading="creating"
-          :disabled="loading || planning"
-          @click="emit('create')"
+          :loading="busy"
+          :disabled="currentLoading || planning"
+          @click="submit"
         >
           创建任务
         </el-button>
       </header>
 
       <el-tabs
-        :model-value="form.creationMode"
+        :model-value="creationMode"
         class="create-mode-tabs"
         @update:model-value="changeCreationMode"
       >
         <el-tab-pane
           name="NEW_GROUP"
           label="新群模式"
+          :disabled="busy || planning"
           data-testid="pull-task-new-group-mode-tab"
         />
-        <el-tab-pane name="PASTED_LINK" label="群链接模式" />
+        <el-tab-pane
+          name="PASTED_LINK"
+          label="群链接模式"
+          :disabled="busy || planning"
+        />
+        <el-tab-pane
+          name="DIRECT_LINK"
+          label="群链接模式（新）"
+          :disabled="busy || planning"
+        />
         <el-tab-pane name="fast" label="速拉模式（后期）" disabled />
       </el-tabs>
 
-      <main v-loading="loading" class="create-scroll">
-        <PullTaskStandardSettings
-          v-model:form="form"
-          :account-groups="accountGroups"
-          :group-avatar-file="groupAvatarFile"
-          :group-folders="groupFolders"
-          @avatar-change="emit('avatar-change', $event)"
-          @avatar-clear="emit('avatar-clear')"
+      <main
+        v-loading="currentLoading"
+        class="create-scroll"
+        :class="{ 'direct-scroll': directMode }"
+      >
+        <PullTaskDirectLinkCreateContent
+          v-if="directMode"
+          v-model:form="directForm"
+          :state="directState"
         />
+        <template v-else>
+          <PullTaskStandardSettings
+            v-model:form="form"
+            :account-groups="accountGroups"
+            :group-avatar-file="groupAvatarFile"
+            :group-folders="groupFolders"
+            @avatar-change="emit('avatar-change', $event)"
+            @avatar-clear="emit('avatar-clear')"
+          />
 
-        <div class="resource-layout">
-          <PullTaskStandardResources
-            v-model:links-text="linksText"
-            :clearing="clearing"
-            :creation-mode="form.creationMode"
-            :draft="draft"
-            :pending-files="pendingFiles"
-            :planning="planning"
-            :resource-error="resourceError"
-            @add-files="emit('add-files', $event)"
-            @clear="emit('clear')"
-            @move-pending-file="forwardPendingFileMove"
-            @plan="emit('plan')"
-            @plan-data-packages="emit('plan-data-packages', $event)"
-            @remove-pending-file="emit('remove-pending-file', $event)"
-          />
-          <PullTaskStandardPlanTable
-            :creation-mode="form.creationMode"
-            :draft="draft"
-            @remove-row="emit('remove-row', $event)"
-          />
-        </div>
+          <div class="resource-layout">
+            <PullTaskStandardResources
+              v-model:links-text="linksText"
+              :clearing="clearing"
+              :creation-mode="form.creationMode"
+              :draft="draft"
+              :pending-files="pendingFiles"
+              :planning="planning"
+              :resource-error="resourceError"
+              @add-files="emit('add-files', $event)"
+              @clear="emit('clear')"
+              @move-pending-file="forwardPendingFileMove"
+              @plan="emit('plan')"
+              @plan-data-packages="emit('plan-data-packages', $event)"
+              @remove-pending-file="emit('remove-pending-file', $event)"
+            />
+            <PullTaskStandardPlanTable
+              :creation-mode="form.creationMode"
+              :draft="draft"
+              @remove-row="emit('remove-row', $event)"
+            />
+          </div>
+        </template>
       </main>
 
       <footer class="create-footer">
-        <el-button :disabled="creating" @click="visible = false">
-          取消
-        </el-button>
+        <span v-if="directMode" class="direct-footer-hint">
+          已选择 {{ directState.files.length }} 份 TXT、{{
+            directState.packageIds.length
+          }}
+          个数据包
+        </span>
+        <el-button :disabled="busy" @click="visible = false"> 取消 </el-button>
         <el-button
           type="primary"
-          :loading="creating"
-          :disabled="loading || planning"
-          @click="emit('create')"
+          :loading="busy"
+          :disabled="currentLoading || planning"
+          @click="submit"
         >
-          创建任务
+          {{ directMode && directForm.autoStart ? "创建并启动" : "创建任务" }}
         </el-button>
       </footer>
     </div>
@@ -205,6 +275,17 @@ function changeCreationMode(mode: string): void {
   grid-template-columns: minmax(520px, 0.95fr) minmax(620px, 1.05fr);
   gap: 16px;
   align-items: start;
+}
+
+.direct-scroll {
+  display: block;
+  background: var(--el-fill-color-light);
+}
+
+.direct-footer-hint {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .create-footer {

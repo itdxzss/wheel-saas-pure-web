@@ -37,7 +37,10 @@ describe("normal-link create prototype layout", () => {
     assert.doesNotMatch(drawerSource, /资源池模式/);
     assert.match(drawerSource, /速拉模式/);
     assert.match(drawerSource, /name="NEW_GROUP"/);
-    assert.doesNotMatch(drawerSource, /name="NEW_GROUP"[^>]*disabled/);
+    assert.doesNotMatch(
+      drawerSource,
+      /name="NEW_GROUP"[^>]*\sdisabled(?:\s|\/?>)/
+    );
     assert.ok(
       drawerSource.indexOf("PullTaskStandardSettings") <
         drawerSource.indexOf("PullTaskStandardResources")
@@ -45,7 +48,7 @@ describe("normal-link create prototype layout", () => {
   });
 
   it("keeps group-folder fallback inside the pasted-link flow", () => {
-    assert.match(drawerSource, /name="PASTED_LINK" label="群链接模式"/);
+    assert.match(drawerSource, /name="PASTED_LINK"\s+label="群链接模式"/);
     assert.doesNotMatch(drawerSource, /name="RESOURCE_POOL"/);
     assert.match(resourcesSource, /自定义粘贴链接/);
     assert.match(settingsSource, /群组分组/);

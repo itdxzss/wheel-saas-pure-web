@@ -2,7 +2,7 @@
 import type { PullTaskGroupRow } from "@/api/pull-task";
 
 defineOptions({ name: "PullTaskStandardExecutionResourceCounts" });
-defineProps<{ row: PullTaskGroupRow }>();
+defineProps<{ row: PullTaskGroupRow; directLink?: boolean }>();
 
 function countLabel(
   current?: number | null,
@@ -16,13 +16,15 @@ function countLabel(
 </script>
 
 <template>
-  管理员：{{
-    countLabel(
-      row.managers?.currentCount,
-      row.managers?.plannedCount,
-      row.managers?.missingCount
-    )
-  }}<br />
+  <template v-if="!directLink"
+    >管理员：{{
+      countLabel(
+        row.managers?.currentCount,
+        row.managers?.plannedCount,
+        row.managers?.missingCount
+      )
+    }}<br
+  /></template>
   拉手：{{
     countLabel(
       row.pullers?.currentCount,

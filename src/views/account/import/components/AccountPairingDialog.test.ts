@@ -15,7 +15,7 @@ describe("account pairing dialog", () => {
   });
 
   it("cleans polling when the dialog closes or unmounts", () => {
-    assert.match(source, /watch\(visible/);
-    assert.match(source, /onBeforeUnmount\(stopPolling\)/);
+    assert.match(source, /watch\(\s*visible/);
+    assert.match(source, /onBeforeUnmount\(retry\)/);
   });
 });

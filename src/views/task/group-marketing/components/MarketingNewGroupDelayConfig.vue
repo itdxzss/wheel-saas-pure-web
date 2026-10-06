@@ -15,10 +15,10 @@ const unitText = computed(() =>
 <template>
   <div class="new-group-delay-card">
     <div class="new-group-delay-header">
-      <span>群组检测后延迟发送</span>
+      <span>首次发送延迟</span>
       <el-switch
         v-model="form.newGroupDelayEnabled"
-        aria-label="群组检测后延迟发送开关"
+        aria-label="首次发送延迟开关"
         active-text="开启"
       />
     </div>
@@ -31,12 +31,12 @@ const unitText = computed(() =>
           :min="1"
           :step="1"
           :precision="0"
-          aria-label="群组检测后延迟时长"
+          aria-label="首次发送延迟时长"
           controls-position="right"
         />
         <el-select
           v-model="form.newGroupDelayUnit"
-          aria-label="群组检测后延迟时间单位"
+          aria-label="首次发送延迟时间单位"
           class="new-group-delay-unit"
         >
           <el-option label="分钟" value="MINUTE" />
@@ -44,10 +44,10 @@ const unitText = computed(() =>
         </el-select>
       </div>
       <p class="new-group-delay-summary">
-        检测到群组后延迟 {{ form.newGroupDelayValue }} {{ unitText }}发送
+        每个群组首次发送前等待 {{ form.newGroupDelayValue }} {{ unitText }}
       </p>
       <p class="new-group-delay-note">
-        延迟时间从系统检测到每个群组的时间开始计算，不以任务启动时间计算。
+        已有群组从任务启动时开始计时，启动后新检测到的群组从检测时开始计时；首次发送后，后续发送跟随任务轮次。
       </p>
     </template>
   </div>

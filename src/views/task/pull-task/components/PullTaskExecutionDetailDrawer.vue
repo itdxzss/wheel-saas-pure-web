@@ -24,6 +24,7 @@ defineProps<{
   members: PullTaskStandardMember[];
   refreshError: string;
   refreshedAt: number | null;
+  directLink?: boolean;
 }>();
 
 const emit = defineEmits<{ refresh: []; "auto-refresh": [] }>();
@@ -216,7 +217,7 @@ function accountLabel(
                 membershipLabel(row.membershipStatus)
               }}</template>
             </el-table-column>
-            <el-table-column label="管理员权限" width="120">
+            <el-table-column v-if="!directLink" label="管理员权限" width="120">
               <template #default="{ row }">{{
                 adminStatusLabel(row.adminStatus)
               }}</template>
@@ -351,17 +352,18 @@ function accountLabel(
               label="入群原因"
               min-width="180"
             />
-            <el-table-column label="需管理员" width="100">
+            <el-table-column v-if="!directLink" label="需管理员" width="100">
               <template #default="{ row }">{{
                 row.adminRequired ? "是" : "否"
               }}</template>
             </el-table-column>
-            <el-table-column label="提权结果" width="110">
+            <el-table-column v-if="!directLink" label="提权结果" width="110">
               <template #default="{ row }">{{
                 adminStatusLabel(row.adminStatus)
               }}</template>
             </el-table-column>
             <el-table-column
+              v-if="!directLink"
               prop="adminReasonCode"
               label="提权原因"
               min-width="160"

@@ -39,6 +39,7 @@ const resumeVisible = computed(
 );
 const managerVisible = computed(
   () =>
+    props.activeTask?.creationMode !== "DIRECT_LINK" &&
     normalLinkWait.value &&
     props.row.waitResourceType === 1 &&
     props.row.stage !== 3

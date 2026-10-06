@@ -7,6 +7,7 @@ import {
 } from "../admin-stage";
 import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import type { JoinResultRow, JoinTaskDetail } from "@/api/join-task";
+import { adminReasonLabel } from "../admin-reason";
 import {
   failurePolicyLabel,
   formatEpoch,
@@ -148,16 +149,24 @@ const visible = defineModel<boolean>({ required: true });
           </template>
         </el-table-column>
         <el-table-column
-          prop="adminActorAccountId"
-          label="操作管理员ID"
-          width="140"
-        />
+          prop="adminActorPhone"
+          label="操作管理员手机号"
+          min-width="180"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            {{ row.adminActorPhone || "—" }}
+          </template>
+        </el-table-column>
         <el-table-column
           prop="adminReason"
-          label="管理员设置原因"
-          min-width="200"
-          show-overflow-tooltip
-        />
+          label="管理员设置说明"
+          min-width="300"
+        >
+          <template #default="{ row }">
+            <div class="admin-reason">{{ adminReasonLabel(row) }}</div>
+          </template>
+        </el-table-column>
         <el-table-column
           v-if="detail.clearAdminsAndLeaveEnabled"
           label="清理 / 退群"
@@ -215,6 +224,12 @@ const visible = defineModel<boolean>({ required: true });
 
 .detail-table {
   width: 100%;
+}
+
+.admin-reason {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .account-cell span,

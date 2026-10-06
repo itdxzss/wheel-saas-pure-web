@@ -13,6 +13,7 @@ const props = defineProps<{
   existingIds: number[];
   planning: boolean;
   resourceError: string;
+  direct?: boolean;
 }>();
 const emit = defineEmits<{ (event: "plan", ids: number[]): void }>();
 const visible = ref(false);
@@ -129,7 +130,11 @@ watch(
     destroy-on-close
   >
     <el-alert
-      title="每个包对应一份料子执行单元，按勾选顺序加入计划。加入计划后可预览号码数量，创建任务时才会领取号码；如果号码已被其他任务取用，需要重新选择。"
+      :title="
+        direct
+          ? '每个包对应一份料子，按勾选顺序添加。点击创建任务时校验并领取可用号码。'
+          : '每个包对应一份料子执行单元，按勾选顺序加入计划。加入计划后可预览号码数量，创建任务时才会领取号码；如果号码已被其他任务取用，需要重新选择。'
+      "
       type="info"
       :closable="false"
       show-icon
@@ -186,7 +191,11 @@ watch(
       <el-table-column prop="remark" label="备注" show-overflow-tooltip />
       <el-table-column label="状态" width="95"
         ><template #default="{ row }">{{
-          existingIds.includes(row.id) ? "已在计划中" : "可选择"
+          existingIds.includes(row.id)
+            ? direct
+              ? "已选择"
+              : "已在计划中"
+            : "可选择"
         }}</template></el-table-column
       >
       <template #empty
@@ -217,7 +226,7 @@ watch(
         :loading="planning"
         :disabled="!selected.length || selected.length > 50 || loading"
         @click="submit"
-        >加入执行计划</el-button
+        >{{ direct ? "添加所选数据包" : "加入执行计划" }}</el-button
       ></template
     >
   </el-dialog>

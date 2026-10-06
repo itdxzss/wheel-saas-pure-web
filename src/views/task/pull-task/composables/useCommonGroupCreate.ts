@@ -35,123 +35,10 @@ import { buildCommonGroupTaskLogs } from "../common-group-task-logs";
 const POLL_INTERVAL_MS = 2500;
 const MAX_UNCHANGED_POLL_ATTEMPTS = 120;
 const MAX_CONSECUTIVE_POLL_ERRORS = 3;
-const ACTIVE_TASK_STORAGE_KEY = "armada:normal-group-creation:active-task-id";
-const PENDING_SUBMISSION_STORAGE_KEY =
-  "armada:normal-group-creation:pending-submission";
-const PENDING_SUBMISSION_STORAGE_VERSION = 2;
-const PENDING_SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
-const PENDING_SUBMISSION_CLOCK_SKEW_MS = 60 * 1000;
-
 interface PendingSubmission {
   fingerprint: string;
   idempotencyKey: string;
   payload: CommonGroupTaskCreateRequest;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hasExactKeys(
-  value: Record<string, unknown>,
-  expectedKeys: readonly string[]
-): boolean {
-  const actualKeys = Object.keys(value).sort();
-  const sortedExpectedKeys = [...expectedKeys].sort();
-  return (
-    actualKeys.length === sortedExpectedKeys.length &&
-    actualKeys.every((key, index) => key === sortedExpectedKeys[index])
-  );
-}
-
-function isPositiveSafeInteger(value: unknown, max?: number): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isSafeInteger(value) &&
-    value > 0 &&
-    (max === undefined || value <= max)
-  );
-}
-
-function isNullablePositiveSafeInteger(value: unknown): value is number | null {
-  return value === null || isPositiveSafeInteger(value);
-}
-
-function isNonNegativeSafeInteger(value: unknown, max?: number): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isSafeInteger(value) &&
-    value >= 0 &&
-    (max === undefined || value <= max)
-  );
-}
-
-function isCommonGroupTaskCreateRequest(
-  value: unknown
-): value is CommonGroupTaskCreateRequest {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, [
-      "adminAccountGroupId",
-      "secondaryAdminAccountGroupId",
-      "secondaryAdminCount",
-      "creatorLeavePolicy",
-      "memberSource",
-      "memberAccountGroupId",
-      "memberCount",
-      "folderId",
-      "groupNameTemplate",
-      "groupCount",
-      "startNo",
-      "speed",
-      "successMigrationGroupId",
-      "failedMigrationGroupId",
-      "settings"
-    ]) ||
-    !isPositiveSafeInteger(value.adminAccountGroupId) ||
-    !isNullablePositiveSafeInteger(value.secondaryAdminAccountGroupId) ||
-    !isNonNegativeSafeInteger(value.secondaryAdminCount, 1024) ||
-    (value.secondaryAdminAccountGroupId === null
-      ? value.secondaryAdminCount !== 0
-      : value.secondaryAdminCount === 0) ||
-    (value.creatorLeavePolicy !== "KEEP" &&
-      value.creatorLeavePolicy !== "LEAVE") ||
-    (value.memberSource !== "CONTROLLED_GROUP" &&
-      value.memberSource !== "EMPTY_GROUP") ||
-    !isPositiveSafeInteger(value.memberAccountGroupId) ||
-    !isPositiveSafeInteger(value.memberCount, 1024) ||
-    (value.memberSource === "EMPTY_GROUP" && value.memberCount !== 1) ||
-    !isNullablePositiveSafeInteger(value.folderId) ||
-    typeof value.groupNameTemplate !== "string" ||
-    value.groupNameTemplate.length > 128 ||
-    !isPositiveSafeInteger(value.groupCount, 1000) ||
-    !isPositiveSafeInteger(value.startNo) ||
-    value.speed !== "NORMAL" ||
-    !isNullablePositiveSafeInteger(value.successMigrationGroupId) ||
-    !isNullablePositiveSafeInteger(value.failedMigrationGroupId) ||
-    value.groupCount * (value.memberCount + value.secondaryAdminCount) >
-      10000 ||
-    !isRecord(value.settings) ||
-    !hasExactKeys(value.settings, [
-      "sendMessagesAllowed",
-      "editGroupSettingsAllowed",
-      "addMembersAllowed",
-      "joinApprovalEnabled",
-      "ephemeralDurationSeconds"
-    ])
-  ) {
-    return false;
-  }
-  return (
-    typeof value.settings.sendMessagesAllowed === "boolean" &&
-    typeof value.settings.editGroupSettingsAllowed === "boolean" &&
-    typeof value.settings.addMembersAllowed === "boolean" &&
-    typeof value.settings.joinApprovalEnabled === "boolean" &&
-    typeof value.settings.ephemeralDurationSeconds === "number" &&
-    [0, 86400, 604800, 7776000].includes(
-      value.settings.ephemeralDurationSeconds
-    )
-  );
 }
 
 function createIdempotencyKey(): string {
@@ -234,6 +121,7 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   let taskGeneration = 0;
   let taskRequestSequence = 0;
   let disposed = false;
+  let formGeneration = 0;
   let pendingSubmission: PendingSubmission | null = null;
 
   const taskProgress = computed(() => {
@@ -251,107 +139,13 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   }
 
   function reset(): void {
+    formGeneration += 1;
+    creating.value = false;
+    confirmVisible.value = false;
     Object.assign(form, createCommonGroupForm());
     clearErrors();
     cleanSnapshot = JSON.stringify(form);
     pendingSubmission = null;
-  }
-
-  function storedTaskId(): number | null {
-    try {
-      const value = window.sessionStorage.getItem(ACTIVE_TASK_STORAGE_KEY);
-      const taskId = Number(value);
-      return Number.isSafeInteger(taskId) && taskId > 0 ? taskId : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function storeTaskId(taskId: number): void {
-    try {
-      window.sessionStorage.setItem(ACTIVE_TASK_STORAGE_KEY, String(taskId));
-    } catch {
-      // 浏览器禁用 sessionStorage 时仍可在当前页面跟踪任务。
-    }
-  }
-
-  function clearStoredTaskId(): void {
-    try {
-      window.sessionStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
-    } catch {
-      // 无持久化能力不影响任务本身执行。
-    }
-  }
-
-  function storedSubmissionIdentity(): PendingSubmission | null {
-    try {
-      const value = window.sessionStorage.getItem(
-        PENDING_SUBMISSION_STORAGE_KEY
-      );
-      if (!value) return null;
-      const parsed = JSON.parse(value) as {
-        createdAt?: unknown;
-        fingerprint?: unknown;
-        idempotencyKey?: unknown;
-        payload?: unknown;
-        version?: unknown;
-      };
-      const now = Date.now();
-      if (
-        parsed.version !== PENDING_SUBMISSION_STORAGE_VERSION ||
-        typeof parsed.createdAt !== "number" ||
-        !Number.isSafeInteger(parsed.createdAt) ||
-        parsed.createdAt <= 0 ||
-        parsed.createdAt > now + PENDING_SUBMISSION_CLOCK_SKEW_MS ||
-        now - parsed.createdAt > PENDING_SUBMISSION_TTL_MS ||
-        typeof parsed.fingerprint !== "string" ||
-        parsed.fingerprint.length === 0 ||
-        parsed.fingerprint.length > 8192 ||
-        typeof parsed.idempotencyKey !== "string" ||
-        !/^[A-Za-z0-9-]{8,128}$/.test(parsed.idempotencyKey) ||
-        !isCommonGroupTaskCreateRequest(parsed.payload) ||
-        JSON.stringify(parsed.payload) !== parsed.fingerprint
-      ) {
-        window.sessionStorage.removeItem(PENDING_SUBMISSION_STORAGE_KEY);
-        return null;
-      }
-      return {
-        fingerprint: parsed.fingerprint,
-        idempotencyKey: parsed.idempotencyKey,
-        payload: parsed.payload
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  function storeSubmissionIdentity(
-    fingerprint: string,
-    idempotencyKey: string,
-    payload: CommonGroupTaskCreateRequest
-  ): void {
-    try {
-      window.sessionStorage.setItem(
-        PENDING_SUBMISSION_STORAGE_KEY,
-        JSON.stringify({
-          version: PENDING_SUBMISSION_STORAGE_VERSION,
-          fingerprint,
-          idempotencyKey,
-          payload,
-          createdAt: Date.now()
-        })
-      );
-    } catch {
-      // 浏览器禁用 sessionStorage 时退回当前页面内的幂等保护。
-    }
-  }
-
-  function clearStoredSubmissionIdentity(): void {
-    try {
-      window.sessionStorage.removeItem(PENDING_SUBMISSION_STORAGE_KEY);
-    } catch {
-      // 无持久化能力不影响任务本身执行。
-    }
   }
 
   function submissionFor(payload: CommonGroupTaskCreateRequest): {
@@ -360,20 +154,11 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   } {
     const fingerprint = JSON.stringify(payload);
     if (!pendingSubmission || pendingSubmission.fingerprint !== fingerprint) {
-      const storedIdentity = storedSubmissionIdentity();
       pendingSubmission = {
         fingerprint,
-        idempotencyKey:
-          storedIdentity?.fingerprint === fingerprint
-            ? storedIdentity.idempotencyKey
-            : createIdempotencyKey(),
+        idempotencyKey: createIdempotencyKey(),
         payload
       };
-      storeSubmissionIdentity(
-        fingerprint,
-        pendingSubmission.idempotencyKey,
-        payload
-      );
     }
     return pendingSubmission;
   }
@@ -407,24 +192,14 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   }
 
   async function open(): Promise<void> {
-    const activeTaskId = task.value?.taskId ?? storedTaskId();
-    if (activeTaskId) {
-      const generation = activateTask(activeTaskId);
-      visible.value = false;
-      resultVisible.value = true;
-      try {
-        await refreshTask(activeTaskId, generation);
-        schedulePolling(activeTaskId, generation);
-      } catch (error) {
-        ElMessage.error(apiErrorMessage(error, "任务进度读取失败，请稍后刷新"));
-      }
-      return;
-    }
-    const storedSubmission = storedSubmissionIdentity();
-    if (storedSubmission) {
-      await recoverStoredSubmission(storedSubmission);
-      return;
-    }
+    stopPolling();
+    activeTaskId = null;
+    taskGeneration += 1;
+    taskRequestSequence += 1;
+    resetPollingState();
+    resultVisible.value = false;
+    task.value = null;
+    retryingItemBaselines.clear();
     reset();
     visible.value = true;
     await loadOptions();
@@ -688,36 +463,11 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     }, POLL_INTERVAL_MS);
   }
 
-  async function recoverStoredSubmission(
-    submission: PendingSubmission
-  ): Promise<void> {
-    loading.value = true;
-    try {
-      const summary = await createCommonGroupTask(
-        submission.payload,
-        submission.idempotencyKey
-      );
-      await enterTaskResult(summary, "已恢复上次提交的普群任务");
-    } catch (error) {
-      if (disposed) return;
-      ElMessage.warning(
-        apiErrorMessage(
-          error,
-          "上次普群提交状态暂时无法恢复，请稍后再次点击新建普群"
-        )
-      );
-    } finally {
-      if (!disposed) loading.value = false;
-    }
-  }
-
   async function enterTaskResult(
     summary: CommonGroupTaskSummary,
     successMessage: string
   ): Promise<void> {
-    storeTaskId(summary.id);
     pendingSubmission = null;
-    clearStoredSubmissionIdentity();
     if (disposed) return;
     const generation = activateTask(summary.id);
     applyTaskSummary(summary);
@@ -727,17 +477,19 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
     try {
       await refreshTask(summary.id, generation);
     } catch (error) {
-      if (disposed) return;
+      if (disposed || generation !== taskGeneration) return;
       ElMessage.warning(
         apiErrorMessage(error, "任务已创建，首次进度读取失败，将继续自动刷新")
       );
     }
-    if (disposed) return;
+    if (disposed || generation !== taskGeneration) return;
     schedulePolling(summary.id, generation);
     ElMessage.success(successMessage);
   }
 
   async function confirmCreate(): Promise<void> {
+    if (creating.value) return;
+    const generation = formGeneration;
     creating.value = true;
     try {
       const submission = submissionFor(toCommonGroupCreateRequest(form));
@@ -745,17 +497,18 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
         submission.payload,
         submission.idempotencyKey
       );
+      if (disposed || generation !== formGeneration) return;
       await enterTaskResult(summary, "普群任务创建成功");
     } catch (error) {
-      if (disposed) return;
+      if (disposed || generation !== formGeneration) return;
       ElMessage.error(apiErrorMessage(error, "普群任务创建失败"));
     } finally {
-      if (!disposed) creating.value = false;
+      if (!disposed && generation === formGeneration) creating.value = false;
     }
   }
 
   async function refreshCurrentTask(): Promise<void> {
-    const taskId = activeTaskId ?? task.value?.taskId ?? storedTaskId();
+    const taskId = activeTaskId ?? task.value?.taskId;
     if (!taskId) {
       ElMessage.warning("暂无可刷新的普群任务");
       return;
@@ -805,14 +558,6 @@ export function useCommonGroupCreate(): CommonGroupCreateState {
   }
 
   async function returnToForm(): Promise<void> {
-    stopPolling();
-    activeTaskId = null;
-    taskGeneration += 1;
-    taskRequestSequence += 1;
-    resultVisible.value = false;
-    task.value = null;
-    retryingItemBaselines.clear();
-    clearStoredTaskId();
     await open();
   }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { pullTaskCreationModeLabel } from "../creation-mode-display";
 import PullTaskTableActions from "./PullTaskTableActions.vue";
 import {
   formatEpoch,
@@ -38,8 +39,7 @@ function timestampLabel(value?: number | null): string {
 
 function creationModeLabel(row: PullTaskRow): string | null {
   if (row.taskType !== "STANDARD" || row.mode !== "NORMAL_LINK") return null;
-  if (row.creationMode === "NEW_GROUP") return "新群模式";
-  return row.creationMode === "RESOURCE_POOL" ? "资源池模式" : "群链接模式";
+  return pullTaskCreationModeLabel(row.creationMode);
 }
 </script>
 
@@ -291,10 +291,12 @@ function creationModeLabel(row: PullTaskRow): string | null {
           <span>
             异常群组{{
               displayMetric(row.exceptionStats.abnormalGroupCount)
-            }}（缺管理员{{
-              displayMetric(row.exceptionStats.managerShortageGroupCount)
-            }}
-            / 缺拉手{{
+            }}（<template v-if="row.creationMode !== 'DIRECT_LINK'"
+              >缺管理员{{
+                displayMetric(row.exceptionStats.managerShortageGroupCount)
+              }}
+              / </template
+            >缺拉手{{
               displayMetric(row.exceptionStats.pullerShortageGroupCount)
             }}
             / 缺站台{{

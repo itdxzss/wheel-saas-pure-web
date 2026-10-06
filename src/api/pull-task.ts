@@ -30,7 +30,8 @@ export type PullTaskMode = "OLD_LINK" | "CREATE_NEW" | "NORMAL_LINK" | string;
 export type PullTaskCreationMode =
   | "PASTED_LINK"
   | "RESOURCE_POOL"
-  | "NEW_GROUP";
+  | "NEW_GROUP"
+  | "DIRECT_LINK";
 
 export type PullTaskType = "STANDARD" | "GROUP_MARKETING";
 
@@ -510,6 +511,50 @@ export interface PullTaskStandardGroupAvatarUpload {
   previewUrl: string;
 }
 
+/** 群链接模式（新）：直接创建，不携带旧模式草稿或管理员配置。 */
+export interface PullTaskDirectLinkCreateRequest {
+  requestId: string;
+  taskName: string;
+  remark: string | null;
+  autoStart: 0 | 1;
+  groupFolderId: number | null;
+  linksText: string;
+  packageIds: number[];
+  earlyPullCount: number;
+  earlyPullCallCount: number;
+  pullCountMin: number;
+  pullCountMax: number;
+  pullIntervalSeconds: number;
+  pullerCountPerGroup: number;
+  stationCountPerCall: number;
+  concurrentGroupCount: number;
+  pullerGroupId: number;
+  stationGroupId: number | null;
+  pullerFinishGroupId: number | null;
+}
+
+export function createPullTaskDirectLink(
+  request: PullTaskDirectLinkCreateRequest,
+  files: File[]
+): Promise<PullTaskStandardCreated> {
+  const data = new FormData();
+  data.append(
+    "request",
+    new Blob([JSON.stringify(request)], { type: "application/json" })
+  );
+  files.forEach(file => data.append("files", file));
+  return armadaRequest<PullTaskStandardCreated>(
+    "post",
+    "/api/pull-tasks/standard/direct-link",
+    { data, timeout: 60_000 },
+    {
+      beforeRequestCallback: config => {
+        delete config.headers["Content-Type"];
+      }
+    }
+  );
+}
+
 export interface PullTaskStandardCreated {
   id: number;
   taskName: string;
@@ -676,8 +721,8 @@ export interface PullTaskStandardSetting {
   initialStationCount: number;
   creatorGroupId: number | null;
   creatorGroupName: string | null;
-  managerGroupId: number;
-  managerGroupName: string;
+  managerGroupId: number | null;
+  managerGroupName: string | null;
   pullerGroupId: number;
   pullerGroupName: string;
   stationGroupId: number | null;

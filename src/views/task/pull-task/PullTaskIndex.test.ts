@@ -37,7 +37,7 @@ describe("pull task list prototype", () => {
 
   it("opens the normal-link create surface directly from the new-task entry", () => {
     assert.match(indexSource, /PullTaskCreateDrawer/);
-    assert.match(indexSource, /@click="openStandardCreate"/);
+    assert.match(indexSource, /@click="openCreate"/);
     assert.doesNotMatch(indexSource, /PullTaskTypeDialog/);
     assert.doesNotMatch(indexSource, /openTaskTypeDialog/);
     assert.doesNotMatch(indexSource, /handleTaskTypeSelect/);
@@ -77,7 +77,7 @@ describe("pull task list prototype", () => {
       "utf8"
     );
     assert.match(detailDrawerSource, /PullTaskDetailSearch/);
-    assert.match(detailSearchSource, /standardStageOptions/);
+    assert.match(detailSearchSource, /stagesForCreationMode/);
     assert.match(detailSearchSource, /standardWaitResourceOptions/);
     assert.match(detailDrawerSource, /row\.stage/);
     assert.match(detailDrawerSource, /row\.materialSummary/);

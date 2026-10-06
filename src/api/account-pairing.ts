@@ -48,3 +48,14 @@ export function getControlPairingSession(
     `/api/account-pairing-sessions/${sessionId}`
   );
 }
+
+/** 创建响应丢失时，仅查询当前用户最近的会话，不重新发起配对。 */
+export function recoverControlPairingSession(
+  phone: string
+): Promise<ControlPairingCreated[]> {
+  return armadaRequest<ControlPairingCreated[]>(
+    "get",
+    "/api/account-pairing-sessions",
+    { params: { phone } }
+  );
+}

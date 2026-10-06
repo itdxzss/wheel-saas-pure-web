@@ -75,6 +75,7 @@ export interface JoinResultRow {
   adminStatus?: string;
   adminReason?: string;
   adminActorAccountId?: number | null;
+  adminActorPhone?: string | null;
   stepStatus?: JoinResultStatus;
   joinedAt?: number | null;
   promotedAt?: number | null;

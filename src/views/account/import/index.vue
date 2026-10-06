@@ -231,6 +231,7 @@ async function handleSubmitImport(
       v-model="showPairingDialog"
       :groups="accountGroups"
       :group-loading="groupLoading"
+      @success="refreshAccountImportList"
     />
 
     <AccountImportDetailDrawer

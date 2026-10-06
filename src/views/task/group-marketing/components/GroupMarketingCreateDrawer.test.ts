@@ -105,13 +105,15 @@ describe("group marketing create drawer", () => {
     assert.match(pageSource, /taskEndAt: endOfDayTimestamp\(\)/);
   });
 
-  it("adds only the new-group delay configuration without displaying stored timestamps", () => {
+  it("explains first-send delay for existing and newly detected groups", () => {
     assert.match(source, /<MarketingNewGroupDelayConfig v-model="form"/);
-    assert.match(delayConfigSource, /群组检测后延迟发送/);
+    assert.match(delayConfigSource, /首次发送延迟/);
     assert.match(delayConfigSource, /v-model="form\.newGroupDelayEnabled"/);
     assert.match(delayConfigSource, /v-model="form\.newGroupDelayValue"/);
     assert.match(delayConfigSource, /v-model="form\.newGroupDelayUnit"/);
-    assert.match(delayConfigSource, /不以任务启动时间计算/);
+    assert.match(delayConfigSource, /已有群组从任务启动时开始计时/);
+    assert.match(delayConfigSource, /新检测到的群组从检测时开始计时/);
+    assert.match(delayConfigSource, /首次发送后，后续发送跟随任务轮次/);
     assert.doesNotMatch(
       source + delayConfigSource,
       /detectedAt|scheduledSendAt/

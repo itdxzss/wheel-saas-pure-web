@@ -39,7 +39,7 @@ const accountGroupApiSource = source("../../../api/account-group.ts");
 
 describe("common group creation flow", () => {
   it("keeps common-group creation out of the pull-task page", () => {
-    assert.match(indexSource, /@click="openStandardCreate"/);
+    assert.match(indexSource, /@click="openCreate"/);
     assert.doesNotMatch(indexSource, /CommonGroupCreateFlow/);
     assert.doesNotMatch(indexSource, /commonGroupCreateFlow/);
     assert.doesNotMatch(indexSource, /新建普群/);
@@ -161,7 +161,6 @@ describe("common group creation flow", () => {
       /executableOnlineAccounts = row\.executableOnlineCount \?\? 0/
     );
     assert.match(flowSource, /次管理员配置/);
-    assert.match(composableSource, /PENDING_SUBMISSION_STORAGE_VERSION = 2/);
   });
 
   it("loads current account groups and protects dirty-form closing", () => {
@@ -177,31 +176,6 @@ describe("common group creation flow", () => {
     assert.match(apiSource, /\/api\/normal-group-creation-tasks/);
     assert.match(apiSource, /"Idempotency-Key"/);
     assert.match(composableSource, /pendingSubmission/);
-    assert.match(composableSource, /ACTIVE_TASK_STORAGE_KEY/);
-    assert.match(composableSource, /PENDING_SUBMISSION_STORAGE_KEY/);
-    assert.match(composableSource, /PENDING_SUBMISSION_STORAGE_VERSION/);
-    assert.match(composableSource, /storedSubmissionIdentity/);
-    assert.match(composableSource, /storeSubmissionIdentity/);
-    assert.match(composableSource, /isCommonGroupTaskCreateRequest/);
-    assert.match(composableSource, /hasExactKeys/);
-    assert.match(
-      composableSource,
-      /removeItem\(PENDING_SUBMISSION_STORAGE_KEY\)/
-    );
-    assert.match(composableSource, /payload: parsed\.payload/);
-    assert.match(
-      composableSource,
-      /storedSubmissionIdentity\(\)[\s\S]*recoverStoredSubmission/
-    );
-    assert.match(
-      composableSource,
-      /recoverStoredSubmission[\s\S]*createCommonGroupTask\([\s\S]*submission\.payload,[\s\S]*submission\.idempotencyKey/
-    );
-    assert.match(
-      composableSource,
-      /enterTaskResult[\s\S]*storeTaskId\(summary\.id\);[\s\S]*if \(disposed\) return;/
-    );
-    assert.match(composableSource, /sessionStorage/);
     assert.match(composableSource, /taskGeneration/);
     assert.match(composableSource, /taskRequestSequence/);
     assert.match(composableSource, /requestSequence !== taskRequestSequence/);
