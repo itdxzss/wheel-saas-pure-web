@@ -174,6 +174,9 @@ export interface PullTaskGroupRow {
   updatedAt?: number | null;
   executionStatus?: number | null;
   stage?: number | null;
+  creatorDeletionStatus?: string | null;
+  creatorDeletionReason?: string | null;
+  creatorDeletionOperationId?: string | null;
   createStep?: number | null;
   groupSubject?: string | null;
   manualPaused?: boolean | null;
@@ -198,6 +201,7 @@ export interface PullTaskSummary {
 }
 
 export interface PullTaskDetail extends PullTaskRow {
+  startedAt?: number | null;
   summary?: PullTaskSummary | null;
   config?: Record<string, unknown> | null;
   standardSetting?: PullTaskStandardSetting | null;
@@ -441,6 +445,7 @@ export interface PullTaskStandardFileResult {
 }
 
 export interface PullTaskStandardDraft {
+  creatorDeleteAfterTakeover?: boolean;
   draftTaskId: number | null;
   creationMode: PullTaskCreationMode;
   rows: PullTaskStandardExecutionRow[];
@@ -478,6 +483,8 @@ export interface PullTaskStandardCreateRequest {
   remark: string | null;
   autoStart: 0 | 1;
   creatorLeaveAfterPull: boolean;
+  /** 仅 NEW_GROUP；旧响应缺失时默认关闭。 */
+  creatorDeleteAfterTakeover?: boolean;
   groupFolderId: number | null;
   pullerSyncMode: "SINGLE" | "BATCH";
   materialAdminTiming: 1 | 2;
@@ -574,6 +581,9 @@ export interface PullTaskStandardExecutionSummary {
   sourceFileName: string | null;
   executionStatus: number;
   stage: number;
+  creatorDeletionStatus?: string | null;
+  creatorDeletionReason?: string | null;
+  creatorDeletionOperationId?: string | null;
   createStep: number | null;
   groupSubject: string | null;
   manualPaused: boolean;
@@ -703,6 +713,8 @@ export interface PullTaskStandardTaskSummary {
 export interface PullTaskStandardSetting {
   autoStart: 0 | 1;
   creatorLeaveAfterPull: boolean;
+  /** 仅 NEW_GROUP；旧响应缺失时默认关闭。 */
+  creatorDeleteAfterTakeover?: boolean;
   groupFolderId: number | null;
   groupFolderName: string | null;
   pullerSyncMode: "SINGLE" | "BATCH";
@@ -983,6 +995,18 @@ export function getPullTaskStandardDraft(): Promise<PullTaskStandardDraft> {
   return armadaRequest<PullTaskStandardDraft>(
     "get",
     "/api/pull-tasks/standard/draft"
+  );
+}
+
+/** 草稿与未启动任务可修改；服务端同时校验租户、任务归属和启动冻结。 */
+export function updatePullTaskCreatorDeletion(
+  taskId: number,
+  creatorDeleteAfterTakeover: boolean
+): Promise<void> {
+  return armadaRequest<void>(
+    "put",
+    `/api/pull-tasks/standard/${taskId}/creator-deletion`,
+    { data: { creatorDeleteAfterTakeover } }
   );
 }
 

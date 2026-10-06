@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   armadaCalls,
   resetArmadaMock,
+  resetArmadaMockFailure,
   resetArmadaMockQueue
 } from "@/api/__tests__/armada-test-double";
 import {
@@ -70,6 +71,7 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(state.form.pullerSyncMode, "SINGLE");
     assert.equal(state.form.creationMode, "PASTED_LINK");
     assert.equal(state.form.creatorLeaveAfterPull, false);
+    assert.equal(state.form.creatorDeleteAfterTakeover, false);
     assert.equal(state.form.groupSettingEnabled, false);
     assert.equal(state.form.groupSettingTiming, "AFTER_PULL");
     assert.equal(state.form.linkPermission, "ADMIN_ONLY");
@@ -667,6 +669,7 @@ describe("standard normal-link pull task create state", () => {
       "clearExistingMembers",
       "concurrentGroupCount",
       "creationMode",
+      "creatorDeleteAfterTakeover",
       "creatorLeaveAfterPull",
       "draftTaskId",
       "earlyPullCallCount",
@@ -1048,5 +1051,105 @@ describe("standard normal-link pull task create state", () => {
       elementPlusCalls().some(call => call.type === "error"),
       false
     );
+  });
+});
+
+describe("new-group creator deletion configuration", () => {
+  async function newGroupDraft(enabled = false) {
+    resetArmadaMockQueue([
+      { list: [] },
+      { list: [] },
+      draft({ creationMode: "NEW_GROUP", creatorDeleteAfterTakeover: enabled })
+    ]);
+    const state = validState();
+    await state.open();
+    Object.assign(state.form, {
+      creatorGroupId: 14,
+      groupName: "测试群",
+      groupDescription: "测试描述"
+    });
+    return state;
+  }
+
+  it("restores the server draft without rewriting it and saves edits separately from leave-group", async () => {
+    const state = await newGroupDraft(true);
+    assert.equal(state.form.creatorDeleteAfterTakeover, true);
+    assert.equal(state.form.creatorLeaveAfterPull, false);
+    assert.equal(armadaCalls().length, 3);
+    resetArmadaMock(undefined);
+    state.form.creatorDeleteAfterTakeover = false;
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(armadaCalls(), [
+      {
+        method: "put",
+        url: "/api/pull-tasks/standard/7/creator-deletion",
+        opts: { data: { creatorDeleteAfterTakeover: false } }
+      }
+    ]);
+  });
+
+  it("serializes rapid changes so the last draft choice wins", async () => {
+    const state = await newGroupDraft();
+    resetArmadaMock(undefined);
+    state.form.creatorDeleteAfterTakeover = true;
+    state.form.creatorDeleteAfterTakeover = false;
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(
+      armadaCalls().map(call => call.opts),
+      [
+        { data: { creatorDeleteAfterTakeover: true } },
+        { data: { creatorDeleteAfterTakeover: false } }
+      ]
+    );
+    assert.equal(state.draft.value.creatorDeleteAfterTakeover, false);
+  });
+
+  it("stops task creation when draft configuration was not saved", async () => {
+    const state = await newGroupDraft();
+    resetArmadaMockFailure(new Error("save unavailable"));
+    state.form.creatorDeleteAfterTakeover = true;
+    await new Promise(resolve => setImmediate(resolve));
+    await state.create();
+    assert.equal(
+      armadaCalls().every(call => call.method === "put"),
+      true
+    );
+    assert.equal(state.visible.value, true);
+  });
+
+  it("requires a takeover manager only when deletion is enabled", async () => {
+    const state = await newGroupDraft(true);
+    state.form.managerGroupId = "";
+    resetArmadaMock(undefined);
+    resetElementPlusMock();
+    await state.create();
+    assert.equal(armadaCalls().length, 0);
+    assert.equal(
+      elementPlusCalls().at(-1)?.text,
+      "开启注销建群账号时，请选择接管管理分组"
+    );
+  });
+
+  it("submits the enabled setting independently and keeps the old leave flag", async () => {
+    const state = await newGroupDraft(true);
+    state.form.creatorLeaveAfterPull = true;
+    resetArmadaMock({ id: 7 });
+    await state.create();
+    const payload = (
+      armadaCalls().at(-1)?.opts as { data: PullTaskStandardCreateRequest }
+    ).data;
+    assert.equal(payload.creatorDeleteAfterTakeover, true);
+    assert.equal(payload.creatorLeaveAfterPull, true);
+  });
+
+  it("does not carry the destructive opt-in into another creation mode", () => {
+    const state = validState();
+    state.form.creationMode = "NEW_GROUP";
+    state.draft.value = { ...draft(), draftTaskId: null };
+    state.form.creatorDeleteAfterTakeover = true;
+    state.form.creationMode = "PASTED_LINK";
+    assert.equal(state.form.creatorDeleteAfterTakeover, false);
+    state.form.creationMode = "NEW_GROUP";
+    assert.equal(state.form.creatorDeleteAfterTakeover, true);
   });
 });

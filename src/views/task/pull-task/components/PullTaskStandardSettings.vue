@@ -123,23 +123,38 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
         >
           <h3>建群配置</h3>
           <div class="setting-grid new-group-grid">
-            <el-form-item label="建群人分组" required>
-              <el-select
-                v-model="form.creatorGroupId"
-                clearable
-                filterable
-                class="full-width"
-                placeholder="请选择建群人分组"
-                data-testid="pull-task-creator-group"
-              >
-                <el-option
-                  v-for="group in accountGroups"
-                  :key="group.id"
-                  :label="accountGroupOptionLabel(group)"
-                  :value="group.id"
+            <div>
+              <el-form-item label="建群人分组" required>
+                <el-select
+                  v-model="form.creatorGroupId"
+                  clearable
+                  filterable
+                  class="full-width"
+                  placeholder="请选择建群人分组"
+                  data-testid="pull-task-creator-group"
+                >
+                  <el-option
+                    v-for="group in accountGroups"
+                    :key="group.id"
+                    :label="accountGroupOptionLabel(group)"
+                    :value="group.id"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="管理员接管后注销建群账号">
+                <el-switch
+                  v-model="form.creatorDeleteAfterTakeover"
+                  data-testid="pull-task-creator-delete-after-takeover"
                 />
-              </el-select>
-            </el-form-item>
+                <p class="field-help">
+                  开启后，群设置完成且管理号已确认成为管理员，再永久注销建群账号；确认创建者信息清理完成后继续拉人。注销不可撤销。
+                </p>
+                <p class="field-help">
+                  仅支持 Android
+                  主设备建群账号，需配置接管管理分组；任务启动后不可修改。
+                </p>
+              </el-form-item>
+            </div>
             <el-form-item label="建群时初始站台数">
               <el-input-number
                 v-model="form.initialStationCount"
@@ -311,13 +326,20 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
         <section class="setting-block account-block">
           <h3>账号分组</h3>
           <div class="setting-grid account-grid">
-            <el-form-item label="管理分组" :required="!isNewGroup">
+            <el-form-item
+              label="管理分组"
+              :required="!isNewGroup || form.creatorDeleteAfterTakeover"
+            >
               <el-select
                 v-model="form.managerGroupId"
                 clearable
                 filterable
                 class="full-width"
-                :placeholder="isNewGroup ? '可不选择' : '每群默认 1 个管理员'"
+                :placeholder="
+                  isNewGroup && !form.creatorDeleteAfterTakeover
+                    ? '可不选择'
+                    : '每群默认 1 个管理员'
+                "
               >
                 <el-option
                   v-for="group in accountGroups"
@@ -431,6 +453,14 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
 </template>
 
 <style scoped>
+.field-help {
+  width: 100%;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
 .settings-sections {
   display: grid;
   gap: 16px;

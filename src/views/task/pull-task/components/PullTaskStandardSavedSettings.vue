@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import PullTaskCreatorDeletionSetting from "./PullTaskCreatorDeletionSetting.vue";
 import { formatPullInterval } from "../standard-create-policy";
 import { pullTaskCreationModeLabel } from "../creation-mode-display";
 import {
@@ -18,10 +19,15 @@ defineOptions({
 
 const props = defineProps<{
   visible: boolean;
+  taskId?: number;
+  status?: string;
+  startedAt?: number | null;
   creationMode: PullTaskCreationMode;
   standardSetting: PullTaskStandardSetting;
   groupSetting?: PullTaskStandardGroupSetting | null;
 }>();
+
+const emit = defineEmits<{ "configuration-saved": [] }>();
 
 const directLink = computed(() => props.creationMode === "DIRECT_LINK");
 
@@ -125,6 +131,23 @@ onBeforeUnmount(() => {
               standardSetting.creatorGroupName
             )
           }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="creationMode === 'NEW_GROUP'"
+          label="管理员接管后注销建群账号"
+          :span="3"
+        >
+          <PullTaskCreatorDeletionSetting
+            v-if="taskId"
+            :task-id="taskId"
+            :status="status"
+            :started-at="startedAt"
+            :enabled="standardSetting.creatorDeleteAfterTakeover"
+            @saved="emit('configuration-saved')"
+          />
+          <span v-else>{{
+            standardSetting.creatorDeleteAfterTakeover ? "开启" : "关闭"
+          }}</span>
         </el-descriptions-item>
         <el-descriptions-item
           v-if="creationMode === 'NEW_GROUP'"

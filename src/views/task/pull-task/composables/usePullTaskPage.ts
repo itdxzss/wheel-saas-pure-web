@@ -177,6 +177,9 @@ function standardGroupRow(
     executionStatus: execution.executionStatus,
     stage: execution.stage,
     createStep: execution.createStep,
+    creatorDeletionStatus: execution.creatorDeletionStatus,
+    creatorDeletionReason: execution.creatorDeletionReason,
+    creatorDeletionOperationId: execution.creatorDeletionOperationId,
     groupSubject: execution.groupSubject,
     manualPaused: execution.manualPaused,
     waitResourceType: execution.waitResourceType,
@@ -204,6 +207,7 @@ function standardTaskDetail(
     expectedPullCount: detail.expectedPullCount,
     remark: detail.remark,
     standardSetting: detail.standardSetting,
+    startedAt: detail.startedAt,
     groupSetting: detail.groupSetting,
     summary: summary
       ? {

@@ -2,6 +2,7 @@
 import { pullTaskCreationModeLabel } from "../creation-mode-display";
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
+import PullTaskCreatorDeletionProgress from "./PullTaskCreatorDeletionProgress.vue";
 import PullTaskDetailSearch from "./PullTaskDetailSearch.vue";
 import PullTaskDetailSummary from "./PullTaskDetailSummary.vue";
 import PullTaskExecutionResourceActions from "./PullTaskExecutionResourceActions.vue";
@@ -267,9 +268,13 @@ function groupNameLabel(row: PullTaskGroupRow): string {
         normalLink && detailTask?.standardSetting && detailTask?.groupSetting
       "
       :visible="visible"
+      :task-id="detailTask.id"
+      :status="detailTask.status"
+      :started-at="detailTask.startedAt"
       :creation-mode="detailTask.creationMode"
       :standard-setting="detailTask.standardSetting"
       :group-setting="detailTask.groupSetting"
+      @configuration-saved="emit('refresh-detail-groups')"
     />
 
     <PullTaskDetailSearch
@@ -349,6 +354,7 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           <template v-if="row.stage === 9">
             / {{ standardCreateStepLabel(row.createStep) }}
           </template>
+          <PullTaskCreatorDeletionProgress :execution="row" />
           <PullTaskExecutionObservation
             :observation="row.observation"
             part="batch"

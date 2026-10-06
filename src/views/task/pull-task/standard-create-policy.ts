@@ -1,6 +1,7 @@
 import type { StandardPullTaskCreateForm } from "./composables/useStandardPullTaskCreate";
 
 const modeSettingKeys = [
+  "creatorDeleteAfterTakeover",
   "groupSettingEnabled",
   "groupSettingTiming",
   "useMaterialFileNameAsGroupName",
@@ -34,6 +35,7 @@ export function requireNewGroupProfile(form: StandardPullTaskCreateForm): void {
 
 export function defaultNewGroupSettings(): StandardPullTaskModeSettings {
   return {
+    creatorDeleteAfterTakeover: false,
     groupSettingEnabled: true,
     groupSettingTiming: "BEFORE_PULL",
     useMaterialFileNameAsGroupName: false,

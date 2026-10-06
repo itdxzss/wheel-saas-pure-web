@@ -57,7 +57,9 @@ export const standardStageOptions = [
   { label: "料子提权", value: 7 },
   { label: "执行收口", value: 8 },
   { label: "创建新群", value: 9 },
-  { label: "拉手进群", value: 10 }
+  { label: "拉手进群", value: 10 },
+  { label: "注销建群账号", value: 11 },
+  { label: "等待创建者清理", value: 12 }
 ];
 
 export const standardCreateStepOptions = [

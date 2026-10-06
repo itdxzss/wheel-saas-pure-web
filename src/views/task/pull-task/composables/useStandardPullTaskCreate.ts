@@ -12,6 +12,7 @@ import {
   type PullTaskCreationMode,
   type PullTaskStandardDraft,
   type PullTaskStandardGroupAvatarUpload,
+  updatePullTaskCreatorDeletion,
   uploadPullTaskStandardGroupAvatar
 } from "@/api/pull-task";
 import {
@@ -38,6 +39,7 @@ export interface StandardPullTaskCreateForm {
   remark: string;
   autoStart: boolean;
   creatorLeaveAfterPull: boolean;
+  creatorDeleteAfterTakeover: boolean;
   groupFolderId: number | "";
   materialAdminTiming: 1 | 2;
   pullerSyncMode: "SINGLE" | "BATCH";
@@ -117,6 +119,7 @@ function emptyForm(): StandardPullTaskCreateForm {
     remark: "",
     autoStart: true,
     creatorLeaveAfterPull: false,
+    creatorDeleteAfterTakeover: false,
     groupFolderId: "",
     materialAdminTiming: 2,
     pullerSyncMode: "SINGLE",
@@ -234,6 +237,8 @@ export function useStandardPullTaskCreate(
   let plannedPendingNames = new Set<string>();
   let plannedGroupFolderId: number | null = null;
   let plannedCreationMode: PullTaskCreationMode = form.creationMode;
+  let savedCreatorDeletion: { taskId: number; enabled: boolean } | null = null;
+  let creatorDeletionSave: Promise<boolean> = Promise.resolve(true);
   const modeSettings = new Map<
     PullTaskCreationMode,
     StandardPullTaskModeSettings
@@ -256,6 +261,54 @@ export function useStandardPullTaskCreate(
   );
 
   watch(linksText, value => storeLinks(value));
+  watch(
+    () => form.creatorDeleteAfterTakeover,
+    () => {
+      if (!loading.value && draft.value.creationMode === form.creationMode) {
+        void persistCreatorDeletion();
+      }
+    },
+    { flush: "sync" }
+  );
+
+  function rememberCreatorDeletion(value: PullTaskStandardDraft): void {
+    savedCreatorDeletion =
+      value.draftTaskId == null
+        ? null
+        : {
+            taskId: value.draftTaskId,
+            enabled: value.creatorDeleteAfterTakeover === true
+          };
+  }
+
+  function persistCreatorDeletion(): Promise<boolean> {
+    const taskId = draft.value.draftTaskId;
+    const enabled =
+      form.creationMode === "NEW_GROUP" && form.creatorDeleteAfterTakeover;
+    if (taskId == null) return Promise.resolve(true);
+    creatorDeletionSave = creatorDeletionSave.then(async () => {
+      if (
+        (savedCreatorDeletion?.taskId === taskId &&
+          savedCreatorDeletion.enabled === enabled) ||
+        (!savedCreatorDeletion && !enabled)
+      )
+        return true;
+      try {
+        await updatePullTaskCreatorDeletion(taskId, enabled);
+        savedCreatorDeletion = { taskId, enabled };
+        if (draft.value.draftTaskId === taskId) {
+          draft.value.creatorDeleteAfterTakeover = enabled;
+        }
+        return true;
+      } catch (error) {
+        ElMessage.error(
+          apiErrorMessage(error, "注销建群账号配置保存失败，请重试")
+        );
+        return false;
+      }
+    });
+    return creatorDeletionSave;
+  }
 
   async function open(): Promise<void> {
     visible.value = true;
@@ -287,8 +340,12 @@ export function useStandardPullTaskCreate(
       }
       if (draftResult.status === "fulfilled") {
         draft.value = draftResult.value;
+        rememberCreatorDeletion(draftResult.value);
         const restoredMode = draftResult.value.creationMode ?? "PASTED_LINK";
         form.creationMode = restoredMode;
+        form.creatorDeleteAfterTakeover =
+          restoredMode === "NEW_GROUP" &&
+          draftResult.value.creatorDeleteAfterTakeover === true;
         plannedCreationMode = restoredMode;
         if (restoredMode !== "PASTED_LINK") {
           plannedLinksText = "";
@@ -447,6 +504,8 @@ export function useStandardPullTaskCreate(
         form.creationMode
       );
       draft.value = result;
+      rememberCreatorDeletion(result);
+      if (!(await persistCreatorDeletion())) return false;
       reconcilePendingFiles(result);
       plannedLinksText = currentLinksText();
       plannedPendingNames = new Set(pendingFiles.value.map(file => file.name));
@@ -491,6 +550,8 @@ export function useStandardPullTaskCreate(
         groupFolderId: planningGroupFolderId(),
         linksText: currentLinksText()
       });
+      rememberCreatorDeletion(draft.value);
+      if (!(await persistCreatorDeletion())) return false;
       plannedLinksText = currentLinksText();
       plannedGroupFolderId = planningGroupFolderId();
       plannedCreationMode = form.creationMode;
@@ -536,6 +597,8 @@ export function useStandardPullTaskCreate(
     clearing.value = true;
     try {
       draft.value = await clearPullTaskStandardDraft();
+      rememberCreatorDeletion(draft.value);
+      form.creatorDeleteAfterTakeover = false;
       linksText.value = "";
       pendingFiles.value = [];
       plannedLinksText = "";
@@ -572,6 +635,14 @@ export function useStandardPullTaskCreate(
     }
     if (form.creationMode !== "NEW_GROUP" && !positiveId(form.managerGroupId)) {
       ElMessage.warning("请选择管理和拉手分组");
+      return null;
+    }
+    if (
+      form.creationMode === "NEW_GROUP" &&
+      form.creatorDeleteAfterTakeover &&
+      !positiveId(form.managerGroupId)
+    ) {
+      ElMessage.warning("开启注销建群账号时，请选择接管管理分组");
       return null;
     }
     if (!positiveId(form.pullerGroupId)) {
@@ -612,6 +683,8 @@ export function useStandardPullTaskCreate(
       remark: form.remark.trim() || null,
       autoStart: form.autoStart ? 1 : 0,
       creatorLeaveAfterPull: form.creatorLeaveAfterPull,
+      creatorDeleteAfterTakeover:
+        form.creationMode === "NEW_GROUP" && form.creatorDeleteAfterTakeover,
       groupFolderId: currentGroupFolderId(),
       pullerSyncMode: form.pullerSyncMode,
       materialAdminTiming: form.materialAdminTiming,
@@ -704,6 +777,7 @@ export function useStandardPullTaskCreate(
   async function create(): Promise<void> {
     if (!(await ensureExecutionPlan())) return;
     if (!createPayload(uploadedAvatar.value?.avatarFileKey ?? null)) return;
+    if (!(await persistCreatorDeletion())) return;
     creating.value = true;
     try {
       const avatarFileKey = await ensureAvatarUploaded();

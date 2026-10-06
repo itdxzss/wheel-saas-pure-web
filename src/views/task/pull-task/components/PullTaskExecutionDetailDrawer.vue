@@ -4,6 +4,7 @@ import type {
   PullTaskStandardMember
 } from "@/api/pull-task";
 import { formatEpoch, standardStageLabel } from "../constants";
+import PullTaskCreatorDeletionProgress from "./PullTaskCreatorDeletionProgress.vue";
 import PullTaskStandardMaterialProgress from "./PullTaskStandardMaterialProgress.vue";
 import PullTaskExecutionObservation from "./PullTaskExecutionObservation.vue";
 import PullTaskObservationRefresh from "./PullTaskObservationRefresh.vue";
@@ -147,6 +148,7 @@ function accountLabel(
           <template v-if="detail.execution.stage === 9">
             / {{ standardCreateStepLabel(detail.execution.createStep) }}
           </template>
+          <PullTaskCreatorDeletionProgress :execution="detail.execution" />
           <PullTaskExecutionObservation
             :observation="detail.execution.observation"
             part="batch"
