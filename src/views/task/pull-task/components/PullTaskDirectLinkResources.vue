@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import type { UploadFile } from "element-plus";
 import { UploadFilled } from "@element-plus/icons-vue";
-import type { DirectLinkPullTaskCreateState } from "../composables/useDirectLinkPullTaskCreate";
+import type { ImmediatePullTaskCreateState } from "../composables/useImmediatePullTaskCreate";
 import PullTaskDataPackagePicker from "./PullTaskDataPackagePicker.vue";
 
 defineOptions({ name: "PullTaskDirectLinkResources" });
-const props = defineProps<{ state: DirectLinkPullTaskCreateState }>();
+const props = defineProps<{
+  state: ImmediatePullTaskCreateState;
+  simpleNewGroup?: boolean;
+}>();
 function addFile(file: UploadFile): void {
   if (file.raw) props.state.addFiles([file.raw]);
 }
@@ -22,7 +25,11 @@ function addFile(file: UploadFile): void {
       </div></template
     >
     <p class="material-hint">
-      每份 TXT 或数据包对应一个群，创建时统一校验、匹配链接。
+      {{
+        simpleNewGroup
+          ? "每份 TXT 或数据包创建一个新群，创建时统一校验料子。"
+          : "每份 TXT 或数据包对应一个群，创建时统一校验、匹配链接。"
+      }}
     </p>
     <div class="material-actions">
       <el-upload

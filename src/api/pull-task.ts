@@ -31,7 +31,8 @@ export type PullTaskCreationMode =
   | "PASTED_LINK"
   | "RESOURCE_POOL"
   | "NEW_GROUP"
-  | "DIRECT_LINK";
+  | "DIRECT_LINK"
+  | "SIMPLE_NEW_GROUP";
 
 export type PullTaskType = "STANDARD" | "GROUP_MARKETING";
 
@@ -544,6 +545,36 @@ export function createPullTaskDirectLink(
   request: PullTaskDirectLinkCreateRequest,
   files: File[]
 ): Promise<PullTaskStandardCreated> {
+  return createImmediatePullTask("direct-link", request, files);
+}
+
+/** 新群模式（新）：保留管理接管及简单群资料，直接创建正式任务。 */
+export interface PullTaskSimpleNewGroupCreateRequest
+  extends Omit<PullTaskDirectLinkCreateRequest, "groupFolderId" | "linksText"> {
+  creatorGroupId: number;
+  managerGroupId: number;
+  managerFinishGroupId: number | null;
+  creatorDeleteAfterTakeover: boolean;
+  groupName: string;
+  avatarFileKey: string | null;
+  groupDescription: string | null;
+  pullIntervalMaxSeconds: number;
+}
+
+export function createPullTaskSimpleNewGroup(
+  request: PullTaskSimpleNewGroupCreateRequest,
+  files: File[]
+): Promise<PullTaskStandardCreated> {
+  return createImmediatePullTask("simple-new-group", request, files);
+}
+
+function createImmediatePullTask(
+  mode: "direct-link" | "simple-new-group",
+  request:
+    | PullTaskDirectLinkCreateRequest
+    | PullTaskSimpleNewGroupCreateRequest,
+  files: File[]
+): Promise<PullTaskStandardCreated> {
   const data = new FormData();
   data.append(
     "request",
@@ -552,7 +583,7 @@ export function createPullTaskDirectLink(
   files.forEach(file => data.append("files", file));
   return armadaRequest<PullTaskStandardCreated>(
     "post",
-    "/api/pull-tasks/standard/direct-link",
+    `/api/pull-tasks/standard/${mode}`,
     { data, timeout: 60_000 },
     {
       beforeRequestCallback: config => {
@@ -713,7 +744,7 @@ export interface PullTaskStandardTaskSummary {
 export interface PullTaskStandardSetting {
   autoStart: 0 | 1;
   creatorLeaveAfterPull: boolean;
-  /** 仅 NEW_GROUP；旧响应缺失时默认关闭。 */
+  /** 仅 NEW_GROUP / SIMPLE_NEW_GROUP；旧响应缺失时默认关闭。 */
   creatorDeleteAfterTakeover?: boolean;
   groupFolderId: number | null;
   groupFolderName: string | null;

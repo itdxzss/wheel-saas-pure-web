@@ -20,6 +20,7 @@ import { usePullTaskPage } from "./composables/usePullTaskPage";
 import { usePullTaskExecutionDetail } from "./composables/usePullTaskExecutionDetail";
 import { usePullTaskGlobalSetting } from "./composables/usePullTaskGlobalSetting";
 import { useStandardPullTaskCreate } from "./composables/useStandardPullTaskCreate";
+import { useSimpleNewGroupPullTaskCreate } from "./composables/useSimpleNewGroupPullTaskCreate";
 import { useDirectLinkPullTaskCreate } from "./composables/useDirectLinkPullTaskCreate";
 import type {
   PullTaskCreationMode,
@@ -146,7 +147,19 @@ const directCreate = useDirectLinkPullTaskCreate({
   }
 });
 
+const simpleCreate = useSimpleNewGroupPullTaskCreate({
+  onCreated: async () => {
+    standardCreateVisible.value = false;
+    await refreshTasks();
+  }
+});
+
 async function openCreate(): Promise<void> {
+  if (createMode.value === "SIMPLE_NEW_GROUP") {
+    standardCreateVisible.value = true;
+    await simpleCreate.load();
+    return;
+  }
   if (createMode.value === "DIRECT_LINK") {
     standardCreateVisible.value = true;
     await directCreate.load();
@@ -158,6 +171,7 @@ async function openCreate(): Promise<void> {
 
 function changeCreateMode(mode: PullTaskCreationMode): void {
   if (mode === "DIRECT_LINK") void directCreate.load();
+  if (mode === "SIMPLE_NEW_GROUP") void simpleCreate.load();
 }
 
 function updateGlobalSettingForm(value: typeof globalSettingForm): void {
@@ -348,7 +362,9 @@ provideAccountGroupLabels(accountGroups);
       v-model:links-text="standardLinksText"
       v-model:creation-mode="createMode"
       v-model:direct-form="directCreate.form"
+      v-model:simple-form="simpleCreate.form"
       :direct-state="directCreate"
+      :simple-state="simpleCreate"
       :account-groups="createAccountGroups"
       :clearing="standardClearing"
       :creating="standardCreating"
@@ -425,6 +441,7 @@ provideAccountGroupLabels(accountGroups);
       :loading="executionDetailLoading"
       :members="executionMembers"
       :direct-link="activeTask?.creationMode === 'DIRECT_LINK'"
+      :simple-new-group="activeTask?.creationMode === 'SIMPLE_NEW_GROUP'"
       :refresh-error="executionRefreshError"
       :refreshed-at="executionRefreshedAt"
       @refresh="refreshExecutionDetail()"

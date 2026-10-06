@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { pullTaskCreationModeLabel } from "../creation-mode-display";
+import {
+  pullTaskCreationModeLabel,
+  isNewGroupCreationMode,
+  stageLabelForCreationMode
+} from "../creation-mode-display";
 import { computed } from "vue";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import PullTaskCreatorDeletionProgress from "./PullTaskCreatorDeletionProgress.vue";
@@ -16,8 +20,7 @@ import PullTaskStandardTaskSummary from "./PullTaskStandardTaskSummary.vue";
 import {
   formatEpoch,
   groupRowStatusLabel,
-  groupRowStatusTagType,
-  standardStageLabel
+  groupRowStatusTagType
 } from "../constants";
 import {
   formatGroupLinkUrl,
@@ -104,8 +107,9 @@ const normalLink = computed(
 const newGroupMode = computed(
   () =>
     normalLink.value &&
-    (props.detailTask?.creationMode ?? props.activeTask?.creationMode) ===
-      "NEW_GROUP"
+    isNewGroupCreationMode(
+      props.detailTask?.creationMode ?? props.activeTask?.creationMode
+    )
 );
 const selectedGroupTip = computed(() =>
   props.detailSelectedCount > 0
@@ -350,7 +354,12 @@ function groupNameLabel(row: PullTaskGroupRow): string {
       </el-table-column>
       <el-table-column v-if="normalLink" label="当前阶段" width="150">
         <template #default="{ row }">
-          {{ standardStageLabel(row.stage) }}
+          {{
+            stageLabelForCreationMode(
+              row.stage,
+              detailTask?.creationMode ?? activeTask?.creationMode
+            )
+          }}
           <template v-if="row.stage === 9">
             / {{ standardCreateStepLabel(row.createStep) }}
           </template>

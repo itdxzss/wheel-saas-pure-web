@@ -10,6 +10,11 @@ import type {
   DirectLinkPullTaskCreateState,
   DirectLinkPullTaskForm
 } from "../composables/useDirectLinkPullTaskCreate";
+import type {
+  SimpleNewGroupPullTaskCreateState,
+  SimpleNewGroupPullTaskForm
+} from "../composables/useSimpleNewGroupPullTaskCreate";
+import PullTaskSimpleNewGroupCreateContent from "./PullTaskSimpleNewGroupCreateContent.vue";
 import PullTaskDirectLinkCreateContent from "./PullTaskDirectLinkCreateContent.vue";
 import type { StandardPullTaskCreateForm } from "../composables/useStandardPullTaskCreate";
 import PullTaskStandardSettings from "./PullTaskStandardSettings.vue";
@@ -32,6 +37,7 @@ const props = defineProps<{
   planning: boolean;
   resourceError: string;
   directState: DirectLinkPullTaskCreateState;
+  simpleState: SimpleNewGroupPullTaskCreateState;
 }>();
 
 const emit = defineEmits<{
@@ -59,14 +65,25 @@ const creationMode = defineModel<PullTaskCreationMode>("creationMode", {
 const directForm = defineModel<DirectLinkPullTaskForm>("directForm", {
   required: true
 });
+const simpleForm = defineModel<SimpleNewGroupPullTaskForm>("simpleForm", {
+  required: true
+});
+const simpleMode = computed(() => creationMode.value === "SIMPLE_NEW_GROUP");
 const directMode = computed(() => creationMode.value === "DIRECT_LINK");
-const busy = computed(() => props.creating || props.directState.creating);
+const immediateMode = computed(() => directMode.value || simpleMode.value);
+const immediateState = computed(() =>
+  simpleMode.value ? props.simpleState : props.directState
+);
+const busy = computed(
+  () =>
+    props.creating || props.directState.creating || props.simpleState.creating
+);
 const currentLoading = computed(() =>
-  directMode.value ? props.directState.loading : props.loading
+  immediateMode.value ? immediateState.value.loading : props.loading
 );
 
 function submit(): void {
-  if (directMode.value) void props.directState.create();
+  if (immediateMode.value) void immediateState.value.create();
   else emit("create");
 }
 
@@ -82,13 +99,16 @@ function changeCreationMode(mode: string): void {
   if (
     busy.value ||
     props.planning ||
-    (mode !== "PASTED_LINK" && mode !== "NEW_GROUP" && mode !== "DIRECT_LINK")
+    (mode !== "PASTED_LINK" &&
+      mode !== "NEW_GROUP" &&
+      mode !== "DIRECT_LINK" &&
+      mode !== "SIMPLE_NEW_GROUP")
   ) {
     return;
   }
   creationMode.value = mode;
   emit("mode-change", mode);
-  if (mode === "DIRECT_LINK") return;
+  if (mode === "DIRECT_LINK" || mode === "SIMPLE_NEW_GROUP") return;
   form.value.creationMode = mode;
 }
 </script>
@@ -116,7 +136,7 @@ function changeCreationMode(mode: string): void {
           <strong>新建拉群任务</strong>
         </div>
         <el-button
-          v-if="!directMode"
+          v-if="!immediateMode"
           type="primary"
           :loading="busy"
           :disabled="currentLoading || planning"
@@ -138,6 +158,11 @@ function changeCreationMode(mode: string): void {
           data-testid="pull-task-new-group-mode-tab"
         />
         <el-tab-pane
+          name="SIMPLE_NEW_GROUP"
+          label="新群模式（新）"
+          :disabled="busy || planning"
+        />
+        <el-tab-pane
           name="PASTED_LINK"
           label="群链接模式"
           :disabled="busy || planning"
@@ -153,12 +178,17 @@ function changeCreationMode(mode: string): void {
       <main
         v-loading="currentLoading"
         class="create-scroll"
-        :class="{ 'direct-scroll': directMode }"
+        :class="{ 'direct-scroll': immediateMode }"
       >
         <PullTaskDirectLinkCreateContent
           v-if="directMode"
           v-model:form="directForm"
           :state="directState"
+        />
+        <PullTaskSimpleNewGroupCreateContent
+          v-else-if="simpleMode"
+          v-model:form="simpleForm"
+          :state="simpleState"
         />
         <template v-else>
           <PullTaskStandardSettings
@@ -196,9 +226,9 @@ function changeCreationMode(mode: string): void {
       </main>
 
       <footer class="create-footer">
-        <span v-if="directMode" class="direct-footer-hint">
-          已选择 {{ directState.files.length }} 份 TXT、{{
-            directState.packageIds.length
+        <span v-if="immediateMode" class="direct-footer-hint">
+          已选择 {{ immediateState.files.length }} 份 TXT、{{
+            immediateState.packageIds.length
           }}
           个数据包
         </span>
@@ -209,7 +239,11 @@ function changeCreationMode(mode: string): void {
           :disabled="currentLoading || planning"
           @click="submit"
         >
-          {{ directMode && directForm.autoStart ? "创建并启动" : "创建任务" }}
+          {{
+            immediateMode && immediateState.form.autoStart
+              ? "创建并启动"
+              : "创建任务"
+          }}
         </el-button>
       </footer>
     </div>

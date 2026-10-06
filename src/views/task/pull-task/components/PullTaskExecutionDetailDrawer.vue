@@ -3,7 +3,8 @@ import type {
   PullTaskStandardExecutionDetail,
   PullTaskStandardMember
 } from "@/api/pull-task";
-import { formatEpoch, standardStageLabel } from "../constants";
+import { formatEpoch } from "../constants";
+import { stageLabelForCreationMode } from "../creation-mode-display";
 import PullTaskCreatorDeletionProgress from "./PullTaskCreatorDeletionProgress.vue";
 import PullTaskStandardMaterialProgress from "./PullTaskStandardMaterialProgress.vue";
 import PullTaskExecutionObservation from "./PullTaskExecutionObservation.vue";
@@ -26,6 +27,7 @@ defineProps<{
   refreshError: string;
   refreshedAt: number | null;
   directLink?: boolean;
+  simpleNewGroup?: boolean;
 }>();
 
 const emit = defineEmits<{ refresh: []; "auto-refresh": [] }>();
@@ -144,7 +146,16 @@ function accountLabel(
           #{{ detail.execution.seq }} / {{ detail.execution.executionId }}
         </el-descriptions-item>
         <el-descriptions-item label="当前阶段">
-          {{ standardStageLabel(detail.execution.stage) }}
+          {{
+            stageLabelForCreationMode(
+              detail.execution.stage,
+              simpleNewGroup
+                ? "SIMPLE_NEW_GROUP"
+                : directLink
+                  ? "DIRECT_LINK"
+                  : undefined
+            )
+          }}
           <template v-if="detail.execution.stage === 9">
             / {{ standardCreateStepLabel(detail.execution.createStep) }}
           </template>
@@ -354,18 +365,26 @@ function accountLabel(
               label="入群原因"
               min-width="180"
             />
-            <el-table-column v-if="!directLink" label="需管理员" width="100">
+            <el-table-column
+              v-if="!directLink && !simpleNewGroup"
+              label="需管理员"
+              width="100"
+            >
               <template #default="{ row }">{{
                 row.adminRequired ? "是" : "否"
               }}</template>
             </el-table-column>
-            <el-table-column v-if="!directLink" label="提权结果" width="110">
+            <el-table-column
+              v-if="!directLink && !simpleNewGroup"
+              label="提权结果"
+              width="110"
+            >
               <template #default="{ row }">{{
                 adminStatusLabel(row.adminStatus)
               }}</template>
             </el-table-column>
             <el-table-column
-              v-if="!directLink"
+              v-if="!directLink && !simpleNewGroup"
               prop="adminReasonCode"
               label="提权原因"
               min-width="160"

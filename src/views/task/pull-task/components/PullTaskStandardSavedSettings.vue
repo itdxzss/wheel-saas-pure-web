@@ -3,7 +3,10 @@ import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabel
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import PullTaskCreatorDeletionSetting from "./PullTaskCreatorDeletionSetting.vue";
 import { formatPullInterval } from "../standard-create-policy";
-import { pullTaskCreationModeLabel } from "../creation-mode-display";
+import {
+  pullTaskCreationModeLabel,
+  isNewGroupCreationMode
+} from "../creation-mode-display";
 import {
   getPullTaskStandardGroupAvatarContent,
   type PullTaskCreationMode,
@@ -30,6 +33,13 @@ const props = defineProps<{
 const emit = defineEmits<{ "configuration-saved": [] }>();
 
 const directLink = computed(() => props.creationMode === "DIRECT_LINK");
+const simpleNewGroup = computed(
+  () => props.creationMode === "SIMPLE_NEW_GROUP"
+);
+const advancedSettings = computed(
+  () => !directLink.value && !simpleNewGroup.value
+);
+const newGroupMode = computed(() => isNewGroupCreationMode(props.creationMode));
 
 const avatarObjectUrl = ref<string | null>(null);
 const avatarLoading = ref(false);
@@ -115,16 +125,16 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="自动启动">
           {{ standardSetting.autoStart === 1 ? "是" : "否" }}
         </el-descriptions-item>
-        <el-descriptions-item v-if="!directLink" label="拉人完成后群主退群">
+        <el-descriptions-item
+          v-if="advancedSettings"
+          label="拉人完成后群主退群"
+        >
           {{ yesNo(standardSetting.creatorLeaveAfterPull) }}
         </el-descriptions-item>
-        <el-descriptions-item label="群组分组">
+        <el-descriptions-item v-if="!simpleNewGroup" label="群组分组">
           {{ namedGroup(standardSetting.groupFolderName) }}
         </el-descriptions-item>
-        <el-descriptions-item
-          v-if="creationMode === 'NEW_GROUP'"
-          label="建群人分组"
-        >
+        <el-descriptions-item v-if="newGroupMode" label="建群人分组">
           {{
             accountGroupLabel(
               standardSetting.creatorGroupId,
@@ -133,7 +143,7 @@ onBeforeUnmount(() => {
           }}
         </el-descriptions-item>
         <el-descriptions-item
-          v-if="creationMode === 'NEW_GROUP'"
+          v-if="newGroupMode"
           label="管理员接管后注销建群账号"
           :span="3"
         >
@@ -155,17 +165,17 @@ onBeforeUnmount(() => {
         >
           {{ standardSetting.initialStationCount }}
         </el-descriptions-item>
-        <el-descriptions-item v-if="!directLink" label="拉手同步料子方式">
+        <el-descriptions-item v-if="advancedSettings" label="拉手同步料子方式">
           {{ settingLabel(standardSetting.pullerSyncMode) }}
         </el-descriptions-item>
-        <el-descriptions-item v-if="!directLink" label="设置料子内容管理">
+        <el-descriptions-item v-if="advancedSettings" label="设置料子内容管理">
           {{
             standardSetting.materialAdminTiming === 1
               ? "任务开始后设置"
               : "任务完成后设置"
           }}
         </el-descriptions-item>
-        <el-descriptions-item v-if="!directLink" label="清空群原成员">
+        <el-descriptions-item v-if="advancedSettings" label="清空群原成员">
           {{ yesNo(standardSetting.clearExistingMembers) }}
         </el-descriptions-item>
         <el-descriptions-item label="拉手踩链接进群">
@@ -177,7 +187,7 @@ onBeforeUnmount(() => {
         >
           {{ standardSetting.earlyPullCount }}
         </el-descriptions-item>
-        <el-descriptions-item label="前期拉人执行次数">
+        <el-descriptions-item v-if="!simpleNewGroup" label="前期拉人执行次数">
           {{
             standardSetting.earlyPullCallCount === 0
               ? "不启用，从首次调用起使用人数范围"
@@ -263,13 +273,13 @@ onBeforeUnmount(() => {
             头像加载失败
           </span>
           <el-descriptions :column="3" border size="small">
-            <el-descriptions-item label="总开关">
+            <el-descriptions-item v-if="advancedSettings" label="总开关">
               {{ groupSetting.enabled ? "开启" : "关闭" }}
             </el-descriptions-item>
-            <el-descriptions-item label="设置顺序">
+            <el-descriptions-item v-if="advancedSettings" label="设置顺序">
               {{ settingLabel(groupSetting.settingTiming) }}
             </el-descriptions-item>
-            <el-descriptions-item label="群名来源">
+            <el-descriptions-item v-if="advancedSettings" label="群名来源">
               {{
                 groupSetting.useMaterialFileNameAsGroupName
                   ? "料子文件名"
@@ -279,25 +289,37 @@ onBeforeUnmount(() => {
             <el-descriptions-item label="群名称">
               {{ groupSetting.groupName || "未设置" }}
             </el-descriptions-item>
-            <el-descriptions-item label="群描述" :span="3">
+            <el-descriptions-item
+              :label="simpleNewGroup ? '群公告' : '群描述'"
+              :span="3"
+            >
               {{ groupSetting.groupDescription || "未设置" }}
             </el-descriptions-item>
-            <el-descriptions-item label="任务后自动关闭禁言">
+            <el-descriptions-item
+              v-if="advancedSettings"
+              label="任务后自动关闭禁言"
+            >
               {{ yesNo(groupSetting.autoCloseMuteAfterTask) }}
             </el-descriptions-item>
-            <el-descriptions-item label="任务后自动关闭拉人权限">
+            <el-descriptions-item
+              v-if="advancedSettings"
+              label="任务后自动关闭拉人权限"
+            >
               {{ yesNo(groupSetting.autoCloseInviteAfterTask) }}
             </el-descriptions-item>
-            <el-descriptions-item label="编辑群设置">
+            <el-descriptions-item v-if="advancedSettings" label="编辑群设置">
               {{ settingLabel(groupSetting.editPermission) }}
             </el-descriptions-item>
-            <el-descriptions-item label="群禁言">
+            <el-descriptions-item v-if="advancedSettings" label="群禁言">
               {{ settingLabel(groupSetting.muteMode) }}
             </el-descriptions-item>
-            <el-descriptions-item label="获取群链接权限">
+            <el-descriptions-item
+              v-if="advancedSettings"
+              label="获取群链接权限"
+            >
               {{ settingLabel(groupSetting.linkPermission) }}
             </el-descriptions-item>
-            <el-descriptions-item label="限时消息">
+            <el-descriptions-item v-if="advancedSettings" label="限时消息">
               {{ settingLabel(groupSetting.disappearingMessage) }}
             </el-descriptions-item>
           </el-descriptions>

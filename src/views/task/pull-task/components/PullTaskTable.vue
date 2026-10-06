@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { pullTaskCreationModeLabel } from "../creation-mode-display";
+import {
+  pullTaskCreationModeLabel,
+  isNewGroupCreationMode
+} from "../creation-mode-display";
 import PullTaskTableActions from "./PullTaskTableActions.vue";
 import {
   formatEpoch,
@@ -70,7 +73,9 @@ function creationModeLabel(row: PullTaskRow): string | null {
             v-if="creationModeLabel(row)"
             size="small"
             effect="plain"
-            :type="row.creationMode === 'NEW_GROUP' ? 'primary' : 'info'"
+            :type="
+              isNewGroupCreationMode(row.creationMode) ? 'primary' : 'info'
+            "
             data-testid="pull-task-creation-mode"
           >
             {{ creationModeLabel(row) }}
