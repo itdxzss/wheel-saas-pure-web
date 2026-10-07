@@ -88,8 +88,7 @@ function clearAvatar(): void {
       <div class="range-inputs">
         <el-input-number
           v-model="form.pullIntervalSeconds"
-          :min="10"
-          :max="15"
+          :min="0"
           :precision="0"
           controls-position="right"
           aria-label="拉人间隔下限"
@@ -97,8 +96,7 @@ function clearAvatar(): void {
         <span>至</span>
         <el-input-number
           v-model="form.pullIntervalMaxSeconds"
-          :min="Math.max(10, form.pullIntervalSeconds)"
-          :max="15"
+          :min="form.pullIntervalSeconds"
           :precision="0"
           controls-position="right"
           aria-label="拉人间隔上限"

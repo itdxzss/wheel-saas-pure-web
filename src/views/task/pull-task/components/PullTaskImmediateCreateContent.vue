@@ -98,7 +98,7 @@ const groupFields = [
                     <el-input-number
                       v-model="form.pullCountMin"
                       :min="1"
-                      :max="simpleNewGroup ? 3 : undefined"
+                      :max="simpleNewGroup ? 50 : undefined"
                       :precision="0"
                       controls-position="right"
                       aria-label="单次拉人数下限"
@@ -107,7 +107,7 @@ const groupFields = [
                     <el-input-number
                       v-model="form.pullCountMax"
                       :min="form.pullCountMin"
-                      :max="simpleNewGroup ? 3 : undefined"
+                      :max="simpleNewGroup ? 50 : undefined"
                       :precision="0"
                       controls-position="right"
                       aria-label="单次拉人数上限"

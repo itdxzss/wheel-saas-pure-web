@@ -187,21 +187,27 @@ describe("standard normal-link pull task create state", () => {
         "新群模式请填写群名称，不能使用料子文件名"
       ],
       [{ earlyPullCallCount: 2 }, "新群模式从首次调用起使用单次拉人数范围"],
-      [{ pullCountMax: 4 }, "新群模式单次拉人数必须在 1–3 人范围内"],
-      [{ pullCountMin: 2.5 }, "新群模式单次拉人数必须在 1–3 人范围内"],
+      [{ pullCountMax: 51 }, "新群模式单次拉人数必须在 1–50 人范围内"],
+      [{ pullCountMin: 2.5 }, "新群模式单次拉人数必须在 1–50 人范围内"],
       [
         { pullCountMin: 3, pullCountMax: 2 },
-        "新群模式单次拉人数必须在 1–3 人范围内"
+        "新群模式单次拉人数必须在 1–50 人范围内"
       ],
-      [{ pullIntervalSeconds: 9 }, "新群模式拉人间隔必须在 10–15 秒范围内"],
-      [{ pullIntervalMaxSeconds: 16 }, "新群模式拉人间隔必须在 10–15 秒范围内"],
+      [
+        { pullIntervalSeconds: -1 },
+        "拉人间隔必须为非负整数，且上限不能小于下限"
+      ],
+      [
+        { pullIntervalMaxSeconds: 20.5 },
+        "拉人间隔必须为非负整数，且上限不能小于下限"
+      ],
       [
         { pullIntervalSeconds: 14, pullIntervalMaxSeconds: 13 },
-        "新群模式拉人间隔必须在 10–15 秒范围内"
+        "拉人间隔必须为非负整数，且上限不能小于下限"
       ],
       [
         { pullIntervalMaxSeconds: Number.NaN },
-        "新群模式拉人间隔必须在 10–15 秒范围内"
+        "拉人间隔必须为非负整数，且上限不能小于下限"
       ]
     ];
     for (const [invalidValues, expectedWarning] of invalidCases) {
@@ -487,6 +493,48 @@ describe("standard normal-link pull task create state", () => {
     assert.equal(createPayload.pullCountMax, 3);
     assert.equal(createPayload.pullIntervalSeconds, 10);
     assert.equal(createPayload.pullIntervalMaxSeconds, 15);
+  });
+
+  it("submits custom new-group batch and interval ranges unchanged", async () => {
+    for (const [
+      pullCountMin,
+      pullCountMax,
+      pullIntervalSeconds,
+      pullIntervalMaxSeconds
+    ] of [
+      [10, 15, 5, 8],
+      [1, 50, 20, 30],
+      [50, 50, 0, 0]
+    ]) {
+      resetArmadaMockQueue([draft({ creationMode: "NEW_GROUP" }), { id: 7 }]);
+      resetElementPlusMock();
+      const state = validState();
+      state.form.creationMode = "NEW_GROUP";
+      const parameters = {
+        pullCountMin,
+        pullCountMax,
+        pullIntervalSeconds,
+        pullIntervalMaxSeconds
+      };
+      Object.assign(state.form, parameters, {
+        creatorGroupId: 10,
+        groupName: "客户群",
+        groupDescription: "群简介"
+      });
+      state.addFiles([new File(["8613900000000"], "new-group.txt")]);
+      await state.create();
+      assert.deepEqual(
+        elementPlusCalls().filter(call => call.type === "warning"),
+        []
+      );
+      const call = armadaCalls().at(-1)!;
+      assert.equal(call.url, "/api/pull-tasks/standard");
+      const request = (call.opts as { data: PullTaskStandardCreateRequest })
+        .data;
+      for (const [key, value] of Object.entries(parameters)) {
+        assert.equal(request[key], value, key);
+      }
+    }
   });
 
   it("allows an omitted manager group only in new-group mode", async () => {

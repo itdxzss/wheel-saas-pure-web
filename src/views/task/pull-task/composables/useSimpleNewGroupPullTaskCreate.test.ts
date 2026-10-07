@@ -144,9 +144,12 @@ describe("simple new-group immediate creation", () => {
   it("enforces new-group pull limits and requires a station group only when needed", async () => {
     for (const change of [
       { pullCountMin: 0 },
-      { pullCountMax: 4 },
-      { pullIntervalSeconds: 9 },
-      { pullIntervalMaxSeconds: 16 },
+      { pullCountMax: 51 },
+      { pullCountMin: 2.5 },
+      { pullCountMin: 3, pullCountMax: 2 },
+      { pullIntervalSeconds: -1 },
+      { pullIntervalMaxSeconds: Number.NaN },
+      { pullIntervalMaxSeconds: 20.5 },
       { pullIntervalSeconds: 15, pullIntervalMaxSeconds: 10 },
       { earlyPullCallCount: 1 },
       { stationCountPerCall: 1 },
@@ -164,6 +167,35 @@ describe("simple new-group immediate creation", () => {
     state.form.stationGroupId = 14;
     await state.create();
     assert.equal((await sentRequest()).request.stationGroupId, 14);
+  });
+
+  it("submits up to 50 members with custom intervals without clamping", async () => {
+    for (const [
+      pullCountMin,
+      pullCountMax,
+      pullIntervalSeconds,
+      pullIntervalMaxSeconds
+    ] of [
+      [10, 15, 5, 8],
+      [1, 50, 20, 30],
+      [50, 50, 0, 0]
+    ]) {
+      resetArmadaMock({ id: 8 });
+      const state = validState();
+      const parameters = {
+        pullCountMin,
+        pullCountMax,
+        pullIntervalSeconds,
+        pullIntervalMaxSeconds
+      };
+      Object.assign(state.form, parameters);
+      await state.create();
+      assert.equal(state.error, "");
+      const { request } = await sentRequest();
+      for (const [key, value] of Object.entries(parameters)) {
+        assert.equal(request[key], value, key);
+      }
+    }
   });
 
   it("preserves retry identity and keeps independent state from direct-link mode", async () => {

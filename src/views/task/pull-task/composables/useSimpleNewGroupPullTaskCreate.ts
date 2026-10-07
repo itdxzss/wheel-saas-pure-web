@@ -69,16 +69,17 @@ export function useSimpleNewGroupPullTaskCreate(options: {
         return "群名称不能超过 100 个字符";
       if (form.groupDescription.trim().length > 1024)
         return "群公告不能超过 1024 个字符";
-      if (form.pullCountMax > 3) return "新群模式单次拉人数必须在 1–3 人范围内";
+      if (form.pullCountMax > 50)
+        return "新群模式单次拉人数必须在 1–50 人范围内";
       if (form.earlyPullCallCount !== 0)
         return "新群模式从首次调用起使用单次拉人数范围";
       if (
         !Number.isInteger(form.pullIntervalMaxSeconds) ||
-        form.pullIntervalSeconds < 10 ||
-        form.pullIntervalMaxSeconds > 15 ||
+        !Number.isInteger(form.pullIntervalSeconds) ||
+        form.pullIntervalSeconds < 0 ||
         form.pullIntervalMaxSeconds < form.pullIntervalSeconds
       )
-        return "新群模式拉人间隔必须在 10–15 秒范围内";
+        return "拉人间隔必须为非负整数，且上限不能小于下限";
       return "";
     },
     buildRequest: async (form, packageIds) => {

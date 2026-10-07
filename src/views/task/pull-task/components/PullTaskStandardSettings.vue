@@ -225,7 +225,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-input-number
                   v-model="form.pullCountMin"
                   :min="1"
-                  :max="isNewGroup ? 3 : undefined"
+                  :max="isNewGroup ? 50 : undefined"
                   :precision="0"
                   controls-position="right"
                 />
@@ -233,7 +233,7 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
                 <el-input-number
                   v-model="form.pullCountMax"
                   :min="form.pullCountMin"
-                  :max="isNewGroup ? 3 : undefined"
+                  :max="isNewGroup ? 50 : undefined"
                   :precision="0"
                   controls-position="right"
                 />
@@ -252,16 +252,14 @@ const stationCapacityType = computed<"success" | "warning" | "info">(() => {
               <div class="range-inputs">
                 <el-input-number
                   v-model="form.pullIntervalSeconds"
-                  :min="10"
-                  :max="15"
+                  :min="0"
                   :precision="0"
                   controls-position="right"
                 />
                 <span>~</span>
                 <el-input-number
                   v-model="form.pullIntervalMaxSeconds"
-                  :min="Math.max(10, form.pullIntervalSeconds)"
-                  :max="15"
+                  :min="form.pullIntervalSeconds"
                   :precision="0"
                   controls-position="right"
                 />

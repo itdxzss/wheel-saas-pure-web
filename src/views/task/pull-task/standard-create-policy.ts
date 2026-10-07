@@ -57,10 +57,10 @@ export function validateStandardProfileAndPullSettings(
     !Number.isInteger(form.pullCountMax) ||
     form.pullCountMin < 1 ||
     form.pullCountMax < form.pullCountMin ||
-    (isNewGroup && form.pullCountMax > 3)
+    (isNewGroup && form.pullCountMax > 50)
   ) {
     return isNewGroup
-      ? "新群模式单次拉人数必须在 1–3 人范围内"
+      ? "新群模式单次拉人数必须在 1–50 人范围内"
       : "单次拉人数范围配置不正确";
   }
   if (
@@ -68,12 +68,10 @@ export function validateStandardProfileAndPullSettings(
     form.pullIntervalSeconds < 0 ||
     (isNewGroup &&
       (!Number.isInteger(form.pullIntervalMaxSeconds) ||
-        form.pullIntervalSeconds < 10 ||
-        form.pullIntervalMaxSeconds > 15 ||
         form.pullIntervalMaxSeconds < form.pullIntervalSeconds))
   ) {
     return isNewGroup
-      ? "新群模式拉人间隔必须在 10–15 秒范围内"
+      ? "拉人间隔必须为非负整数，且上限不能小于下限"
       : "拉人间隔必须是非负整数";
   }
   if (
