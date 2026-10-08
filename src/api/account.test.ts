@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { armadaCalls, resetArmadaMock } from "./__tests__/armada-test-double";
 import { httpCalls, resetHttpMock } from "./__tests__/http-test-double";
+import { businessRestrictionLines } from "../views/account/index/account-display";
 import {
   batchClearTenantAccountOperationRestrictions,
   batchDeleteTenantAccounts,
@@ -274,6 +275,8 @@ describe("account operation API", () => {
           countryFlag: "🇮🇳",
           dispatchedAt: 1782705600000,
           messageRestrictionUntil: 1782792000000,
+          platformMessageRestrictionUntil: 1782792000000,
+          fallbackMessageRestrictionUntil: 1782705600000,
           pullingRestrictionUntil: 1782878400000
         }
       ],
@@ -304,9 +307,64 @@ describe("account operation API", () => {
       "2026-06-30 12:00:00"
     );
     assert.equal(
+      result.list?.[0]?.platform_message_restriction_until,
+      "2026-06-30 12:00:00"
+    );
+    assert.equal(
+      result.list?.[0]?.fallback_message_restriction_until,
+      "2026-06-29 12:00:00"
+    );
+    assert.equal(
       result.list?.[0]?.pulling_restriction_until,
       "2026-07-01 12:00:00"
     );
+  });
+
+  it("preserves subsecond differences through mapping and restriction source attribution", async () => {
+    const platformUntil = 1782792000000;
+    resetArmadaMock({
+      list: [
+        {
+          id: 100,
+          muteStatus: 3,
+          messageRestrictionUntil: platformUntil + 1,
+          platformMessageRestrictionUntil: platformUntil,
+          fallbackMessageRestrictionUntil: platformUntil + 1,
+          pullingRestrictionUntil: platformUntil + 1
+        }
+      ]
+    });
+    const result = await listTenantAccounts();
+    const row = result.list[0];
+    assert.equal(row.platform_message_restriction_until, "2026-06-30 12:00:00");
+    assert.equal(row.message_restriction_until, "2026-06-30 12:00:00.001");
+    assert.equal(
+      row.fallback_message_restriction_until,
+      "2026-06-30 12:00:00.001"
+    );
+    assert.equal(row.pulling_restriction_until, "2026-06-30 12:00:00.001");
+    assert.deepEqual(
+      businessRestrictionLines(row).map(line => line.source),
+      ["系统推断", "系统推断"]
+    );
+  });
+
+  it("keeps missing or inactive restriction sources null", async () => {
+    resetArmadaMock({
+      list: [
+        { id: 100 },
+        {
+          id: 101,
+          platformMessageRestrictionUntil: null,
+          fallbackMessageRestrictionUntil: null
+        }
+      ]
+    });
+    const result = await listTenantAccounts();
+    for (const row of result.list ?? []) {
+      assert.equal(row.platform_message_restriction_until, null);
+      assert.equal(row.fallback_message_restriction_until, null);
+    }
   });
 
   it("maps marketing occupancy facts returned by the account list", async () => {

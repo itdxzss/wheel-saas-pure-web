@@ -11,8 +11,8 @@ export type AccountStatusFilter =
   | "封禁"
   | "导出"
   | "消息发送受限"
-  | "拉人受限"
-  | "消息和拉人受限"
+  | "进群拉人受限"
+  | "消息和进群拉人受限"
   | "解绑"
   | "注销"
   | "被抢登"
@@ -26,8 +26,8 @@ export const accountStatusOptions: Exclude<AccountStatusFilter, "">[] = [
   "封禁",
   "导出",
   "消息发送受限",
-  "拉人受限",
-  "消息和拉人受限",
+  "进群拉人受限",
+  "消息和进群拉人受限",
   "解绑",
   "注销"
 ];
@@ -45,8 +45,8 @@ const accountStateMap: Partial<Record<AccountStatusFilter, AccountState>> = {
 
 const muteStatusMap: Partial<Record<AccountStatusFilter, MuteStatus>> = {
   消息发送受限: 1,
-  拉人受限: 2,
-  消息和拉人受限: 3
+  进群拉人受限: 2,
+  消息和进群拉人受限: 3
 };
 
 export function accountStatusToQuery(

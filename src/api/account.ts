@@ -12,7 +12,7 @@ export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;
 export type AccountTypeVerifyStatus = 0 | 1 | 2 | 3 | 4;
 export type NumberSource = 1 | 2 | 3;
-/** 账号操作限制：1=消息发送，2=拉人，3=消息发送和拉人。 */
+/** 账号操作限制：1=消息发送，2=进群拉人，3=消息发送和进群拉人。 */
 export type MuteStatus = 1 | 2 | 3;
 /** 账号菜单使用的营销整组占用展示类型。 */
 export type MarketingOccupancyDisplayType =
@@ -61,6 +61,8 @@ export interface TenantAccount {
   mute_status?: MuteStatus | null;
   cooldown_until?: string | null;
   message_restriction_until?: string | null;
+  platform_message_restriction_until?: string | null;
+  fallback_message_restriction_until?: string | null;
   pulling_restriction_until?: string | null;
   restriction_reason_code?: string | null;
   restriction_reported_at?: string | null;
@@ -246,6 +248,8 @@ interface ArmadaTenantAccount {
   riskEndTime?: number | null;
   cooldownUntil?: number | null;
   messageRestrictionUntil?: number | null;
+  platformMessageRestrictionUntil?: number | null;
+  fallbackMessageRestrictionUntil?: number | null;
   pullingRestrictionUntil?: number | null;
   muteStatus?: number | null;
   restrictionReasonCode?: string | null;
@@ -326,6 +330,16 @@ async function exportJsonError(blob: Blob): Promise<Error> {
   return new Error("导出失败，请重新操作。");
 }
 
+/** 保留限制截止时间的毫秒，避免来源比较把同一秒内不同时间误判为相等。 */
+function formatRestrictionEpochMillis(value?: number | null): string | null {
+  const formatted = formatEpochMillis(value, null);
+  if (formatted === null) return null;
+  const millis = ((Math.trunc(value) % 1000) + 1000) % 1000;
+  return millis === 0
+    ? formatted
+    : `${formatted}.${String(millis).padStart(3, "0")}`;
+}
+
 function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
   return {
     id: row.id,
@@ -368,13 +382,17 @@ function toTenantAccount(row: ArmadaTenantAccount): TenantAccount {
     country_flag: row.countryFlag ?? null,
     mute_status: operationRestrictionStatus(row.muteStatus),
     cooldown_until: formatEpochMillis(row.cooldownUntil, null),
-    message_restriction_until: formatEpochMillis(
-      row.messageRestrictionUntil,
-      null
+    message_restriction_until: formatRestrictionEpochMillis(
+      row.messageRestrictionUntil
     ),
-    pulling_restriction_until: formatEpochMillis(
-      row.pullingRestrictionUntil,
-      null
+    platform_message_restriction_until: formatRestrictionEpochMillis(
+      row.platformMessageRestrictionUntil
+    ),
+    fallback_message_restriction_until: formatRestrictionEpochMillis(
+      row.fallbackMessageRestrictionUntil
+    ),
+    pulling_restriction_until: formatRestrictionEpochMillis(
+      row.pullingRestrictionUntil
     ),
     restriction_reason_code: row.restrictionReasonCode ?? null,
     restriction_reported_at: formatEpochMillis(row.restrictionReportedAt, null),
@@ -500,7 +518,7 @@ export function batchDeleteTenantAccounts(ids: number[]): Promise<void> {
   });
 }
 
-/** 同时移除所选账号的超链发送和拉手拉人限制时间。 */
+/** 同时移除所选账号的消息发送和进群拉人本地限制时间，平台限制仍可能生效。 */
 export function batchClearTenantAccountOperationRestrictions(
   ids: number[]
 ): Promise<TenantAccountOperationRestrictionClearResult> {

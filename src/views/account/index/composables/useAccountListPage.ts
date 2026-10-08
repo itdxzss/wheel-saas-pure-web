@@ -47,6 +47,7 @@ import { downloadBlobFile } from "@/utils/download";
 import {
   buildAccountStatCards,
   canDeleteAccount,
+  clearOperationRestrictionsConfirmMessage,
   type AccountStatCard
 } from "../account-display";
 import {
@@ -753,9 +754,10 @@ export function useAccountListPage(): AccountListPageState {
     batchSubmitting.value = true;
     try {
       await ElMessageBox.confirm(
-        `确认手动移除选中的 ${ids.length} 个账号的风控时间限制？` +
-          "将同时移除超链发送和拉手拉人的本地风控时间；" +
-          "后续新的风控结果仍会重新限制账号。",
+        clearOperationRestrictionsConfirmMessage(
+          selectedRows.value.filter(row => ids.includes(row.id)),
+          Date.now()
+        ),
         "手动移除风控时间限制",
         {
           confirmButtonText: "确认移除",

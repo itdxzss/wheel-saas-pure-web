@@ -60,6 +60,15 @@ describe("AccountListTable business actions", () => {
     assert.match(source, /item\.label/);
     assert.match(source, /受限/);
     assert.match(source, /预计.*formatDate\(item\.until\).*恢复/s);
+    assert.match(source, /item\.source/);
+    assert.equal(
+      (
+        source.match(
+          /accountRestrictionReasonLabel\(row\.restriction_reason_code\)/g
+        ) ?? []
+      ).length,
+      1
+    );
     assert.match(source, /未受限/);
     assert.match(source, /command="clear-operation-restrictions"/);
     assert.match(source, /手动移除风控时间限制/);

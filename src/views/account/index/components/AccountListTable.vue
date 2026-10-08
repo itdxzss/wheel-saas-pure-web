@@ -8,6 +8,7 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import type { TenantAccount } from "@/api/account";
 import MoreFilled from "~icons/ep/more-filled";
 import {
+  accountRestrictionReasonLabel,
   accountStatusLabel,
   accountStatusTagType,
   accountTypeDeviceLabel,
@@ -236,8 +237,15 @@ function occupancyTagStyle(row: TenantAccount) {
                 <el-tag size="small" type="danger">
                   {{ item.label }}：受限
                 </el-tag>
-                <small>预计 {{ formatDate(item.until) }} 恢复</small>
+                <small>
+                  预计 {{ formatDate(item.until) }} 恢复（{{ item.source }}）
+                </small>
               </div>
+              <small>
+                原因：{{
+                  accountRestrictionReasonLabel(row.restriction_reason_code)
+                }}
+              </small>
             </div>
             <span v-else class="unrestricted-text">未受限</span>
           </template>

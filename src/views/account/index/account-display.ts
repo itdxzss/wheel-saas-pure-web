@@ -16,6 +16,7 @@ export interface BusinessRestrictionLine {
   key: "message" | "pulling";
   label: string;
   until?: string | null;
+  source: "平台下发" | "系统推断";
 }
 
 function compactLabels(values: Array<string | null | undefined>): string {
@@ -37,29 +38,84 @@ export function accountStatusTagType(
   return "info";
 }
 
-/** 把两类业务风控按各自截止时间展开，不与账号生命周期混用。 */
+/** 列表 API 的无时区时间统一为北京时间，与浏览器所在时区无关。 */
+function restrictionEpochMillis(value?: string | null): number | null {
+  if (!value) return null;
+  const iso = value.trim().replace(" ", "T");
+  const zoned = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(iso) ? iso : `${iso}+08:00`;
+  const timestamp = Date.parse(zoned);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+/** 把两类业务风控按各自截止时间及来源展开，不与账号生命周期混用。 */
 export function businessRestrictionLines(
   row: Pick<
     TenantAccount,
-    "mute_status" | "message_restriction_until" | "pulling_restriction_until"
+    | "mute_status"
+    | "message_restriction_until"
+    | "pulling_restriction_until"
+    | "platform_message_restriction_until"
+    | "fallback_message_restriction_until"
   >
 ): BusinessRestrictionLine[] {
   const lines: BusinessRestrictionLine[] = [];
+  const platformUntil = restrictionEpochMillis(
+    row.platform_message_restriction_until
+  );
+  const fallbackUntil = restrictionEpochMillis(
+    row.fallback_message_restriction_until
+  );
   if (row.mute_status === 1 || row.mute_status === 3) {
     lines.push({
       key: "message",
-      label: "超链发送",
-      until: row.message_restriction_until
+      label: "消息发送",
+      until: row.message_restriction_until,
+      source:
+        platformUntil !== null &&
+        (fallbackUntil === null || platformUntil >= fallbackUntil)
+          ? "平台下发"
+          : "系统推断"
     });
   }
   if (row.mute_status === 2 || row.mute_status === 3) {
     lines.push({
       key: "pulling",
-      label: "拉手拉人",
-      until: row.pulling_restriction_until
+      label: "进群拉人",
+      until: row.pulling_restriction_until,
+      source:
+        platformUntil !== null &&
+        platformUntil === restrictionEpochMillis(row.pulling_restriction_until)
+          ? "平台下发"
+          : "系统推断"
     });
   }
   return lines;
+}
+
+/** 只统计尚未到期的平台限制；人工解除不会解除 WhatsApp 平台风控。 */
+export function clearOperationRestrictionsConfirmMessage(
+  selectedRows: Pick<TenantAccount, "platform_message_restriction_until">[],
+  now: number
+): string {
+  const activeUntil = selectedRows
+    .map(row => restrictionEpochMillis(row.platform_message_restriction_until))
+    .filter((until): until is number => until !== null && until > now);
+  const base =
+    `确认手动移除选中的 ${selectedRows.length} 个账号的风控时间限制？` +
+    "将同时移除消息发送和进群拉人的本地风控时间；" +
+    "后续新的风控结果仍会重新限制账号。";
+  if (activeUntil.length === 0) return base;
+  const latestUntil = Math.max(...activeUntil);
+  // 和列表日期口径相同，明确展示北京时间以免跨时区误解恢复时间。
+  const latestLabel = new Date(latestUntil + 8 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
+  return (
+    base +
+    `其中 ${activeUntil.length} 个账号的 WhatsApp 平台触达限制尚未到期（最晚 ${latestLabel} 北京时间），` +
+    "解除只清本地状态，平台仍会拒绝进群、拉人和新会话。"
+  );
 }
 
 /** 将协议原因码转换为业务可读文案；未知原因仍保留原码，便于排查。 */
@@ -70,7 +126,7 @@ export function accountRestrictionReasonLabel(value?: string | null): string {
     ACCOUNT_REACHOUT_RESTRICTED: "账号触达受限",
     CHAT_SUSPENDED: "会话发送受限",
     MESSAGE_SENDING_RESTRICTED: "消息发送受限",
-    PULLING_RESTRICTED: "拉人受限",
+    PULLING_RESTRICTED: "进群拉人受限",
     PULLER_HISTORY_RESTRICTION: "历史拉人限制"
   };
   return labels[value] ?? value;

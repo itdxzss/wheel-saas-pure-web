@@ -8,6 +8,7 @@ import {
   buildAccountStatCards,
   businessRestrictionLines,
   canDeleteAccount,
+  clearOperationRestrictionsConfirmMessage,
   loginStateLabel,
   loginStateTagType,
   riskStatusLabel,
@@ -36,7 +37,7 @@ describe("account list display helpers", () => {
     );
   });
 
-  it("builds separate hyperlink and puller restriction lines", () => {
+  it("builds separate message and group join/pulling restriction lines", () => {
     assert.deepEqual(
       businessRestrictionLines({
         mute_status: 3,
@@ -46,17 +47,105 @@ describe("account list display helpers", () => {
       [
         {
           key: "message",
-          label: "超链发送",
-          until: "2026-09-02 10:00:00"
+          label: "消息发送",
+          until: "2026-09-02 10:00:00",
+          source: "系统推断"
         },
         {
           key: "pulling",
-          label: "拉手拉人",
-          until: "2026-09-03 11:00:00"
+          label: "进群拉人",
+          until: "2026-09-03 11:00:00",
+          source: "系统推断"
         }
       ]
     );
     assert.deepEqual(businessRestrictionLines({ mute_status: null }), []);
+  });
+
+  it("attributes message expiry to the platform only when it is not earlier than fallback", () => {
+    const cases = [
+      ["2026-10-09 12:00:00", null, "平台下发"],
+      ["2026-10-09 12:00:00", "2026-10-09 11:59:59", "平台下发"],
+      ["2026-10-09 12:00:00", "2026-10-09 12:00:00", "平台下发"],
+      ["2026-10-09 12:00:00", "2026-10-09 12:00:01", "系统推断"],
+      ["2026-10-09 12:00:00", "2026-10-09 12:00:00.001", "系统推断"],
+      [null, "2026-10-09 12:00:00", "系统推断"],
+      [null, null, "系统推断"],
+      ["invalid", "2026-10-09 12:00:00", "系统推断"]
+    ];
+    for (const [platform, fallback, expected] of cases) {
+      const lines = businessRestrictionLines({
+        mute_status: 1,
+        platform_message_restriction_until: platform,
+        fallback_message_restriction_until: fallback
+      });
+      assert.equal(lines.length, 1);
+      assert.equal(lines[0].source, expected, `${platform} / ${fallback}`);
+    }
+  });
+
+  it("attributes pulling expiry only to an equal, valid platform expiry", () => {
+    const cases = [
+      ["2026-10-09 12:00:00", "2026-10-09 12:00:00", "平台下发"],
+      ["2026-10-09T04:00:00Z", "2026-10-09 12:00:00", "平台下发"],
+      ["2026-10-09 12:00:00", "2026-10-09 11:59:59", "系统推断"],
+      ["2026-10-09 12:00:00", "2026-10-09 12:00:01", "系统推断"],
+      ["2026-10-09 12:00:00", "2026-10-09 12:00:00.001", "系统推断"],
+      ["2026-10-09 12:00:00", null, "系统推断"],
+      [null, null, "系统推断"],
+      ["invalid", "invalid", "系统推断"]
+    ];
+    for (const [platform, pulling, expected] of cases) {
+      const lines = businessRestrictionLines({
+        mute_status: 2,
+        platform_message_restriction_until: platform,
+        pulling_restriction_until: pulling
+      });
+      assert.equal(lines.length, 1);
+      assert.equal(lines[0].source, expected, `${platform} / ${pulling}`);
+    }
+  });
+
+  it("warns about only unexpired platform restrictions with their latest Beijing expiry", () => {
+    const now = Date.parse("2026-10-08T12:00:00+08:00");
+    const message = clearOperationRestrictionsConfirmMessage(
+      [
+        { platform_message_restriction_until: "2026-10-08 13:00:00" },
+        { platform_message_restriction_until: "2026-10-08T06:00:00Z" },
+        { platform_message_restriction_until: "2026-10-08 11:59:59" },
+        { platform_message_restriction_until: "2026-10-08 12:00:00" },
+        { platform_message_restriction_until: null },
+        { platform_message_restriction_until: "invalid" }
+      ],
+      now
+    );
+    assert.match(message, /选中的 6 个账号/);
+    assert.match(message, /同时移除消息发送和进群拉人的本地风控时间/);
+    assert.match(message, /其中 2 个账号的 WhatsApp 平台触达限制尚未到期/);
+    assert.match(message, /最晚 2026-10-08 14:00:00 北京时间/);
+    assert.match(message, /解除只清本地状态，平台仍会拒绝进群、拉人和新会话/);
+  });
+
+  it("warns when the platform expiry is just one millisecond after now", () => {
+    const message = clearOperationRestrictionsConfirmMessage(
+      [{ platform_message_restriction_until: "2026-10-08 12:00:00.001" }],
+      Date.parse("2026-10-08T12:00:00+08:00")
+    );
+    assert.match(message, /其中 1 个账号的 WhatsApp 平台触达限制尚未到期/);
+  });
+
+  it("does not show a platform warning for missing, invalid or expired expiries", () => {
+    const message = clearOperationRestrictionsConfirmMessage(
+      [
+        {},
+        { platform_message_restriction_until: null },
+        { platform_message_restriction_until: "invalid" },
+        { platform_message_restriction_until: "2026-10-08 12:00:00" }
+      ],
+      Date.parse("2026-10-08T12:00:00+08:00")
+    );
+    assert.doesNotMatch(message, /平台触达限制尚未到期/);
+    assert.match(message, /后续新的风控结果仍会重新限制账号/);
   });
 
   it("shows a readable restriction reason while preserving unknown codes", () => {
@@ -70,6 +159,10 @@ describe("account list display helpers", () => {
       "custom_reason"
     );
     assert.equal(accountRestrictionReasonLabel(null), "—");
+    assert.equal(
+      accountRestrictionReasonLabel("PULLING_RESTRICTED"),
+      "进群拉人受限"
+    );
   });
 
   it("maps login replaced takeover account status labels", () => {

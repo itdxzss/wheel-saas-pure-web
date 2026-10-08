@@ -21,8 +21,8 @@ describe("account status filter mapping", () => {
 
   it("maps operation restriction status without accountState", () => {
     assert.deepEqual(accountStatusToQuery("消息发送受限"), { muteStatus: 1 });
-    assert.deepEqual(accountStatusToQuery("拉人受限"), { muteStatus: 2 });
-    assert.deepEqual(accountStatusToQuery("消息和拉人受限"), {
+    assert.deepEqual(accountStatusToQuery("进群拉人受限"), { muteStatus: 2 });
+    assert.deepEqual(accountStatusToQuery("消息和进群拉人受限"), {
       muteStatus: 3
     });
   });
