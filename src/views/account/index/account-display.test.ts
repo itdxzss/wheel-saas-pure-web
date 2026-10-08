@@ -82,6 +82,14 @@ describe("account list display helpers", () => {
     assert.equal(accountStatusTagType({ account_state: 8 }), "warning");
   });
 
+  it("shows confirmed deregistration independently from business restrictions", () => {
+    assert.equal(
+      accountStatusLabel({ account_state: 9, mute_status: 3 }),
+      "注销"
+    );
+    assert.equal(accountStatusTagType({ account_state: 9 }), "info");
+  });
+
   it("maps account status labels to tag types", () => {
     assert.equal(accountStatusTagType({ account_state: 2 }), "success");
     assert.equal(accountStatusTagType({ account_state: 4 }), "success");
@@ -232,6 +240,20 @@ describe("account list display helpers", () => {
       canDeleteAccount({
         account_state: 6,
         dispatched_at: "2026-06-29 12:00:00"
+      }),
+      false
+    );
+  });
+
+  it("allows deregistered accounts to be deleted only after task release", () => {
+    assert.equal(
+      canDeleteAccount({ account_state: 9, dispatched_at: null }),
+      true
+    );
+    assert.equal(
+      canDeleteAccount({
+        account_state: 9,
+        dispatched_at: "2026-10-08 12:00:00"
       }),
       false
     );

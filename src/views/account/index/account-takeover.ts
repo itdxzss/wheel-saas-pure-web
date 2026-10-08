@@ -4,7 +4,7 @@ export const TAKEOVER_EMPTY_SELECTION_MESSAGE = "请先选择账号";
 export const TAKEOVER_SELECTION_MESSAGE =
   "当前所选账号存在非被抢登状态，请重新选择";
 export const TAKING_OVER_ONLINE_MESSAGE = "账号抢登中，请先离线";
-export const TERMINAL_ONLINE_BLOCKED_MESSAGE = "封禁、解绑账号不可上线";
+export const TERMINAL_ONLINE_BLOCKED_MESSAGE = "封禁、解绑、注销账号不可上线";
 
 type TakeoverSelectableAccount = Pick<
   TenantAccount,
@@ -37,7 +37,11 @@ export function isTakingOverAccount(row: OnlineGuardAccount): boolean {
 export function isTerminalOnlineBlockedAccount(
   row: OnlineGuardAccount
 ): boolean {
-  return row.account_state === 3 || row.account_state === 5;
+  return (
+    row.account_state === 3 ||
+    row.account_state === 5 ||
+    row.account_state === 9
+  );
 }
 
 export function onlineBlockedTip(rows: OnlineGuardAccount[]): string {

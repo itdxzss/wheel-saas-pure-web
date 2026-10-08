@@ -6,7 +6,7 @@ import {
   type BackendTenantAccountListParams
 } from "./account-mapping";
 
-export type AccountState = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type AccountState = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type LoginState = 1 | 2 | 3;
 export type RiskStatus = 1 | 2 | 3;
 export type AccountType = 1 | 2;

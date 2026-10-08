@@ -14,6 +14,7 @@ export type AccountStatusFilter =
   | "拉人受限"
   | "消息和拉人受限"
   | "解绑"
+  | "注销"
   | "被抢登"
   | "抢登中";
 
@@ -27,7 +28,8 @@ export const accountStatusOptions: Exclude<AccountStatusFilter, "">[] = [
   "消息发送受限",
   "拉人受限",
   "消息和拉人受限",
-  "解绑"
+  "解绑",
+  "注销"
 ];
 
 const accountStateMap: Partial<Record<AccountStatusFilter, AccountState>> = {
@@ -36,6 +38,7 @@ const accountStateMap: Partial<Record<AccountStatusFilter, AccountState>> = {
   封禁: 3,
   导出: 4,
   解绑: 5,
+  注销: 9,
   被抢登: 6,
   抢登中: 7
 };

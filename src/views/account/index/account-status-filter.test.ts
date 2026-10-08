@@ -14,6 +14,11 @@ describe("account status filter mapping", () => {
     assert.deepEqual(accountStatusToQuery("账号受限"), { accountState: 8 });
   });
 
+  it("offers a deregistered filter and maps it to accountState 9", () => {
+    assert.equal(accountStatusOptions.includes("注销"), true);
+    assert.deepEqual(accountStatusToQuery("注销"), { accountState: 9 });
+  });
+
   it("maps operation restriction status without accountState", () => {
     assert.deepEqual(accountStatusToQuery("消息发送受限"), { muteStatus: 1 });
     assert.deepEqual(accountStatusToQuery("拉人受限"), { muteStatus: 2 });

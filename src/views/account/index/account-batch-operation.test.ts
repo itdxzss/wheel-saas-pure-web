@@ -42,6 +42,48 @@ describe("account batch operation", () => {
     );
   });
 
+  it("shows deregistered skip counts for selected, filtered and all-account operations", () => {
+    for (const [selectedCount, hasAppliedFilters] of [
+      [10, true],
+      [0, true],
+      [0, false]
+    ] as const) {
+      const message = batchConfirmMessage(
+        "ONLINE",
+        selectedCount,
+        hasAppliedFilters,
+        {
+          matched: 10,
+          executable: 7,
+          skipped: 3,
+          skipReasons: { DEREGISTERED: 3 }
+        }
+      );
+      assert.match(message, /预计执行批量登录 7 个/);
+      assert.match(message, /已注销 3/);
+    }
+  });
+
+  it("shows deregistered skips in the final batch result", () => {
+    const message = batchCommandResultMessage("ONLINE", {
+      requested: 282,
+      submitted: 279,
+      accepted: 279,
+      timeout: 0,
+      proxyRequired: 0,
+      error: 0,
+      remote: 0,
+      elapsedMs: 0,
+      skipped: 3,
+      failed: 0,
+      skipReasons: { DEREGISTERED: 3 },
+      batchErrors: [],
+      results: [],
+      remoteRoutes: []
+    });
+    assert.match(message, /跳过 3（已注销 3）/);
+  });
+
   it("describes an unfiltered offline operation as all accounts", () => {
     assert.equal(
       batchConfirmMessage("OFFLINE", 0, false, {

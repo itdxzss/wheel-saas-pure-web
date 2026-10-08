@@ -12,7 +12,8 @@ export function accountStatusLabel(
     5: "解绑",
     6: "被抢登",
     7: "抢登中",
-    8: "账号受限"
+    8: "账号受限",
+    9: "注销"
   };
   return row.account_state ? (map[row.account_state] ?? "-") : "—";
 }

@@ -727,7 +727,7 @@ export function useAccountListPage(): AccountListPageState {
       ids.length === 1 ? "该账号" : `选中的 ${ids.length} 个账号`;
     if (
       !window.confirm(
-        `确认删除${deleteText}？仅封禁、导出、解绑、被抢登且不在任务中的账号可删除。`
+        `确认删除${deleteText}？仅封禁、导出、解绑、被抢登、注销且不在任务中的账号可删除。`
       )
     ) {
       return;
@@ -889,7 +889,9 @@ export function useAccountListPage(): AccountListPageState {
     }
     if (action === "删除") {
       if (!canDeleteAccount(row)) {
-        ElMessage.warning("仅封禁、导出、解绑、被抢登且不在任务中的账号可删除");
+        ElMessage.warning(
+          "仅封禁、导出、解绑、被抢登、注销且不在任务中的账号可删除"
+        );
         return;
       }
       void submitBatchDelete([id]);

@@ -32,17 +32,25 @@ export function batchConfirmMessage(
   const executable = formatCount(preview.executable);
   const skipped = formatCount(preview.skipped);
   const action = operation === "ONLINE" ? "批量登录" : "批量离线";
+  const deregistered = preview.skipReasons.DEREGISTERED ?? 0;
+  const deregisteredText =
+    deregistered > 0 ? `（已注销 ${formatCount(deregistered)}）` : "";
   if (selectedCount > 0) {
     if (preview.skipped > 0) {
-      return `当前已勾选 ${matched} 个账号，预计执行${action} ${executable} 个，跳过 ${skipped} 个不可登录账号，是否继续？`;
+      return `当前已勾选 ${matched} 个账号，预计执行${action} ${executable} 个，跳过 ${skipped} 个不可登录账号${deregisteredText}，是否继续？`;
     }
     return `当前已勾选 ${matched} 个账号，将执行${action}，是否继续？`;
   }
   if (!hasAppliedFilters) {
+    if (deregistered > 0) {
+      return `当前未勾选账号，全部账号共 ${matched} 个；预计执行${action} ${executable} 个，跳过 ${skipped} 个不可执行账号${deregisteredText}，是否继续？`;
+    }
     return `当前未勾选账号，将对全部 ${matched} 个账号执行${action}，是否继续？`;
   }
   const skipText =
-    preview.skipped > 0 ? `，跳过 ${skipped} 个不可登录账号` : "";
+    preview.skipped > 0
+      ? `，跳过 ${skipped} 个不可登录账号${deregisteredText}`
+      : "";
   return `当前未勾选账号，符合已生效筛选条件共 ${matched} 个；预计执行${action} ${executable} 个${skipText}，是否继续？`;
 }
 
@@ -52,7 +60,10 @@ export function batchCommandResultMessage(
   result: TenantAccountBatchCommandResult
 ): string {
   const action = operation === "ONLINE" ? "批量登录" : "批量离线";
-  return `${action}请求已提交，已受理 ${formatCount(result.accepted)}/${formatCount(result.requested)}，跳过 ${formatCount(result.skipped)}，失败 ${formatCount(result.failed)}`;
+  const deregistered = result.skipReasons.DEREGISTERED ?? 0;
+  const deregisteredText =
+    deregistered > 0 ? `（已注销 ${formatCount(deregistered)}）` : "";
+  return `${action}请求已提交，已受理 ${formatCount(result.accepted)}/${formatCount(result.requested)}，跳过 ${formatCount(result.skipped)}${deregisteredText}，失败 ${formatCount(result.failed)}`;
 }
 
 function formatCount(value: number): string {

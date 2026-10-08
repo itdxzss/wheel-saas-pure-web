@@ -61,11 +61,20 @@ describe("account takeover helpers", () => {
   it("blocks online actions for terminal account states", () => {
     assert.equal(isTerminalOnlineBlockedAccount({ account_state: 3 }), true);
     assert.equal(isTerminalOnlineBlockedAccount({ account_state: 5 }), true);
+    assert.equal(isTerminalOnlineBlockedAccount({ account_state: 9 }), true);
     assert.equal(isTerminalOnlineBlockedAccount({ account_state: 4 }), false);
     assert.equal(isTerminalOnlineBlockedAccount({ account_state: 2 }), false);
     assert.equal(
       singleOnlineBlockedTip({ account_state: 3 }),
       TERMINAL_ONLINE_BLOCKED_MESSAGE
+    );
+    assert.equal(
+      singleOnlineBlockedTip({ account_state: 9 }),
+      TERMINAL_ONLINE_BLOCKED_MESSAGE
+    );
+    assert.equal(
+      isTakeoverCandidate({ account_state: 9, mute_status: null }),
+      false
     );
     assert.equal(
       onlineBlockedTip([{ account_state: 2 }, { account_state: 3 }]),
@@ -78,10 +87,11 @@ describe("account takeover helpers", () => {
       { id: 100, account_state: 2 },
       { id: 101, account_state: 3 },
       { id: 102, account_state: 5 },
-      { id: 103, account_state: 4 }
+      { id: 103, account_state: 4 },
+      { id: 104, account_state: 9 }
     ]);
 
     assert.deepEqual(result.submittableIds, [100, 103]);
-    assert.equal(result.skippedCount, 2);
+    assert.equal(result.skippedCount, 3);
   });
 });

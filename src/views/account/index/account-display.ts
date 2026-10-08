@@ -166,7 +166,8 @@ export function canDeleteAccount(
     (row.account_state === 3 ||
       row.account_state === 4 ||
       row.account_state === 5 ||
-      row.account_state === 6) &&
+      row.account_state === 6 ||
+      row.account_state === 9) &&
     !row.dispatched_at
   );
 }
