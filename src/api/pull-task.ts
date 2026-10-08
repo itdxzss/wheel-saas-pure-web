@@ -185,6 +185,8 @@ export interface PullTaskGroupRow {
   reasonCode?: string | null;
   lastBusinessExecutedAt?: number | null;
   materialSummary?: PullTaskStandardMaterialSummary | null;
+  /** 本执行累计分配过的不同拉手账号数，包含当前和已移出资源。 */
+  cumulativeAssignedPullerCount?: number | null;
   managers?: PullTaskStandardResourceCount | null;
   pullers?: PullTaskStandardResourceCount | null;
   stations?: PullTaskStandardResourceCount | null;
@@ -624,6 +626,8 @@ export interface PullTaskStandardExecutionSummary {
   reasonMessage: string | null;
   lastBusinessExecutedAt: number | null;
   materialSummary: PullTaskStandardMaterialSummary | null;
+  /** 本执行累计分配过的不同拉手账号数，包含当前和已移出资源。 */
+  cumulativeAssignedPullerCount?: number | null;
   managers: PullTaskStandardResourceCount | null;
   pullers: PullTaskStandardResourceCount | null;
   stations: PullTaskStandardResourceCount | null;

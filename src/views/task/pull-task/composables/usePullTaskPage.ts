@@ -186,6 +186,7 @@ function standardGroupRow(
     reasonCode: execution.reasonCode,
     lastBusinessExecutedAt: execution.lastBusinessExecutedAt,
     materialSummary: execution.materialSummary,
+    cumulativeAssignedPullerCount: execution.cumulativeAssignedPullerCount,
     observation: execution.observation,
     managers: execution.managers,
     pullers: execution.pullers,

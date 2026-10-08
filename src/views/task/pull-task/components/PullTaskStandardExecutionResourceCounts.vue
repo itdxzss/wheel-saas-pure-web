@@ -25,12 +25,17 @@ function countLabel(
       )
     }}<br
   /></template>
-  拉手：{{
+  当前拉手：{{
     countLabel(
       row.pullers?.currentCount,
       row.pullers?.plannedCount,
       row.pullers?.missingCount
     )
+  }}<br />
+  累计分配拉手：{{
+    row.cumulativeAssignedPullerCount == null
+      ? "—"
+      : `${row.cumulativeAssignedPullerCount} 个`
   }}<br />
   站台：{{
     countLabel(

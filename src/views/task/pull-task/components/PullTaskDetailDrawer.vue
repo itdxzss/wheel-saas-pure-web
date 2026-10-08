@@ -406,11 +406,7 @@ function groupNameLabel(row: PullTaskGroupRow): string {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column
-        v-if="normalLink"
-        label="执行资源（当前/计划）"
-        min-width="230"
-      >
+      <el-table-column v-if="normalLink" label="执行资源" min-width="230">
         <template #default="{ row }">
           <PullTaskStandardExecutionResourceCounts
             :row="row"
