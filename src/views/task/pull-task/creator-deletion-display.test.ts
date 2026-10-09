@@ -34,6 +34,13 @@ describe("creator deletion progress and frozen configuration", () => {
     assert.equal(standardStageLabel(12), "等待创建者清理");
   });
 
+  it("shows released reservation without implying permanent deletion", () => {
+    assert.equal(
+      creatorDeletionLabel({ creatorDeletionStatus: "RELEASED" }),
+      "预留已释放（未注销）"
+    );
+  });
+
   it("allows only confirmed never-started tasks to change configuration", () => {
     assert.equal(canEditCreatorDeletion("WAIT_START", null), true);
     assert.equal(canEditCreatorDeletion("WAIT_START", undefined), false);

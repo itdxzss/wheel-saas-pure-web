@@ -490,8 +490,8 @@ export function previewTenantAccountBatch(
 
 export function batchTakeoverTenantAccounts(
   ids: number[]
-): Promise<TenantAccountBatchBaseResult> {
-  return armadaRequest<TenantAccountBatchBaseResult>(
+): Promise<TenantAccountBatchCommandResult> {
+  return armadaRequest<TenantAccountBatchCommandResult>(
     "post",
     "/api/accounts/batch-takeover",
     { data: { ids } }

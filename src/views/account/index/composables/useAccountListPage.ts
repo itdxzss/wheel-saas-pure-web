@@ -67,7 +67,7 @@ import {
   TAKEOVER_SELECTION_MESSAGE
 } from "../account-takeover";
 import {
-  batchCommandResultMessage,
+  batchCommandResultFeedback,
   batchConfirmMessage,
   buildBatchPreviewRequest
 } from "../account-batch-operation";
@@ -587,13 +587,6 @@ export function useAccountListPage(): AccountListPageState {
     }
   }
 
-  function batchResultMessage(
-    prefix: string,
-    result: { requested: number; accepted: number }
-  ): string {
-    return `${prefix}，已受理 ${result.accepted}/${result.requested}`;
-  }
-
   async function submitLifecycleBatch(
     operation: TenantAccountBatchOperation
   ): Promise<void> {
@@ -660,7 +653,7 @@ export function useAccountListPage(): AccountListPageState {
           : operation === "ONLINE"
             ? await batchOnlineTenantAccountsByQuery(appliedFilters)
             : await batchOfflineTenantAccountsByQuery(appliedFilters);
-      ElMessage.success(batchCommandResultMessage(operation, result));
+      ElMessage(batchCommandResultFeedback(operation, result));
       selectedRows.value = [];
       await refreshAccountList();
     } catch (error) {
@@ -688,7 +681,7 @@ export function useAccountListPage(): AccountListPageState {
   async function submitSingleOffline(id: number): Promise<void> {
     try {
       const result = await batchOfflineTenantAccounts([id]);
-      ElMessage.success(batchResultMessage("下线请求已提交", result));
+      ElMessage(batchCommandResultFeedback("OFFLINE", result, true));
       await refreshAccountList();
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "下线请求失败"));
@@ -710,7 +703,7 @@ export function useAccountListPage(): AccountListPageState {
     });
     try {
       const result = await batchTakeoverTenantAccounts(ids);
-      ElMessage.success(batchResultMessage("一键抢登请求已提交", result));
+      ElMessage(batchCommandResultFeedback("TAKEOVER", result));
       await refreshAccountList();
     } catch (error) {
       ElMessage.error(apiErrorMessage(error, "一键抢登失败"));

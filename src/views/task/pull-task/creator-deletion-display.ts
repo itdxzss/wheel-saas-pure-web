@@ -6,6 +6,7 @@ export interface CreatorDeletionProgress {
 }
 
 const deletionLabels: Record<string, string> = {
+  RELEASED: "预留已释放（未注销）",
   RESERVED: "等待管理员接管",
   COMPLETE: "注销及创建者清理完成",
   PREPARED: "注销中（已登记操作）",

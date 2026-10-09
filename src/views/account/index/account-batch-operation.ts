@@ -56,14 +56,80 @@ export function batchConfirmMessage(
 
 /** 将后端最终汇总转换为用户可见结果，不把 outbox 受理误写成最终上下线成功。 */
 export function batchCommandResultMessage(
-  operation: TenantAccountBatchOperation,
-  result: TenantAccountBatchCommandResult
+  operation: TenantAccountBatchOperation | "TAKEOVER",
+  result: TenantAccountBatchCommandResult,
+  singleAccount = false
 ): string {
-  const action = operation === "ONLINE" ? "批量登录" : "批量离线";
+  const action =
+    operation === "TAKEOVER"
+      ? "一键抢登"
+      : singleAccount
+        ? operation === "ONLINE"
+          ? "上线"
+          : "下线"
+        : operation === "ONLINE"
+          ? "批量登录"
+          : "批量离线";
+  const status =
+    batchCommandResultType(result) === "success"
+      ? "已受理"
+      : result.accepted > 0
+        ? "部分受理"
+        : "未受理";
+  const reasons = [
+    ...new Set(
+      (result.batchErrors ?? [])
+        .map(reason =>
+          reason
+            .replace(/\+?\d(?:[\s()-]*\d){6,}/g, "[号码已隐藏]")
+            .replace(/\s+/g, " ")
+            .trim()
+        )
+        .filter(Boolean)
+    )
+  ];
+  const errorSummary =
+    reasons.length > 0
+      ? `；原因：${reasons.slice(0, 3).join("；")}${reasons.length > 3 ? `；另有 ${reasons.length - 3} 条原因` : ""}`
+      : "";
   const deregistered = result.skipReasons.DEREGISTERED ?? 0;
   const deregisteredText =
     deregistered > 0 ? `（已注销 ${formatCount(deregistered)}）` : "";
-  return `${action}请求已提交，已受理 ${formatCount(result.accepted)}/${formatCount(result.requested)}，跳过 ${formatCount(result.skipped)}${deregisteredText}，失败 ${formatCount(result.failed)}`;
+  return `${action}请求${status}，已受理 ${formatCount(result.accepted)}/${formatCount(result.requested)}，跳过 ${formatCount(result.skipped)}${deregisteredText}，失败 ${formatCount(result.failed)}${errorSummary}`;
+}
+
+export function batchCommandResultFeedback(
+  operation: TenantAccountBatchOperation | "TAKEOVER",
+  result: TenantAccountBatchCommandResult,
+  singleAccount = false
+): {
+  type: "success" | "warning" | "error";
+  message: string;
+  duration: number;
+  showClose: boolean;
+} {
+  const type = batchCommandResultType(result);
+  return {
+    type,
+    message: batchCommandResultMessage(operation, result, singleAccount),
+    duration: type === "success" ? 3000 : 8000,
+    showClose: true
+  };
+}
+
+function batchCommandResultType(
+  result: TenantAccountBatchCommandResult
+): "success" | "warning" | "error" {
+  if (result.accepted === 0 && result.failed > 0) return "error";
+  if (
+    result.requested > 0 &&
+    result.accepted === result.requested &&
+    result.failed === 0 &&
+    result.skipped === 0
+  ) {
+    return "success";
+  }
+  return "warning";
 }
 
 function formatCount(value: number): string {
