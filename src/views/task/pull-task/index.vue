@@ -8,6 +8,7 @@ import PullTaskDetailDrawer from "./components/PullTaskDetailDrawer.vue";
 import PullTaskExecutionDetailDrawer from "./components/PullTaskExecutionDetailDrawer.vue";
 import PullTaskCreateDrawer from "./components/PullTaskCreateDrawer.vue";
 import PullTaskGlobalSettingDialog from "./components/PullTaskGlobalSettingDialog.vue";
+import PullTaskObservationRefresh from "./components/PullTaskObservationRefresh.vue";
 import PullTaskResourceSupplementFlows from "./components/PullTaskResourceSupplementFlows.vue";
 import PullTaskTable from "./components/PullTaskTable.vue";
 import {
@@ -57,6 +58,7 @@ const {
   accountGroups,
   activeTask,
   advancedOpen,
+  autoRefreshTasks,
   deleteSelected,
   deleteTask,
   detailDrawerOpen,
@@ -75,6 +77,9 @@ const {
   exportGroupLinks,
   exportReport,
   exportResources,
+  listRefreshError,
+  listRefreshedAt,
+  listRefreshing,
   loading,
   onDetailSelectionChange,
   onSelectionChange,
@@ -338,6 +343,14 @@ provideAccountGroupLabels(accountGroups);
       </template>
 
       <template #default="{ dynamicColumns }">
+        <PullTaskObservationRefresh
+          visible
+          :loading="listRefreshing"
+          :refreshed-at="listRefreshedAt"
+          :error="listRefreshError"
+          @refresh="refreshTasks"
+          @auto-refresh="autoRefreshTasks"
+        />
         <PullTaskTable
           :columns="dynamicColumns"
           :loading="loading"

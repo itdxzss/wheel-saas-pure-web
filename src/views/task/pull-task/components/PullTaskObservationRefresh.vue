@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onActivated, onDeactivated, onMounted, onUnmounted, ref } from "vue";
 import { formatEpoch } from "../constants";
+import { usePullTaskAutoRefresh } from "../composables/usePullTaskAutoRefresh";
 
 const props = defineProps<{
   visible: boolean;
@@ -9,31 +9,11 @@ const props = defineProps<{
   error: string;
 }>();
 const emit = defineEmits<{ refresh: []; "auto-refresh": [] }>();
-const automatic = ref(true);
-let timer: ReturnType<typeof setInterval> | undefined;
-let active = true;
-
-onActivated(() => {
-  active = true;
+const { automatic } = usePullTaskAutoRefresh({
+  active: () => props.visible,
+  busy: () => props.loading,
+  refresh: () => emit("auto-refresh")
 });
-onDeactivated(() => {
-  active = false;
-});
-
-onMounted(() => {
-  timer = setInterval(() => {
-    if (
-      active &&
-      props.visible &&
-      automatic.value &&
-      !props.loading &&
-      document.visibilityState === "visible"
-    ) {
-      emit("auto-refresh");
-    }
-  }, 10_000);
-});
-onUnmounted(() => clearInterval(timer));
 </script>
 
 <template>

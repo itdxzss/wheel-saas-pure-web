@@ -80,6 +80,7 @@ export interface PullTaskPageState {
   accountGroups: Ref<AccountGroupApiRow[]>;
   activeTask: Ref<PullTaskRow | null>;
   advancedOpen: Ref<boolean>;
+  autoRefreshTasks: () => Promise<void>;
   deleteSelected: () => Promise<void>;
   deleteTask: (row: PullTaskRow) => Promise<void>;
   detailDrawerOpen: Ref<boolean>;
@@ -98,6 +99,9 @@ export interface PullTaskPageState {
   exportGroupLinks: () => Promise<void>;
   exportReport: () => Promise<void>;
   exportResources: (kind: string) => Promise<void>;
+  listRefreshError: Ref<string>;
+  listRefreshedAt: Ref<number | null>;
+  listRefreshing: Ref<boolean>;
   loading: Ref<boolean>;
   onDetailSelectionChange: (rows: PullTaskGroupRow[]) => void;
   onSelectionChange: (rows: PullTaskRow[]) => void;
@@ -288,6 +292,11 @@ export function usePullTaskPage(): PullTaskPageState {
   const detailGroupRows = ref<PullTaskGroupRow[]>([]);
   const selectedDetailRows = ref<PullTaskGroupRow[]>([]);
   const loading = ref(false);
+  const listRefreshing = ref(false);
+  const listRefreshError = ref("");
+  const listRefreshedAt = ref<number | null>(null);
+  let listRequestVersion = 0;
+  let appliedListQuery: ReturnType<typeof buildQuery> | null = null;
   const detailLoading = ref(false);
   const detailRefreshError = ref("");
   const detailRefreshedAt = ref<number | null>(null);
@@ -325,20 +334,49 @@ export function usePullTaskPage(): PullTaskPageState {
     };
   }
 
-  async function refreshTasks(): Promise<void> {
-    selectedRows.value = [];
-    loading.value = true;
+  async function loadTasks(silent: boolean): Promise<void> {
+    // 上一次请求未返回时自动刷新跳过本轮，不叠加请求。
+    if (silent && listRefreshing.value) return;
+    // 自动刷新沿用最近一次已查询的条件和分页，不抢先应用尚未点“查询”的输入。
+    const query = silent && appliedListQuery ? appliedListQuery : buildQuery();
+    appliedListQuery = query;
+    const requestVersion = ++listRequestVersion;
+    listRefreshing.value = true;
+    if (!silent) {
+      selectedRows.value = [];
+      loading.value = true;
+    }
     try {
-      const result = await listPullTasks(buildQuery());
-      rows.value = result.list ?? [];
+      const result = await listPullTasks(query);
+      if (requestVersion !== listRequestVersion) return;
+      const list = result.list ?? [];
+      // 静默刷新原地替换行：表格不出遮罩、不清空，ElTable 按 row-key 保留勾选。
+      if (silent) rows.value.splice(0, rows.value.length, ...list);
+      else rows.value = list;
       total.value = result.total ?? 0;
+      listRefreshedAt.value = Date.now();
+      listRefreshError.value = "";
     } catch (error) {
+      if (requestVersion !== listRequestVersion) return;
+      listRefreshError.value = apiErrorMessage(error, "拉群任务加载失败");
+      if (silent) return;
       rows.value = [];
       total.value = 0;
-      ElMessage.error(apiErrorMessage(error, "拉群任务加载失败"));
+      ElMessage.error(listRefreshError.value);
     } finally {
-      loading.value = false;
+      if (requestVersion === listRequestVersion) {
+        listRefreshing.value = false;
+        loading.value = false;
+      }
     }
+  }
+
+  function refreshTasks(): Promise<void> {
+    return loadTasks(false);
+  }
+
+  function autoRefreshTasks(): Promise<void> {
+    return loadTasks(true);
   }
 
   async function loadAccountGroupOptions(): Promise<void> {
@@ -742,6 +780,7 @@ export function usePullTaskPage(): PullTaskPageState {
     accountGroups,
     activeTask,
     advancedOpen,
+    autoRefreshTasks,
     deleteSelected,
     deleteTask,
     detailDrawerOpen,
@@ -760,6 +799,9 @@ export function usePullTaskPage(): PullTaskPageState {
     exportGroupLinks,
     exportReport,
     exportResources,
+    listRefreshError,
+    listRefreshedAt,
+    listRefreshing,
     loading,
     onDetailSelectionChange,
     onSelectionChange,
