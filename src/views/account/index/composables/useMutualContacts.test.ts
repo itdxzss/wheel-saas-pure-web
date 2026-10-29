@@ -78,3 +78,36 @@ test("clear or identical groups cannot preview or create a task", async () => {
     close();
   }
 });
+
+test("works on plain HTTP pages where crypto.randomUUID is unavailable", async () => {
+  const original = globalThis.crypto.randomUUID;
+  Object.defineProperty(globalThis.crypto, "randomUUID", {
+    value: undefined,
+    configurable: true
+  });
+  try {
+    const { state, close } = setup();
+    try {
+      state.form.leftGroupId = 11;
+      state.form.rightGroupId = 12;
+      await nextTick();
+      resetArmadaMock({ operationCount: 12, previewToken: "http-scope" });
+      await state.check();
+      resetArmadaMockFailure(new Error("response lost"));
+      await state.start();
+      const sent = (armadaCalls()[0].opts as { data: { requestId: string } })
+        .data;
+      assert.match(
+        sent.requestId,
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      );
+    } finally {
+      close();
+    }
+  } finally {
+    Object.defineProperty(globalThis.crypto, "randomUUID", {
+      value: original,
+      configurable: true
+    });
+  }
+});

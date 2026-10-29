@@ -14,6 +14,18 @@ import {
   type MutualContactTask
 } from "@/api/account-mutual-contact";
 import { validMutualForm } from "../mutual-contact-display";
+/** randomUUID 仅在 HTTPS/localhost 可用；HTTP 测试环境回退到 getRandomValues 生成 v4 UUID。 */
+function mutualRequestId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function")
+    return globalThis.crypto.randomUUID();
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, value =>
+    value.toString(16).padStart(2, "0")
+  ).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 /** 页面只控制展示和轮询，真实任务及保存间隔均由后端执行。 */
 export function useMutualContacts(open: Ref<boolean>) {
   const form = reactive<{
@@ -32,7 +44,7 @@ export function useMutualContacts(open: Ref<boolean>) {
   const itemPage = ref(1);
   const itemTotal = ref(0);
   const itemStatus = ref<number>();
-  let requestId = crypto.randomUUID();
+  let requestId = mutualRequestId();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let refreshGeneration = 0;
   let pollGeneration = 0;
@@ -100,7 +112,7 @@ export function useMutualContacts(open: Ref<boolean>) {
       itemPage.value = 1;
       itemStatus.value = undefined;
       taskPage.value = 1;
-      requestId = crypto.randomUUID();
+      requestId = mutualRequestId();
       preview.value = undefined;
       ElMessage.success("互存任务已创建");
       await refresh();
@@ -161,7 +173,7 @@ export function useMutualContacts(open: Ref<boolean>) {
   }
   watch(form, () => {
     preview.value = undefined;
-    requestId = crypto.randomUUID();
+    requestId = mutualRequestId();
   });
   watch(open, value => {
     if (timer) clearTimeout(timer);
