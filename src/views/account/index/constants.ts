@@ -17,5 +17,6 @@ export const accountListColumns: TableColumnList = [
   { label: "封号错误码/封号原因", prop: "block_reason", minWidth: 180 },
   { label: "入库时间", prop: "first_login_time", width: 180 },
   { label: "失效时间", prop: "invalidated_at", width: 180 },
-  { label: "操作", prop: "operation", fixed: "right", width: 140 }
+  { label: "WB 分身", prop: "wb_companion", minWidth: 170 },
+  { label: "操作", prop: "operation", fixed: "right", width: 200 }
 ];

@@ -20,6 +20,8 @@ import {
   sourceLabel
 } from "../account-display";
 import { marketingOccupancyMeta } from "../marketing-occupancy";
+import type { WbCompanionSummary } from "@/api/wb-companion";
+import WbCompanionCell from "./WbCompanionCell.vue";
 
 const accountGroupLabel = useAccountGroupLabel();
 
@@ -42,6 +44,8 @@ const props = defineProps<{
   takeoverBatchTip: string;
   total: number;
   wsExporting: boolean;
+  /** 账号 ID → WB 分身快照，没有的账号不在里面。 */
+  wbSummaries: Record<number, WbCompanionSummary>;
 }>();
 
 const emit = defineEmits<{
@@ -53,7 +57,17 @@ const emit = defineEmits<{
   (event: "selection-change", rows: TenantAccount[]): void;
   (event: "update:page", value: number): void;
   (event: "update:pageSize", value: number): void;
+  (event: "wb-companion", row: TenantAccount): void;
 }>();
+
+/** 只有在线的安卓协议号能当主设备登录到 WB；已挂分身或进行中的号随时可看详情。 */
+function wbCompanionEnabled(row: TenantAccount): boolean {
+  if (row.id !== undefined && props.wbSummaries[row.id]) return true;
+  return (
+    (row.protocol_address ?? "").toUpperCase() === "ANDROID" &&
+    row.login_state === 1
+  );
+}
 
 const currentPage = computed({
   get: () => props.page,
@@ -142,6 +156,13 @@ function occupancyTagStyle(row: TenantAccount) {
               command="export-history"
             >
               账号导出记录
+            </el-dropdown-item>
+            <el-dropdown-item
+              v-if="hasAuth('tenant:account:edit')"
+              command="wb-companion"
+              :disabled="selectedCount === 0 || batchSubmitting"
+            >
+              登录到 WB 分身
             </el-dropdown-item>
             <el-dropdown-item
               command="clear-operation-restrictions"
@@ -354,9 +375,18 @@ function occupancyTagStyle(row: TenantAccount) {
         </el-table-column>
         <el-table-column
           v-if="!dynamicColumns[18].hide"
+          label="WB 分身"
+          min-width="170"
+        >
+          <template #default="{ row }">
+            <WbCompanionCell :summary="wbSummaries[row.id] ?? null" />
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-if="!dynamicColumns[19].hide"
           label="操作"
           fixed="right"
-          width="140"
+          width="200"
         >
           <template #default="{ row }">
             <el-button
@@ -375,6 +405,20 @@ function occupancyTagStyle(row: TenantAccount) {
               "
             >
               {{ onlineActionLabel(row as TenantAccount) }}
+            </el-button>
+            <el-button
+              v-if="hasAuth('tenant:account:edit')"
+              link
+              type="primary"
+              :disabled="!wbCompanionEnabled(row as TenantAccount)"
+              :title="
+                wbCompanionEnabled(row as TenantAccount)
+                  ? undefined
+                  : '只有在线的安卓号可以登录到 WB'
+              "
+              @click="emit('wb-companion', row as TenantAccount)"
+            >
+              {{ wbSummaries[row.id] ? "WB 分身" : "登录到WB" }}
             </el-button>
             <el-button
               link

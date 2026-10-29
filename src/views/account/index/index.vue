@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
+import type { TenantAccount } from "@/api/account";
+import WbCompanionDialog from "./components/WbCompanionDialog.vue";
+import WbCompanionDrawer from "./components/WbCompanionDrawer.vue";
+import { useWbCompanion } from "./composables/useWbCompanion";
 import AccountMutualContactDrawer from "./components/AccountMutualContactDrawer.vue";
 import AccountExportDrawer from "./components/AccountExportDrawer.vue";
 import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
@@ -69,7 +73,29 @@ const {
 
 provideAccountGroupLabels(accountGroups);
 
-function handleAccountBatchCommand(command: string) {
+const wb = useWbCompanion();
+watch(rows, value => void wb.loadSummaries(value));
+
+/** 下线、删除挂着 WB 分身的账号前多确认一次。 */
+async function handleAccountRowAction(row: TenantAccount, action: string) {
+  if ((action === "下线" || action === "删除") && row.id !== undefined) {
+    if (!(await wb.confirmIfBound([row.id], action))) return;
+  }
+  handleRowAction(row, action);
+}
+
+async function handleAccountBatchCommand(command: string) {
+  if (command === "wb-companion") {
+    wb.openBatch(selectedRows.value);
+    return;
+  }
+  if (command === "offline" || command === "delete") {
+    const ids = selectedRows.value
+      .map(row => row.id)
+      .filter((id): id is number => id !== undefined);
+    const action = command === "offline" ? "下线" : "删除";
+    if (!(await wb.confirmIfBound(ids, action))) return;
+  }
   if (command === "export-accounts" || command === "export-history") {
     exportDrawer.value?.open(
       command === "export-accounts" ? selectedRows.value : []
@@ -363,12 +389,27 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
       :takeover-batch-tip="takeoverBatchTip"
       :total="total"
       :ws-exporting="wsExporting"
+      :wb-summaries="wb.summaries.value"
       @batch-command="handleAccountBatchCommand"
       @mutual-contacts="mutualContactsOpen = true"
       @group-click="openMarketingOccupancy"
       @refresh="refreshAccountList"
-      @row-action="handleRowAction"
+      @row-action="handleAccountRowAction"
       @selection-change="onSelectionChange"
+      @wb-companion="wb.openFor"
+    />
+
+    <WbCompanionDialog
+      v-model="wb.dialogOpen.value"
+      :accounts="wb.dialogAccounts.value"
+      :summary="wb.dialogSummary.value"
+      @finished="wb.loadSummaries(rows)"
+    />
+    <WbCompanionDrawer
+      v-model="wb.drawerOpen.value"
+      :account="wb.drawerAccount.value"
+      @refill="wb.openDialog([$event])"
+      @changed="wb.loadSummaries(rows)"
     />
 
     <AccountMutualContactDrawer v-model="mutualContactsOpen" />
