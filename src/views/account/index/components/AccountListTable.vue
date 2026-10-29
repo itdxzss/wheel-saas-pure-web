@@ -2,6 +2,7 @@
 import { useAccountGroupLabel } from "@/views/account/group/useAccountGroupLabels";
 import { computed } from "vue";
 import { hasAuth } from "@/router/utils";
+import { hasPerms } from "@/utils/auth";
 import { PureTableBar } from "@/components/RePureTableBar";
 import WheelPagination from "@/components/WheelPagination/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -59,6 +60,9 @@ const emit = defineEmits<{
   (event: "update:pageSize", value: number): void;
   (event: "wb-companion", row: TenantAccount): void;
 }>();
+
+/** 账号列表页路由只带查看权限，编辑权限按登录用户权限判断，与后端 @PreAuthorize 一致。 */
+const canEditAccount = computed(() => hasPerms("tenant:account:edit"));
 
 /** 只有在线的安卓协议号能当主设备登录到 WB；已挂分身或进行中的号随时可看详情。 */
 function wbCompanionEnabled(row: TenantAccount): boolean {
@@ -158,7 +162,7 @@ function occupancyTagStyle(row: TenantAccount) {
               账号导出记录
             </el-dropdown-item>
             <el-dropdown-item
-              v-if="hasAuth('tenant:account:edit')"
+              v-if="canEditAccount"
               command="wb-companion"
               :disabled="selectedCount === 0 || batchSubmitting"
             >
@@ -407,7 +411,7 @@ function occupancyTagStyle(row: TenantAccount) {
               {{ onlineActionLabel(row as TenantAccount) }}
             </el-button>
             <el-button
-              v-if="hasAuth('tenant:account:edit')"
+              v-if="canEditAccount"
               link
               type="primary"
               :disabled="!wbCompanionEnabled(row as TenantAccount)"
