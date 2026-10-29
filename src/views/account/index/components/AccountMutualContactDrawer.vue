@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { hasAuth } from "@/router/utils";
+import { hasPerms } from "@/utils/auth";
 import MutualContactGroupSelect from "./MutualContactGroupSelect.vue";
 import { useMutualContacts } from "../composables/useMutualContacts";
 import {
@@ -9,7 +9,8 @@ import {
   mutualReason
 } from "../mutual-contact-display";
 const open = defineModel<boolean>({ default: false });
-const canEdit = computed(() => hasAuth("tenant:account:edit"));
+/** 账号列表页路由只带查看权限，编辑权限需按登录用户权限判断，与后端 @PreAuthorize 一致。 */
+const canEdit = computed(() => hasPerms("tenant:account:edit"));
 const {
   form,
   preview,
@@ -163,7 +164,7 @@ const {
       <el-alert
         v-if="selected.stats.unknown"
         class="my-3"
-        title="待确认操作不会自动重做，该执行账号后续操作暂停，避免重复保存。"
+        title="待确认操作不会自动重做；该执行账号仍会继续保存后续号码。"
         type="warning"
         :closable="false"
       />
