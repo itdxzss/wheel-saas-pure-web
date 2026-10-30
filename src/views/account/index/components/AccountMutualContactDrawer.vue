@@ -145,8 +145,12 @@ const {
             @click="stop"
             >停止</el-button
           >
-          <el-button :disabled="busy || !selected.stats.failed" @click="retry"
-            >重试可重试的失败项</el-button
+          <el-button
+            :disabled="
+              busy || (!selected.stats.failed && !selected.stats.unknown)
+            "
+            @click="retry"
+            >重试失败/待确认项</el-button
           >
         </div>
       </div>
@@ -164,7 +168,7 @@ const {
       <el-alert
         v-if="selected.stats.unknown"
         class="my-3"
-        title="待确认操作不会自动重做；该执行账号仍会继续保存后续号码。"
+        title="待确认操作不会自动重做，可点“重试失败/待确认项”重新保存；该执行账号仍会继续保存后续号码。"
         type="warning"
         :closable="false"
       />

@@ -158,7 +158,7 @@ export function useMutualContacts(open: Ref<boolean>) {
     error.value = "";
     try {
       const count = await retryMutualContacts(selected.value.id);
-      ElMessage.info(`已重新排入 ${count} 条明确失败操作`);
+      ElMessage.info(`已重新排入 ${count} 条失败或待确认操作`);
       await refresh();
     } catch (cause) {
       report(cause);
