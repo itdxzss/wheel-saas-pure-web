@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import type { SmsActivation } from "@/api/sms-activation";
 import { formatEpochMillis } from "@/utils/time";
-import { smsStateLabel, smsStateTag } from "../sms-activation-display";
+import {
+  registrationFailureLabel,
+  registrationLabel,
+  registrationTag,
+  smsStateLabel,
+  smsStateTag
+} from "../sms-activation-display";
 
 defineProps<{
   rows: SmsActivation[];
@@ -30,6 +36,19 @@ const emit = defineEmits<{ (event: "change"): void }>();
     <el-table-column label="验证码" width="110">
       <template #default="{ row }">{{ row.smsCode || "-" }}</template>
     </el-table-column>
+    <el-table-column label="注册" min-width="150">
+      <template #default="{ row }">
+        <template v-if="row.registrationState">
+          <el-tag :type="registrationTag(row.registrationState)" size="small">{{
+            registrationLabel(row.registrationState)
+          }}</el-tag>
+          <div v-if="row.registrationFailure" class="records-failure">
+            {{ registrationFailureLabel(row.registrationFailure) }}
+          </div>
+        </template>
+        <template v-else>-</template>
+      </template>
+    </el-table-column>
     <el-table-column label="取号时间" min-width="170">
       <template #default="{ row }">{{
         formatEpochMillis(row.createdAt)
@@ -50,6 +69,12 @@ const emit = defineEmits<{ (event: "change"): void }>();
 </template>
 
 <style scoped>
+.records-failure {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--el-color-danger);
+}
+
 .records-pager {
   justify-content: flex-end;
   margin-top: 16px;

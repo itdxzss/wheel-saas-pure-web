@@ -13,12 +13,23 @@ export type SmsActivationState =
   | "CANCELLED"
   | "EXPIRED";
 
+/** 订单的 Go 注册办理状态；后台定时任务推进，页面只展示。 */
+export type SmsRegistrationState =
+  | "REQUESTING"
+  | "WAITING_CODE"
+  | "VERIFYING"
+  | "REGISTERED"
+  | "ACTION_REQUIRED";
+
 export interface SmsActivationOptions {
   serviceCode: string;
   countries: Array<{ id: string; name: string }>;
   balance?: RegistrationPrice | null;
   purchaseEnabled: boolean;
   disabledReason?: string | null;
+  /** 当前租户能否对订单点“开始注册”。 */
+  registrationEnabled: boolean;
+  registrationDisabledReason?: string | null;
 }
 
 export interface SmsActivationRequest {
@@ -42,6 +53,10 @@ export interface SmsActivation {
   createdBy?: number | null;
   createdAt: number;
   updatedAt: number;
+  /** 没点过“开始注册”时为空。 */
+  registrationState?: SmsRegistrationState | null;
+  /** 办理进入“需处理”时的固定原因码，其它状态为空串。 */
+  registrationFailure?: string | null;
 }
 
 /** 读取美国渠道目录、平台余额和取号开关。 */
@@ -78,6 +93,11 @@ export function listSmsActivations(
 /** 读取一条记录；等码中时后端会向平台刷新一次。 */
 export function getSmsActivation(id: number): Promise<SmsActivation> {
   return armadaRequest("get", `/api/sms-activations/${id}`);
+}
+
+/** 对等码订单开始 Go 注册；后台自动发码、等码、验码，重复点击返回已有办理记录。 */
+export function startSmsRegistration(id: number): Promise<SmsActivation> {
+  return armadaRequest("post", `/api/sms-activations/${id}/registration`);
 }
 
 /** 已收码后通知平台完成。 */

@@ -7,6 +7,10 @@ import {
   resetArmadaMockQueue
 } from "@/api/__tests__/armada-test-double";
 import type { SmsActivation } from "@/api/sms-activation";
+import {
+  canStartRegistration,
+  registrationRunning
+} from "../sms-activation-display";
 import { SMS_POLL_INTERVAL_MS, useSmsActivation } from "./useSmsActivation";
 
 const scopes: EffectScope[] = [];
@@ -30,7 +34,8 @@ const tier = {
 function row(
   id: number,
   state: SmsActivation["state"],
-  smsCode?: string
+  smsCode?: string,
+  registrationState?: SmsActivation["registrationState"]
 ): SmsActivation {
   return {
     id,
@@ -44,7 +49,8 @@ function row(
     cancelAfter: 0,
     expiresAt: Date.now() + 600_000,
     createdAt: 1,
-    updatedAt: 1
+    updatedAt: 1,
+    registrationState
   };
 }
 
@@ -114,6 +120,74 @@ describe("手动接码页面状态", () => {
     mock.timers.tick(SMS_POLL_INTERVAL_MS * 3);
     await settle();
     assert.equal(armadaCalls().length, 0);
+  });
+
+  it("keeps refreshing an order while its registration runs, then stops", async () => {
+    mock.timers.enable({ apis: ["setInterval"] });
+    const { state } = await setup([
+      row(1, "RECEIVED", "004271", "VERIFYING"),
+      row(2, "RECEIVED", "111111")
+    ]);
+
+    // 订单 1 已收码但后台还在验码，必须继续刷新；订单 2 没有后台注册，不轮询。
+    resetArmadaMockQueue([row(1, "RECEIVED", "004271", "REGISTERED")]);
+    mock.timers.tick(SMS_POLL_INTERVAL_MS);
+    await settle();
+    assert.deepEqual(
+      armadaCalls().map(call => call.url),
+      ["/api/sms-activations/1"]
+    );
+    assert.equal(state.records.value[0].registrationState, "REGISTERED");
+
+    resetArmadaMockQueue([]);
+    mock.timers.tick(SMS_POLL_INTERVAL_MS);
+    await settle();
+    assert.equal(armadaCalls().length, 0);
+  });
+
+  it("starts registration with one post and shows the returned state", async () => {
+    const { state } = await setup([row(1, "WAITING_CODE")]);
+    resetArmadaMockQueue([row(1, "WAITING_CODE", undefined, "REQUESTING")]);
+
+    await state.register(1);
+
+    const posts = armadaCalls().filter(call => call.method === "post");
+    assert.deepEqual(
+      posts.map(call => call.url),
+      ["/api/sms-activations/1/registration"]
+    );
+    assert.equal(state.records.value[0].registrationState, "REQUESTING");
+    assert.equal(state.acting.value, null);
+  });
+
+  it("only offers registration for waiting orders without a code or a registration", () => {
+    assert.equal(canStartRegistration(row(1, "WAITING_CODE")), true);
+    assert.equal(canStartRegistration(row(1, "WAITING_CODE", "004271")), false);
+    assert.equal(canStartRegistration(row(1, "RECEIVED")), false);
+    assert.equal(
+      canStartRegistration(
+        row(1, "WAITING_CODE", undefined, "ACTION_REQUIRED")
+      ),
+      false
+    );
+    // 只有后台仍在推进的三个状态才占用订单。
+    assert.equal(
+      registrationRunning(row(1, "WAITING_CODE", undefined, "REQUESTING")),
+      true
+    );
+    assert.equal(
+      registrationRunning(row(1, "RECEIVED", "1", "VERIFYING")),
+      true
+    );
+    assert.equal(
+      registrationRunning(row(1, "RECEIVED", "1", "REGISTERED")),
+      false
+    );
+    assert.equal(
+      registrationRunning(row(1, "WAITING_CODE", undefined, "ACTION_REQUIRED")),
+      false
+    );
+    assert.equal(registrationRunning(row(1, "WAITING_CODE")), false);
   });
 
   it("does not retry a failed purchase", async () => {

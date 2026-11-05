@@ -2,7 +2,12 @@
 import { ElMessage } from "element-plus";
 import type { SmsActivation } from "@/api/sms-activation";
 import {
+  canStartRegistration,
   countdown,
+  registrationFailureLabel,
+  registrationLabel,
+  registrationRunning,
+  registrationTag,
   smsStateLabel,
   smsStateTag
 } from "../sms-activation-display";
@@ -11,10 +16,14 @@ defineProps<{
   rows: SmsActivation[];
   now: number;
   acting: number | null;
+  /** 当前租户能否开始自动注册；不能时按钮禁用并提示原因。 */
+  registrationEnabled: boolean;
+  registrationDisabledReason: string;
 }>();
 const emit = defineEmits<{
   (event: "complete", id: number): void;
   (event: "cancel", id: number): void;
+  (event: "register", id: number): void;
 }>();
 
 async function copy(text: string, label: string): Promise<void> {
@@ -64,9 +73,35 @@ async function copy(text: string, label: string): Promise<void> {
         </template>
         <span v-else class="card-waiting">等待短信…</span>
       </div>
+      <div v-if="row.registrationState" class="card-line">
+        <span class="card-label">注册</span>
+        <el-tag :type="registrationTag(row.registrationState)" size="small">{{
+          registrationLabel(row.registrationState)
+        }}</el-tag>
+        <span v-if="row.registrationFailure" class="card-failure">{{
+          registrationFailureLabel(row.registrationFailure)
+        }}</span>
+      </div>
       <div class="card-actions">
+        <el-tooltip
+          v-if="canStartRegistration(row)"
+          :disabled="registrationEnabled"
+          :content="`自动注册未开放：${registrationDisabledReason}`"
+          placement="top"
+        >
+          <span>
+            <el-button
+              type="success"
+              size="small"
+              :loading="acting === row.id"
+              :disabled="!registrationEnabled"
+              @click="emit('register', row.id)"
+              >开始注册</el-button
+            >
+          </span>
+        </el-tooltip>
         <el-button
-          v-if="row.state === 'RECEIVED'"
+          v-if="row.state === 'RECEIVED' && !registrationRunning(row)"
           type="primary"
           size="small"
           :loading="acting === row.id"
@@ -74,7 +109,7 @@ async function copy(text: string, label: string): Promise<void> {
           >完成</el-button
         >
         <el-button
-          v-if="row.state === 'WAITING_CODE'"
+          v-if="row.state === 'WAITING_CODE' && !registrationRunning(row)"
           size="small"
           :loading="acting === row.id"
           :disabled="Boolean(countdown(row.cancelAfter, now))"
@@ -134,8 +169,13 @@ async function copy(text: string, label: string): Promise<void> {
   letter-spacing: 2px;
 }
 
+.card-failure {
+  color: var(--el-color-danger);
+}
+
 .card-actions {
   display: flex;
+  gap: 8px;
   justify-content: flex-end;
 }
 </style>

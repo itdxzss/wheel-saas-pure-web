@@ -15,11 +15,13 @@ import {
   getSmsActivationOptions,
   getSmsActivationPriceTiers,
   listSmsActivations,
+  startSmsRegistration,
   type SmsActivation,
   type SmsActivationOptions
 } from "@/api/sms-activation";
 import type { AccountRegistrationPriceTier } from "@/api/account-registration";
 import { apiErrorMessage } from "@/utils/api-error";
+import { registrationRunning } from "../sms-activation-display";
 
 /** 等码记录向后端刷新的间隔。 */
 export const SMS_POLL_INTERVAL_MS = 4000;
@@ -173,13 +175,20 @@ export function useSmsActivation(visible: Ref<boolean>) {
 
   const complete = (id: number) => act(id, completeSmsActivation);
   const cancel = (id: number) => act(id, cancelSmsActivation);
+  /** 开始后台注册：只创建办理记录，真正的发码、验码由后端定时任务推进。 */
+  const register = (id: number) => act(id, startSmsRegistration);
 
-  /** 只刷新等码记录；单条失败保留原状态，等下一轮。 */
+  /**
+   * 只刷新还在变化的记录：等码中的订单，以及后台注册仍在推进的订单（收到验证码后
+   * 订单已是“已收码”，但注册进度仍要继续刷新）。单条失败保留原状态，等下一轮。
+   */
   async function pollWaiting(): Promise<void> {
     if (polling) return;
     polling = true;
     try {
-      const waiting = records.value.filter(row => row.state === "WAITING_CODE");
+      const waiting = records.value.filter(
+        row => row.state === "WAITING_CODE" || registrationRunning(row)
+      );
       for (const row of waiting) {
         try {
           replace(await getSmsActivation(row.id));
@@ -242,6 +251,7 @@ export function useSmsActivation(visible: Ref<boolean>) {
     purchase,
     complete,
     cancel,
+    register,
     pollWaiting
   };
 }

@@ -38,7 +38,8 @@ const {
   refreshRecords,
   purchase,
   complete,
-  cancel
+  cancel,
+  register
 } = useSmsActivation(visible);
 
 async function run(
@@ -58,6 +59,12 @@ const onPurchase = () => run(purchase, "取号成功，等待短信", "取号失
 const onComplete = (id: number) =>
   run(() => complete(id), "已完成", "完成失败");
 const onCancel = (id: number) => run(() => cancel(id), "已取消", "取消失败");
+const onRegister = (id: number) =>
+  run(
+    () => register(id),
+    "已开始注册，后台自动办理，可关闭页面",
+    "开始注册失败"
+  );
 </script>
 
 <template>
@@ -103,8 +110,13 @@ const onCancel = (id: number) => run(() => cancel(id), "已取消", "取消失�
       :rows="active"
       :now="now"
       :acting="acting"
+      :registration-enabled="options?.registrationEnabled ?? false"
+      :registration-disabled-reason="
+        options?.registrationDisabledReason || '未知原因'
+      "
       @complete="onComplete"
       @cancel="onCancel"
+      @register="onRegister"
     />
     <SmsActivationRecords
       v-model:page="page"
