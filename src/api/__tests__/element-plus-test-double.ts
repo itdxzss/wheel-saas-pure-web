@@ -14,6 +14,9 @@ export function elementPlusCalls(): MessageCall[] {
 }
 
 export const ElMessage = {
+  info(text: unknown): void {
+    calls.push({ type: "info", text });
+  },
   error(text: unknown): void {
     calls.push({ type: "error", text });
   },

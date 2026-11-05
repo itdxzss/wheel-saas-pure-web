@@ -5,6 +5,7 @@ import WbCompanionDialog from "./components/WbCompanionDialog.vue";
 import WbCompanionDrawer from "./components/WbCompanionDrawer.vue";
 import { useWbCompanion } from "./composables/useWbCompanion";
 import AccountMutualContactDrawer from "./components/AccountMutualContactDrawer.vue";
+import AccountMutualChatDrawer from "./components/AccountMutualChatDrawer.vue";
 import AccountExportDrawer from "./components/AccountExportDrawer.vue";
 import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
 import { formatAccountGroupLabel } from "@/utils/account-group-label";
@@ -28,6 +29,7 @@ defineOptions({
 
 const router = useRouter();
 const mutualContactsOpen = ref(false);
+const mutualChatsOpen = ref(false);
 const exportDrawer = ref<InstanceType<typeof AccountExportDrawer>>();
 
 const {
@@ -392,6 +394,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
       :wb-summaries="wb.summaries.value"
       @batch-command="handleAccountBatchCommand"
       @mutual-contacts="mutualContactsOpen = true"
+      @mutual-chats="mutualChatsOpen = true"
       @group-click="openMarketingOccupancy"
       @refresh="refreshAccountList"
       @row-action="handleAccountRowAction"
@@ -413,6 +416,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
     />
 
     <AccountMutualContactDrawer v-model="mutualContactsOpen" />
+    <AccountMutualChatDrawer v-model="mutualChatsOpen" />
 
     <MarketingOccupancyDialog
       v-model="marketingOccupancyDialogOpen"

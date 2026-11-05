@@ -51,6 +51,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: "mutual-contacts"): void;
+  (event: "mutual-chats"): void;
   (event: "batch-command", command: string): void;
   (event: "group-click", row: TenantAccount): void;
   (event: "refresh"): void;
@@ -111,6 +112,11 @@ function occupancyTagStyle(row: TenantAccount) {
       >
         互相添加好友
       </el-button>
+      <el-button
+        v-if="hasAuth('tenant:account:view')"
+        @click="emit('mutual-chats')"
+        >互聊</el-button
+      >
       <el-dropdown trigger="click" @command="emit('batch-command', $event)">
         <el-button
           :loading="batchSubmitting || wsExporting"
