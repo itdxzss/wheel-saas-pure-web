@@ -57,6 +57,18 @@ const accountRouter = {
         module_key: "account",
         perm_key: "tenant:account:edit"
       }
+    },
+    {
+      path: "/account/sms-activation",
+      component: "account/sms-activation/index",
+      name: "AccountSmsActivation",
+      meta: {
+        title: "手动接码",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "account",
+        perm_key: "tenant:account:edit"
+      }
     }
   ]
 };

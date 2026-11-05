@@ -58,6 +58,7 @@ const componentOptions = [
   "account/group/index",
   "account/import/index",
   "account/registration/index",
+  "account/sms-activation/index",
   "group/imports/index",
   "group/list/index",
   "group/history/index",
