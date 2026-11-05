@@ -35,6 +35,18 @@ const accountRouter = {
       }
     },
     {
+      path: "/account/tier-check",
+      component: "account/tier-check/index",
+      name: "AccountTierCheck",
+      meta: {
+        title: "档位检测",
+        roles: ["admin", "common"],
+        showParent: true,
+        module_key: "account",
+        perm_key: "tenant:account:view"
+      }
+    },
+    {
       path: "/account/import",
       component: "account/import/index",
       name: "AccountImport",

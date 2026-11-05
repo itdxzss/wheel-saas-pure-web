@@ -6,6 +6,7 @@ import WbCompanionDrawer from "./components/WbCompanionDrawer.vue";
 import { useWbCompanion } from "./composables/useWbCompanion";
 import AccountMutualContactDrawer from "./components/AccountMutualContactDrawer.vue";
 import AccountMutualChatDrawer from "./components/AccountMutualChatDrawer.vue";
+import TierCheckCreateDrawer from "../tier-check/components/TierCheckCreateDrawer.vue";
 import AccountExportDrawer from "./components/AccountExportDrawer.vue";
 import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
 import { formatAccountGroupLabel } from "@/utils/account-group-label";
@@ -65,6 +66,8 @@ const {
   selectedRows,
   showAdvancedSearch,
   showBatchMoveDrawer,
+  showTierCheckDrawer,
+  tierCheckAccountIds,
   statCards,
   submitBatchMove,
   takeoverBatchDisabled,
@@ -128,6 +131,10 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
 <template>
   <div class="account-list-page">
     <AccountExportDrawer ref="exportDrawer" @changed="refreshAccountList" />
+    <TierCheckCreateDrawer
+      v-model="showTierCheckDrawer"
+      :account-ids="tierCheckAccountIds"
+    />
     <div class="account-list-stats">
       <el-card
         v-for="card in statCards"

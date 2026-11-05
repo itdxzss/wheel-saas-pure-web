@@ -169,6 +169,13 @@ function occupancyTagStyle(row: TenantAccount) {
             </el-dropdown-item>
             <el-dropdown-item
               v-if="canEditAccount"
+              command="tier-check"
+              :disabled="selectedCount === 0 || batchSubmitting"
+            >
+              检测档位
+            </el-dropdown-item>
+            <el-dropdown-item
+              v-if="canEditAccount"
               command="wb-companion"
               :disabled="selectedCount === 0 || batchSubmitting"
             >

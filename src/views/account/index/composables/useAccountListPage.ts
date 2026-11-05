@@ -43,6 +43,7 @@ import {
   type AccountGroupMarketingOccupancy
 } from "@/api/account-group";
 import { apiErrorMessage, isRequestTimeout } from "@/utils/api-error";
+import { hasPerms } from "@/utils/auth";
 import { downloadBlobFile } from "@/utils/download";
 import {
   buildAccountStatCards,
@@ -162,6 +163,8 @@ export interface AccountListPageState {
   selectedRows: Ref<TenantAccount[]>;
   showAdvancedSearch: Ref<boolean>;
   showBatchMoveDrawer: Ref<boolean>;
+  showTierCheckDrawer: Ref<boolean>;
+  tierCheckAccountIds: Ref<number[]>;
   statCards: ComputedRef<AccountStatCard[]>;
   submitBatchMove: () => void;
   takeoverBatchDisabled: ComputedRef<boolean>;
@@ -234,6 +237,8 @@ export function useAccountListPage(): AccountListPageState {
   const wsExporting = ref(false);
   const showAdvancedSearch = ref(initialGroupId !== "");
   const showBatchMoveDrawer = ref(false);
+  const showTierCheckDrawer = ref(false);
+  const tierCheckAccountIds = ref<number[]>([]);
   const marketingOccupancyDialogOpen = ref(false);
   const marketingOccupancyLoading = ref(false);
   const marketingOccupancyDetail = ref<AccountGroupMarketingOccupancy | null>(
@@ -853,6 +858,12 @@ export function useAccountListPage(): AccountListPageState {
       ElMessage.warning("请先选择账号");
       return;
     }
+    if (command === "tier-check") {
+      if (!hasPerms("tenant:account:edit")) return;
+      tierCheckAccountIds.value = [...ids];
+      showTierCheckDrawer.value = true;
+      return;
+    }
     if (command === "takeover") {
       void submitBatchTakeover(ids);
       return;
@@ -941,6 +952,8 @@ export function useAccountListPage(): AccountListPageState {
     selectedRows,
     showAdvancedSearch,
     showBatchMoveDrawer,
+    showTierCheckDrawer,
+    tierCheckAccountIds,
     statCards,
     submitBatchMove,
     takeoverBatchDisabled,
