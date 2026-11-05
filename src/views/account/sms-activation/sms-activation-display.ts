@@ -106,3 +106,12 @@ export function countdown(target: number, now: number): string {
   const minutes = Math.floor(seconds / 60);
   return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
+
+/** 只展示服务端保存的类型，未注册订单不推断为个人。 */
+export function registrationAccountTypeLabel(
+  type: number | null | undefined
+): string {
+  if (type === 1) return "个人版";
+  if (type === 2) return "商业版";
+  return "-";
+}

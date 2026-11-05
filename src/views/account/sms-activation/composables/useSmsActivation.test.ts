@@ -21,6 +21,8 @@ const options = {
     { id: "187", name: "美国" }
   ],
   balance: "3.5",
+  registrationEnabled: true,
+  registrationAccountTypes: [1, 2],
   purchaseEnabled: true
 };
 const tier = {
@@ -149,14 +151,46 @@ describe("手动接码页面状态", () => {
     const { state } = await setup([row(1, "WAITING_CODE")]);
     resetArmadaMockQueue([row(1, "WAITING_CODE", undefined, "REQUESTING")]);
 
-    await state.register(1);
+    await state.register(1, 1);
 
     const posts = armadaCalls().filter(call => call.method === "post");
     assert.deepEqual(
       posts.map(call => call.url),
       ["/api/sms-activations/1/registration"]
     );
+    assert.deepEqual(posts[0].opts, { data: { accountType: 1 } });
     assert.equal(state.records.value[0].registrationState, "REQUESTING");
+    assert.equal(state.acting.value, null);
+  });
+
+  it("sends business selection once and keeps the saved type when polling", async () => {
+    const { state } = await setup([row(1, "WAITING_CODE")]);
+    const started = {
+      ...row(1, "WAITING_CODE", undefined, "REQUESTING"),
+      registrationAccountType: 2 as const
+    };
+    resetArmadaMockQueue([started]);
+    await state.register(1, 2);
+    assert.deepEqual(
+      armadaCalls().map(call => call.opts),
+      [{ data: { accountType: 2 } }]
+    );
+    assert.equal(state.records.value[0].registrationAccountType, 2);
+    resetArmadaMockQueue([{ ...started, registrationState: "WAITING_CODE" }]);
+    await state.pollWaiting();
+    assert.equal(armadaCalls()[0].method, "get");
+    assert.equal(state.records.value[0].registrationAccountType, 2);
+  });
+
+  it("does not post an unconfigured account type", async () => {
+    const { state } = await setup([row(1, "WAITING_CODE")]);
+    state.options.value = {
+      ...state.options.value!,
+      registrationAccountTypes: [1]
+    };
+    resetArmadaMockQueue([]);
+    await assert.rejects(state.register(1, 2), /未开放注册/);
+    assert.equal(armadaCalls().length, 0);
     assert.equal(state.acting.value, null);
   });
 

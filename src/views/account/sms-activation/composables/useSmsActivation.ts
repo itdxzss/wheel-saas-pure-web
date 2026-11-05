@@ -17,6 +17,7 @@ import {
   listSmsActivations,
   startSmsRegistration,
   type SmsActivation,
+  type SmsRegistrationAccountType,
   type SmsActivationOptions
 } from "@/api/sms-activation";
 import type { AccountRegistrationPriceTier } from "@/api/account-registration";
@@ -176,7 +177,15 @@ export function useSmsActivation(visible: Ref<boolean>) {
   const complete = (id: number) => act(id, completeSmsActivation);
   const cancel = (id: number) => act(id, cancelSmsActivation);
   /** 开始后台注册：只创建办理记录，真正的发码、验码由后端定时任务推进。 */
-  const register = (id: number) => act(id, startSmsRegistration);
+  const register = (id: number, accountType: SmsRegistrationAccountType) => {
+    if (
+      !options.value?.registrationEnabled ||
+      !options.value.registrationAccountTypes?.includes(accountType)
+    ) {
+      return Promise.reject(new Error("当前账号类型未开放注册"));
+    }
+    return act(id, () => startSmsRegistration(id, accountType));
+  };
 
   /**
    * 只刷新还在变化的记录：等码中的订单，以及后台注册仍在推进的订单（收到验证码后

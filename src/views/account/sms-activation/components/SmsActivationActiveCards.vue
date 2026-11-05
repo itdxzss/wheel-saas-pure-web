@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
-import type { SmsActivation } from "@/api/sms-activation";
+import { reactive } from "vue";
+import type {
+  SmsActivation,
+  SmsRegistrationAccountType
+} from "@/api/sms-activation";
 import {
   canStartRegistration,
   countdown,
   registrationFailureLabel,
+  registrationAccountTypeLabel,
   registrationLabel,
   registrationRunning,
   registrationTag,
@@ -12,19 +17,37 @@ import {
   smsStateTag
 } from "../sms-activation-display";
 
-defineProps<{
+const props = defineProps<{
   rows: SmsActivation[];
   now: number;
   acting: number | null;
   /** 当前租户能否开始自动注册；不能时按钮禁用并提示原因。 */
   registrationEnabled: boolean;
+  registrationAccountTypes: SmsRegistrationAccountType[];
   registrationDisabledReason: string;
 }>();
 const emit = defineEmits<{
   (event: "complete", id: number): void;
   (event: "cancel", id: number): void;
-  (event: "register", id: number): void;
+  (
+    event: "register",
+    id: number,
+    accountType: SmsRegistrationAccountType
+  ): void;
 }>();
+
+const selectedTypes = reactive<Record<number, SmsRegistrationAccountType>>({});
+function selectedType(id: number): SmsRegistrationAccountType | undefined {
+  const selected = selectedTypes[id];
+  return props.registrationAccountTypes.includes(selected)
+    ? selected
+    : props.registrationAccountTypes[0];
+}
+function register(id: number): void {
+  const type = selectedType(id);
+  if (props.registrationEnabled && type !== undefined)
+    emit("register", id, type);
+}
 
 async function copy(text: string, label: string): Promise<void> {
   try {
@@ -75,12 +98,32 @@ async function copy(text: string, label: string): Promise<void> {
       </div>
       <div v-if="row.registrationState" class="card-line">
         <span class="card-label">注册</span>
+        <span>{{
+          registrationAccountTypeLabel(row.registrationAccountType)
+        }}</span>
         <el-tag :type="registrationTag(row.registrationState)" size="small">{{
           registrationLabel(row.registrationState)
         }}</el-tag>
         <span v-if="row.registrationFailure" class="card-failure">{{
           registrationFailureLabel(row.registrationFailure)
         }}</span>
+      </div>
+      <div v-if="canStartRegistration(row)" class="card-line">
+        <span class="card-label">类型</span>
+        <el-select
+          :model-value="selectedType(row.id)"
+          aria-label="注册账号类型"
+          placeholder="暂无可用类型"
+          :disabled="!registrationEnabled || acting === row.id"
+          @update:model-value="selectedTypes[row.id] = $event"
+        >
+          <el-option
+            v-for="type in registrationAccountTypes"
+            :key="type"
+            :value="type"
+            :label="registrationAccountTypeLabel(type)"
+          />
+        </el-select>
       </div>
       <div class="card-actions">
         <el-tooltip
@@ -94,8 +137,10 @@ async function copy(text: string, label: string): Promise<void> {
               type="success"
               size="small"
               :loading="acting === row.id"
-              :disabled="!registrationEnabled"
-              @click="emit('register', row.id)"
+              :disabled="
+                !registrationEnabled || selectedType(row.id) === undefined
+              "
+              @click="register(row.id)"
               >开始注册</el-button
             >
           </span>

@@ -3,6 +3,7 @@ import type { SmsActivation } from "@/api/sms-activation";
 import { formatEpochMillis } from "@/utils/time";
 import {
   registrationFailureLabel,
+  registrationAccountTypeLabel,
   registrationLabel,
   registrationTag,
   smsStateLabel,
@@ -39,6 +40,9 @@ const emit = defineEmits<{ (event: "change"): void }>();
     <el-table-column label="注册" min-width="150">
       <template #default="{ row }">
         <template v-if="row.registrationState">
+          <div>
+            {{ registrationAccountTypeLabel(row.registrationAccountType) }}
+          </div>
           <el-tag :type="registrationTag(row.registrationState)" size="small">{{
             registrationLabel(row.registrationState)
           }}</el-tag>

@@ -21,6 +21,9 @@ export type SmsRegistrationState =
   | "REGISTERED"
   | "ACTION_REQUIRED";
 
+/** 1 个人版，2 WhatsApp Business 手机客户端。 */
+export type SmsRegistrationAccountType = 1 | 2;
+
 export interface SmsActivationOptions {
   serviceCode: string;
   countries: Array<{ id: string; name: string }>;
@@ -29,6 +32,7 @@ export interface SmsActivationOptions {
   disabledReason?: string | null;
   /** 当前租户能否对订单点“开始注册”。 */
   registrationEnabled: boolean;
+  registrationAccountTypes: SmsRegistrationAccountType[];
   registrationDisabledReason?: string | null;
 }
 
@@ -55,6 +59,8 @@ export interface SmsActivation {
   updatedAt: number;
   /** 没点过“开始注册”时为空。 */
   registrationState?: SmsRegistrationState | null;
+  /** 开始注册时冻结的类型，后续轮询只读。 */
+  registrationAccountType?: SmsRegistrationAccountType | null;
   /** 办理进入“需处理”时的固定原因码，其它状态为空串。 */
   registrationFailure?: string | null;
 }
@@ -96,8 +102,13 @@ export function getSmsActivation(id: number): Promise<SmsActivation> {
 }
 
 /** 对等码订单开始 Go 注册；后台自动发码、等码、验码，重复点击返回已有办理记录。 */
-export function startSmsRegistration(id: number): Promise<SmsActivation> {
-  return armadaRequest("post", `/api/sms-activations/${id}/registration`);
+export function startSmsRegistration(
+  id: number,
+  accountType: SmsRegistrationAccountType
+): Promise<SmsActivation> {
+  return armadaRequest("post", `/api/sms-activations/${id}/registration`, {
+    data: { accountType }
+  });
 }
 
 /** 已收码后通知平台完成。 */

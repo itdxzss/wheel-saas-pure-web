@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SmsRegistrationAccountType } from "@/api/sms-activation";
 import { onActivated, onDeactivated, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { apiErrorMessage } from "@/utils/api-error";
@@ -59,9 +60,9 @@ const onPurchase = () => run(purchase, "取号成功，等待短信", "取号失
 const onComplete = (id: number) =>
   run(() => complete(id), "已完成", "完成失败");
 const onCancel = (id: number) => run(() => cancel(id), "已取消", "取消失败");
-const onRegister = (id: number) =>
+const onRegister = (id: number, accountType: SmsRegistrationAccountType) =>
   run(
-    () => register(id),
+    () => register(id, accountType),
     "已开始注册，后台自动办理，可关闭页面",
     "开始注册失败"
   );
@@ -111,6 +112,7 @@ const onRegister = (id: number) =>
       :now="now"
       :acting="acting"
       :registration-enabled="options?.registrationEnabled ?? false"
+      :registration-account-types="options?.registrationAccountTypes ?? []"
       :registration-disabled-reason="
         options?.registrationDisabledReason || '未知原因'
       "
