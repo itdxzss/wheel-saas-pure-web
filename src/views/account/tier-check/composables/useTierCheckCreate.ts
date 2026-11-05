@@ -40,6 +40,19 @@ export interface TierCheckCreateState {
   searchProbes: (keyword: string) => Promise<void>;
 }
 
+/** randomUUID 仅在 HTTPS/localhost 可用；HTTP 测试环境回退到 getRandomValues 生成 v4 UUID。 */
+function tierCheckRequestId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function")
+    return globalThis.crypto.randomUUID();
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, value =>
+    value.toString(16).padStart(2, "0")
+  ).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 /** 新建抽屉保留原表单：范围变更使预览失效，关闭后不接收旧请求结果。 */
 export function useTierCheckCreate(
   open: Ref<boolean>,
@@ -145,7 +158,7 @@ export function useTierCheckCreate(
       };
       preview.value = null;
       error.value = "";
-      requestId.value = crypto.randomUUID();
+      requestId.value = tierCheckRequestId();
       try {
         await Promise.all([loadGroups(current), searchProbes("")]);
       } catch (e) {
@@ -160,7 +173,7 @@ export function useTierCheckCreate(
     () => {
       revision++;
       preview.value = null;
-      requestId.value = crypto.randomUUID();
+      requestId.value = tierCheckRequestId();
     },
     { deep: true, flush: "sync" }
   );
