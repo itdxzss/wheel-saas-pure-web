@@ -40,7 +40,7 @@ export interface SmsActivationDraft {
 function defaultCountryId(
   countries: SmsActivationOptions["countries"]
 ): string {
-  // Grizzly 的美国渠道是 187；目录首项可能是 12（美国虚拟）。
+  // 后端已按库存倒序；仍优先美国渠道 187，没有则取库存最多的首项。
   return (
     countries.find(country => country.id === "187")?.id ??
     countries[0]?.id ??

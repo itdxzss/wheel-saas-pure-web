@@ -2,6 +2,7 @@ import { armadaRequest } from "@/api/armada";
 import type { PageResponse } from "@/api/account-group";
 import type {
   AccountRegistrationPriceTier,
+  RegistrationCountry,
   RegistrationPrice
 } from "@/api/account-registration";
 
@@ -26,7 +27,7 @@ export type SmsRegistrationAccountType = 1 | 2;
 
 export interface SmsActivationOptions {
   serviceCode: string;
-  countries: Array<{ id: string; name: string }>;
+  countries: RegistrationCountry[];
   balance?: RegistrationPrice | null;
   purchaseEnabled: boolean;
   disabledReason?: string | null;

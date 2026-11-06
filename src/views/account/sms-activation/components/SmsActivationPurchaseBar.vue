@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { SmsActivationOptions } from "@/api/sms-activation";
-import type { AccountRegistrationPriceTier } from "@/api/account-registration";
+import type {
+  AccountRegistrationPriceTier,
+  RegistrationCountry
+} from "@/api/account-registration";
 import type { SmsActivationDraft } from "../composables/useSmsActivation";
 
 defineProps<{
@@ -18,6 +21,13 @@ const emit = defineEmits<{
   (event: "refresh-prices"): void;
 }>();
 
+/** 国家名 + 库存 + 供应商报价；库存未知时只显示国家名。 */
+function countryLabel(country: RegistrationCountry): string {
+  if (country.stock == null) return country.name;
+  const price = country.price == null ? "" : ` · ${country.price} 美元起`;
+  return `${country.name} · 库存 ${country.stock}${price}`;
+}
+
 function changePrice(): void {
   form.value.providerId = null;
 }
@@ -30,15 +40,17 @@ function changePrice(): void {
     </div>
     <el-select
       v-model="form.countryId"
-      placeholder="国家渠道"
+      filterable
+      placeholder="国家渠道（可搜索）"
       class="purchase-country"
       @change="emit('country-change')"
     >
       <el-option
         v-for="country in options?.countries ?? []"
         :key="country.id"
-        :label="country.name"
+        :label="countryLabel(country)"
         :value="country.id"
+        :disabled="country.stock === 0"
       />
     </el-select>
     <el-select
@@ -99,9 +111,12 @@ function changePrice(): void {
   min-width: 120px;
 }
 
-.purchase-country,
 .purchase-provider {
   width: 180px;
+}
+
+.purchase-country {
+  width: 300px;
 }
 
 .purchase-price {

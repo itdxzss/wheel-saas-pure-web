@@ -5,10 +5,18 @@ import type { AccountImportIpAllocationMode } from "@/api/account-import";
 /** Armada 接码注册合同；价格保留供应商原值，不默认币种。 */
 export type RegistrationPrice = string | number;
 
+/** 供应商国家目录项；stock/price 查询失败或无报价时为空。 */
+export interface RegistrationCountry {
+  id: string;
+  name: string;
+  stock?: number | null;
+  price?: RegistrationPrice | null;
+}
+
 export interface AccountRegistrationCatalog {
   serviceCode: string;
   serviceName: string;
-  countries: Array<{ id: string; name: string }>;
+  countries: RegistrationCountry[];
   orderingEnabled: boolean;
   disabledReason?: string | null;
 }
