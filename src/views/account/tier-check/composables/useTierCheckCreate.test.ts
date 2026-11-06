@@ -34,14 +34,13 @@ async function setup(ids: number[] = []) {
 }
 afterEach(() => scopes.splice(0).forEach(scope => scope.stop()));
 
-test("probe search requests online Web only and ignores offline rows", async () => {
+test("probe search requests online accounts of any protocol and ignores offline rows", async () => {
   const { state } = await setup();
   const call = armadaCalls().find(c => c.url === "/api/accounts");
   assert.deepEqual((call?.opts as { params: object }).params, {
     page: 1,
     pageSize: 20,
-    loginState: 1,
-    protocolId: "WEB"
+    loginState: 1
   });
   assert.deepEqual(state.probeOptions.value, [{ id: 3, phone: "00000000003" }]);
   assert.equal(state.valid.value, false);

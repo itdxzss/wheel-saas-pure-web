@@ -127,8 +127,7 @@ export function useTierCheckCreate(
         page: 1,
         pageSize: 20,
         keyword: keyword.trim() || undefined,
-        loginState: 1,
-        protocolId: "WEB"
+        loginState: 1
       });
       if (current !== generation || search !== probeGeneration) return;
       probeOptions.value = (result.list ?? [])
