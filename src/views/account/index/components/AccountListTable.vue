@@ -168,6 +168,13 @@ function occupancyTagStyle(row: TenantAccount) {
               账号导出记录
             </el-dropdown-item>
             <el-dropdown-item
+              v-if="hasAuth('tenant:account:view')"
+              command="message-cap"
+              :disabled="selectedCount === 0 || batchSubmitting"
+            >
+              查询新聊天额度
+            </el-dropdown-item>
+            <el-dropdown-item
               v-if="canEditAccount"
               command="tier-check"
               :disabled="selectedCount === 0 || batchSubmitting"

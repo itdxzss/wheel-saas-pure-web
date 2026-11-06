@@ -8,6 +8,7 @@ import AccountMutualContactDrawer from "./components/AccountMutualContactDrawer.
 import AccountMutualChatDrawer from "./components/AccountMutualChatDrawer.vue";
 import TierCheckCreateDrawer from "../tier-check/components/TierCheckCreateDrawer.vue";
 import AccountExportDrawer from "./components/AccountExportDrawer.vue";
+import AccountMessageCapDrawer from "./components/AccountMessageCapDrawer.vue";
 import { provideAccountGroupLabels } from "@/views/account/group/useAccountGroupLabels";
 import { formatAccountGroupLabel } from "@/utils/account-group-label";
 import { useRouter } from "vue-router";
@@ -32,6 +33,7 @@ const router = useRouter();
 const mutualContactsOpen = ref(false);
 const mutualChatsOpen = ref(false);
 const exportDrawer = ref<InstanceType<typeof AccountExportDrawer>>();
+const messageCapDrawer = ref<InstanceType<typeof AccountMessageCapDrawer>>();
 
 const {
   accountGroups,
@@ -101,6 +103,10 @@ async function handleAccountBatchCommand(command: string) {
     const action = command === "offline" ? "下线" : "删除";
     if (!(await wb.confirmIfBound(ids, action))) return;
   }
+  if (command === "message-cap") {
+    messageCapDrawer.value?.open(selectedRows.value);
+    return;
+  }
   if (command === "export-accounts" || command === "export-history") {
     exportDrawer.value?.open(
       command === "export-accounts" ? selectedRows.value : []
@@ -131,6 +137,7 @@ function openOccupancyTask(detail: AccountGroupMarketingOccupancy): void {
 <template>
   <div class="account-list-page">
     <AccountExportDrawer ref="exportDrawer" @changed="refreshAccountList" />
+    <AccountMessageCapDrawer ref="messageCapDrawer" />
     <TierCheckCreateDrawer
       v-model="showTierCheckDrawer"
       :account-ids="tierCheckAccountIds"
